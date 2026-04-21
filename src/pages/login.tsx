@@ -43,14 +43,14 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<number | null>(null);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={user.role === 'client' ? '/portal' : '/'} replace />;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    const err = await login(email.trim(), password.trim());
+    const { error: err, user: loggedInUser } = await login(email.trim(), password.trim());
     setLoading(false);
 
     if (err) {
@@ -59,7 +59,7 @@ export function LoginPage() {
       toast.error('Login failed', { description: err });
     } else {
       toast.success('Welcome back!', { description: 'You have been signed in successfully.' });
-      navigate('/');
+      navigate(loggedInUser?.role === 'client' ? '/portal' : '/');
     }
   }
 

@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<string | null>;
+  login: (email: string, password: string) => Promise<{ error: string | null; user: User | null }>;
   logout: () => void;
 }
 
@@ -20,29 +20,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      api.setToken(token);
-      fetchMe(token);
-    } else {
-      setLoading(false);
-    }
+    restoreSession();
   }, []);
 
-  async function fetchMe(accessToken: string) {
+  async function restoreSession() {
+    const accessToken = localStorage.getItem('accessToken');
+    const refreshToken = localStorage.getItem('refreshToken');
+
+    if (!accessToken && !refreshToken) {
+      setLoading(false);
+      return;
+    }
+
+    if (accessToken && (await fetchMe(accessToken))) {
+      setLoading(false);
+      return;
+    }
+
+    if (refreshToken) {
+      const newAccess = await refreshSession(refreshToken);
+      if (newAccess && (await fetchMe(newAccess))) {
+        setLoading(false);
+        return;
+      }
+    }
+
+    clearAuth();
+    setLoading(false);
+  }
+
+  async function fetchMe(accessToken: string): Promise<boolean> {
     try {
       const res = await fetch(`${API_URL}/api/v1/auth/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data: ApiResponse<{ user: User }> = await res.json();
       if (res.ok && data.status === 'success' && data.data) {
+        api.setToken(accessToken);
+        setToken(accessToken);
         setUser(data.data.user);
-      } else {
-        clearAuth();
+        return true;
       }
+      return false;
     } catch {
-      clearAuth();
-    } finally {
-      setLoading(false);
+      return false;
+    }
+  }
+
+  async function refreshSession(refreshToken: string): Promise<string | null> {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      const data: ApiResponse<{ tokens: AuthTokens }> = await res.json();
+      if (res.ok && data.status === 'success' && data.data) {
+        localStorage.setItem('accessToken', data.data.tokens.accessToken);
+        localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
+        return data.data.tokens.accessToken;
+      }
+      return null;
+    } catch {
+      return null;
     }
   }
 
@@ -54,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.setToken(null);
   }
 
-  async function login(email: string, password: string): Promise<string | null> {
+  async function login(email: string, password: string): Promise<{ error: string | null; user: User | null }> {
     try {
       const res = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: 'POST',
@@ -64,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data: ApiResponse<{ user: User; tokens: AuthTokens }> = await res.json();
 
       if (!res.ok || data.status !== 'success' || !data.data) {
-        return data.message || 'Login failed';
+        return { error: data.message || 'Login failed', user: null };
       }
 
       localStorage.setItem('accessToken', data.data.tokens.accessToken);
@@ -72,9 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(data.data.tokens.accessToken);
       setUser(data.data.user);
       api.setToken(data.data.tokens.accessToken);
-      return null;
+      return { error: null, user: data.data.user };
     } catch {
-      return 'Network error';
+      return { error: 'Network error', user: null };
     }
   }
 
