@@ -69,7 +69,7 @@ export function SupplierReportPage() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis type="number" tickFormatter={(v) => `£${v}`} tick={{ fontSize: 11 }} />
                   <YAxis type="category" dataKey="supplierName" width={140} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => [fmt(v), 'CPL']} />
+                  <Tooltip formatter={(v) => [fmt(Number(v)), 'CPL']} />
                   <Bar dataKey="cpl" fill="#171717" radius={[0, 4, 4, 0]} name="CPL" />
                 </BarChart>
               </ResponsiveContainer>

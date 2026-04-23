@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Megaphone, Users, Truck, Banknote, ArrowRight, TrendingUp } from 'lucide-react';
 
 const reports = [

@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import { Image, Video, FileText, Globe, ExternalLink } from 'lucide-react';
 import { usePortalCompliance } from '@/lib/hooks/use-portal';
 

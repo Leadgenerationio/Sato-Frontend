@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layouts/page-header';
@@ -14,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Mail, Shield, Building, Calendar, LogOut, Link2, Unlink, Loader2, CheckCircle2, XCircle, RefreshCw, Send, FileSignature, HardDrive } from 'lucide-react';
+import { User, Mail, Shield, Building, Calendar, LogOut, Loader2, CheckCircle2, XCircle, RefreshCw, Send, FileSignature, HardDrive } from 'lucide-react';
 import { toast } from 'sonner';
 import { UsersManagement } from '@/pages/users';
 
@@ -36,14 +35,13 @@ interface XeroStatus {
   connected: boolean;
   configured: boolean;
   tenantId?: string;
+  tenantName?: string;
   expiresAt?: string;
 }
 
 function XeroIntegration() {
   const [status, setStatus] = useState<XeroStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
 
   async function fetchStatus() {
     try {
@@ -59,41 +57,6 @@ function XeroIntegration() {
   useEffect(() => {
     fetchStatus();
   }, []);
-
-  useEffect(() => {
-    if (searchParams.get('xero') === 'connected') {
-      toast.success('Xero connected successfully');
-      searchParams.delete('xero');
-      setSearchParams(searchParams, { replace: true });
-      fetchStatus();
-    }
-  }, [searchParams]);
-
-  async function handleConnect() {
-    setActionLoading(true);
-    try {
-      const res = await api.get<{ url: string }>('/api/v1/integrations/xero/auth-url');
-      if (res.data?.url) {
-        window.location.href = res.data.url;
-      }
-    } catch {
-      toast.error('Failed to start Xero connection');
-      setActionLoading(false);
-    }
-  }
-
-  async function handleDisconnect() {
-    setActionLoading(true);
-    try {
-      await api.post('/api/v1/integrations/xero/disconnect');
-      toast.success('Xero disconnected');
-      setStatus({ connected: false, configured: status?.configured ?? false });
-    } catch {
-      toast.error('Failed to disconnect Xero');
-    } finally {
-      setActionLoading(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -115,7 +78,7 @@ function XeroIntegration() {
             </div>
             <div>
               <CardTitle className="text-base">Xero</CardTitle>
-              <CardDescription>Accounting and invoicing</CardDescription>
+              <CardDescription>Accounting and invoicing · Custom Connection</CardDescription>
             </div>
           </div>
           {status?.connected ? (
@@ -138,41 +101,25 @@ function XeroIntegration() {
           </p>
         ) : status?.connected ? (
           <>
-            {status.tenantId && (
+            {status.tenantName && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Building className="size-4" />
-                <span>Tenant ID: <code className="rounded bg-muted px-1 py-0.5 text-xs">{status.tenantId}</code></span>
+                <span>Organisation: <span className="font-medium text-foreground">{status.tenantName}</span></span>
               </div>
             )}
-            {status.expiresAt && (
+            {status.tenantId && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="size-4" />
-                <span>Token expires: {new Date(status.expiresAt).toLocaleString()}</span>
+                <span className="text-xs">Tenant ID: <code className="rounded bg-muted px-1 py-0.5 text-xs">{status.tenantId}</code></span>
               </div>
             )}
-            <p className="text-sm text-muted-foreground">
-              Tokens auto-refresh before each API call. Disconnect to revoke access.
+            <p className="text-xs text-muted-foreground">
+              Connected via Xero Custom Connection (server-to-server). Tokens renew automatically every 30 minutes.
             </p>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDisconnect}
-              disabled={actionLoading}
-            >
-              {actionLoading ? <Loader2 className="size-4 animate-spin" /> : <Unlink className="size-4" />}
-              Disconnect Xero
-            </Button>
           </>
         ) : (
-          <>
-            <p className="text-sm text-muted-foreground">
-              Connect your Xero account to sync invoices, bank accounts, and contacts.
-            </p>
-            <Button size="sm" onClick={handleConnect} disabled={actionLoading}>
-              {actionLoading ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
-              Connect Xero
-            </Button>
-          </>
+          <p className="text-sm text-muted-foreground">
+            Xero credentials are set but authentication failed. Check the backend log for details.
+          </p>
         )}
       </CardContent>
     </Card>
@@ -374,7 +321,7 @@ function CreditCheckIntegration() {
 }
 
 interface ResendStatus { configured: boolean; fromEmail: string | null; fromName: string | null; }
-interface DocuSignStatus { configured: boolean; accountId: string | null; oauthBase: string | null; }
+interface SignNowStatus { configured: boolean; baseUrl: string | null; username: string | null; sandbox: boolean; }
 interface R2Status { configured: boolean; bucket: string | null; publicBaseUrl: string | null; }
 
 function SimpleIntegrationCard<T extends { configured: boolean }>({
@@ -476,22 +423,22 @@ function ResendIntegration() {
   );
 }
 
-function DocuSignIntegration() {
+function SignNowIntegration() {
   return (
-    <SimpleIntegrationCard<DocuSignStatus>
-      title="DocuSign"
+    <SimpleIntegrationCard<SignNowStatus>
+      title="SignNow"
       description="E-signature for client service agreements"
       icon={FileSignature}
-      iconColor="#ffcc22"
-      endpoint="/api/v1/integrations/docusign/status"
-      envHint="DOCUSIGN_INTEGRATION_KEY + DOCUSIGN_SECRET + DOCUSIGN_USER_ID + DOCUSIGN_ACCOUNT_ID"
+      iconColor="#22c55e"
+      endpoint="/api/v1/integrations/signnow/status"
+      envHint="SIGNNOW_CLIENT_ID + SIGNNOW_CLIENT_SECRET + SIGNNOW_USERNAME + SIGNNOW_PASSWORD"
       renderDetails={(d) => (
         <div className="space-y-1 text-sm text-muted-foreground">
-          {d.accountId && (
-            <div className="flex items-center gap-2"><Shield className="size-4" />Account: <code className="rounded bg-muted px-1 py-0.5 text-xs">{d.accountId}</code></div>
+          {d.username && (
+            <div className="flex items-center gap-2"><Shield className="size-4" />Service account: <code className="rounded bg-muted px-1 py-0.5 text-xs">{d.username}</code></div>
           )}
-          {d.oauthBase && <div className="text-xs">OAuth host: {d.oauthBase}</div>}
-          <p className="text-xs">JWT access tokens are cached and auto-refresh before each envelope request.</p>
+          {d.baseUrl && <div className="text-xs">API host: {d.baseUrl}{d.sandbox && ' (sandbox)'}</div>}
+          <p className="text-xs">OAuth2 password grant; access tokens cached and refreshed automatically.</p>
         </div>
       )}
     />
@@ -550,13 +497,77 @@ function BankingIntegration() {
 }
 
 export function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [pageLoading, setPageLoading] = useState(true);
+
+  const [profileName, setProfileName] = useState(user?.name ?? '');
+  const [profileSaving, setProfileSaving] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setPageLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (user?.name) setProfileName(user.name);
+  }, [user?.name]);
+
+  async function handleSaveProfile() {
+    if (!user) return;
+    const trimmed = profileName.trim();
+    if (!trimmed) {
+      toast.error('Name is required');
+      return;
+    }
+    if (trimmed === user.name) {
+      toast.info('No changes to save');
+      return;
+    }
+    setProfileSaving(true);
+    try {
+      const res = await api.patch<{ user: { name: string } }>('/api/v1/auth/me', { name: trimmed });
+      if (res.data?.user) {
+        updateUser({ name: res.data.user.name });
+        toast.success('Profile updated');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update profile';
+      toast.error(message);
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!currentPassword || !newPassword) {
+      toast.error('Both current and new password are required');
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+    if (currentPassword === newPassword) {
+      toast.error('New password must differ from the current password');
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await api.post('/api/v1/auth/change-password', { currentPassword, newPassword });
+      toast.success('Password updated');
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to change password';
+      toast.error(message);
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
 
   if (!user) return null;
 
@@ -630,14 +641,22 @@ export function SettingsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" defaultValue={user.name} />
+                  <Input
+                    id="name"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    disabled={profileSaving}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" defaultValue={user.email} disabled />
                 </div>
               </div>
-              <Button size="sm">Save Changes</Button>
+              <Button size="sm" onClick={handleSaveProfile} disabled={profileSaving}>
+                {profileSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+                Save Changes
+              </Button>
             </CardContent>
           </Card>
 
@@ -650,14 +669,31 @@ export function SettingsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="current-password">Current Password</Label>
-                  <Input id="current-password" type="password" />
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                    disabled={passwordSaving}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="new-password">New Password</Label>
-                  <Input id="new-password" type="password" />
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                    disabled={passwordSaving}
+                  />
                 </div>
               </div>
-              <Button size="sm">Update Password</Button>
+              <Button size="sm" onClick={handleChangePassword} disabled={passwordSaving}>
+                {passwordSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+                Update Password
+              </Button>
             </CardContent>
           </Card>
 
@@ -682,7 +718,7 @@ export function SettingsPage() {
             <LeadByteIntegration />
             <CreditCheckIntegration />
             <ResendIntegration />
-            <DocuSignIntegration />
+            <SignNowIntegration />
             <R2Integration />
             <BankingIntegration />
           </TabsContent>

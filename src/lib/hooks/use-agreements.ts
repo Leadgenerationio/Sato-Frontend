@@ -6,7 +6,7 @@ export type AgreementStatus = 'sent' | 'delivered' | 'completed' | 'signed' | 'd
 export interface Agreement {
   id: string;
   clientId: string;
-  docusignEnvelopeId: string;
+  providerEnvelopeId: string;
   signerEmail: string;
   signerName: string;
   status: AgreementStatus;

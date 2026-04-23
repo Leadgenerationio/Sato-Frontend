@@ -34,6 +34,7 @@ interface UserItem {
   businessId: string | null;
   clientId: string | null;
   isActive: boolean;
+  isPrimaryOwner?: boolean;
   createdAt: string;
 }
 
@@ -340,19 +341,25 @@ export function UsersManagement() {
                 {users.map((u) => {
                   const RoleIcon = getRoleIcon(u.role);
                   const isSelf = u.id === user.id;
+                  const isProtected = u.isPrimaryOwner === true && !isSelf;
+                  const roleLocked = isSelf || isProtected;
                   return (
                     <TableRow key={u.id} className={!u.isActive ? 'opacity-50' : ''}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar><AvatarFallback>{u.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}</AvatarFallback></Avatar>
                           <div>
-                            <div className="font-medium flex items-center gap-2">{u.name}{isSelf && <Badge variant="outline" className="text-[10px] px-1.5">You</Badge>}</div>
+                            <div className="font-medium flex items-center gap-2">
+                              {u.name}
+                              {isSelf && <Badge variant="outline" className="text-[10px] px-1.5">You</Badge>}
+                              {u.isPrimaryOwner && <Badge variant="secondary" className="text-[10px] px-1.5 gap-1"><Crown className="size-2.5" />Primary</Badge>}
+                            </div>
                             <div className="text-xs text-muted-foreground">{u.email}</div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {isSelf ? (
+                        {roleLocked ? (
                           <Badge className="capitalize gap-1"><RoleIcon className="size-3" />{u.role.replace('_', ' ')}</Badge>
                         ) : (
                           <DropdownMenu>
@@ -382,15 +389,18 @@ export function UsersManagement() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {!isSelf && (
+                          {!isSelf && !isProtected && (
                             <Button variant="ghost" size="sm" onClick={() => openEditDialog(u)} className="gap-1.5">
                               <Pencil className="size-3" /> Edit
                             </Button>
                           )}
-                          {!isSelf && (
+                          {!isSelf && !isProtected && (
                             <Button variant="ghost" size="sm" onClick={() => requestToggle(u.id, u.name, u.isActive)} disabled={updating === u.id} className="gap-1.5">
                               {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : u.isActive ? <><UserX className="size-3" /> Deactivate</> : <><UserCheck className="size-3" /> Activate</>}
                             </Button>
+                          )}
+                          {isProtected && (
+                            <Badge variant="outline" className="text-[10px] gap-1"><Shield className="size-2.5" />Protected</Badge>
                           )}
                         </div>
                       </TableCell>

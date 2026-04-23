@@ -251,7 +251,7 @@ export function CampaignDetailPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} className="text-muted-foreground" />
-                <Tooltip formatter={(value: number) => [`£${value.toFixed(2)}`, '']} />
+                <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, '']} />
                 <Legend />
                 <Area type="monotone" dataKey="revenue" stroke="#171717" fill="#171717" fillOpacity={0.1} name="Revenue" />
                 <Area type="monotone" dataKey="cost" stroke="#a3a3a3" fill="#a3a3a3" fillOpacity={0.1} name="Cost" />
@@ -275,7 +275,7 @@ export function CampaignDetailPage() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} className="text-muted-foreground" />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={140} className="text-muted-foreground" />
-                  <Tooltip formatter={(value: number) => [`£${value.toFixed(2)}`, 'CPL']} />
+                  <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, 'CPL']} />
                   <Bar dataKey="cpl" fill="#171717" radius={[0, 4, 4, 0]} name="CPL" />
                 </BarChart>
               </ResponsiveContainer>

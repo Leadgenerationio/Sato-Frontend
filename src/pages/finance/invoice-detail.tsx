@@ -8,8 +8,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from '@/components/ui/table';
-import { ArrowLeft, Send, Mail, Download } from 'lucide-react';
-import { useInvoice, type InvoiceDetail } from '@/lib/hooks/use-invoices';
+import { ArrowLeft, Send, Download, Check, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useInvoice, usePushInvoiceToXero, type InvoiceDetail } from '@/lib/hooks/use-invoices';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
@@ -111,6 +112,18 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: invoice, isLoading, error } = useInvoice(id!);
+  const pushToXero = usePushInvoiceToXero();
+
+  async function handlePushToXero() {
+    if (!id) return;
+    try {
+      await pushToXero.mutateAsync(id);
+      toast.success('Invoice pushed to Xero as draft.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to push to Xero';
+      toast.error(msg);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -148,10 +161,19 @@ export function InvoiceDetailPage() {
                 <Download className="size-4 mr-1.5" />
                 Download PDF
               </Button>
-              {invoice.status === 'draft' && (
-                <Button size="sm">
-                  <Send className="size-4 mr-1.5" />
-                  Send via Xero
+              {invoice.xeroInvoiceId ? (
+                <Badge className="bg-blue-500/10 text-blue-600 border-blue-200">
+                  <Check className="size-3 mr-1" />
+                  In Xero
+                </Badge>
+              ) : (
+                <Button size="sm" onClick={handlePushToXero} disabled={pushToXero.isPending}>
+                  {pushToXero.isPending ? (
+                    <Loader2 className="size-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Send className="size-4 mr-1.5" />
+                  )}
+                  Push to Xero
                 </Button>
               )}
             </div>

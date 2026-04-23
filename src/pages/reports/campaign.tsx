@@ -70,7 +70,7 @@ export function CampaignReportPage() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis type="number" tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
                   <YAxis type="category" dataKey="campaignName" width={160} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => [fmt(v), '']} />
+                  <Tooltip formatter={(v) => [fmt(Number(v)), '']} />
                   <Legend />
                   <Bar dataKey="revenue" fill="#171717" name="Revenue" radius={[0, 4, 4, 0]} />
                   <Bar dataKey="cost" fill="#a3a3a3" name="Cost" radius={[0, 4, 4, 0]} />

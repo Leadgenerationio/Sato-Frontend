@@ -147,10 +147,15 @@ export function InvoiceListPage() {
                       <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                       <TableCell className="text-muted-foreground">{inv.clientName}</TableCell>
                       <TableCell>
-                        <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
-                          {inv.status}
-                          {inv.daysOverdue > 0 && ` (${inv.daysOverdue}d)`}
-                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
+                            {inv.status}
+                            {inv.daysOverdue > 0 && ` (${inv.daysOverdue}d)`}
+                          </Badge>
+                          {inv.xeroInvoiceId && (
+                            <Badge className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Xero</Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{formatCurrency(inv.subtotal, inv.currency)}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatCurrency(inv.vatAmount, inv.currency)}</TableCell>

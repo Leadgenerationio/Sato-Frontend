@@ -80,7 +80,7 @@ function SendDialog() {
         documentBase64,
         documentName: file.name,
       });
-      toast.success('Envelope sent to DocuSign.');
+      toast.success('Envelope sent via SignNow.');
       setOpen(false);
       reset();
     } catch (err: unknown) {
@@ -102,7 +102,7 @@ function SendDialog() {
           <DialogHeader>
             <DialogTitle>Send agreement for signature</DialogTitle>
             <DialogDescription>
-              A DocuSign envelope will be created and emailed to the signer. Status will update here once they sign.
+              A SignNow envelope will be created and emailed to the signer. Status will update here once they sign.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
@@ -199,7 +199,7 @@ export function AgreementsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Agreements"
-        description="DocuSign service agreements sent to clients"
+        description="Service agreements sent to clients via SignNow"
       />
 
       <Card>

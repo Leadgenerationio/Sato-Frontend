@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/components/layouts/page-header';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,9 +11,20 @@ import {
   useLbSummary,
   useLbCampaignReport,
   useLbSupplierSpend,
+  useLbManualSync,
   LB_WINDOW_LABELS,
   type LbWindow,
 } from '@/lib/hooks/use-leadbyte';
+
+function formatRelativeTime(date: Date | null): string {
+  if (!date) return 'never';
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.floor(minutes / 60)}h ago`;
+}
 
 function formatMoney(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value || 0);
@@ -34,13 +48,34 @@ function StatCard({ label, value, subValue }: { label: string; value: string; su
 
 export function LeadByteDashboardPage() {
   const [window, setWindow] = useState<LbWindow>('today');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [, forceRender] = useState(0);
 
   const summary = useLbSummary(window);
   const campaigns = useLbCampaignReport(window);
   const suppliers = useLbSupplierSpend(window);
+  const manualSync = useLbManualSync();
 
   const totals = summary.data;
   const currency = totals?.currency || 'GBP';
+
+  useEffect(() => {
+    if (summary.dataUpdatedAt) setLastUpdated(new Date(summary.dataUpdatedAt));
+  }, [summary.dataUpdatedAt]);
+
+  useEffect(() => {
+    const t = setInterval(() => forceRender((n) => n + 1), 5_000);
+    return () => clearInterval(t);
+  }, []);
+
+  async function handleRefreshNow() {
+    try {
+      await manualSync.mutateAsync();
+      toast.success('Sync queued — refreshing data in a moment');
+    } catch {
+      toast.error('Failed to queue sync');
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -52,8 +87,20 @@ export function LeadByteDashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm font-medium text-muted-foreground" data-testid="lb-window-label">
           Showing: <span className="text-foreground">{LB_WINDOW_LABELS[window]}</span>
+          <span className="ml-3 text-xs">Updated {formatRelativeTime(lastUpdated)}</span>
         </div>
-        <LbWindowSelector value={window} onChange={setWindow} />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefreshNow}
+            disabled={manualSync.isPending}
+          >
+            <RefreshCw className={`size-4 mr-1.5 ${manualSync.isPending ? 'animate-spin' : ''}`} />
+            {manualSync.isPending ? 'Syncing…' : 'Refresh now'}
+          </Button>
+          <LbWindowSelector value={window} onChange={setWindow} />
+        </div>
       </div>
 
       {/* Top-line stats */}

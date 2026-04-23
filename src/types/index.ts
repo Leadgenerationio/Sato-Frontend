@@ -8,6 +8,7 @@ export interface User {
   businessId: string | null;
   clientId: string | null;
   isActive: boolean;
+  isPrimaryOwner?: boolean;
 }
 
 export interface AuthTokens {

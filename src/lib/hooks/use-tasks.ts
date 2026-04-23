@@ -122,7 +122,7 @@ export function useUpdateTaskStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await api.put<{ task: TaskDetail }>(`/api/v1/tasks/${id}/status`, { status });
+      const res = await api.patch<{ task: TaskDetail }>(`/api/v1/tasks/${id}/status`, { status });
       return res.data!.task;
     },
     onSuccess: (_, { id }) => {

@@ -1,8 +1,7 @@
-import { Suspense } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/layouts/page-header';
 import { DashboardSkeleton } from '@/components/shared/loading-skeleton';
-import { WidgetContainer, StatSkeleton, WidgetSkeleton } from '@/components/dashboard/widget-container';
+import { WidgetContainer, WidgetSkeleton } from '@/components/dashboard/widget-container';
 import { BankWidget } from '@/components/dashboard/bank-widget';
 import { OverdueWidget } from '@/components/dashboard/overdue-widget';
 import { VatWidget } from '@/components/dashboard/vat-widget';

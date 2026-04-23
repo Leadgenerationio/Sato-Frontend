@@ -23,8 +23,8 @@ export function TaskSummaryWidget() {
   if (!stats) return null;
 
   const items = [
-    { label: 'In Progress', value: stats.in_progress, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-    { label: 'Completed', value: stats.completed, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+    { label: 'Completed Today', value: stats.completedToday, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
     { label: 'Overdue', value: stats.overdue, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-500/10' },
   ];
 

@@ -81,3 +81,4 @@ src/
   main.tsx       # App entrypoint
   App.tsx        # Router and provider setup
 ```
+`

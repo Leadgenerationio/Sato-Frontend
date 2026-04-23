@@ -54,7 +54,7 @@ export function ClientPnlReportPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => [fmt(v), '']} />
+                <Tooltip formatter={(v) => [fmt(Number(v)), '']} />
                 <Legend />
                 {clients.map((c, i) => (
                   <Bar key={c} dataKey={c} fill={colors[i % colors.length]} stackId="a" />

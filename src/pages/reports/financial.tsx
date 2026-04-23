@@ -50,7 +50,7 @@ export function FinancialReportPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => [fmt(v), '']} />
+                <Tooltip formatter={(v) => [fmt(Number(v)), '']} />
                 <Legend />
                 <Area type="monotone" dataKey="revenue" stroke="#171717" fill="#171717" fillOpacity={0.1} name="Revenue" />
                 <Area type="monotone" dataKey="expenses" stroke="#a3a3a3" fill="#a3a3a3" fillOpacity={0.1} name="Expenses" />

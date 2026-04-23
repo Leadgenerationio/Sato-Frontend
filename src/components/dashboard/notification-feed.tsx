@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  FileText, Users, Megaphone, Shield, AlertTriangle, CreditCard, Bell, CheckCircle2,
+  FileText, Users, Megaphone, Shield, CreditCard, Bell, CheckCircle2,
 } from 'lucide-react';
 
 interface Notification {

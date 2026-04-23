@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Plus, Users, ShieldAlert } from 'lucide-react';
+import { Search, ExternalLink, Plus, Users } from 'lucide-react';
 import { useClients, type ClientSummary } from '@/lib/hooks/use-clients';
 import { Pagination } from '@/components/ui/pagination';
 

@@ -3,10 +3,9 @@ import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  ArrowLeft, CheckCircle2, XCircle, Clock, Pause, Play, ArrowRight, Loader2,
+  ArrowLeft, CheckCircle2, XCircle, Clock, Pause, Play, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkflow, useToggleWorkflowStatus, useExecuteWorkflow } from '@/lib/hooks/use-workflows';

@@ -22,6 +22,7 @@ export interface InvoiceSummary {
   paidDate: string | null;
   daysOverdue: number;
   createdAt: string;
+  xeroInvoiceId: string | null;
 }
 
 export interface InvoiceDetail extends InvoiceSummary {
@@ -95,6 +96,20 @@ export function useCreateInvoice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+}
+
+export function usePushInvoiceToXero() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const res = await api.post<{ invoice: InvoiceDetail }>(`/api/v1/invoices/${invoiceId}/push-to-xero`);
+      return res.data!.invoice;
+    },
+    onSuccess: (_, invoiceId) => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
     },
   });
 }

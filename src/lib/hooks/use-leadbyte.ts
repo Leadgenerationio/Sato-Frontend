@@ -352,10 +352,15 @@ export interface LbSupplierSpendRow {
   cpl: number;
 }
 
+// Live dashboard polls every 30s so data stays close to the 2-min backend sync.
+const LIVE_REFETCH_MS = 30_000;
+
 export function useLbSummary(window: LbWindow) {
   return useQuery<LbSummaryTotals>({
     queryKey: ['lb-summary', window],
     queryFn: () => unwrap(api.get<Wrap<LbSummaryTotals>>(`${BASE}/reports/summary?window=${window}`)),
+    refetchInterval: LIVE_REFETCH_MS,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -363,6 +368,8 @@ export function useLbCampaignReport(window: LbWindow) {
   return useQuery<LbCampaignRow[]>({
     queryKey: ['lb-campaign-report', window],
     queryFn: () => unwrap(api.get<Wrap<LbCampaignRow[]>>(`${BASE}/reports/campaign?window=${window}`)),
+    refetchInterval: LIVE_REFETCH_MS,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -370,5 +377,26 @@ export function useLbSupplierSpend(window: LbWindow) {
   return useQuery<LbSupplierSpendRow[]>({
     queryKey: ['lb-supplier-spend', window],
     queryFn: () => unwrap(api.get<Wrap<LbSupplierSpendRow[]>>(`${BASE}/reports/supplier-spend?window=${window}`)),
+    refetchInterval: LIVE_REFETCH_MS,
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * Manually enqueue a LeadByte sync. The backend job usually completes in
+ * ~3 seconds; caller should invalidate the lb-* queries after a short delay.
+ */
+export function useLbManualSync() {
+  const qc = useQueryClient();
+  return useMutation<{ jobId: string; enqueuedAt: string }>({
+    mutationFn: () =>
+      unwrap(api.post<Wrap<{ jobId: string; enqueuedAt: string }>>('/api/v1/integrations/leadbyte/sync')),
+    onSuccess: () => {
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ['lb-summary'] });
+        qc.invalidateQueries({ queryKey: ['lb-campaign-report'] });
+        qc.invalidateQueries({ queryKey: ['lb-supplier-spend'] });
+      }, 3000);
+    },
   });
 }

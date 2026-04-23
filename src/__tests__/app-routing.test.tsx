@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, Outlet } from 'react-router-dom';
 
 // Mock auth state
 const mockUseAuth = vi.fn();
@@ -23,10 +23,9 @@ import { NotFoundPage } from '@/pages/not-found';
 const DashboardPage = () => <div data-testid="dashboard-page">Dashboard</div>;
 const LoginPage = () => <div data-testid="login-page">Login</div>;
 const SettingsPage = () => <div data-testid="settings-page">Settings</div>;
-const DashboardLayout = ({ children }: { children?: React.ReactNode }) => {
-  const { Outlet } = require('react-router-dom');
-  return <div data-testid="dashboard-layout"><Outlet /></div>;
-};
+const DashboardLayout = () => (
+  <div data-testid="dashboard-layout"><Outlet /></div>
+);
 
 function renderApp(initialRoute: string) {
   return render(
