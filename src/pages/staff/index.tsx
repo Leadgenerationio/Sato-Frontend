@@ -239,16 +239,17 @@ function CreateJobDialog() {
 
 function RequestHolidayDialog() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ staffId: 's-1', staffName: 'Sam Carter', type: 'annual' as const, startDate: '', endDate: '' });
+  const [form, setForm] = useState({ staffId: '', staffName: '', type: 'annual' as const, startDate: '', endDate: '' });
   const { data: staff } = useStaffList();
   const createHoliday = useCreateHolidayRequest();
 
   async function handleSubmit() {
+    if (!form.staffId) { toast.error('Pick a staff member'); return; }
     if (!form.startDate || !form.endDate) { toast.error('Dates required'); return; }
     try {
       await createHoliday.mutateAsync(form);
       toast.success('Holiday request submitted');
-      setForm({ staffId: 's-1', staffName: 'Sam Carter', type: 'annual', startDate: '', endDate: '' });
+      setForm({ staffId: '', staffName: '', type: 'annual', startDate: '', endDate: '' });
       setOpen(false);
     } catch { toast.error('Failed to submit'); }
   }

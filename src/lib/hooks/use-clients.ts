@@ -127,3 +127,20 @@ export function useRunCreditCheck() {
     },
   });
 }
+
+export interface CreditAlert {
+  clientId: string;
+  clientName: string;
+  scoreChange: number;
+  currentScore: number;
+}
+
+export function useCreditAlerts() {
+  return useQuery({
+    queryKey: ['credit-alerts'],
+    queryFn: async () => {
+      const res = await api.get<{ alerts: CreditAlert[] }>('/api/v1/clients/credit-alerts');
+      return res.data!.alerts;
+    },
+  });
+}
