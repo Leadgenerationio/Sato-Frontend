@@ -63,3 +63,13 @@ export function useFileUpload() {
     },
   });
 }
+
+/**
+ * Fetches a fresh 1-hour signed download URL for a previously-uploaded file.
+ * Use when reopening a stored doc after the original presign URL expired.
+ */
+export async function fetchFreshDownloadUrl(folder: UploadFolder, key: string): Promise<string> {
+  const qs = new URLSearchParams({ folder, key });
+  const res = await unwrap<{ url: string }>(api.get(`/api/v1/uploads/signed-url?${qs.toString()}`));
+  return res.url;
+}

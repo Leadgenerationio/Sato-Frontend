@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,9 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Building, Mail, Phone, MapPin, Shield, FileText, Megaphone,
   CreditCard, ClipboardCheck, Loader2, TrendingDown, TrendingUp, AlertTriangle, Link2,
+  Download, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClient, useCreditHistory, useRunCreditCheck } from '@/lib/hooks/use-clients';
+import { FileUpload } from '@/components/shared/file-upload';
+import { fetchFreshDownloadUrl } from '@/lib/hooks/use-uploads';
 
 const statusColors: Record<string, string> = {
   prospect: 'bg-blue-500/10 text-blue-600 border-blue-200',
@@ -95,6 +99,7 @@ export function ClientDetailPage() {
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="credit">Credit</TabsTrigger>
           <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -310,7 +315,159 @@ export function ClientDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="mt-6">
+          <DocumentsTab clientId={id!} />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ─── Documents tab (R2-backed) ──────────────────────────────────────────────
+//
+// Files are uploaded to Cloudflare R2 via the shared <FileUpload> component.
+// File metadata (key, name, size, contentType, uploadedAt) is persisted in
+// localStorage keyed by clientId — this is intentional MVP scope. When the
+// `clients` table grows a `documents` JSONB column (or a `client_documents`
+// table), swap the localStorage helpers for a real React Query hook against
+// `/api/v1/clients/:id/documents` — the rest of this component stays the same.
+
+interface ClientDocument {
+  key: string;
+  folder: 'misc';
+  name: string;
+  size: number;
+  contentType: string;
+  uploadedAt: string;
+}
+
+const DOCS_LS_KEY = (clientId: string) => `stato:client-docs:${clientId}`;
+
+function loadDocs(clientId: string): ClientDocument[] {
+  try {
+    const raw = localStorage.getItem(DOCS_LS_KEY(clientId));
+    return raw ? (JSON.parse(raw) as ClientDocument[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDocs(clientId: string, docs: ClientDocument[]) {
+  localStorage.setItem(DOCS_LS_KEY(clientId), JSON.stringify(docs));
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function DocumentsTab({ clientId }: { clientId: string }) {
+  const [docs, setDocs] = useState<ClientDocument[]>(() => loadDocs(clientId));
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDocs(loadDocs(clientId));
+  }, [clientId]);
+
+  const handleUploaded = (
+    result: { key: string; folder: string; contentType: string; sizeBytes: number },
+    file: File,
+  ) => {
+    const newDoc: ClientDocument = {
+      key: result.key,
+      folder: 'misc',
+      name: file.name,
+      size: result.sizeBytes,
+      contentType: result.contentType,
+      uploadedAt: new Date().toISOString(),
+    };
+    const updated = [newDoc, ...docs];
+    setDocs(updated);
+    saveDocs(clientId, updated);
+  };
+
+  const handleDownload = async (doc: ClientDocument) => {
+    try {
+      setDownloadingKey(doc.key);
+      const url = await fetchFreshDownloadUrl(doc.folder, doc.key);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      toast.error('Failed to generate download link');
+    } finally {
+      setDownloadingKey(null);
+    }
+  };
+
+  const handleRemove = (key: string) => {
+    const updated = docs.filter((d) => d.key !== key);
+    setDocs(updated);
+    saveDocs(clientId, updated);
+    toast.info('Removed from list. File still exists in storage.');
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-base">Client Documents</CardTitle>
+          <CardDescription>
+            Due-diligence documents, contracts, and other client files. Stored in Cloudflare R2.
+          </CardDescription>
+        </div>
+        <FileUpload
+          folder="misc"
+          maxSizeMB={50}
+          label="Upload document"
+          onUploaded={handleUploaded}
+        />
+      </CardHeader>
+      <CardContent>
+        {docs.length === 0 ? (
+          <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
+            No documents uploaded yet. Use the button above to add one.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {docs.map((d) => (
+              <div key={d.key} className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <FileText className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium" title={d.name}>{d.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBytes(d.size)} · uploaded {formatDate(d.uploadedAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDownload(d)}
+                    disabled={downloadingKey === d.key}
+                    aria-label="Download"
+                  >
+                    {downloadingKey === d.key ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemove(d.key)}
+                    aria-label="Remove from list"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
