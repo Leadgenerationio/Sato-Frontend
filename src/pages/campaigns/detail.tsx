@@ -15,6 +15,11 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts';
 import { useCampaign, useTrafficSources } from '@/lib/hooks/use-campaigns';
+import { useCreatives, useCreateCreative, useDeleteCreative } from '@/lib/hooks/use-creatives';
+import { FileUpload } from '@/components/shared/file-upload';
+import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
+import { Image as ImageIcon, Video, FileText, Download, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 type DeliveryWindow = 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'ytd';
 
@@ -285,6 +290,7 @@ export function CampaignDetailPage() {
       )}
 
       <TrafficSourcesCard campaignId={campaign.id} />
+      <CreativesCard campaignId={campaign.id} />
     </div>
   );
 }
@@ -362,6 +368,115 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
             ))}
           </TableBody>
         </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CreativesCard({ campaignId }: { campaignId: string }) {
+  const { data: creatives = [], isLoading } = useCreatives(campaignId);
+  const create = useCreateCreative(campaignId);
+  const remove = useDeleteCreative(campaignId);
+
+  const guessTypeFromContentType = (ct: string): 'image' | 'video' | 'text' => {
+    if (ct.startsWith('image/')) return 'image';
+    if (ct.startsWith('video/')) return 'video';
+    return 'text';
+  };
+
+  const handleUploaded = async (result: PresignedUpload, file: File) => {
+    try {
+      await create.mutateAsync({
+        name: file.name,
+        type: guessTypeFromContentType(result.contentType),
+        r2Key: result.key,
+        fileUrl: result.downloadUrl, // Initial signed URL, refreshed via fetchFreshDownloadUrl on view.
+        sizeBytes: result.sizeBytes,
+        contentType: result.contentType,
+      });
+      toast.success(`Uploaded ${file.name}`);
+    } catch {
+      toast.error('Failed to upload creative');
+    }
+  };
+
+  const handleView = async (key: string | null) => {
+    if (!key) return;
+    try {
+      const url = await fetchFreshDownloadUrl('misc', key);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      toast.error('Failed to generate link');
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      await remove.mutateAsync(id);
+      toast.info('Removed (file kept in storage)');
+    } catch {
+      toast.error('Failed to remove');
+    }
+  };
+
+  const iconFor = (type: string) => {
+    if (type === 'image') return ImageIcon;
+    if (type === 'video') return Video;
+    return FileText;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-base">Creatives</CardTitle>
+          <CardDescription>
+            Ad assets running on this campaign. Visible to the client in the Compliance tab of their portal.
+          </CardDescription>
+        </div>
+        <FileUpload folder="misc" maxSizeMB={50} label="Upload creative" onUploaded={handleUploaded} />
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-8 text-muted-foreground">
+            <Loader2 className="size-5 animate-spin" />
+          </div>
+        ) : creatives.length === 0 ? (
+          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            No creatives uploaded yet.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {creatives.map((c) => {
+              const Icon = iconFor(c.type);
+              return (
+                <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                      <Icon className="size-4 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium" title={c.name}>{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="text-xs capitalize mr-1.5">{c.type}</Badge>
+                        v{c.version} · {c.sizeBytes ? `${(c.sizeBytes / 1024).toFixed(0)} KB · ` : ''}
+                        {new Date(c.uploadedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleView(c.r2Key)} aria-label="View" disabled={!c.r2Key}>
+                      <Download className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleRemove(c.id)} aria-label="Remove">
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
