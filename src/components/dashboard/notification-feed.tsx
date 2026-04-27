@@ -1,49 +1,53 @@
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
-  FileText, Users, Megaphone, Shield, CreditCard, Bell, CheckCircle2,
+  FileText, Users, Megaphone, Shield, CreditCard, Bell, CheckCircle2, AlertTriangle,
 } from 'lucide-react';
+import { useNotifications, type NotificationType } from '@/lib/hooks/use-notifications';
 
-interface Notification {
-  id: string;
-  type: 'invoice' | 'client' | 'campaign' | 'credit' | 'payment' | 'system' | 'workflow';
-  message: string;
-  time: string;
-  read: boolean;
+const typeIcons: Record<NotificationType, React.ElementType> = {
+  invoice_overdue: FileText,
+  credit_alert: Shield,
+  workflow_complete: CheckCircle2,
+  payment_received: CreditCard,
+  onboarding_update: Users,
+  lead_delivery: Megaphone,
+  vat_shortfall: AlertTriangle,
+  agreement_signed: CheckCircle2,
+  system_error: Bell,
+};
+
+const typeColors: Record<NotificationType, string> = {
+  invoice_overdue: 'bg-red-500/10 text-red-600',
+  credit_alert: 'bg-red-500/10 text-red-600',
+  workflow_complete: 'bg-amber-500/10 text-amber-600',
+  payment_received: 'bg-emerald-500/10 text-emerald-600',
+  onboarding_update: 'bg-indigo-500/10 text-indigo-600',
+  lead_delivery: 'bg-emerald-500/10 text-emerald-600',
+  vat_shortfall: 'bg-red-500/10 text-red-600',
+  agreement_signed: 'bg-emerald-500/10 text-emerald-600',
+  system_error: 'bg-neutral-500/10 text-neutral-500',
+};
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  const diffMs = Date.now() - then;
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
+  const day = Math.floor(hr / 24);
+  return `${day} day${day === 1 ? '' : 's'} ago`;
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  { id: 'n-1', type: 'invoice', message: 'Invoice INV-1050 created for Apex Media Ltd', time: '5 min ago', read: false },
-  { id: 'n-2', type: 'payment', message: 'Payment received: £3,200.00 from Clearwater Digital', time: '25 min ago', read: false },
-  { id: 'n-3', type: 'credit', message: 'Credit alert: Delta Solutions score dropped to 42', time: '1 hour ago', read: false },
-  { id: 'n-4', type: 'campaign', message: 'Campaign "Solar Panel Leads UK" delivered 35 leads today', time: '2 hours ago', read: true },
-  { id: 'n-5', type: 'workflow', message: 'Weekly Auto-Invoice completed — 3 invoices created', time: '3 hours ago', read: true },
-  { id: 'n-6', type: 'client', message: 'New client "GreenTech Solar" started onboarding', time: '5 hours ago', read: true },
-  { id: 'n-7', type: 'system', message: 'LeadByte sync completed — 8 campaigns updated', time: '6 hours ago', read: true },
-];
-
-const typeIcons: Record<string, React.ElementType> = {
-  invoice: FileText,
-  client: Users,
-  campaign: Megaphone,
-  credit: Shield,
-  payment: CreditCard,
-  system: Bell,
-  workflow: CheckCircle2,
-};
-
-const typeColors: Record<string, string> = {
-  invoice: 'bg-blue-500/10 text-blue-600',
-  client: 'bg-indigo-500/10 text-indigo-600',
-  campaign: 'bg-emerald-500/10 text-emerald-600',
-  credit: 'bg-red-500/10 text-red-600',
-  payment: 'bg-emerald-500/10 text-emerald-600',
-  system: 'bg-neutral-500/10 text-neutral-500',
-  workflow: 'bg-amber-500/10 text-amber-600',
-};
-
 export function NotificationFeed() {
-  const unread = MOCK_NOTIFICATIONS.filter((n) => !n.read).length;
+  const { data, isLoading } = useNotifications({ limit: 7 });
+
+  const all = data?.notifications ?? [];
+  const unread = all.filter((n) => !n.read).length;
 
   return (
     <Card>
@@ -51,7 +55,7 @@ export function NotificationFeed() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base">Notifications</CardTitle>
-            <CardDescription>{unread} unread</CardDescription>
+            <CardDescription>{isLoading ? 'Loading…' : `${unread} unread`}</CardDescription>
           </div>
           {unread > 0 && (
             <Badge className="bg-red-500 text-white text-xs">{unread}</Badge>
@@ -59,7 +63,17 @@ export function NotificationFeed() {
         </div>
       </CardHeader>
       <CardContent className="space-y-1">
-        {MOCK_NOTIFICATIONS.map((n) => {
+        {isLoading && (
+          <div className="space-y-2 py-1">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        )}
+        {!isLoading && all.length === 0 && (
+          <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
+            No notifications yet.
+          </div>
+        )}
+        {!isLoading && all.map((n) => {
           const Icon = typeIcons[n.type] || Bell;
           return (
             <div key={n.id} className={`flex items-start gap-3 rounded-lg p-2 ${!n.read ? 'bg-muted/50' : ''}`}>
@@ -67,13 +81,20 @@ export function NotificationFeed() {
                 <Icon className="size-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm leading-relaxed ${!n.read ? 'font-medium' : 'text-muted-foreground'}`}>{n.message}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{n.time}</p>
+                <p className={`text-sm leading-relaxed ${!n.read ? 'font-medium' : 'text-muted-foreground'}`}>
+                  {n.message}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{relativeTime(n.createdAt)}</p>
               </div>
               {!n.read && <div className="size-2 rounded-full bg-blue-500 mt-2 shrink-0" />}
             </div>
           );
         })}
+        {!isLoading && all.length > 0 && (
+          <Link to="/notifications" className="block text-center text-xs text-primary hover:underline pt-2">
+            View all →
+          </Link>
+        )}
       </CardContent>
     </Card>
   );
