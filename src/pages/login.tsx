@@ -4,8 +4,6 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Eye,
   EyeOff,
@@ -14,17 +12,10 @@ import {
   Zap,
   TrendingUp,
   Lock,
+  Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo, LogoWhite } from '@/components/shared/logo';
-
-const demoAccounts = [
-  { email: 'owner@stato.app', password: 'owner123', role: 'owner', color: 'bg-neutral-600' },
-  { email: 'finance@stato.app', password: 'finance123', role: 'finance_admin', color: 'bg-emerald-600' },
-  { email: 'ops@stato.app', password: 'ops123', role: 'ops_manager', color: 'bg-neutral-500' },
-  { email: 'client@stato.app', password: 'client123', role: 'client', color: 'bg-amber-600' },
-  { email: 'readonly@stato.app', password: 'readonly123', role: 'readonly', color: 'bg-neutral-400' },
-];
 
 const features = [
   { icon: TrendingUp, title: 'Real-time Analytics', desc: 'Track revenue, leads and campaigns live' },
@@ -41,7 +32,6 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<number | null>(null);
 
   if (user) return <Navigate to={user.role === 'client' ? '/portal' : '/'} replace />;
 
@@ -55,19 +45,11 @@ export function LoginPage() {
 
     if (err) {
       setError(err);
-      setSelectedAccount(null);
       toast.error('Login failed', { description: err });
     } else {
       toast.success('Welcome back!', { description: 'You have been signed in successfully.' });
       navigate(loggedInUser?.role === 'client' ? '/portal' : '/');
     }
-  }
-
-  function fillDemo(account: typeof demoAccounts[number], index: number) {
-    setEmail(account.email);
-    setPassword(account.password);
-    setSelectedAccount(index);
-    setError('');
   }
 
   return (
@@ -232,41 +214,27 @@ export function LoginPage() {
               </form>
             </div>
 
-            {/* Demo accounts */}
+            {/* Need access? */}
             <div className="px-8 pb-8 animate-slide-up delay-500">
-              <div className="relative">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-neutral-400">
-                  or try a demo account
-                </span>
-              </div>
-
-              <div className="mt-6 space-y-2">
-                {demoAccounts.map((account, i) => (
-                  <button
-                    key={account.email}
-                    type="button"
-                    onClick={() => fillDemo(account, i)}
-                    className={`group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all duration-200 ${
-                      selectedAccount === i
-                        ? 'border-neutral-900 bg-neutral-50 shadow-sm'
-                        : 'border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300'
-                    }`}
-                  >
-                    <div className={`flex size-8 shrink-0 items-center justify-center rounded-full ${account.color} text-white text-xs font-bold transition-transform group-hover:scale-110`}>
-                      {account.role[0].toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-neutral-700 truncate">{account.email}</p>
-                    </div>
-                    <Badge variant="secondary" className="shrink-0 capitalize text-[10px] px-2">
-                      {account.role.replace('_', ' ')}
-                    </Badge>
-                    {selectedAccount === i && (
-                      <div className="size-2 rounded-full bg-neutral-900 animate-pulse shrink-0" />
-                    )}
-                  </button>
-                ))}
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 text-center">
+                <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-white shadow-sm">
+                  <Mail className="size-5 text-neutral-600" />
+                </div>
+                <p className="mt-3 text-sm font-medium text-neutral-800">
+                  Need an account?
+                </p>
+                <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+                  Stato is currently invite-only.
+                  <br />
+                  Contact the Octogle Team to be added to your business.
+                </p>
+                <a
+                  href="mailto:hello@octogle.com?subject=Stato%20access%20request"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-800 transition-colors hover:border-neutral-900"
+                >
+                  <Mail className="size-3.5" />
+                  Email the Octogle Team
+                </a>
               </div>
             </div>
           </div>
