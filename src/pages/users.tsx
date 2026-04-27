@@ -24,7 +24,7 @@ interface PermissionEntry {
   access: Record<UserRole, boolean>;
 }
 
-const API_URL = 'http://localhost:3001';
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
 
 interface UserItem {
   id: string;

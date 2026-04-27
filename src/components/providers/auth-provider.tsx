@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { api } from '@/lib/api';
 import type { User, AuthTokens, ApiResponse } from '@/types';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
 
 interface AuthContextType {
   user: User | null;
