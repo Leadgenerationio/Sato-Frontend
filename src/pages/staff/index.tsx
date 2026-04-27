@@ -14,14 +14,18 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   Users, UserCheck, Briefcase, Calendar, ChevronDown, ChevronRight, Check, X, Plus, Loader2, Pencil, Network,
+  FileText, Download, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useStaffList, useStaffStats, useJobPostings, useApplicants,
   useHolidayRequests, useApproveHolidayRequest, useRejectHolidayRequest,
   useCreateStaff, useUpdateStaff, useCreateJobPosting, useCreateHolidayRequest,
+  useStaffDocuments, useAddStaffDocument, useRemoveStaffDocument,
   type JobPosting, type Applicant, type StaffMember,
 } from '@/lib/hooks/use-staff';
+import { FileUpload } from '@/components/shared/file-upload';
+import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
 
 // ─── Helpers ───
 
@@ -619,6 +623,7 @@ export function StaffPage() {
           <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="recruitment">Recruitment</TabsTrigger>
           <TabsTrigger value="holidays">Holidays</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
         <TabsContent value="team">
           <div className="flex justify-end mb-4"><AddStaffDialog /></div>
@@ -632,7 +637,117 @@ export function StaffPage() {
           <div className="flex justify-end mb-4"><RequestHolidayDialog /></div>
           <HolidaysTab />
         </TabsContent>
+        <TabsContent value="documents">
+          <DocumentsTab />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function StaffDocumentsTab({ staffId }: { staffId: string }) {
+  const { data: documents = [], isLoading } = useStaffDocuments(staffId);
+  const add = useAddStaffDocument(staffId);
+  const remove = useRemoveStaffDocument(staffId);
+
+  const handleUploaded = async (result: PresignedUpload, file: File) => {
+    try {
+      await add.mutateAsync({ key: result.key, name: file.name, size: result.sizeBytes, contentType: result.contentType });
+      toast.success(`Uploaded ${file.name}`);
+    } catch { toast.error('Failed to upload'); }
+  };
+
+  const handleDownload = async (key: string) => {
+    try {
+      const url = await fetchFreshDownloadUrl('misc', key);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch { toast.error('Failed to generate link'); }
+  };
+
+  const handleRemove = async (key: string) => {
+    try {
+      await remove.mutateAsync(key);
+      toast.info('Removed');
+    } catch { toast.error('Failed to remove'); }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-base">Staff documents</CardTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Contracts, NDAs, payslips. Stored in Cloudflare R2.
+          </p>
+        </div>
+        <FileUpload folder="misc" maxSizeMB={50} label="Upload document" onUploaded={handleUploaded} />
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
+        ) : documents.length === 0 ? (
+          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            No documents yet for this staff member.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {documents.map((d) => (
+              <div key={d.key} className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <FileText className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium" title={d.name}>{d.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(d.size / 1024).toFixed(1)} KB · {new Date(d.uploadedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => handleDownload(d.key)} aria-label="Download">
+                    <Download className="size-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemove(d.key)} aria-label="Remove">
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DocumentsTab() {
+  const { data: staffList = [] } = useStaffList();
+  const [selectedId, setSelectedId] = useState(staffList[0]?.id ?? '');
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="staff-select">Staff member</Label>
+        <select
+          id="staff-select"
+          value={selectedId}
+          onChange={(e) => setSelectedId(e.target.value)}
+          className="flex h-9 w-full max-w-xs rounded-md border border-input bg-background px-3 text-sm"
+        >
+          <option value="">Select a staff member…</option>
+          {staffList.map((s) => (
+            <option key={s.id} value={s.id}>{s.name} — {s.role}</option>
+          ))}
+        </select>
+      </div>
+      {selectedId ? (
+        <StaffDocumentsTab staffId={selectedId} />
+      ) : (
+        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+          Pick a staff member above to manage their documents.
+        </div>
+      )}
     </div>
   );
 }

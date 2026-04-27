@@ -25,12 +25,22 @@ export interface InvoiceSummary {
   xeroInvoiceId: string | null;
 }
 
+export interface InvoiceAttachment {
+  key: string;
+  name: string;
+  size: number;
+  contentType: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+}
+
 export interface InvoiceDetail extends InvoiceSummary {
   lineItems: LineItem[];
   chaseCount: number;
   lastChasedAt: string | null;
   clientEmail: string;
   vatRegistered: boolean;
+  attachments: InvoiceAttachment[];
 }
 
 export interface InvoiceClient {
@@ -109,6 +119,37 @@ export function usePushInvoiceToXero() {
     },
     onSuccess: (_, invoiceId) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+    },
+  });
+}
+
+export function useAddInvoiceAttachment(invoiceId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (attachment: { key: string; name: string; size: number; contentType: string }) => {
+      const res = await api.post<{ invoice: InvoiceDetail }>(
+        `/api/v1/invoices/${invoiceId}/attachments`,
+        attachment,
+      );
+      return res.data!.invoice;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+    },
+  });
+}
+
+export function useRemoveInvoiceAttachment(invoiceId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (key: string) => {
+      const res = await api.delete<{ invoice: InvoiceDetail }>(
+        `/api/v1/invoices/${invoiceId}/attachments/${encodeURIComponent(key)}`,
+      );
+      return res.data!.invoice;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
     },
   });

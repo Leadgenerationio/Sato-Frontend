@@ -8,9 +8,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from '@/components/ui/table';
-import { ArrowLeft, Send, Download, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Download, Check, Loader2, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useInvoice, usePushInvoiceToXero, type InvoiceDetail } from '@/lib/hooks/use-invoices';
+import {
+  useInvoice,
+  usePushInvoiceToXero,
+  useAddInvoiceAttachment,
+  useRemoveInvoiceAttachment,
+  type InvoiceDetail,
+} from '@/lib/hooks/use-invoices';
+import { FileUpload } from '@/components/shared/file-upload';
+import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
@@ -285,6 +293,98 @@ export function InvoiceDetailPage() {
           </Card>
         </div>
       </div>
+
+      <InvoiceAttachments invoice={invoice} />
     </div>
+  );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
+  const add = useAddInvoiceAttachment(invoice.id);
+  const remove = useRemoveInvoiceAttachment(invoice.id);
+
+  const handleUploaded = async (result: PresignedUpload, file: File) => {
+    try {
+      await add.mutateAsync({
+        key: result.key,
+        name: file.name,
+        size: result.sizeBytes,
+        contentType: result.contentType,
+      });
+      toast.success(`Attached ${file.name}`);
+    } catch {
+      toast.error('Failed to attach');
+    }
+  };
+
+  const handleDownload = async (key: string) => {
+    try {
+      const url = await fetchFreshDownloadUrl('misc', key);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      toast.error('Failed to generate download link');
+    }
+  };
+
+  const handleRemove = async (key: string) => {
+    try {
+      await remove.mutateAsync(key);
+      toast.info('Attachment removed');
+    } catch {
+      toast.error('Failed to remove');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-base">Attachments</CardTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Receipts, proof of payment, supporting documents. Stored in Cloudflare R2.
+          </p>
+        </div>
+        <FileUpload folder="misc" maxSizeMB={50} label="Attach file" onUploaded={handleUploaded} />
+      </CardHeader>
+      <CardContent>
+        {invoice.attachments.length === 0 ? (
+          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            No attachments yet.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {invoice.attachments.map((a) => (
+              <div key={a.key} className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <FileText className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium" title={a.name}>{a.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBytes(a.size)} · {new Date(a.uploadedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => handleDownload(a.key)} aria-label="Download">
+                    <Download className="size-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemove(a.key)} aria-label="Remove">
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

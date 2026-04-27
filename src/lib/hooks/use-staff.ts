@@ -108,6 +108,51 @@ export function useStaffMember(id: string) {
   });
 }
 
+export interface StaffDocument {
+  key: string;
+  name: string;
+  size: number;
+  contentType: string;
+  category?: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+}
+
+export function useStaffDocuments(staffId: string) {
+  return useQuery({
+    queryKey: ['staff-documents', staffId],
+    queryFn: async () => {
+      const res = await api.get<{ documents: StaffDocument[] }>(`/api/v1/hr/staff/${staffId}/documents`);
+      return res.data!.documents;
+    },
+    enabled: !!staffId,
+  });
+}
+
+export function useAddStaffDocument(staffId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (doc: { key: string; name: string; size: number; contentType: string; category?: string }) => {
+      const res = await api.post<{ documents: StaffDocument[] }>(`/api/v1/hr/staff/${staffId}/documents`, doc);
+      return res.data!.documents;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff-documents', staffId] }),
+  });
+}
+
+export function useRemoveStaffDocument(staffId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (key: string) => {
+      const res = await api.delete<{ documents: StaffDocument[] }>(
+        `/api/v1/hr/staff/${staffId}/documents/${encodeURIComponent(key)}`,
+      );
+      return res.data!.documents;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff-documents', staffId] }),
+  });
+}
+
 export function useStaffStats() {
   return useQuery({
     queryKey: ['staff-stats'],
