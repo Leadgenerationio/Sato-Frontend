@@ -14,11 +14,12 @@ import {
   useAgreements,
   useSendAgreement,
   useRefreshAgreementStatus,
-  fileToBase64,
   type AgreementStatus,
   type Agreement,
 } from '@/lib/hooks/use-agreements';
 import { useClients } from '@/lib/hooks/use-clients';
+import { FileUpload } from '@/components/shared/file-upload';
+import type { PresignedUpload } from '@/lib/hooks/use-uploads';
 
 function statusBadge(status: AgreementStatus) {
   const map: Record<AgreementStatus, { label: string; classes: string; icon: React.ElementType }> = {
@@ -48,7 +49,7 @@ function SendDialog() {
   const [clientId, setClientId] = useState('');
   const [signerEmail, setSignerEmail] = useState('');
   const [signerName, setSignerName] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [uploaded, setUploaded] = useState<{ key: string; name: string } | null>(null);
   const { data: clientsData } = useClients({ limit: 100 });
   const send = useSendAgreement();
 
@@ -58,27 +59,31 @@ function SendDialog() {
     setClientId('');
     setSignerEmail('');
     setSignerName('');
-    setFile(null);
+    setUploaded(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!clientId || !signerEmail || !signerName || !file) {
-      toast.error('All fields are required.');
-      return;
-    }
+  const handleUploaded = (result: PresignedUpload, file: File) => {
     if (file.type !== 'application/pdf') {
       toast.error('Only PDF files are supported for signing.');
       return;
     }
+    setUploaded({ key: result.key, name: file.name });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientId || !signerEmail || !signerName || !uploaded) {
+      toast.error('All fields are required (upload a PDF first).');
+      return;
+    }
     try {
-      const documentBase64 = await fileToBase64(file);
       await send.mutateAsync({
         clientId,
         signerEmail,
         signerName,
-        documentBase64,
-        documentName: file.name,
+        r2SourceKey: uploaded.key,
+        r2SourceFolder: 'misc',
+        documentName: uploaded.name,
       });
       toast.success('Envelope sent via SignNow.');
       setOpen(false);
@@ -130,18 +135,18 @@ function SendDialog() {
               <Input id="signerEmail" type="email" value={signerEmail} onChange={(e) => setSignerEmail(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="documentFile">PDF document</Label>
-              <Input
-                id="documentFile"
-                type="file"
+              <Label>PDF document</Label>
+              <FileUpload
+                folder="misc"
                 accept="application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                required
+                maxSizeMB={50}
+                label={uploaded ? 'Replace PDF' : 'Upload PDF'}
+                onUploaded={handleUploaded}
               />
-              {file && (
+              {uploaded && (
                 <p className="text-xs text-muted-foreground truncate">
                   <FileText className="inline size-3.5 mr-1" />
-                  {file.name} ({Math.round(file.size / 1024)} KB)
+                  {uploaded.name} (uploaded to R2)
                 </p>
               )}
             </div>

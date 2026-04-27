@@ -56,7 +56,12 @@ export interface SendAgreementInput {
   clientId: string;
   signerEmail: string;
   signerName: string;
-  documentBase64: string;
+  /** Inline base64-encoded PDF (legacy small-file path, capped at API body limit). */
+  documentBase64?: string;
+  /** R2 key from a prior <FileUpload> result. Bypasses body-size limits. */
+  r2SourceKey?: string;
+  /** R2 folder where the source PDF lives (matches FileUpload `folder` prop). */
+  r2SourceFolder?: 'invoices' | 'agreements' | 'creatives' | 'landing-pages' | 'misc';
   documentName?: string;
 }
 
