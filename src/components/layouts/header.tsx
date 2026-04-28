@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useUiStore } from '@/stores/ui-store';
+import { useNotifications } from '@/lib/hooks/use-notifications';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import { cn } from '@/lib/utils';
 export function Header() {
   const { user, logout } = useAuth();
   const { sidebarOpen } = useUiStore();
+  const { data: unreadData } = useNotifications({ filter: 'unread', limit: 1 });
 
   if (!user) return null;
 
@@ -21,8 +23,7 @@ export function Header() {
     .toUpperCase()
     .slice(0, 2);
 
-  // Dummy unread count — replace with real API later
-  const unreadCount = 3;
+  const unreadCount = unreadData?.total ?? 0;
 
   return (
     <header className={cn(
