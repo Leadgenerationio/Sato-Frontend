@@ -249,7 +249,7 @@ function CreateJobDialog() {
       toast.success(`${form.title} posted`);
       setForm({ title: '', department: 'Operations' });
       setOpen(false);
-    } catch { toast.error('Failed to create job'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to create job'); }
   }
 
   return (
@@ -287,7 +287,7 @@ function RequestHolidayDialog() {
       toast.success('Holiday request submitted');
       setForm({ staffId: '', staffName: '', type: 'annual', startDate: '', endDate: '' });
       setOpen(false);
-    } catch { toast.error('Failed to submit'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to submit'); }
   }
 
   return (
@@ -309,7 +309,7 @@ function RequestHolidayDialog() {
               <option value="annual">Annual Leave</option><option value="sick">Sick Leave</option><option value="personal">Personal</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1"><Label>Start Date</Label><input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" /></div>
             <div className="space-y-1"><Label>End Date</Label><input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" /></div>
           </div>
@@ -698,21 +698,21 @@ function StaffDocumentsTab({ staffId }: { staffId: string }) {
     try {
       await add.mutateAsync({ key: result.key, name: file.name, size: result.sizeBytes, contentType: result.contentType });
       toast.success(`Uploaded ${file.name}`);
-    } catch { toast.error('Failed to upload'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to upload'); }
   };
 
   const handleDownload = async (key: string) => {
     try {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch { toast.error('Failed to generate link'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to generate link'); }
   };
 
   const handleRemove = async (key: string) => {
     try {
       await remove.mutateAsync(key);
       toast.info('Removed');
-    } catch { toast.error('Failed to remove'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to remove'); }
   };
 
   return (

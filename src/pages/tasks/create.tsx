@@ -57,7 +57,8 @@ export function TaskCreatePage() {
       });
       toast.success(`Task "${task.title}" created`);
       navigate(`/tasks/${task.id}`);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to create task');
     }
   }

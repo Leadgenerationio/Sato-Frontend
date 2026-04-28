@@ -407,7 +407,8 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
       setDownloadingKey(doc.key);
       const url = await fetchFreshDownloadUrl(doc.folder, doc.key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to generate download link');
     } finally {
       setDownloadingKey(null);

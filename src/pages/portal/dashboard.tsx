@@ -90,7 +90,7 @@ export function PortalDashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                   <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
                   <Tooltip />
                   <Bar dataKey="leads" fill="#171717" radius={[4, 4, 0, 0]} name="Leads" />

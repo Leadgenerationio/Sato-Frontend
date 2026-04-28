@@ -322,7 +322,8 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
         contentType: result.contentType,
       });
       toast.success(`Attached ${file.name}`);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to attach');
     }
   };
@@ -331,7 +332,8 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
     try {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to generate download link');
     }
   };
@@ -340,7 +342,8 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
     try {
       await remove.mutateAsync(key);
       toast.info('Attachment removed');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to remove');
     }
   };

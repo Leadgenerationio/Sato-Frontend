@@ -75,7 +75,7 @@ export function WorkflowDetailPage() {
                   try {
                     const result = await toggleStatus.mutateAsync(id!);
                     toast.success(`Workflow ${result.status === 'active' ? 'activated' : 'paused'}`);
-                  } catch { toast.error('Failed to toggle status'); }
+                  } catch (err) { console.error('Operation failed', err); toast.error('Failed to toggle status'); }
                 }}
                 disabled={toggleStatus.isPending}
               >
@@ -88,7 +88,7 @@ export function WorkflowDetailPage() {
                   try {
                     const exec = await executeWf.mutateAsync(id!);
                     toast.success(`Executed — ${exec.result}`);
-                  } catch { toast.error('Execution failed'); }
+                  } catch (err) { console.error('Operation failed', err); toast.error('Execution failed'); }
                 }}
                 disabled={executeWf.isPending}
               >

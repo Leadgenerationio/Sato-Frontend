@@ -73,7 +73,8 @@ export function LeadByteDashboardPage() {
     try {
       await manualSync.mutateAsync();
       toast.success('Sync queued — refreshing data in a moment');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to queue sync');
     }
   }

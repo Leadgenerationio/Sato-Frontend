@@ -293,9 +293,13 @@ export function TasksPage() {
           <CardContent className="p-0">
             <EmptyState
               icon={CheckSquare}
-              title="No tasks yet"
-              description="Create a task to track work and assign it to a teammate."
-              link={{ label: 'New task', to: '/tasks/new', icon: Plus }}
+              title={search || statusFilter !== 'all' || priorityFilter !== 'all' ? 'No matching tasks' : 'No tasks yet'}
+              description={
+                search || statusFilter !== 'all' || priorityFilter !== 'all'
+                  ? 'Try a different search or filter.'
+                  : 'Create a task to track work and assign it to a teammate.'
+              }
+              link={search || statusFilter !== 'all' || priorityFilter !== 'all' ? undefined : { label: 'New task', to: '/tasks/new', icon: Plus }}
             />
           </CardContent>
         </Card>
@@ -323,7 +327,7 @@ export function TasksPage() {
                       className="cursor-pointer"
                       onClick={() => navigate(`/tasks/${t.id}`)}
                     >
-                      <TableCell className="font-medium max-w-[250px] truncate">{t.title}</TableCell>
+                      <TableCell className="max-w-[140px] truncate font-medium sm:max-w-[250px]">{t.title}</TableCell>
                       <TableCell className="text-muted-foreground">{t.assignee}</TableCell>
                       <TableCell>
                         <Badge className={`text-xs capitalize ${priorityColors[t.priority] || ''}`}>

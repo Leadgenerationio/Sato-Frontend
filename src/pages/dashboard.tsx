@@ -159,7 +159,7 @@ export function DashboardPage() {
                     <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#171717" stopOpacity={0.15} /><stop offset="100%" stopColor="#171717" stopOpacity={0} /></linearGradient>
                     <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a3a3a3" stopOpacity={0.1} /><stop offset="100%" stopColor="#a3a3a3" stopOpacity={0} /></linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" interval="preserveStartEnd" minTickGap={16} /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} />
                   <Tooltip {...tooltipStyle} formatter={(value: any) => [`£${Number(value).toLocaleString()}`, '']} /><Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
                   <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#171717" strokeWidth={2} fill="url(#revenueGrad)" />
                   <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#a3a3a3" strokeWidth={2} fill="url(#expenseGrad)" />
@@ -190,7 +190,7 @@ export function DashboardPage() {
             <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={campaignData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" stroke="none">{campaignData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip {...tooltipStyle} formatter={(value: any) => [`${value}%`, '']} /></PieChart></ResponsiveContainer>
             </div>
-            <div className="grid grid-cols-2 gap-3 mt-2">{campaignData.map((item) => (<div key={item.name} className="flex items-center gap-2"><div className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} /><span className="text-xs text-neutral-600">{item.name}</span><span className="text-xs font-medium text-neutral-900 ml-auto">{item.value}%</span></div>))}</div>
+            <div className="grid grid-cols-1 gap-3 mt-2 sm:grid-cols-2">{campaignData.map((item) => (<div key={item.name} className="flex items-center gap-2"><div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} /><span className="truncate text-xs text-neutral-600">{item.name}</span><span className="ml-auto text-xs font-medium tabular-nums text-neutral-900">{item.value}%</span></div>))}</div>
           </CardContent>
         </Card>
         </WidgetContainer>
@@ -199,7 +199,7 @@ export function DashboardPage() {
           <CardHeader><CardTitle>Invoice Status</CardTitle><CardDescription>Monthly breakdown by payment status</CardDescription></CardHeader>
           <CardContent>
             <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%"><BarChart data={invoiceData}><CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" /><Tooltip {...tooltipStyle} /><Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} /><Bar dataKey="paid" name="Paid" stackId="a" fill="#171717" /><Bar dataKey="pending" name="Pending" stackId="a" fill="#a3a3a3" /><Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%"><BarChart data={invoiceData}><CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" interval="preserveStartEnd" minTickGap={16} /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" /><Tooltip {...tooltipStyle} /><Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} /><Bar dataKey="paid" name="Paid" stackId="a" fill="#171717" /><Bar dataKey="pending" name="Pending" stackId="a" fill="#a3a3a3" /><Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
             </div>
           </CardContent>
         </Card>

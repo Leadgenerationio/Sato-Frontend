@@ -232,7 +232,7 @@ export function CampaignDetailPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                   <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
                   <Tooltip />
                   <Area type="monotone" dataKey="leads" stroke="#171717" fill="#171717" fillOpacity={0.15} name="Leads" />
@@ -254,7 +254,7 @@ export function CampaignDetailPage() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} className="text-muted-foreground" />
                 <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, '']} />
                 <Legend />
@@ -397,7 +397,8 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
         contentType: result.contentType,
       });
       toast.success(`Uploaded ${file.name}`);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to upload creative');
     }
   };
@@ -407,7 +408,8 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
     try {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to generate link');
     }
   };
@@ -416,7 +418,8 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
     try {
       await remove.mutateAsync(id);
       toast.info('Removed (file kept in storage)');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to remove');
     }
   };

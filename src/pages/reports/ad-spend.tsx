@@ -197,7 +197,7 @@ export function AdSpendReportPage() {
                       <TableCell className="tabular-nums">{r.date}</TableCell>
                       <TableCell><Badge variant="secondary" className="text-xs">{r.platform}</Badge></TableCell>
                       <TableCell>{r.accountName ?? '—'}</TableCell>
-                      <TableCell className="max-w-[280px] truncate">{r.campaignName ?? '—'}</TableCell>
+                      <TableCell className="max-w-[160px] truncate sm:max-w-[280px]">{r.campaignName ?? '—'}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatMoney(parseFloat(r.spend) || 0, r.currency)}
                       </TableCell>

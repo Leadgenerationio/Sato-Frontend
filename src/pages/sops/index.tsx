@@ -115,9 +115,13 @@ export function SopsPage() {
       ) : !sops?.length ? (
         <EmptyState
           icon={BookOpen}
-          title="No SOPs yet"
-          description="Standard operating procedures help your team work consistently. Document your first one to get started."
-          link={{ label: 'New SOP', to: '/sops/create', icon: Plus }}
+          title={search || categoryFilter !== 'all' ? 'No matching SOPs' : 'No SOPs yet'}
+          description={
+            search || categoryFilter !== 'all'
+              ? 'Try a different search or category filter.'
+              : 'Standard operating procedures help your team work consistently. Document your first one to get started.'
+          }
+          link={search || categoryFilter !== 'all' ? undefined : (canWrite ? { label: 'New SOP', to: '/sops/create', icon: Plus } : undefined)}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
