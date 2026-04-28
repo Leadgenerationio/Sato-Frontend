@@ -36,19 +36,19 @@ export function FinancialReportPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{fmt(totalRevenue)}</p><p className="text-sm text-muted-foreground">Annual Revenue</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold text-emerald-600">{fmt(totalProfit)}</p><p className="text-sm text-muted-foreground">Annual Profit</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{fmt(totalVat)}</p><p className="text-sm text-muted-foreground">VAT Collected</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{fmt(totalRevenue)}</p><p className="text-sm text-muted-foreground">Annual Revenue</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-emerald-600">{fmt(totalProfit)}</p><p className="text-sm text-muted-foreground">Annual Profit</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{fmt(totalVat)}</p><p className="text-sm text-muted-foreground">VAT Collected</p></CardContent></Card>
       </div>
 
       <Card>
         <CardHeader><CardTitle>Revenue vs Expenses</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-[350px]">
+          <div className="h-[270px] sm:h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={16} />
                 <YAxis tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => [fmt(Number(v)), '']} />
                 <Legend />
@@ -63,32 +63,34 @@ export function FinancialReportPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Month</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">Expenses</TableHead>
-                <TableHead className="text-right">Profit</TableHead>
-                <TableHead className="text-right">Paid</TableHead>
-                <TableHead className="text-right">Overdue</TableHead>
-                <TableHead className="text-right">VAT</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((r, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-medium">{r.month}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.revenue)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.expenses)}</TableCell>
-                  <TableCell className="text-right tabular-nums text-emerald-600">{fmt(r.profit)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.invoicesPaid}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.invoicesOverdue > 0 ? <span className="text-red-600">{r.invoicesOverdue}</span> : '0'}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.vatCollected)}</TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Month</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">Expenses</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
+                  <TableHead className="text-right">Paid</TableHead>
+                  <TableHead className="text-right">Overdue</TableHead>
+                  <TableHead className="text-right">VAT</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((r, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{r.month}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.revenue)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.expenses)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-emerald-600">{fmt(r.profit)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.invoicesPaid}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.invoicesOverdue > 0 ? <span className="text-red-600">{r.invoicesOverdue}</span> : '0'}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.vatCollected)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

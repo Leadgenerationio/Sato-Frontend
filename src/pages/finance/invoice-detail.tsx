@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from '@/components/ui/table';
-import { ArrowLeft, Send, Download, Check, Loader2, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Download, Check, Loader2, FileText, Trash2, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useInvoice,
@@ -20,6 +20,7 @@ import {
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
@@ -197,42 +198,44 @@ export function InvoiceDetailPage() {
             <CardTitle className="text-base">Line Items</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoice.lineItems.map((item, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice, invoice.currency)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(item.amount, invoice.currency)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</TableCell>
-                </TableRow>
-                {toMoney(invoice.vatAmount) > 0 && (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-right font-medium">VAT (20%)</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</TableCell>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                )}
-                <TableRow>
-                  <TableCell colSpan={3} className="text-right text-base font-bold">Total</TableCell>
-                  <TableCell className="text-right text-base font-bold tabular-nums">{formatCurrency(toMoney(invoice.total), invoice.currency)}</TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {invoice.lineItems.map((item, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice, invoice.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(item.amount, invoice.currency)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</TableCell>
+                  </TableRow>
+                  {toMoney(invoice.vatAmount) > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-right font-medium">VAT (20%)</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</TableCell>
+                    </TableRow>
+                  )}
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right text-base font-bold">Total</TableCell>
+                    <TableCell className="text-right text-base font-bold tabular-nums">{formatCurrency(toMoney(invoice.total), invoice.currency)}</TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -319,7 +322,8 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
         contentType: result.contentType,
       });
       toast.success(`Attached ${file.name}`);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to attach');
     }
   };
@@ -328,7 +332,8 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
     try {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to generate download link');
     }
   };
@@ -337,7 +342,8 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
     try {
       await remove.mutateAsync(key);
       toast.info('Attachment removed');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to remove');
     }
   };
@@ -355,9 +361,12 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
       </CardHeader>
       <CardContent>
         {invoice.attachments.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-            No attachments yet.
-          </div>
+          <EmptyState
+            icon={Paperclip}
+            title="No attachments"
+            description="Attach receipts, proof of payment, or supporting documents using the button above."
+            size="compact"
+          />
         ) : (
           <div className="space-y-2">
             {invoice.attachments.map((a) => (

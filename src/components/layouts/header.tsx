@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Bell, LogOut } from 'lucide-react';
+import { Bell, LogOut, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/shared/logo';
 
 export function Header() {
   const { user, logout } = useAuth();
-  const { sidebarOpen } = useUiStore();
+  const { sidebarOpen, toggleMobileSidebar } = useUiStore();
 
   if (!user) return null;
 
@@ -30,7 +31,18 @@ export function Header() {
       'left-0 md:left-16',
       sidebarOpen && 'md:left-64',
     )}>
-      <div className="w-10 md:hidden" />
+      {/* Mobile-only: hamburger + logo (sidebar lives off-canvas on mobile) */}
+      <div className="flex items-center gap-2 md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleMobileSidebar}
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <Logo size="sm" />
+      </div>
       <div className="ml-auto flex items-center gap-3">
         {/* Notification Bell */}
         <Link to="/notifications" className="relative inline-flex items-center justify-center size-9 rounded-lg hover:bg-muted transition-colors">

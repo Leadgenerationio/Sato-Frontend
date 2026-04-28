@@ -53,15 +53,15 @@ export function CampaignReportPage() {
       </Tabs>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{totalLeads.toLocaleString()}</p><p className="text-sm text-muted-foreground">Total Leads</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{fmt(totalRevenue)}</p><p className="text-sm text-muted-foreground">Total Revenue</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold text-emerald-600">{fmt(totalProfit)}</p><p className="text-sm text-muted-foreground">Total Profit</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{totalLeads.toLocaleString()}</p><p className="text-sm text-muted-foreground">Total Leads</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{fmt(totalRevenue)}</p><p className="text-sm text-muted-foreground">Total Revenue</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-emerald-600">{fmt(totalProfit)}</p><p className="text-sm text-muted-foreground">Total Profit</p></CardContent></Card>
       </div>
 
       <Card>
         <CardHeader><CardTitle>Revenue vs Cost by Campaign</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-[350px]">
+          <div className="h-[270px] sm:h-[350px]">
             {data.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No data in this window</div>
             ) : (
@@ -83,36 +83,38 @@ export function CampaignReportPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Vertical</TableHead>
-                <TableHead className="text-right">Leads</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead className="text-right">CPL</TableHead>
-                <TableHead className="text-right">Profit</TableHead>
-                <TableHead className="text-right">Margin</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((r) => (
-                <TableRow key={r.campaignId}>
-                  <TableCell className="font-medium">{r.campaignName}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.clientName}</TableCell>
-                  <TableCell><Badge variant="secondary" className="text-xs">{r.vertical}</Badge></TableCell>
-                  <TableCell className="text-right tabular-nums">{r.leads}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.revenue)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.cost)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.cpl)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.profit)}</TableCell>
-                  <TableCell className="text-right tabular-nums"><span className={r.margin >= 50 ? 'text-emerald-600' : r.margin >= 30 ? 'text-amber-600' : 'text-red-600'}>{r.margin}%</span></TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Vertical</TableHead>
+                  <TableHead className="text-right">Leads</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead className="text-right">CPL</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
+                  <TableHead className="text-right">Margin</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((r) => (
+                  <TableRow key={r.campaignId}>
+                    <TableCell className="font-medium">{r.campaignName}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.clientName}</TableCell>
+                    <TableCell><Badge variant="secondary" className="text-xs">{r.vertical}</Badge></TableCell>
+                    <TableCell className="text-right tabular-nums">{r.leads}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.revenue)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.cost)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.cpl)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.profit)}</TableCell>
+                    <TableCell className="text-right tabular-nums"><span className={r.margin >= 50 ? 'text-emerald-600' : r.margin >= 30 ? 'text-amber-600' : 'text-red-600'}>{r.margin}%</span></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

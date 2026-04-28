@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePortalDashboard } from '@/lib/hooks/use-portal';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
@@ -11,17 +12,17 @@ function formatCurrency(value: number) {
 
 function StatCard({ label, value, icon: Icon, badge }: { label: string; value: string; icon: React.ElementType; badge?: { text: string; variant: 'default' | 'destructive' | 'secondary' } }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+    <Card className="gap-3 py-5">
+      <CardContent>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
             <Icon className="size-5 text-muted-foreground" />
           </div>
           {badge && <Badge variant={badge.variant} className="text-xs">{badge.text}</Badge>}
         </div>
-        <div className="mt-4">
-          <p className="text-2xl font-bold tabular-nums">{value}</p>
-          <p className="text-sm text-muted-foreground">{label}</p>
+        <div className="mt-3">
+          <p className="truncate text-2xl font-bold tabular-nums">{value}</p>
+          <p className="truncate text-sm text-muted-foreground">{label}</p>
         </div>
       </CardContent>
     </Card>
@@ -78,17 +79,25 @@ export function PortalDashboardPage() {
           <CardDescription>Last 14 days</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                <Tooltip />
-                <Bar dataKey="leads" fill="#171717" radius={[4, 4, 0, 0]} name="Leads" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {chartData.length === 0 || chartData.every((d) => d.leads === 0) ? (
+            <EmptyState
+              icon={BarChart3}
+              title="No lead deliveries yet"
+              description="Once leads are delivered against your campaigns, you'll see daily volumes here."
+            />
+          ) : (
+            <div className="h-[180px] sm:h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
+                  <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                  <Tooltip />
+                  <Bar dataKey="leads" fill="#171717" radius={[4, 4, 0, 0]} name="Leads" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -63,8 +63,8 @@ class WidgetErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
   render() {
     if (this.state.hasError) {
       return this.props.fallback || (
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="gap-3 py-5">
+          <CardContent>
             <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
               <AlertTriangle className="size-8" />
               <p className="text-sm">Failed to load widget</p>

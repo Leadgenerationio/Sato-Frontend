@@ -75,7 +75,7 @@ export function WorkflowDetailPage() {
                   try {
                     const result = await toggleStatus.mutateAsync(id!);
                     toast.success(`Workflow ${result.status === 'active' ? 'activated' : 'paused'}`);
-                  } catch { toast.error('Failed to toggle status'); }
+                  } catch (err) { console.error('Operation failed', err); toast.error('Failed to toggle status'); }
                 }}
                 disabled={toggleStatus.isPending}
               >
@@ -88,7 +88,7 @@ export function WorkflowDetailPage() {
                   try {
                     const exec = await executeWf.mutateAsync(id!);
                     toast.success(`Executed — ${exec.result}`);
-                  } catch { toast.error('Execution failed'); }
+                  } catch (err) { console.error('Operation failed', err); toast.error('Execution failed'); }
                 }}
                 disabled={executeWf.isPending}
               >
@@ -104,10 +104,10 @@ export function WorkflowDetailPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{workflow.totalRuns}</p><p className="text-sm text-muted-foreground">Total Runs</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold text-emerald-600">{workflow.successRate}%</p><p className="text-sm text-muted-foreground">Success Rate</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-sm font-medium">{workflow.lastRunAt ? formatDate(workflow.lastRunAt) : '—'}</p><p className="text-sm text-muted-foreground">Last Run</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-sm font-medium">{workflow.nextRunAt ? formatDate(workflow.nextRunAt) : '—'}</p><p className="text-sm text-muted-foreground">Next Run</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{workflow.totalRuns}</p><p className="text-sm text-muted-foreground">Total Runs</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-emerald-600">{workflow.successRate}%</p><p className="text-sm text-muted-foreground">Success Rate</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-sm font-medium">{workflow.lastRunAt ? formatDate(workflow.lastRunAt) : '—'}</p><p className="text-sm text-muted-foreground">Last Run</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-sm font-medium">{workflow.nextRunAt ? formatDate(workflow.nextRunAt) : '—'}</p><p className="text-sm text-muted-foreground">Next Run</p></CardContent></Card>
       </div>
 
       {/* Steps */}

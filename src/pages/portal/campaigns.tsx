@@ -25,32 +25,34 @@ export function PortalCampaignsPage() {
           {isLoading ? (
             <div className="p-6 space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Vertical</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">This Week</TableHead>
-                  <TableHead className="text-right">This Month</TableHead>
-                  <TableHead className="text-right">All Time</TableHead>
-                  <TableHead>Start Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {campaigns?.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell><Badge variant="secondary" className="text-xs">{c.vertical}</Badge></TableCell>
-                    <TableCell><Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>{c.status}</Badge></TableCell>
-                    <TableCell className="text-right tabular-nums">{c.leadsThisWeek}</TableCell>
-                    <TableCell className="text-right tabular-nums">{c.leadsThisMonth}</TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{c.totalLeads.toLocaleString()}</TableCell>
-                    <TableCell className="text-muted-foreground">{new Date(c.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead>Vertical</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">This Week</TableHead>
+                    <TableHead className="text-right">This Month</TableHead>
+                    <TableHead className="text-right">All Time</TableHead>
+                    <TableHead>Start Date</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {campaigns?.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell><Badge variant="secondary" className="text-xs">{c.vertical}</Badge></TableCell>
+                      <TableCell><Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>{c.status}</Badge></TableCell>
+                      <TableCell className="text-right tabular-nums">{c.leadsThisWeek}</TableCell>
+                      <TableCell className="text-right tabular-nums">{c.leadsThisMonth}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{c.totalLeads.toLocaleString()}</TableCell>
+                      <TableCell className="text-muted-foreground">{new Date(c.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

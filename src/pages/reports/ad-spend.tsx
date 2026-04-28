@@ -78,15 +78,15 @@ export function AdSpendReportPage() {
       </div>
 
       {statusData && !statusData.configured && (
-        <Card className="border-amber-300 bg-amber-50">
-          <CardContent className="pt-4 pb-4 text-sm text-amber-900">
-            Catchr is not configured. Set <code className="px-1 rounded bg-amber-100">CATCHR_ACCESS_TOKEN</code> in the backend .env and restart the API.
+        <Card className="border-amber-300 bg-amber-50 py-4">
+          <CardContent className="text-sm text-amber-900">
+            Catchr is not configured. Set <code className="rounded bg-amber-100 px-1">CATCHR_ACCESS_TOKEN</code> in the backend .env and restart the API.
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardContent className="pt-6 flex flex-wrap items-end gap-4">
+      <Card className="gap-3 py-5">
+        <CardContent className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-xs text-muted-foreground">From</label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
@@ -112,24 +112,24 @@ export function AdSpendReportPage() {
       </Tabs>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6 text-center">
+        <Card className="gap-3 py-5">
+          <CardContent className="text-center">
             {summaryLoading || !total ? <Skeleton className="h-8 w-32 mx-auto" /> : (
               <p className="text-2xl font-bold">{formatMoney(total.total, total.currency)}</p>
             )}
             <p className="text-sm text-muted-foreground">Total Spend</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6 text-center">
+        <Card className="gap-3 py-5">
+          <CardContent className="text-center">
             {summaryLoading || !total ? <Skeleton className="h-8 w-32 mx-auto" /> : (
               <p className="text-2xl font-bold">{total.rowCount.toLocaleString()}</p>
             )}
             <p className="text-sm text-muted-foreground">Rows (day × campaign)</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6 text-center">
+        <Card className="gap-3 py-5">
+          <CardContent className="text-center">
             {summaryLoading ? <Skeleton className="h-8 w-32 mx-auto" /> : (
               <p className="text-2xl font-bold">{summary.length}</p>
             )}
@@ -146,26 +146,28 @@ export function AdSpendReportPage() {
           ) : summary.length === 0 ? (
             <div className="p-6 text-sm text-muted-foreground text-center">No spend in this window</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Platform</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead className="text-right">Spend</TableHead>
-                  <TableHead className="text-right">Campaigns</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summary.map((r, i) => (
-                  <TableRow key={`${r.platform}-${r.accountName ?? 'unknown'}-${i}`}>
-                    <TableCell><Badge variant="secondary" className="text-xs">{r.platform}</Badge></TableCell>
-                    <TableCell className="font-medium">{r.accountName ?? '—'}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatMoney(r.totalSpend, r.currency)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.campaigns}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Platform</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead className="text-right">Spend</TableHead>
+                    <TableHead className="text-right">Campaigns</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {summary.map((r, i) => (
+                    <TableRow key={`${r.platform}-${r.accountName ?? 'unknown'}-${i}`}>
+                      <TableCell><Badge variant="secondary" className="text-xs">{r.platform}</Badge></TableCell>
+                      <TableCell className="font-medium">{r.accountName ?? '—'}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatMoney(r.totalSpend, r.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{r.campaigns}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -178,30 +180,32 @@ export function AdSpendReportPage() {
           ) : rows.length === 0 ? (
             <div className="p-6 text-sm text-muted-foreground text-center">No rows in this window</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Platform</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead className="text-right">Spend</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="tabular-nums">{r.date}</TableCell>
-                    <TableCell><Badge variant="secondary" className="text-xs">{r.platform}</Badge></TableCell>
-                    <TableCell>{r.accountName ?? '—'}</TableCell>
-                    <TableCell className="max-w-[280px] truncate">{r.campaignName ?? '—'}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(parseFloat(r.spend) || 0, r.currency)}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Platform</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead className="text-right">Spend</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="tabular-nums">{r.date}</TableCell>
+                      <TableCell><Badge variant="secondary" className="text-xs">{r.platform}</Badge></TableCell>
+                      <TableCell>{r.accountName ?? '—'}</TableCell>
+                      <TableCell className="max-w-[160px] truncate sm:max-w-[280px]">{r.campaignName ?? '—'}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMoney(parseFloat(r.spend) || 0, r.currency)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -48,11 +48,11 @@ export function ClientPnlReportPage() {
       <Card>
         <CardHeader><CardTitle>Monthly Profit by Client</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-[350px]">
+          <div className="h-[270px] sm:h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={16} />
                 <YAxis tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => [fmt(Number(v)), '']} />
                 <Legend />
@@ -67,32 +67,34 @@ export function ClientPnlReportPage() {
 
       <Card>
         <CardContent className="p-0 max-h-[500px] overflow-y-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>Month</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead className="text-right">Profit</TableHead>
-                <TableHead className="text-right">Margin</TableHead>
-                <TableHead className="text-right">Leads</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((r, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-medium">{r.clientName}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.month}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.revenue)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.cost)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.profit)}</TableCell>
-                  <TableCell className="text-right tabular-nums"><span className={r.margin >= 50 ? 'text-emerald-600' : 'text-amber-600'}>{r.margin}%</span></TableCell>
-                  <TableCell className="text-right tabular-nums">{r.leadsDelivered}</TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Month</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
+                  <TableHead className="text-right">Margin</TableHead>
+                  <TableHead className="text-right">Leads</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((r, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{r.clientName}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.month}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.revenue)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.cost)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.profit)}</TableCell>
+                    <TableCell className="text-right tabular-nums"><span className={r.margin >= 50 ? 'text-emerald-600' : 'text-amber-600'}>{r.margin}%</span></TableCell>
+                    <TableCell className="text-right tabular-nums">{r.leadsDelivered}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

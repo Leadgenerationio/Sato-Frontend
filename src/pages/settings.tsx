@@ -47,7 +47,8 @@ function XeroIntegration() {
     try {
       const res = await api.get<XeroStatus>('/api/v1/integrations/xero/status');
       setStatus(res.data ?? null);
-    } catch {
+    } catch (err) {
+      console.warn('xero status fetch failed', err);
       setStatus({ connected: false, configured: false });
     } finally {
       setLoading(false);
@@ -140,7 +141,8 @@ function LeadByteIntegration() {
     try {
       const res = await api.get<LeadByteStatus>('/api/v1/integrations/leadbyte/status');
       setStatus(res.data ?? null);
-    } catch {
+    } catch (err) {
+      console.warn('leadbyte status fetch failed', err);
       setStatus({ configured: false, lastSyncAt: null });
     } finally {
       setLoading(false);
@@ -157,7 +159,8 @@ function LeadByteIntegration() {
       await api.post('/api/v1/integrations/leadbyte/sync');
       toast.success('LeadByte sync enqueued — runs in a moment');
       setTimeout(fetchStatus, 2000);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to enqueue sync');
     } finally {
       setSyncing(false);
@@ -249,7 +252,8 @@ function CreditCheckIntegration() {
       try {
         const res = await api.get<CreditCheckStatus>('/api/v1/integrations/credit-check/status');
         setStatus(res.data ?? null);
-      } catch {
+      } catch (err) {
+        console.warn('credit-check status fetch failed', err);
         setStatus({ provider: 'mock', configured: false, checksRun: 0 });
       } finally {
         setLoading(false);
@@ -343,7 +347,8 @@ function SimpleIntegrationCard<T extends { configured: boolean }>({
       try {
         const res = await api.get<T>(endpoint);
         setData((res.data as T) ?? null);
-      } catch {
+      } catch (err) {
+        console.warn('integration status fetch failed', err);
         setData({ configured: false } as T);
       } finally {
         setLoading(false);

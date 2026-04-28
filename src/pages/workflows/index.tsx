@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, Clock, CheckCircle2, Pause, Workflow, Plus } from 'lucide-react';
 import { useWorkflows } from '@/lib/hooks/use-workflows';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
@@ -37,14 +38,23 @@ export function WorkflowsPage() {
       {isLoading ? (
         <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32" />)}</div>
       ) : !workflows?.length ? (
-        <Card><CardContent className="flex flex-col items-center gap-3 py-12 text-muted-foreground"><Workflow className="size-8" /><p className="text-sm">No workflows configured</p></CardContent></Card>
+        <Card>
+          <CardContent>
+            <EmptyState
+              icon={Workflow}
+              title="No workflows yet"
+              description="Workflows automate recurring tasks like weekly invoicing, credit checks, and chasing overdue invoices."
+              link={{ label: 'New workflow', to: '/workflows/create', icon: Plus }}
+            />
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
           {workflows.map((wf) => {
             const StatusIcon = statusIcons[wf.status] || Clock;
             return (
               <Card key={wf.id}>
-                <CardContent className="pt-6">
+                <CardContent>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">

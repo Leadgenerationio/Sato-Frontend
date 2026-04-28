@@ -79,8 +79,8 @@ function StatCard({ label, value, icon: Icon, trend }: {
   trend?: { value: string; positive: boolean };
 }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <Card className="gap-3 py-5">
+      <CardContent>
         <div className="flex items-center justify-between">
           <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
             <Icon className="size-5 text-muted-foreground" />
@@ -213,9 +213,9 @@ export function CampaignDetailPage() {
 
       {/* Window totals */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Leads</p><p className="mt-1 text-xl font-bold tabular-nums">{windowTotals.leads.toLocaleString()}</p></CardContent></Card>
-        <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Revenue</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.revenue)}</p></CardContent></Card>
-        <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Cost</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.cost)}</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent><p className="text-xs text-muted-foreground">Leads</p><p className="mt-1 text-xl font-bold tabular-nums">{windowTotals.leads.toLocaleString()}</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent><p className="text-xs text-muted-foreground">Revenue</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.revenue)}</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent><p className="text-xs text-muted-foreground">Cost</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.cost)}</p></CardContent></Card>
       </div>
 
       {/* Lead Volume Chart */}
@@ -225,14 +225,14 @@ export function CampaignDetailPage() {
           <CardDescription>{WINDOW_OPTIONS.find((o) => o.value === window)?.label} — daily lead deliveries</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[220px] sm:h-[300px]">
             {chartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No deliveries in this window</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                   <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
                   <Tooltip />
                   <Area type="monotone" dataKey="leads" stroke="#171717" fill="#171717" fillOpacity={0.15} name="Leads" />
@@ -250,11 +250,11 @@ export function CampaignDetailPage() {
           <CardDescription>Daily revenue and cost breakdown</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[220px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} className="text-muted-foreground" />
                 <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, '']} />
                 <Legend />
@@ -274,7 +274,7 @@ export function CampaignDetailPage() {
             <CardDescription>Cost per lead by traffic source</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[220px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={supplierData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -336,38 +336,40 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Platform</TableHead>
-              <TableHead>Catchr URL</TableHead>
-              <TableHead className="text-right">Spend</TableHead>
-              <TableHead className="text-right">Leads</TableHead>
-              <TableHead className="text-right">CPL</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sources.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.name}</TableCell>
-                <TableCell><Badge variant="secondary" className="text-xs">{s.platform}</Badge></TableCell>
-                <TableCell className="text-muted-foreground">
-                  {s.catchrUrl ? (
-                    <span className="inline-flex items-center gap-1 text-xs">
-                      <ExternalLink className="size-3" /> configured
-                    </span>
-                  ) : (
-                    <span className="text-xs">Not set</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{formatCurrency(s.totalSpend)}</TableCell>
-                <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatCurrency(s.cpl)}</TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead>Catchr URL</TableHead>
+                <TableHead className="text-right">Spend</TableHead>
+                <TableHead className="text-right">Leads</TableHead>
+                <TableHead className="text-right">CPL</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {sources.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell><Badge variant="secondary" className="text-xs">{s.platform}</Badge></TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {s.catchrUrl ? (
+                      <span className="inline-flex items-center gap-1 text-xs">
+                        <ExternalLink className="size-3" /> configured
+                      </span>
+                    ) : (
+                      <span className="text-xs">Not set</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCurrency(s.totalSpend)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCurrency(s.cpl)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -395,7 +397,8 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
         contentType: result.contentType,
       });
       toast.success(`Uploaded ${file.name}`);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to upload creative');
     }
   };
@@ -405,7 +408,8 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
     try {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to generate link');
     }
   };
@@ -414,7 +418,8 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
     try {
       await remove.mutateAsync(id);
       toast.info('Removed (file kept in storage)');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to remove');
     }
   };

@@ -34,7 +34,8 @@ export function SopCreatePage() {
       });
       toast.success(`SOP "${sop.title}" created`);
       navigate(`/sops/${sop.id}`);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to create SOP');
     }
   }

@@ -20,6 +20,7 @@ import {
 import { useClients } from '@/lib/hooks/use-clients';
 import { FileUpload } from '@/components/shared/file-upload';
 import type { PresignedUpload } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function statusBadge(status: AgreementStatus) {
   const map: Record<AgreementStatus, { label: string; classes: string; icon: React.ElementType }> = {
@@ -224,42 +225,46 @@ export function AgreementsPage() {
             </div>
           )}
           {!isLoading && agreements.length === 0 && (
-            <div className="p-10 text-center text-sm text-muted-foreground">
-              No agreements sent yet. Click “Send for signature” to create one.
-            </div>
+            <EmptyState
+              icon={FileSignature}
+              title="No agreements yet"
+              description='Send a contract or onboarding document for e-signature. Use "Send for signature" above to start.'
+            />
           )}
           {!isLoading && agreements.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Signer</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Sent</TableHead>
-                  <TableHead>Signed</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {agreements.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.signerName}</TableCell>
-                    <TableCell className="text-muted-foreground">{a.signerEmail}</TableCell>
-                    <TableCell>{formatDateTime(a.sentAt)}</TableCell>
-                    <TableCell>{formatDateTime(a.signedAt)}</TableCell>
-                    <TableCell>{statusBadge(a.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <RefreshButton id={a.id} />
-                      {a.documentUrl && (
-                        <a href={a.documentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline ml-2">
-                          PDF
-                        </a>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Signer</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Sent</TableHead>
+                    <TableHead>Signed</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {agreements.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.signerName}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.signerEmail}</TableCell>
+                      <TableCell>{formatDateTime(a.sentAt)}</TableCell>
+                      <TableCell>{formatDateTime(a.signedAt)}</TableCell>
+                      <TableCell>{statusBadge(a.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <RefreshButton id={a.id} />
+                        {a.documentUrl && (
+                          <a href={a.documentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline ml-2">
+                            PDF
+                          </a>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -4,7 +4,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronDown,
-  Menu,
   X,
   ShieldCheck,
   Banknote,
@@ -90,8 +89,7 @@ function isGroupActive(pathname: string, group: NavGroup): boolean {
 export function Sidebar() {
   const { user } = useAuth();
   const location = useLocation();
-  const { sidebarOpen, toggleSidebar } = useUiStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { sidebarOpen, toggleSidebar, mobileSidebarOpen, setMobileSidebarOpen } = useUiStore();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const filteredNav = useMemo(() =>
@@ -187,34 +185,24 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed left-4 top-4 z-50 md:hidden"
-        onClick={() => setMobileOpen(true)}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-
       {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileSidebarOpen(false)} />
       )}
 
       {/* Mobile sidebar */}
       <aside className={cn(
         'fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r bg-sidebar-background transition-transform md:hidden',
-        mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full',
       )}>
         <div className="flex h-16 shrink-0 items-center justify-between border-b px-4">
           <Logo size="sm" />
-          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
+          <Button variant="ghost" size="icon" onClick={() => setMobileSidebarOpen(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
-          {renderNav(() => setMobileOpen(false))}
+          {renderNav(() => setMobileSidebarOpen(false))}
         </nav>
         {user && (
           <div className="shrink-0 border-t px-3 py-3">

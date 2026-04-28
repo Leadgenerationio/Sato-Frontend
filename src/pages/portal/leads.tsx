@@ -28,19 +28,19 @@ export function PortalLeadsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{totalLeads}</p><p className="text-sm text-muted-foreground">Total Leads</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{avgPerDay}</p><p className="text-sm text-muted-foreground">Avg / Day</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{peakDay?.leadCount ?? 0}</p><p className="text-sm text-muted-foreground">Peak Day</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{totalLeads}</p><p className="text-sm text-muted-foreground">Total Leads</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{avgPerDay}</p><p className="text-sm text-muted-foreground">Avg / Day</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{peakDay?.leadCount ?? 0}</p><p className="text-sm text-muted-foreground">Peak Day</p></CardContent></Card>
       </div>
 
       <Card>
         <CardHeader><CardTitle>Daily Volume</CardTitle><CardDescription>Leads delivered per day</CardDescription></CardHeader>
         <CardContent>
-          <div className="h-[280px]">
+          <div className="h-[200px] sm:h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                 <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
                 <Tooltip />
                 <Area type="monotone" dataKey="leads" stroke="#171717" fill="#171717" fillOpacity={0.15} name="Leads" />
@@ -54,24 +54,26 @@ export function PortalLeadsPage() {
         <CardHeader><CardTitle>Daily Breakdown</CardTitle></CardHeader>
         <CardContent className="p-0">
           <div className="max-h-[400px] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead className="text-right">Leads</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[...leads].reverse().map((d, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</TableCell>
-                    <TableCell className="text-muted-foreground">{d.campaignName}</TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{d.leadCount}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead className="text-right">Leads</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {[...leads].reverse().map((d, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</TableCell>
+                      <TableCell className="text-muted-foreground">{d.campaignName}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{d.leadCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

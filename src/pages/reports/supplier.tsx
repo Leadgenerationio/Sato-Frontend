@@ -52,15 +52,15 @@ export function SupplierReportPage() {
       </Tabs>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{fmt(totalSpend)}</p><p className="text-sm text-muted-foreground">Total Spend</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{totalLeads.toLocaleString()}</p><p className="text-sm text-muted-foreground">Total Leads</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{fmt(totalLeads > 0 ? totalSpend / totalLeads : 0)}</p><p className="text-sm text-muted-foreground">Avg CPL</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{fmt(totalSpend)}</p><p className="text-sm text-muted-foreground">Total Spend</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{totalLeads.toLocaleString()}</p><p className="text-sm text-muted-foreground">Total Leads</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{fmt(totalLeads > 0 ? totalSpend / totalLeads : 0)}</p><p className="text-sm text-muted-foreground">Avg CPL</p></CardContent></Card>
       </div>
 
       <Card>
         <CardHeader><CardTitle>CPL by Supplier</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[220px] sm:h-[300px]">
             {data.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No spend in this window</div>
             ) : (
@@ -80,30 +80,32 @@ export function SupplierReportPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Platform</TableHead>
-                <TableHead className="text-right">Spend</TableHead>
-                <TableHead className="text-right">Leads</TableHead>
-                <TableHead className="text-right">CPL</TableHead>
-                <TableHead className="text-right">Campaigns</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((r) => (
-                <TableRow key={r.supplierId}>
-                  <TableCell className="font-medium">{r.supplierName}</TableCell>
-                  <TableCell><Badge variant="secondary" className="text-xs">{r.platform}</Badge></TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.totalSpend)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.totalLeads.toLocaleString()}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.cpl)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.campaigns}</TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead>Platform</TableHead>
+                  <TableHead className="text-right">Spend</TableHead>
+                  <TableHead className="text-right">Leads</TableHead>
+                  <TableHead className="text-right">CPL</TableHead>
+                  <TableHead className="text-right">Campaigns</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((r) => (
+                  <TableRow key={r.supplierId}>
+                    <TableCell className="font-medium">{r.supplierName}</TableCell>
+                    <TableCell><Badge variant="secondary" className="text-xs">{r.platform}</Badge></TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.totalSpend)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.totalLeads.toLocaleString()}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.cpl)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.campaigns}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

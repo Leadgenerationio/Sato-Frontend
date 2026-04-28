@@ -26,6 +26,7 @@ import {
 } from '@/lib/hooks/use-staff';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
 
 // ─── Helpers ───
 
@@ -82,7 +83,7 @@ function StatsCards() {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}><CardContent className="pt-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
+          <Card key={i}><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
         ))}
       </div>
     );
@@ -101,7 +102,7 @@ function StatsCards() {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((c) => (
         <Card key={c.label}>
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="flex items-center gap-3">
               <div className={`flex size-10 items-center justify-center rounded-lg ${c.bg}`}>
                 <c.icon className={`size-5 ${c.iconColor}`} />
@@ -248,7 +249,7 @@ function CreateJobDialog() {
       toast.success(`${form.title} posted`);
       setForm({ title: '', department: 'Operations' });
       setOpen(false);
-    } catch { toast.error('Failed to create job'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to create job'); }
   }
 
   return (
@@ -286,7 +287,7 @@ function RequestHolidayDialog() {
       toast.success('Holiday request submitted');
       setForm({ staffId: '', staffName: '', type: 'annual', startDate: '', endDate: '' });
       setOpen(false);
-    } catch { toast.error('Failed to submit'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to submit'); }
   }
 
   return (
@@ -308,7 +309,7 @@ function RequestHolidayDialog() {
               <option value="annual">Annual Leave</option><option value="sick">Sick Leave</option><option value="personal">Personal</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1"><Label>Start Date</Label><input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" /></div>
             <div className="space-y-1"><Label>End Date</Label><input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" /></div>
           </div>
@@ -348,10 +349,11 @@ function TeamTab() {
               <p className="text-sm">Failed to load staff</p>
             </div>
           ) : !staff?.length ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <Users className="size-8" />
-              <p className="text-sm">No staff members found</p>
-            </div>
+            <EmptyState
+              icon={Users}
+              title="No staff members yet"
+              description="Add your team to track roles, departments, holidays, and documents."
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -408,7 +410,14 @@ function ApplicantPipeline({ jobId }: { jobId: string }) {
   }
 
   if (!applicants?.length) {
-    return <p className="p-4 text-sm text-muted-foreground">No applicants yet.</p>;
+    return (
+      <EmptyState
+        icon={Users}
+        title="No applicants yet"
+        description="When someone applies to this job posting, they'll appear here in the pipeline."
+        size="compact"
+      />
+    );
   }
 
   const rejected = applicants.filter((a) => a.stage === 'rejected');
@@ -494,7 +503,7 @@ function RecruitmentTab() {
     return (
       <div className="space-y-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}><CardContent className="pt-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
+          <Card key={i}><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
         ))}
       </div>
     );
@@ -502,19 +511,21 @@ function RecruitmentTab() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-        <Briefcase className="size-8" />
-        <p className="text-sm">Failed to load job postings</p>
-      </div>
+      <EmptyState
+        icon={Briefcase}
+        title="Couldn't load job postings"
+        description="Something went wrong reaching the server. Try refreshing the page."
+      />
     );
   }
 
   if (!jobs?.length) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-        <Briefcase className="size-8" />
-        <p className="text-sm">No job postings found</p>
-      </div>
+      <EmptyState
+        icon={Briefcase}
+        title="No job postings yet"
+        description="Post a job to start recruiting and tracking applicants through your hiring pipeline."
+      />
     );
   }
 
@@ -552,19 +563,21 @@ function HolidaysTab() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-        <Calendar className="size-8" />
-        <p className="text-sm">Failed to load holiday requests</p>
-      </div>
+      <EmptyState
+        icon={Calendar}
+        title="Couldn't load holiday requests"
+        description="Something went wrong reaching the server. Try refreshing the page."
+      />
     );
   }
 
   if (!holidays?.length) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-        <Calendar className="size-8" />
-        <p className="text-sm">No holiday requests found</p>
-      </div>
+      <EmptyState
+        icon={Calendar}
+        title="No holiday requests"
+        description="When a staff member submits a holiday request, it will appear here for approval."
+      />
     );
   }
 
@@ -685,21 +698,21 @@ function StaffDocumentsTab({ staffId }: { staffId: string }) {
     try {
       await add.mutateAsync({ key: result.key, name: file.name, size: result.sizeBytes, contentType: result.contentType });
       toast.success(`Uploaded ${file.name}`);
-    } catch { toast.error('Failed to upload'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to upload'); }
   };
 
   const handleDownload = async (key: string) => {
     try {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch { toast.error('Failed to generate link'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to generate link'); }
   };
 
   const handleRemove = async (key: string) => {
     try {
       await remove.mutateAsync(key);
       toast.info('Removed');
-    } catch { toast.error('Failed to remove'); }
+    } catch (err) { console.error('Operation failed', err); toast.error('Failed to remove'); }
   };
 
   return (
@@ -715,11 +728,14 @@ function StaffDocumentsTab({ staffId }: { staffId: string }) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
+          <div className="space-y-2 py-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
         ) : documents.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-            No documents yet for this staff member.
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No documents"
+            description="Upload contracts, NDAs, payslips, or certifications using the button above."
+            size="compact"
+          />
         ) : (
           <div className="space-y-2">
             {documents.map((d) => (
