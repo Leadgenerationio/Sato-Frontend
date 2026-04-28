@@ -12,8 +12,8 @@ vi.mock('@/lib/hooks/use-invoices', () => ({
   useInvoices: () => ({
     data: {
       invoices: [
-        { id: 'inv-1', invoiceNumber: 'INV-1050', clientId: 'c-1', clientName: 'Apex Media', status: 'draft', currency: 'GBP', subtotal: 500, vatAmount: 100, total: 600, dueDate: '2026-05-01T00:00:00Z', paidDate: null, daysOverdue: 0, createdAt: '2026-04-01T00:00:00Z' },
-        { id: 'inv-2', invoiceNumber: 'INV-1049', clientId: 'c-2', clientName: 'Brightfield', status: 'paid', currency: 'GBP', subtotal: 800, vatAmount: 160, total: 960, dueDate: '2026-04-15T00:00:00Z', paidDate: '2026-04-10T00:00:00Z', daysOverdue: 0, createdAt: '2026-03-15T00:00:00Z' },
+        { id: 'inv-1', invoiceNumber: 'INV-1050', clientId: 'c-1', clientName: 'Apex Media', status: 'draft', currency: 'GBP', subtotal: '500', vatAmount: '100', total: '600', dueDate: '2026-05-01T00:00:00Z', paidDate: null, daysOverdue: 0, createdAt: '2026-04-01T00:00:00Z' },
+        { id: 'inv-2', invoiceNumber: 'INV-1049', clientId: 'c-2', clientName: 'Brightfield', status: 'paid', currency: 'GBP', subtotal: '800', vatAmount: '160', total: '960', dueDate: '2026-04-15T00:00:00Z', paidDate: '2026-04-10T00:00:00Z', daysOverdue: 0, createdAt: '2026-03-15T00:00:00Z' },
       ],
       total: 2,
       page: 1,
@@ -22,6 +22,12 @@ vi.mock('@/lib/hooks/use-invoices', () => ({
     isLoading: false,
     error: null,
   }),
+  toMoney: (v: string | number | null | undefined) => {
+    if (v === null || v === undefined) return 0;
+    if (typeof v === 'number') return v;
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  },
 }));
 
 function renderPage() {

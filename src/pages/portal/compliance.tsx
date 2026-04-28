@@ -65,17 +65,17 @@ export function PortalCompliancePage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {campaign.landingPages.map((lp) => (
-                <div key={lp.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-9 items-center justify-center rounded-lg bg-muted">
+                <div key={lp.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
                       <Globe className="size-4 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium truncate max-w-[300px]">{lp.url}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-all text-sm font-medium">{lp.url}</p>
                       <p className="text-xs text-muted-foreground">Last checked {formatDate(lp.lastChecked)}</p>
                     </div>
                   </div>
-                  <a href={lp.url} target="_blank" rel="noopener noreferrer">
+                  <a href={lp.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
                     <ExternalLink className="size-4 text-muted-foreground hover:text-foreground" />
                   </a>
                 </div>

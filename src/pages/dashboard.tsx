@@ -10,6 +10,7 @@ import { CreditAlertWidget } from '@/components/dashboard/credit-alert-widget';
 import { NotificationFeed } from '@/components/dashboard/notification-feed';
 import { TaskSummaryWidget } from '@/components/dashboard/task-summary-widget';
 import { useDashboardStats } from '@/lib/hooks/use-dashboard';
+import { toMoney } from '@/lib/hooks/use-invoices';
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from '@/components/ui/card';
@@ -238,7 +239,7 @@ export function DashboardPage() {
                     <TableCell><div><div className="font-medium">{inv.invoiceNumber}</div><div className="text-xs text-muted-foreground">{formatDate(inv.createdAt)}</div></div></TableCell>
                     <TableCell className="font-medium">{inv.clientName}</TableCell>
                     <TableCell><Badge variant={statusVariant(inv.status)} className="capitalize">{inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}</Badge></TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(inv.total)}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(toMoney(inv.total))}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

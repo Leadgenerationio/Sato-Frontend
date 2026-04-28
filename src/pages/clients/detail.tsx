@@ -73,11 +73,13 @@ export function ClientDetailPage() {
   }
 
   async function handleCreditCheck() {
+    if (runCheck.isPending) return;
     try {
       const result = await runCheck.mutateAsync(id!);
       toast.success(`Credit check complete — score: ${result.creditScore}`);
-    } catch {
-      toast.error('Credit check failed');
+    } catch (err) {
+      console.error('Credit check failed', err);
+      toast.error(err instanceof Error ? err.message : 'Credit check failed');
     }
   }
 

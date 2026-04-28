@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export interface AdSpendRow {
   id: string;
@@ -55,7 +55,7 @@ export function useAdSpendStatus() {
     queryKey: ['ad-spend', 'status'],
     queryFn: async () => {
       const res = await api.get<AdSpendStatus>('/api/v1/ad-spend/status');
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -65,7 +65,7 @@ export function useAdSpendList(filters: AdSpendFilters) {
     queryKey: ['ad-spend', 'list', filters],
     queryFn: async () => {
       const res = await api.get<AdSpendRow[]>(`/api/v1/ad-spend${toQs(filters)}`);
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -77,7 +77,7 @@ export function useAdSpendSummary(filters: AdSpendFilters) {
       const res = await api.get<{ rows: AdSpendSummaryRow[]; total: AdSpendTotal }>(
         `/api/v1/ad-spend/summary${toQs(filters)}`,
       );
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -87,7 +87,7 @@ export function useAdSpendSyncNow() {
   return useMutation({
     mutationFn: async () => {
       const res = await api.post<{ jobId: string; enqueuedAt: string }>('/api/v1/ad-spend/sync');
-      return res.data!;
+      return unwrap(res);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ad-spend'] });

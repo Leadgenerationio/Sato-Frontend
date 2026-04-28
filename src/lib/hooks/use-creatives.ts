@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export interface Creative {
   id: string;
@@ -19,7 +19,7 @@ export function useCreatives(campaignId: string) {
     queryKey: ['creatives', campaignId],
     queryFn: async () => {
       const res = await api.get<{ creatives: Creative[] }>(`/api/v1/campaigns/${campaignId}/creatives`);
-      return res.data!.creatives;
+      return unwrap(res).creatives;
     },
     enabled: !!campaignId,
   });
@@ -37,7 +37,7 @@ export function useCreateCreative(campaignId: string) {
       contentType: string;
     }) => {
       const res = await api.post<{ creative: Creative }>('/api/v1/creatives', { ...input, campaignId });
-      return res.data!.creative;
+      return unwrap(res).creative;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['creatives', campaignId] }),
   });

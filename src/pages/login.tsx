@@ -127,7 +127,7 @@ export function LoginPage() {
       {/* ─── Right Panel ─── */}
       <div className="flex flex-1 items-center justify-center bg-neutral-50 p-6 sm:p-10 relative">
 
-        <div className="relative z-10 w-full max-w-[400px]">
+        <div className="relative z-10 w-full max-w-[calc(100%-1rem)] sm:max-w-[400px]">
 
           {/* Mobile logo */}
           <div className="mb-10 flex flex-col items-center lg:hidden animate-scale-in">

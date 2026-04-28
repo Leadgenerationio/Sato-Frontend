@@ -15,6 +15,7 @@ import {
   usePushInvoiceToXero,
   useAddInvoiceAttachment,
   useRemoveInvoiceAttachment,
+  toMoney,
   type InvoiceDetail,
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
@@ -105,9 +106,9 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
       </table>
 
       <table class="total-section">
-        <tr><td class="text-right" colspan="3">Subtotal</td><td class="text-right">${fmt(invoice.subtotal)}</td></tr>
-        ${invoice.vatAmount > 0 ? `<tr><td class="text-right" colspan="3">VAT (20%)</td><td class="text-right">${fmt(invoice.vatAmount)}</td></tr>` : ''}
-        <tr class="grand-total"><td class="text-right" colspan="3">Total</td><td class="text-right">${fmt(invoice.total)}</td></tr>
+        <tr><td class="text-right" colspan="3">Subtotal</td><td class="text-right">${fmt(toMoney(invoice.subtotal))}</td></tr>
+        ${toMoney(invoice.vatAmount) > 0 ? `<tr><td class="text-right" colspan="3">VAT (20%)</td><td class="text-right">${fmt(toMoney(invoice.vatAmount))}</td></tr>` : ''}
+        <tr class="grand-total"><td class="text-right" colspan="3">Total</td><td class="text-right">${fmt(toMoney(invoice.total))}</td></tr>
       </table>
 
       <script>window.onload = function() { window.print(); }</script>
@@ -218,17 +219,17 @@ export function InvoiceDetailPage() {
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(invoice.subtotal, invoice.currency)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</TableCell>
                 </TableRow>
-                {invoice.vatAmount > 0 && (
+                {toMoney(invoice.vatAmount) > 0 && (
                   <TableRow>
                     <TableCell colSpan={3} className="text-right font-medium">VAT (20%)</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(invoice.vatAmount, invoice.currency)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</TableCell>
                   </TableRow>
                 )}
                 <TableRow>
                   <TableCell colSpan={3} className="text-right text-base font-bold">Total</TableCell>
-                  <TableCell className="text-right text-base font-bold tabular-nums">{formatCurrency(invoice.total, invoice.currency)}</TableCell>
+                  <TableCell className="text-right text-base font-bold tabular-nums">{formatCurrency(toMoney(invoice.total), invoice.currency)}</TableCell>
                 </TableRow>
               </TableFooter>
             </Table>

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, ExternalLink, Plus, Download, FileText } from 'lucide-react';
-import { useInvoices, type InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { useInvoices, toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import { Pagination } from '@/components/ui/pagination';
 
 const STATUS_TABS = ['all', 'draft', 'sent', 'authorised', 'paid', 'overdue'] as const;
@@ -79,7 +79,7 @@ export function InvoiceListPage() {
             <button
               key={tab}
               onClick={() => handleStatusChange(tab)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors capitalize whitespace-nowrap ${
+              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                 statusFilter === tab
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -157,9 +157,9 @@ export function InvoiceListPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(inv.subtotal, inv.currency)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(inv.vatAmount, inv.currency)}</TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">{formatCurrency(inv.total, inv.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(inv.subtotal), inv.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(inv.vatAmount), inv.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
                       <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
                       <TableCell className="text-muted-foreground">{formatDate(inv.createdAt)}</TableCell>
                       <TableCell>

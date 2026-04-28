@@ -55,8 +55,17 @@ class ApiClient {
       if (newToken) return this.request<T>(path, options, true);
     }
 
-    const data = await response.json();
+    let data: ApiResponse<T>;
+    try {
+      data = (await response.json()) as ApiResponse<T>;
+    } catch {
+      throw new ApiError(statusMessage(response.status, 'Server returned an invalid response'), response.status);
+    }
+
     if (!response.ok) {
+      throw new ApiError(data.message || statusMessage(response.status, 'Request failed'), response.status);
+    }
+    if (data.status !== 'success') {
       throw new ApiError(data.message || 'Request failed', response.status);
     }
     return data;
@@ -73,6 +82,32 @@ export class ApiError extends Error {
   constructor(message: string, public status: number) {
     super(message);
   }
+}
+
+function statusMessage(status: number, fallback: string): string {
+  switch (status) {
+    case 400: return 'Invalid request';
+    case 401: return 'Session expired — please sign in again';
+    case 403: return 'Access denied';
+    case 404: return 'Not found';
+    case 409: return 'Conflict — this record was modified or already exists';
+    case 422: return 'Validation failed';
+    case 429: return 'Too many requests — please wait a moment';
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return 'Server error — please try again';
+    default:
+      return fallback;
+  }
+}
+
+export function unwrap<T>(res: ApiResponse<T>): T {
+  if (res.data === undefined || res.data === null) {
+    throw new ApiError(res.message || 'Response missing data', 500);
+  }
+  return res.data;
 }
 
 export const api = new ApiClient();

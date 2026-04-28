@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export interface ClientSummary {
   id: string;
@@ -62,7 +62,7 @@ export function useClients(filters?: { status?: string; search?: string; page?: 
     queryKey: ['clients', filters],
     queryFn: async () => {
       const res = await api.get<PaginatedClients>(`/api/v1/clients${qs ? `?${qs}` : ''}`);
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -72,7 +72,7 @@ export function useClient(id: string) {
     queryKey: ['client', id],
     queryFn: async () => {
       const res = await api.get<{ client: ClientDetail }>(`/api/v1/clients/${id}`);
-      return res.data!.client;
+      return unwrap(res).client;
     },
     enabled: !!id,
   });
@@ -83,7 +83,7 @@ export function useCreateClient() {
   return useMutation({
     mutationFn: async (data: Partial<ClientDetail>) => {
       const res = await api.post<{ client: ClientDetail }>('/api/v1/clients', data);
-      return res.data!.client;
+      return unwrap(res).client;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
   });
@@ -94,7 +94,7 @@ export function useUpdateClient() {
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<ClientDetail> & { id: string }) => {
       const res = await api.put<{ client: ClientDetail }>(`/api/v1/clients/${id}`, data);
-      return res.data!.client;
+      return unwrap(res).client;
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['clients'] });
@@ -108,7 +108,7 @@ export function useCreditHistory(clientId: string) {
     queryKey: ['credit-history', clientId],
     queryFn: async () => {
       const res = await api.get<{ history: CreditCheckEntry[] }>(`/api/v1/clients/${clientId}/credit-history`);
-      return res.data!.history;
+      return unwrap(res).history;
     },
     enabled: !!clientId,
   });
@@ -119,7 +119,7 @@ export function useRunCreditCheck() {
   return useMutation({
     mutationFn: async (clientId: string) => {
       const res = await api.post<{ creditCheck: CreditCheckEntry }>(`/api/v1/clients/${clientId}/credit-check`);
-      return res.data!.creditCheck;
+      return unwrap(res).creditCheck;
     },
     onSuccess: (_, clientId) => {
       qc.invalidateQueries({ queryKey: ['credit-history', clientId] });
@@ -140,7 +140,7 @@ export function useCreditAlerts() {
     queryKey: ['credit-alerts'],
     queryFn: async () => {
       const res = await api.get<{ alerts: CreditAlert[] }>('/api/v1/clients/credit-alerts');
-      return res.data!.alerts;
+      return unwrap(res).alerts;
     },
   });
 }
