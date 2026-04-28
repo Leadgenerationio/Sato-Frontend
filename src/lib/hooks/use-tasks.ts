@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export interface TaskSummary {
   id: string;
@@ -68,7 +68,7 @@ export function useTasks(filters?: { status?: string; priority?: string; search?
     queryKey: ['tasks', filters],
     queryFn: async () => {
       const res = await api.get<PaginatedTasks>(`/api/v1/tasks${qs ? `?${qs}` : ''}`);
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -78,7 +78,7 @@ export function useTask(id: string) {
     queryKey: ['task', id],
     queryFn: async () => {
       const res = await api.get<{ task: TaskDetail }>(`/api/v1/tasks/${id}`);
-      return res.data!.task;
+      return unwrap(res).task;
     },
     enabled: !!id,
   });
@@ -89,7 +89,7 @@ export function useTaskStats() {
     queryKey: ['task-stats'],
     queryFn: async () => {
       const res = await api.get<{ stats: TaskStats }>('/api/v1/tasks/stats');
-      return res.data!.stats;
+      return unwrap(res).stats;
     },
   });
 }
@@ -99,7 +99,7 @@ export function useTaskTemplates() {
     queryKey: ['task-templates'],
     queryFn: async () => {
       const res = await api.get<{ templates: TaskTemplate[] }>('/api/v1/tasks/templates');
-      return res.data!.templates;
+      return unwrap(res).templates;
     },
   });
 }
@@ -109,7 +109,7 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: async (data: { title: string; description: string; assignee: string; priority: string; category: string; dueDate: string | null }) => {
       const res = await api.post<{ task: TaskDetail }>('/api/v1/tasks', data);
-      return res.data!.task;
+      return unwrap(res).task;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
@@ -123,7 +123,7 @@ export function useUpdateTaskStatus() {
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const res = await api.patch<{ task: TaskDetail }>(`/api/v1/tasks/${id}/status`, { status });
-      return res.data!.task;
+      return unwrap(res).task;
     },
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
@@ -138,7 +138,7 @@ export function useAddComment() {
   return useMutation({
     mutationFn: async ({ taskId, text }: { taskId: string; text: string }) => {
       const res = await api.post<{ comment: TaskComment }>(`/api/v1/tasks/${taskId}/comments`, { text });
-      return res.data!.comment;
+      return unwrap(res).comment;
     },
     onSuccess: (_, { taskId }) => {
       qc.invalidateQueries({ queryKey: ['task', taskId] });
@@ -151,7 +151,7 @@ export function useCreateFromTemplate() {
   return useMutation({
     mutationFn: async (data: { templateId: string; assignee: string; dueDate: string | null }) => {
       const res = await api.post<{ task: TaskDetail }>('/api/v1/tasks/from-template', data);
-      return res.data!.task;
+      return unwrap(res).task;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] });

@@ -48,7 +48,10 @@ function formatDate(iso: string) {
 export function SubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState(MOCK_SUBSCRIPTIONS);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', provider: '', cost: 0, currency: 'GBP', frequency: 'monthly' as const, category: '' });
+  const [form, setForm] = useState<{
+    name: string; provider: string; cost: number; currency: string;
+    frequency: 'monthly' | 'yearly'; category: string;
+  }>({ name: '', provider: '', cost: 0, currency: 'GBP', frequency: 'monthly', category: '' });
 
   const monthlyCost = subscriptions
     .filter((s) => s.status === 'active')
@@ -81,11 +84,11 @@ export function SubscriptionsPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>Add Subscription</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g., Slack" /></div>
                 <div className="space-y-1"><Label>Provider</Label><Input value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })} placeholder="e.g., Slack Inc" /></div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="space-y-1"><Label>Cost</Label><Input type="number" min={0} step={0.01} value={form.cost} onChange={(e) => setForm({ ...form, cost: Number(e.target.value) })} /></div>
                 <div className="space-y-1"><Label>Currency</Label>
                   <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
@@ -93,7 +96,14 @@ export function SubscriptionsPage() {
                   </select>
                 </div>
                 <div className="space-y-1"><Label>Frequency</Label>
-                  <select value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value as any })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+                  <select
+                    value={form.frequency}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === 'monthly' || v === 'yearly') setForm({ ...form, frequency: v });
+                    }}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  >
                     <option value="monthly">Monthly</option><option value="yearly">Yearly</option>
                   </select>
                 </div>
@@ -106,9 +116,9 @@ export function SubscriptionsPage() {
       </PageHeader>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold tabular-nums">{formatCurrency(monthlyCost)}</p><p className="text-sm text-muted-foreground">Monthly Cost</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold tabular-nums">{formatCurrency(yearlyCost)}</p><p className="text-sm text-muted-foreground">Annual Cost</p></CardContent></Card>
-        <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold">{subscriptions.filter((s) => s.status === 'active').length}</p><p className="text-sm text-muted-foreground">Active Subscriptions</p></CardContent></Card>
+        <Card className="py-5"><CardContent className="text-center"><p className="text-2xl font-bold tabular-nums">{formatCurrency(monthlyCost)}</p><p className="text-sm text-muted-foreground">Monthly Cost</p></CardContent></Card>
+        <Card className="py-5"><CardContent className="text-center"><p className="text-2xl font-bold tabular-nums">{formatCurrency(yearlyCost)}</p><p className="text-sm text-muted-foreground">Annual Cost</p></CardContent></Card>
+        <Card className="py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{subscriptions.filter((s) => s.status === 'active').length}</p><p className="text-sm text-muted-foreground">Active Subscriptions</p></CardContent></Card>
       </div>
 
       <Card>

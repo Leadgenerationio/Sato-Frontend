@@ -16,6 +16,15 @@ function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
 
+// Money math is done in integer minor units (e.g. pence) to avoid float drift
+// across many line items. Inputs may be partial decimals; round once on entry.
+function toMinor(value: number): number {
+  return Math.round(value * 100);
+}
+function fromMinor(minor: number): number {
+  return minor / 100;
+}
+
 export function InvoiceCreatePage() {
   const navigate = useNavigate();
   const { data: clients, isLoading: clientsLoading } = useInvoiceClients();
@@ -48,11 +57,13 @@ export function InvoiceCreatePage() {
       if (field === 'description') {
         line.description = value as string;
       } else if (field === 'quantity') {
-        line.quantity = Number(value) || 0;
-        line.amount = Math.round(line.quantity * line.unitPrice * 100) / 100;
+        const n = Number(value);
+        line.quantity = Number.isFinite(n) && n > 0 ? n : 0;
+        line.amount = fromMinor(toMinor(line.quantity * line.unitPrice));
       } else if (field === 'unitPrice') {
-        line.unitPrice = Number(value) || 0;
-        line.amount = Math.round(line.quantity * line.unitPrice * 100) / 100;
+        const n = Number(value);
+        line.unitPrice = Number.isFinite(n) && n >= 0 ? n : 0;
+        line.amount = fromMinor(toMinor(line.quantity * line.unitPrice));
       }
 
       updated[index] = line;
@@ -69,9 +80,12 @@ export function InvoiceCreatePage() {
     setLines((prev) => prev.filter((_, i) => i !== index));
   }
 
-  const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
-  const vatAmount = addVat ? Math.round(subtotal * 0.2 * 100) / 100 : 0;
-  const total = Math.round((subtotal + vatAmount) * 100) / 100;
+  const subtotalMinor = lines.reduce((sum, l) => sum + toMinor(l.amount), 0);
+  const vatMinor = addVat ? Math.round(subtotalMinor * 0.2) : 0;
+  const totalMinor = subtotalMinor + vatMinor;
+  const subtotal = fromMinor(subtotalMinor);
+  const vatAmount = fromMinor(vatMinor);
+  const total = fromMinor(totalMinor);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,8 +102,9 @@ export function InvoiceCreatePage() {
       const invoice = await createInvoice.mutateAsync({ clientId: selectedClientId, currency, lineItems: lines, addVat });
       toast.success(`Invoice ${invoice.invoiceNumber} created`);
       navigate(`/finance/invoices/${invoice.id}`);
-    } catch {
-      toast.error('Failed to create invoice');
+    } catch (err) {
+      console.error('Create invoice failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to create invoice');
     }
   }
 
@@ -120,46 +135,55 @@ export function InvoiceCreatePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {lines.map((line, i) => (
-                <div key={i} className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-5">
-                    {i === 0 && <Label className="text-xs text-muted-foreground">Description</Label>}
+                <div
+                  key={i}
+                  className="grid grid-cols-1 gap-3 rounded-md border p-3 sm:grid-cols-12 sm:items-end sm:rounded-none sm:border-0 sm:p-0"
+                >
+                  <div className="sm:col-span-5">
+                    <Label className="text-xs text-muted-foreground sm:hidden">Description</Label>
+                    {i === 0 && <Label className="hidden text-xs text-muted-foreground sm:block">Description</Label>}
                     <Input
                       value={line.description}
                       onChange={(e) => updateLine(i, 'description', e.target.value)}
                       placeholder="Lead type..."
                     />
                   </div>
-                  <div className="col-span-2">
-                    {i === 0 && <Label className="text-xs text-muted-foreground">Qty</Label>}
-                    <Input
-                      type="number"
-                      min={1}
-                      value={line.quantity}
-                      onChange={(e) => updateLine(i, 'quantity', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    {i === 0 && <Label className="text-xs text-muted-foreground">Unit Price</Label>}
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={line.unitPrice}
-                      onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-2 text-right">
-                    {i === 0 && <Label className="text-xs text-muted-foreground">Amount</Label>}
-                    <p className="h-9 flex items-center justify-end text-sm font-medium tabular-nums">
-                      {formatCurrency(line.amount, currency)}
-                    </p>
-                  </div>
-                  <div className="col-span-1">
-                    {lines.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" className="size-9" onClick={() => removeLine(i)}>
-                        <Trash2 className="size-4 text-muted-foreground" />
-                      </Button>
-                    )}
+                  <div className="grid grid-cols-3 gap-3 sm:col-span-7 sm:grid-cols-7">
+                    <div className="sm:col-span-2">
+                      <Label className="text-xs text-muted-foreground sm:hidden">Qty</Label>
+                      {i === 0 && <Label className="hidden text-xs text-muted-foreground sm:block">Qty</Label>}
+                      <Input
+                        type="number"
+                        min={1}
+                        value={line.quantity}
+                        onChange={(e) => updateLine(i, 'quantity', e.target.value)}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="text-xs text-muted-foreground sm:hidden">Unit Price</Label>
+                      {i === 0 && <Label className="hidden text-xs text-muted-foreground sm:block">Unit Price</Label>}
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={line.unitPrice}
+                        onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
+                      />
+                    </div>
+                    <div className="sm:col-span-2 sm:text-right">
+                      <Label className="text-xs text-muted-foreground sm:hidden">Amount</Label>
+                      {i === 0 && <Label className="hidden text-xs text-muted-foreground sm:block">Amount</Label>}
+                      <p className="flex h-9 items-center text-sm font-medium tabular-nums sm:justify-end">
+                        {formatCurrency(line.amount, currency)}
+                      </p>
+                    </div>
+                    <div className="flex items-end justify-end sm:col-span-1">
+                      {lines.length > 1 && (
+                        <Button type="button" variant="ghost" size="icon" className="size-9" onClick={() => removeLine(i)}>
+                          <Trash2 className="size-4 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

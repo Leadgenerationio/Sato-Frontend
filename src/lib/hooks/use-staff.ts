@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 // ─── Types ───
 
@@ -59,7 +59,7 @@ export function useStaffList() {
     queryKey: ['staff'],
     queryFn: async () => {
       const res = await api.get<{ staff: StaffMember[] }>('/api/v1/hr/staff');
-      return res.data!.staff;
+      return unwrap(res).staff;
     },
   });
 }
@@ -69,7 +69,7 @@ export function useCreateStaff() {
   return useMutation({
     mutationFn: async (data: Partial<StaffMember>) => {
       const res = await api.post<{ member: StaffMember }>('/api/v1/hr/staff', data);
-      return res.data!.member;
+      return unwrap(res).member;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff'] }); qc.invalidateQueries({ queryKey: ['staff-stats'] }); },
   });
@@ -80,7 +80,7 @@ export function useUpdateStaff() {
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<StaffMember> & { id: string }) => {
       const res = await api.put<{ member: StaffMember }>(`/api/v1/hr/staff/${id}`, data);
-      return res.data!.member;
+      return unwrap(res).member;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff'] }); },
   });
@@ -91,7 +91,7 @@ export function useCreateJobPosting() {
   return useMutation({
     mutationFn: async (data: { title: string; department: string }) => {
       const res = await api.post<{ job: JobPosting }>('/api/v1/hr/jobs', data);
-      return res.data!.job;
+      return unwrap(res).job;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['job-postings'] }); qc.invalidateQueries({ queryKey: ['staff-stats'] }); },
   });
@@ -102,7 +102,7 @@ export function useStaffMember(id: string) {
     queryKey: ['staff', id],
     queryFn: async () => {
       const res = await api.get<{ member: StaffMember }>(`/api/v1/hr/staff/${id}`);
-      return res.data!.member;
+      return unwrap(res).member;
     },
     enabled: !!id,
   });
@@ -123,7 +123,7 @@ export function useStaffDocuments(staffId: string) {
     queryKey: ['staff-documents', staffId],
     queryFn: async () => {
       const res = await api.get<{ documents: StaffDocument[] }>(`/api/v1/hr/staff/${staffId}/documents`);
-      return res.data!.documents;
+      return unwrap(res).documents;
     },
     enabled: !!staffId,
   });
@@ -134,7 +134,7 @@ export function useAddStaffDocument(staffId: string) {
   return useMutation({
     mutationFn: async (doc: { key: string; name: string; size: number; contentType: string; category?: string }) => {
       const res = await api.post<{ documents: StaffDocument[] }>(`/api/v1/hr/staff/${staffId}/documents`, doc);
-      return res.data!.documents;
+      return unwrap(res).documents;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['staff-documents', staffId] }),
   });
@@ -147,7 +147,7 @@ export function useRemoveStaffDocument(staffId: string) {
       const res = await api.delete<{ documents: StaffDocument[] }>(
         `/api/v1/hr/staff/${staffId}/documents/${encodeURIComponent(key)}`,
       );
-      return res.data!.documents;
+      return unwrap(res).documents;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['staff-documents', staffId] }),
   });
@@ -158,7 +158,7 @@ export function useStaffStats() {
     queryKey: ['staff-stats'],
     queryFn: async () => {
       const res = await api.get<{ stats: StaffStats }>('/api/v1/hr/staff/stats');
-      return res.data!.stats;
+      return unwrap(res).stats;
     },
   });
 }
@@ -168,7 +168,7 @@ export function useJobPostings() {
     queryKey: ['job-postings'],
     queryFn: async () => {
       const res = await api.get<{ jobs: JobPosting[] }>('/api/v1/hr/jobs');
-      return res.data!.jobs;
+      return unwrap(res).jobs;
     },
   });
 }
@@ -178,7 +178,7 @@ export function useApplicants(jobId: string) {
     queryKey: ['applicants', jobId],
     queryFn: async () => {
       const res = await api.get<{ applicants: Applicant[] }>(`/api/v1/hr/jobs/${jobId}/applicants`);
-      return res.data!.applicants;
+      return unwrap(res).applicants;
     },
     enabled: !!jobId,
   });
@@ -189,7 +189,7 @@ export function useUpdateApplicantStage() {
   return useMutation({
     mutationFn: async ({ id, stage }: { id: string; stage: Applicant['stage'] }) => {
       const res = await api.patch<{ applicant: Applicant }>(`/api/v1/hr/applicants/${id}/stage`, { stage });
-      return res.data!.applicant;
+      return unwrap(res).applicant;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['applicants'] });
@@ -203,7 +203,7 @@ export function useHolidayRequests() {
     queryKey: ['holiday-requests'],
     queryFn: async () => {
       const res = await api.get<{ holidays: HolidayRequest[] }>('/api/v1/hr/holidays');
-      return res.data!.holidays;
+      return unwrap(res).holidays;
     },
   });
 }
@@ -213,7 +213,7 @@ export function useCreateHolidayRequest() {
   return useMutation({
     mutationFn: async (data: { staffId: string; staffName: string; type: HolidayRequest['type']; startDate: string; endDate: string }) => {
       const res = await api.post<{ holiday: HolidayRequest }>('/api/v1/hr/holidays', data);
-      return res.data!.holiday;
+      return unwrap(res).holiday;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['holiday-requests'] });
@@ -227,7 +227,7 @@ export function useApproveHolidayRequest() {
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await api.patch<{ holiday: HolidayRequest }>(`/api/v1/hr/holidays/${id}/approve`);
-      return res.data!.holiday;
+      return unwrap(res).holiday;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['holiday-requests'] });
@@ -241,7 +241,7 @@ export function useRejectHolidayRequest() {
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await api.patch<{ holiday: HolidayRequest }>(`/api/v1/hr/holidays/${id}/reject`);
-      return res.data!.holiday;
+      return unwrap(res).holiday;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['holiday-requests'] });

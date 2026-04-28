@@ -62,7 +62,7 @@ export function ClientsPage() {
             <button
               key={tab}
               onClick={() => handleStatusChange(tab)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors capitalize whitespace-nowrap ${
+              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                 statusFilter === tab ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               }`}
             >

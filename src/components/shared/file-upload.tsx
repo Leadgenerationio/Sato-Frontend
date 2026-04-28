@@ -38,7 +38,12 @@ export function FileUpload({
     try {
       const result = await upload.mutateAsync({ file, folder });
       setUploaded({ name: file.name, key: result.key });
-      onUploaded?.(result, file);
+      try {
+        onUploaded?.(result, file);
+      } catch (cbErr) {
+        console.error('onUploaded callback threw', cbErr);
+        toast.error('Upload succeeded but post-upload action failed');
+      }
       if (!result.configured) {
         toast.info('Uploaded in mock mode — R2 credentials not configured.');
       } else {

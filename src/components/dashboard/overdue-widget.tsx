@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
@@ -28,7 +28,7 @@ export function OverdueWidget() {
   });
 
   const overdue = data ?? [];
-  const totalOverdue = overdue.reduce((sum, inv) => sum + inv.total, 0);
+  const totalOverdue = overdue.reduce((sum, inv) => sum + toMoney(inv.total), 0);
   const top = overdue.slice(0, 4);
 
   return (
@@ -75,7 +75,7 @@ export function OverdueWidget() {
                     {inv.daysOverdue}d
                   </Badge>
                   <span className="text-sm font-medium tabular-nums whitespace-nowrap">
-                    {formatCurrency(inv.total, inv.currency)}
+                    {formatCurrency(toMoney(inv.total), inv.currency)}
                   </span>
                 </div>
               </div>

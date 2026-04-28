@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Download } from 'lucide-react';
 import { usePortalInvoices, type PortalInvoice } from '@/lib/hooks/use-portal';
+import { toMoney } from '@/lib/hooks/use-invoices';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500',
@@ -59,7 +60,7 @@ function handleDownloadInvoice(inv: PortalInvoice) {
         ${inv.paidDate ? `<tr><td>Paid Date</td><td class="text-right">${new Date(inv.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td></tr>` : ''}
       </table>
       <table>
-        <tr class="total-row"><td>Total</td><td class="text-right">${new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(inv.total)}</td></tr>
+        <tr class="total-row"><td>Total</td><td class="text-right">${new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(toMoney(inv.total))}</td></tr>
       </table>
       <script>window.onload = function() { window.print(); }</script>
     </body>
@@ -71,8 +72,8 @@ function handleDownloadInvoice(inv: PortalInvoice) {
 export function PortalInvoicesPage() {
   const { data: invoices, isLoading } = usePortalInvoices();
 
-  const totalOutstanding = invoices?.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + i.total, 0) ?? 0;
-  const totalPaid = invoices?.filter((i) => i.status === 'paid').reduce((sum, i) => sum + i.total, 0) ?? 0;
+  const totalOutstanding = invoices?.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + toMoney(i.total), 0) ?? 0;
+  const totalPaid = invoices?.filter((i) => i.status === 'paid').reduce((sum, i) => sum + toMoney(i.total), 0) ?? 0;
 
   return (
     <div className="space-y-6">
@@ -113,7 +114,7 @@ export function PortalInvoicesPage() {
                         {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(inv.total, inv.currency)}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
                     <TableCell className="text-muted-foreground">{inv.paidDate ? formatDate(inv.paidDate) : '—'}</TableCell>
                     <TableCell className="text-right">

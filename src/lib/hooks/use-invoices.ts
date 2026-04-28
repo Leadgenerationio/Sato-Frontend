@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export interface LineItem {
   description: string;
@@ -15,14 +15,22 @@ export interface InvoiceSummary {
   clientName: string;
   status: string;
   currency: string;
-  subtotal: number;
-  vatAmount: number;
-  total: number;
+  // Money fields are sent as decimal strings on the wire; parse with toMoney().
+  subtotal: string;
+  vatAmount: string;
+  total: string;
   dueDate: string;
   paidDate: string | null;
   daysOverdue: number;
   createdAt: string;
   xeroInvoiceId: string | null;
+}
+
+export function toMoney(value: string | number | null | undefined): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export interface InvoiceAttachment {
@@ -71,7 +79,7 @@ export function useInvoices(filters?: { status?: string; client?: string; search
     queryKey: ['invoices', filters],
     queryFn: async () => {
       const res = await api.get<PaginatedInvoices>(`/api/v1/invoices${qs ? `?${qs}` : ''}`);
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -81,7 +89,7 @@ export function useInvoice(id: string) {
     queryKey: ['invoice', id],
     queryFn: async () => {
       const res = await api.get<{ invoice: InvoiceDetail }>(`/api/v1/invoices/${id}`);
-      return res.data!.invoice;
+      return unwrap(res).invoice;
     },
     enabled: !!id,
   });
@@ -92,7 +100,7 @@ export function useInvoiceClients() {
     queryKey: ['invoice-clients'],
     queryFn: async () => {
       const res = await api.get<{ clients: InvoiceClient[] }>('/api/v1/invoices/clients');
-      return res.data!.clients;
+      return unwrap(res).clients;
     },
   });
 }
@@ -102,7 +110,7 @@ export function useCreateInvoice() {
   return useMutation({
     mutationFn: async (data: { clientId: string; currency: string; lineItems: LineItem[]; addVat: boolean }) => {
       const res = await api.post<{ invoice: InvoiceDetail }>('/api/v1/invoices', data);
-      return res.data!.invoice;
+      return unwrap(res).invoice;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -115,7 +123,7 @@ export function usePushInvoiceToXero() {
   return useMutation({
     mutationFn: async (invoiceId: string) => {
       const res = await api.post<{ invoice: InvoiceDetail }>(`/api/v1/invoices/${invoiceId}/push-to-xero`);
-      return res.data!.invoice;
+      return unwrap(res).invoice;
     },
     onSuccess: (_, invoiceId) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -132,7 +140,7 @@ export function useAddInvoiceAttachment(invoiceId: string) {
         `/api/v1/invoices/${invoiceId}/attachments`,
         attachment,
       );
-      return res.data!.invoice;
+      return unwrap(res).invoice;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
@@ -147,7 +155,7 @@ export function useRemoveInvoiceAttachment(invoiceId: string) {
       const res = await api.delete<{ invoice: InvoiceDetail }>(
         `/api/v1/invoices/${invoiceId}/attachments/${encodeURIComponent(key)}`,
       );
-      return res.data!.invoice;
+      return unwrap(res).invoice;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });

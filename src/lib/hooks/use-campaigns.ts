@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export type CampaignType = 'pay_per_lead' | 'managed' | 'internal';
 
@@ -63,7 +63,7 @@ export function useCampaigns(filters?: { status?: string; vertical?: string; sea
     queryKey: ['campaigns', filters],
     queryFn: async () => {
       const res = await api.get<PaginatedCampaigns>(`/api/v1/campaigns${qs ? `?${qs}` : ''}`);
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -73,7 +73,7 @@ export function useCampaign(id: string) {
     queryKey: ['campaign', id],
     queryFn: async () => {
       const res = await api.get<{ campaign: CampaignDetail }>(`/api/v1/campaigns/${id}`);
-      return res.data!.campaign;
+      return unwrap(res).campaign;
     },
     enabled: !!id,
   });
@@ -99,7 +99,7 @@ export function useTrafficSources(campaignId: string) {
       const res = await api.get<{ sources: TrafficSource[] }>(
         `/api/v1/campaigns/${campaignId}/sources`,
       );
-      return res.data!.sources;
+      return unwrap(res).sources;
     },
     enabled: !!campaignId,
   });

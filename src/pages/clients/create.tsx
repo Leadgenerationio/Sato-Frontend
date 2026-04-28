@@ -32,7 +32,7 @@ export function ClientCreatePage() {
     notes: '',
   });
 
-  function update(field: string, value: any) {
+  function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -46,8 +46,9 @@ export function ClientCreatePage() {
       const client = await createClient.mutateAsync(form);
       toast.success(`${client.companyName} created`);
       navigate(`/clients/${client.id}`);
-    } catch {
-      toast.error('Failed to create client');
+    } catch (err) {
+      console.error('Create client failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to create client');
     }
   }
 

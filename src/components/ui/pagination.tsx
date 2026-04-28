@@ -61,24 +61,31 @@ export function Pagination({ page, pageSize, total, onPageChange }: PaginationPr
           <ChevronLeft className="size-4" />
         </Button>
 
-        {getPageNumbers().map((p, idx) =>
-          p === '...' ? (
-            <span key={`ellipsis-${idx}`} className="px-1.5 text-sm text-muted-foreground">
-              ...
-            </span>
-          ) : (
-            <Button
-              key={p}
-              variant={p === page ? 'default' : 'outline'}
-              size="icon-sm"
-              onClick={() => onPageChange(p)}
-              aria-label={`Page ${p}`}
-              aria-current={p === page ? 'page' : undefined}
-            >
-              {p}
-            </Button>
-          ),
-        )}
+        {/* On mobile, show only "page N of M" instead of all numeric buttons */}
+        <span className="px-2 text-sm tabular-nums text-muted-foreground sm:hidden">
+          {page} / {totalPages}
+        </span>
+
+        <div className="hidden items-center gap-1 sm:flex">
+          {getPageNumbers().map((p, idx) =>
+            p === '...' ? (
+              <span key={`ellipsis-${idx}`} className="px-1.5 text-sm text-muted-foreground">
+                ...
+              </span>
+            ) : (
+              <Button
+                key={p}
+                variant={p === page ? 'default' : 'outline'}
+                size="icon-sm"
+                onClick={() => onPageChange(p)}
+                aria-label={`Page ${p}`}
+                aria-current={p === page ? 'page' : undefined}
+              >
+                {p}
+              </Button>
+            ),
+          )}
+        </div>
 
         <Button
           variant="outline"

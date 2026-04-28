@@ -57,12 +57,12 @@ export function CampaignsPage() {
       {/* Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleStatusChange(tab)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors capitalize ${
+                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                   statusFilter === tab
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -72,12 +72,12 @@ export function CampaignsPage() {
               </button>
             ))}
           </div>
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
             {TYPE_TABS.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => handleTypeChange(tab.value)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                   typeFilter === tab.value
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -146,9 +146,9 @@ export function CampaignsPage() {
                 <TableBody>
                   {campaigns.map((c: CampaignSummary) => (
                     <TableRow key={c.id}>
-                      <TableCell className="max-w-[220px]">
-                        <div className="font-medium truncate">{c.name}</div>
-                        <div className="text-xs text-muted-foreground">LeadByte ID: {c.id.replace(/^lb-/, '')}</div>
+                      <TableCell className="max-w-[140px] sm:max-w-[220px]">
+                        <div className="truncate font-medium">{c.name}</div>
+                        <div className="truncate text-xs text-muted-foreground">LeadByte ID: {c.id.replace(/^lb-/, '')}</div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{c.clientName}</TableCell>
                       <TableCell>

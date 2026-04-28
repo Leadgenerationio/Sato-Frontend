@@ -63,7 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
       }
       return false;
-    } catch {
+    } catch (err) {
+      console.warn('fetchMe failed', err);
       return false;
     }
   }
@@ -82,7 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return data.data.tokens.accessToken;
       }
       return null;
-    } catch {
+    } catch (err) {
+      console.warn('refreshSession failed', err);
       return null;
     }
   }

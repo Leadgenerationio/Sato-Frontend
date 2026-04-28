@@ -118,9 +118,13 @@ function StatsCards() {
   );
 }
 
+type StaffDepartment = 'Content Team' | 'Operations';
+
 function AddStaffDialog() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', role: '', department: 'Operations' as const });
+  const [form, setForm] = useState<{
+    name: string; email: string; role: string; department: StaffDepartment;
+  }>({ name: '', email: '', role: '', department: 'Operations' });
   const createStaff = useCreateStaff();
 
   async function handleSubmit() {
@@ -130,7 +134,10 @@ function AddStaffDialog() {
       toast.success(`${form.name} added`);
       setForm({ name: '', email: '', role: '', department: 'Operations' });
       setOpen(false);
-    } catch { toast.error('Failed to add staff'); }
+    } catch (err) {
+      console.error('Add staff failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to add staff');
+    }
   }
 
   return (
@@ -139,14 +146,21 @@ function AddStaffDialog() {
       <DialogContent>
         <DialogHeader><DialogTitle>Add Staff Member</DialogTitle></DialogHeader>
         <div className="space-y-4 pt-2">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></div>
             <div className="space-y-1"><Label>Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@company.com" /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1"><Label>Role</Label><Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g., Content Writer" /></div>
             <div className="space-y-1"><Label>Department</Label>
-              <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value as any })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+              <select
+                value={form.department}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'Content Team' || v === 'Operations') setForm({ ...form, department: v });
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              >
                 <option value="Content Team">Content Team</option><option value="Operations">Operations</option>
               </select>
             </div>
@@ -170,7 +184,10 @@ function EditStaffDialog({ member }: { member: StaffMember }) {
       await updateStaff.mutateAsync({ id: member.id, ...form });
       toast.success(`${form.name} updated`);
       setOpen(false);
-    } catch { toast.error('Failed to update'); }
+    } catch (err) {
+      console.error('Update staff failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update');
+    }
   }
 
   return (
@@ -179,19 +196,33 @@ function EditStaffDialog({ member }: { member: StaffMember }) {
       <DialogContent>
         <DialogHeader><DialogTitle>Edit {member.name}</DialogTitle></DialogHeader>
         <div className="space-y-4 pt-2">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div className="space-y-1"><Label>Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1"><Label>Role</Label><Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} /></div>
             <div className="space-y-1"><Label>Department</Label>
-              <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value as any })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+              <select
+                value={form.department}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'Content Team' || v === 'Operations') setForm({ ...form, department: v });
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              >
                 <option value="Content Team">Content Team</option><option value="Operations">Operations</option>
               </select>
             </div>
             <div className="space-y-1"><Label>Status</Label>
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as any })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+              <select
+                value={form.status}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'active' || v === 'on_leave' || v === 'terminated') setForm({ ...form, status: v });
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              >
                 <option value="active">Active</option><option value="on_leave">On Leave</option><option value="terminated">Terminated</option>
               </select>
             </div>
