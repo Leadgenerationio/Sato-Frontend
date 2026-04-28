@@ -9,7 +9,8 @@ import { PnlWidget } from '@/components/dashboard/pnl-widget';
 import { CreditAlertWidget } from '@/components/dashboard/credit-alert-widget';
 import { NotificationFeed } from '@/components/dashboard/notification-feed';
 import { TaskSummaryWidget } from '@/components/dashboard/task-summary-widget';
-import { useDashboardStats } from '@/lib/hooks/use-dashboard';
+import { useDashboardStats, useFinancialOverview, useLeadsByDay, useRecentActivity } from '@/lib/hooks/use-dashboard';
+import { useCampaigns } from '@/lib/hooks/use-campaigns';
 import { toMoney } from '@/lib/hooks/use-invoices';
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
@@ -20,43 +21,27 @@ import {
 } from '@/components/ui/table';
 import {
   DollarSign, Users, TrendingUp, Activity, ArrowUpRight, ArrowDownRight,
-  Megaphone, FileText, CreditCard, Clock,
+  FileText, CreditCard,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
-// ─── Chart Data (static — would come from financial report API in production) ───
+// Static demo fallbacks used only when the financial-overview endpoint is
+// unavailable or the user lacks permission (e.g. ops_manager/readonly viewing
+// the dashboard). Real data comes from /api/v1/reports/financial-overview.
 
-const revenueData = [
+const FALLBACK_REVENUE = [
   { month: 'Jan', revenue: 18500, expenses: 12400 },
   { month: 'Feb', revenue: 22300, expenses: 13100 },
   { month: 'Mar', revenue: 19800, expenses: 11900 },
   { month: 'Apr', revenue: 27600, expenses: 14200 },
   { month: 'May', revenue: 32100, expenses: 15800 },
   { month: 'Jun', revenue: 29400, expenses: 14600 },
-  { month: 'Jul', revenue: 35200, expenses: 16100 },
-  { month: 'Aug', revenue: 31800, expenses: 15300 },
-  { month: 'Sep', revenue: 38500, expenses: 17200 },
-  { month: 'Oct', revenue: 42100, expenses: 18600 },
-  { month: 'Nov', revenue: 39800, expenses: 17800 },
-  { month: 'Dec', revenue: 45200, expenses: 19100 },
 ];
 
-const leadsData = [
-  { day: 'Mon', leads: 42 }, { day: 'Tue', leads: 58 }, { day: 'Wed', leads: 35 },
-  { day: 'Thu', leads: 72 }, { day: 'Fri', leads: 64 }, { day: 'Sat', leads: 28 }, { day: 'Sun', leads: 19 },
-];
-
-const campaignData = [
-  { name: 'Google Ads', value: 38, color: '#171717' },
-  { name: 'Facebook', value: 28, color: '#525252' },
-  { name: 'LinkedIn', value: 18, color: '#a3a3a3' },
-  { name: 'Email', value: 16, color: '#d4d4d4' },
-];
-
-const invoiceData = [
+const FALLBACK_INVOICES = [
   { month: 'Jul', paid: 24, overdue: 3, pending: 5 },
   { month: 'Aug', paid: 28, overdue: 2, pending: 4 },
   { month: 'Sep', paid: 31, overdue: 4, pending: 6 },
@@ -65,13 +50,31 @@ const invoiceData = [
   { month: 'Dec', paid: 38, overdue: 1, pending: 4 },
 ];
 
-const recentActivity = [
-  { user: 'Sam Owner', action: 'Created invoice INV-1050 for Apex Media Ltd (£631.80)', time: '5 min ago', icon: FileText },
-  { user: 'System', action: 'Payment received: £3,200.00 from Clearwater Digital', time: '25 min ago', icon: CreditCard },
-  { user: 'System', action: 'Credit alert: Delta Solutions score dropped to 42 (-23 pts)', time: '1 hour ago', icon: Users },
-  { user: 'System', action: 'Campaign "Solar Panel Leads UK" delivered 35 leads today', time: '2 hours ago', icon: Megaphone },
-  { user: 'System', action: 'Weekly Auto-Invoice completed — 3 invoices created (£8,420.00)', time: '3 hours ago', icon: Clock },
+const PIE_PALETTE = ['#171717', '#525252', '#a3a3a3', '#d4d4d4', '#737373', '#404040'];
+
+const FALLBACK_LEADS_BY_DAY = [
+  { day: 'Mon', leads: 0 }, { day: 'Tue', leads: 0 }, { day: 'Wed', leads: 0 },
+  { day: 'Thu', leads: 0 }, { day: 'Fri', leads: 0 }, { day: 'Sat', leads: 0 }, { day: 'Sun', leads: 0 },
 ];
+
+const ACTIVITY_ICON: Record<string, React.ElementType> = {
+  invoice: FileText,
+  agreement: FileText,
+  credit: Users,
+  system: Activity,
+};
+
+function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
 
 // ─── Components ───
 
@@ -123,9 +126,57 @@ const tooltipStyle = {
 export function DashboardPage() {
   const { user } = useAuth();
   const { data: stats, isLoading } = useDashboardStats();
+  const { data: financialOverview } = useFinancialOverview();
+  const { data: campaignsData } = useCampaigns({ limit: 100 });
+  const { data: leadsByDay } = useLeadsByDay(7);
+  const { data: activityFeed } = useRecentActivity(5);
 
   if (!user) return null;
   if (isLoading || !stats) return <DashboardSkeleton />;
+
+  // Real financial data → revenue/expenses chart + invoice status chart.
+  // Falls back to demo data if the user lacks permission (ops_manager/readonly)
+  // or the API is empty.
+  const revenueData = financialOverview && financialOverview.length > 0
+    ? financialOverview.map((r) => ({ month: r.month.split(' ')[0], revenue: r.revenue, expenses: r.expenses }))
+    : FALLBACK_REVENUE;
+
+  const invoiceData = financialOverview && financialOverview.length > 0
+    ? financialOverview.slice(-6).map((r) => ({
+        month: r.month.split(' ')[0],
+        paid: r.invoicesPaid,
+        overdue: r.invoicesOverdue,
+        // Pending isn't in the financial-overview shape; show 0 until BE reports it.
+        pending: 0,
+      }))
+    : FALLBACK_INVOICES;
+
+  // Real campaign-source pie chart — group active campaigns by vertical
+  // (Solar, Insurance, Finance, etc.) and show share of leads-this-month.
+  const campaignsByVertical = (campaignsData?.campaigns ?? []).reduce<Record<string, number>>((acc, c) => {
+    const v = c.vertical || 'Other';
+    acc[v] = (acc[v] ?? 0) + (c.leadsThisMonth ?? 0);
+    return acc;
+  }, {});
+  const totalLeadsByVertical = Object.values(campaignsByVertical).reduce((s, n) => s + n, 0);
+  const campaignData = totalLeadsByVertical > 0
+    ? Object.entries(campaignsByVertical)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 6)
+        .map(([name, leads], i) => ({
+          name,
+          value: Math.round((leads / totalLeadsByVertical) * 100),
+          color: PIE_PALETTE[i % PIE_PALETTE.length],
+        }))
+    : [
+        { name: 'No data', value: 100, color: '#e5e5e5' },
+      ];
+
+  // Daily leads chart — real data from /api/v1/dashboard/leads-by-day.
+  // Fallback to zeros until first data lands so the chart still renders.
+  const leadsData = leadsByDay && leadsByDay.length > 0
+    ? leadsByDay.map((p) => ({ day: p.day, leads: p.leads }))
+    : FALLBACK_LEADS_BY_DAY;
 
   return (
     <div className="flex flex-col gap-6">
@@ -254,13 +305,20 @@ export function DashboardPage() {
           <CardHeader><CardTitle>Recent Activity</CardTitle><CardDescription>Latest actions across the system</CardDescription></CardHeader>
           <CardContent>
             <div className="space-y-5">
-              {recentActivity.map((item, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 mt-0.5"><item.icon className="size-4 text-neutral-600" /></div>
-                  <div className="flex-1 min-w-0"><p className="text-sm font-medium leading-none">{item.user}</p><p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{item.action}</p></div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap mt-0.5">{item.time}</span>
-                </div>
-              ))}
+              {(activityFeed ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No recent activity yet — invoices, agreements, and credit checks will appear here.</p>
+              ) : (
+                (activityFeed ?? []).map((item) => {
+                  const Icon = ACTIVITY_ICON[item.category] ?? Activity;
+                  return (
+                    <div key={item.id} className="flex items-start gap-3">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 mt-0.5"><Icon className="size-4 text-neutral-600" /></div>
+                      <div className="flex-1 min-w-0"><p className="text-sm font-medium leading-none">{item.user}</p><p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{item.action}</p></div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap mt-0.5">{formatRelativeTime(item.timestamp)}</span>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>

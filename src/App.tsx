@@ -30,7 +30,6 @@ import { FinancialReportPage } from '@/pages/reports/financial';
 import { AdSpendReportPage } from '@/pages/reports/ad-spend';
 import { PortalLayout } from '@/components/layouts/portal-layout';
 import { PortalDashboardPage } from '@/pages/portal/dashboard';
-import { PortalCampaignsPage } from '@/pages/portal/campaigns';
 import { PortalLeadsPage } from '@/pages/portal/leads';
 import { PortalInvoicesPage } from '@/pages/portal/invoices';
 import { PortalCompliancePage } from '@/pages/portal/compliance';
@@ -303,7 +302,6 @@ export default function App() {
             }
           >
             <Route path="/portal" element={<PortalDashboardPage />} />
-            <Route path="/portal/campaigns" element={<PortalCampaignsPage />} />
             <Route path="/portal/leads" element={<PortalLeadsPage />} />
             <Route path="/portal/invoices" element={<PortalInvoicesPage />} />
             <Route path="/portal/compliance" element={<PortalCompliancePage />} />

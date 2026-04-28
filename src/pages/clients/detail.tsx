@@ -10,13 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Building, Mail, Phone, MapPin, Shield, FileText, Megaphone,
   CreditCard, ClipboardCheck, Loader2, TrendingDown, TrendingUp, AlertTriangle, Link2,
-  Download, Trash2,
+  Download, Trash2, FileSignature,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClient, useCreditHistory, useRunCreditCheck } from '@/lib/hooks/use-clients';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
+import { SendAgreementDialog } from '@/pages/agreements';
 
 const statusColors: Record<string, string> = {
   prospect: 'bg-blue-500/10 text-blue-600 border-blue-200',
@@ -90,7 +91,23 @@ export function ClientDetailPage() {
         <Link to="/clients"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
         <div className="flex-1">
           <PageHeader title={client.companyName} description={`${client.contactName} · ${client.companyNumber}`}>
-            <Badge className={`capitalize ${statusColors[client.status] || ''}`}>{client.status}</Badge>
+            <div className="flex items-center gap-3">
+              <Badge className={`capitalize ${statusColors[client.status] || ''}`}>{client.status}</Badge>
+              <SendAgreementDialog
+                lockClient
+                prefill={{
+                  clientId: client.id,
+                  signerName: client.contactName,
+                  signerEmail: client.contactEmail,
+                }}
+                trigger={
+                  <Button size="sm" variant="default">
+                    <FileSignature className="size-4 mr-1.5" />
+                    Create Agreement
+                  </Button>
+                }
+              />
+            </div>
           </PageHeader>
         </div>
       </div>

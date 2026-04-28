@@ -5,12 +5,11 @@ import { Logo } from '@/components/shared/logo';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  LayoutDashboard, Megaphone, FileBarChart, FileText, Shield, ScrollText, LogOut,
+  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/portal', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/portal/campaigns', label: 'Campaigns', icon: Megaphone },
   { href: '/portal/leads', label: 'Leads', icon: FileBarChart },
   { href: '/portal/invoices', label: 'Invoices', icon: FileText },
   { href: '/portal/compliance', label: 'Compliance', icon: Shield },

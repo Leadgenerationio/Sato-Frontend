@@ -79,12 +79,27 @@ export function usePortalCampaigns() {
   });
 }
 
-export function usePortalLeads() {
+export interface PortalLeadsRange {
+  from: string;
+  to: string;
+}
+
+export interface PortalLeadsResponse {
+  leads: PortalLeadDay[];
+  range: PortalLeadsRange;
+}
+
+export function usePortalLeads(filter?: { from?: string; to?: string }) {
+  const params = new URLSearchParams();
+  if (filter?.from) params.set('from', filter.from);
+  if (filter?.to) params.set('to', filter.to);
+  const qs = params.toString();
+
   return useQuery({
-    queryKey: ['portal-leads'],
+    queryKey: ['portal-leads', filter?.from, filter?.to],
     queryFn: async () => {
-      const res = await api.get<{ leads: PortalLeadDay[] }>('/api/v1/portal/leads');
-      return unwrap(res).leads;
+      const res = await api.get<PortalLeadsResponse>(`/api/v1/portal/leads${qs ? `?${qs}` : ''}`);
+      return unwrap(res);
     },
   });
 }

@@ -45,21 +45,40 @@ function formatDateTime(iso?: string | null) {
   return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function SendDialog() {
+interface SendAgreementDialogProps {
+  /** Pre-fill any of the form fields. Useful when launching from a client/buyer profile. */
+  prefill?: { clientId?: string; signerName?: string; signerEmail?: string };
+  /** Lock the client selector when launched from a specific client/buyer page. */
+  lockClient?: boolean;
+  /** Custom trigger node. Defaults to a "Send for signature" button. */
+  trigger?: React.ReactNode;
+}
+
+export function SendAgreementDialog({ prefill, lockClient = false, trigger }: SendAgreementDialogProps = {}) {
   const [open, setOpen] = useState(false);
-  const [clientId, setClientId] = useState('');
-  const [signerEmail, setSignerEmail] = useState('');
-  const [signerName, setSignerName] = useState('');
+  const [clientId, setClientId] = useState(prefill?.clientId ?? '');
+  const [signerEmail, setSignerEmail] = useState(prefill?.signerEmail ?? '');
+  const [signerName, setSignerName] = useState(prefill?.signerName ?? '');
   const [uploaded, setUploaded] = useState<{ key: string; name: string } | null>(null);
   const { data: clientsData } = useClients({ limit: 100 });
   const send = useSendAgreement();
 
   const clients = useMemo(() => clientsData?.clients ?? [], [clientsData]);
 
+  // Re-sync state from prefill when the dialog opens — handles the case where
+  // prefill arrives async (e.g. client data loads after parent renders).
+  useEffect(() => {
+    if (!open) return;
+    setClientId(prefill?.clientId ?? '');
+    setSignerEmail(prefill?.signerEmail ?? '');
+    setSignerName(prefill?.signerName ?? '');
+    setUploaded(null);
+  }, [open, prefill?.clientId, prefill?.signerEmail, prefill?.signerName]);
+
   const reset = () => {
-    setClientId('');
-    setSignerEmail('');
-    setSignerName('');
+    setClientId(prefill?.clientId ?? '');
+    setSignerEmail(prefill?.signerEmail ?? '');
+    setSignerName(prefill?.signerName ?? '');
     setUploaded(null);
   };
 
@@ -98,10 +117,12 @@ function SendDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <FileSignature className="size-4" />
-          Send for signature
-        </Button>
+        {trigger ?? (
+          <Button size="sm">
+            <FileSignature className="size-4" />
+            Send for signature
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <form onSubmit={handleSubmit}>
@@ -118,7 +139,8 @@ function SendDialog() {
                 id="clientId"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                disabled={lockClient}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 required
               >
                 <option value="">Select a client…</option>
@@ -216,7 +238,7 @@ export function AgreementsPage() {
               {hasPending ? 'Auto-refreshing every 30s while envelopes are pending…' : 'Envelope statuses update via webhook.'}
             </CardDescription>
           </div>
-          <SendDialog />
+          <SendAgreementDialog />
         </CardHeader>
         <CardContent className="p-0">
           {isLoading && (
