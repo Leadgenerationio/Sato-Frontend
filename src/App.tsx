@@ -13,6 +13,7 @@ import { InvoiceListPage } from '@/pages/finance/invoices';
 import { InvoiceDetailPage } from '@/pages/finance/invoice-detail';
 import { InvoiceCreatePage } from '@/pages/finance/invoice-create';
 import { SubscriptionsPage } from '@/pages/finance/subscriptions';
+import { BankFeedPage } from '@/pages/finance/bank-feed';
 import { ClientsPage } from '@/pages/clients/index';
 import { ClientDetailPage } from '@/pages/clients/detail';
 import { ClientCreatePage } from '@/pages/clients/create';
@@ -98,6 +99,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
                   <SubscriptionsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/finance/bank-feed"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
+                  <BankFeedPage />
                 </ProtectedRoute>
               }
             />

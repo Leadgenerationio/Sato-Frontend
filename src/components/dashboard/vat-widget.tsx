@@ -1,86 +1,115 @@
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Receipt, AlertTriangle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Receipt } from 'lucide-react';
+import { api, unwrap } from '@/lib/api';
 
-const MOCK_VAT = {
-  vatCollected: 14820.40,
-  vatPaid: 6340.20,
-  netLiability: 8480.20,
-  vatReserveBalance: 18200.00,
-  periodStart: '2026-01-01',
-  periodEnd: '2026-03-31',
-};
+interface VatLiabilityResponse {
+  configured: boolean;
+  fromDate?: string;
+  toDate?: string;
+  owed?: string;
+  collectedOnSales?: string;
+  paidOnPurchases?: string;
+  currency?: string;
+  error?: string;
+}
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
+function toMoney(s?: string): number {
+  if (!s) return 0;
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatCurrency(value: number, currency = 'GBP') {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
+}
+
+function formatDate(iso?: string) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function VatWidget() {
-  const { vatCollected, vatPaid, netLiability, vatReserveBalance } = MOCK_VAT;
-  const surplus = vatReserveBalance - netLiability;
-  const hasShortfall = surplus < 0;
+  const { data, isLoading } = useQuery({
+    queryKey: ['xero', 'vat-liability'],
+    queryFn: async () => {
+      const res = await api.get<VatLiabilityResponse>('/api/v1/integrations/xero/vat-liability');
+      return unwrap(res);
+    },
+    refetchInterval: 30 * 60_000, // refresh every 30 min
+  });
+
+  const owed = toMoney(data?.owed);
+  const collected = toMoney(data?.collectedOnSales);
+  const paid = toMoney(data?.paidOnPurchases);
+  const currency = data?.currency ?? 'GBP';
+  const isOwed = owed >= 0;
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-base">VAT Tracker</CardTitle>
-            <CardDescription>Q1 2026 estimate</CardDescription>
+            <CardTitle className="text-base">VAT Liability</CardTitle>
+            <CardDescription>
+              {data?.fromDate
+                ? `Since end of last quarter (${formatDate(data.fromDate)})`
+                : 'Live from Xero'}
+            </CardDescription>
           </div>
-          <div className={`flex size-10 items-center justify-center rounded-lg ${hasShortfall ? 'bg-red-500/10' : 'bg-emerald-500/10'}`}>
-            <Receipt className={`size-5 ${hasShortfall ? 'text-red-600' : 'text-emerald-600'}`} />
+          <div className={`flex size-10 items-center justify-center rounded-lg ${isOwed ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
+            <Receipt className={`size-5 ${isOwed ? 'text-amber-600' : 'text-emerald-600'}`} />
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">VAT Collected</span>
-            <span className="font-medium tabular-nums">{formatCurrency(vatCollected)}</span>
+        {isLoading && (
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-32 mx-auto" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">VAT Paid (input)</span>
-            <span className="font-medium tabular-nums">-{formatCurrency(vatPaid)}</span>
-          </div>
-          <Separator />
-          <div className="flex justify-between">
-            <span className="font-medium">Net Liability</span>
-            <span className="font-bold tabular-nums">{formatCurrency(netLiability)}</span>
-          </div>
-        </div>
+        )}
 
-        <Separator />
-
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">VAT Reserve Balance</span>
-            <span className="font-medium tabular-nums">{formatCurrency(vatReserveBalance)}</span>
+        {!isLoading && data && !data.configured && (
+          <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
+            Xero not connected. Configure XERO_CLIENT_ID + XERO_CLIENT_SECRET to see VAT owed.
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">{hasShortfall ? 'Shortfall' : 'Surplus'}</span>
-            <div className="flex items-center gap-2">
-              {hasShortfall && <AlertTriangle className="size-3.5 text-red-600" />}
-              <span className={`font-bold tabular-nums ${hasShortfall ? 'text-red-600' : 'text-emerald-600'}`}>
-                {hasShortfall ? '-' : '+'}{formatCurrency(Math.abs(surplus))}
-              </span>
+        )}
+
+        {!isLoading && data?.configured && data.error && (
+          <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
+            Couldn't load VAT report from Xero. Make sure the Custom Connection has the <code className="rounded bg-muted px-1 text-xs">accounting.reports.read</code> scope.
+          </div>
+        )}
+
+        {!isLoading && data?.configured && !data.error && (
+          <>
+            <div className="text-center">
+              <p className={`text-3xl font-bold tabular-nums ${isOwed ? 'text-amber-600' : 'text-emerald-600'}`}>
+                {formatCurrency(Math.abs(owed), currency)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {isOwed ? 'Owed to HMRC' : 'Refund due'}
+              </p>
             </div>
-          </div>
-        </div>
 
-        {/* Progress bar */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Coverage</span>
-            <span>{Math.min(Math.round((vatReserveBalance / netLiability) * 100), 999)}%</span>
-          </div>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${hasShortfall ? 'bg-red-500' : 'bg-emerald-500'}`}
-              style={{ width: `${Math.min((vatReserveBalance / netLiability) * 100, 100)}%` }}
-            />
-          </div>
-        </div>
+            <Separator />
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Collected on sales</span>
+                <span className="font-medium tabular-nums">{formatCurrency(collected, currency)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Paid on purchases</span>
+                <span className="font-medium tabular-nums">-{formatCurrency(paid, currency)}</span>
+              </div>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
