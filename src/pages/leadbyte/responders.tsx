@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLbResponders } from '@/lib/hooks/use-leadbyte';
+import { EmptyState } from '@/components/shared/empty-state';
+import { Send, AlertTriangle } from 'lucide-react';
 
 function formatMoney(value?: number, currency = 'GBP') {
   if (value == null) return '—';
@@ -25,10 +27,18 @@ export function LeadByteRespondersPage() {
             </div>
           )}
           {error && (
-            <div className="p-6 text-sm text-red-600">Failed to load responders.</div>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load responders"
+              description="LeadByte may be unreachable. Try again in a moment."
+            />
           )}
           {responders && responders.length === 0 && (
-            <div className="p-6 text-sm text-neutral-500">No responders configured.</div>
+            <EmptyState
+              icon={Send}
+              title="No responders configured"
+              description="Email and SMS responders sync from LeadByte. Configure responders in LeadByte to track push performance here."
+            />
           )}
           {responders && responders.length > 0 && (
             <Table>

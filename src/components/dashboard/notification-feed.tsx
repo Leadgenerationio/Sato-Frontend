@@ -6,6 +6,7 @@ import {
   FileText, Users, Megaphone, Shield, CreditCard, Bell, CheckCircle2, AlertTriangle,
 } from 'lucide-react';
 import { useNotifications, type NotificationType } from '@/lib/hooks/use-notifications';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const typeIcons: Record<NotificationType, React.ElementType> = {
   invoice_overdue: FileText,
@@ -69,9 +70,12 @@ export function NotificationFeed() {
           </div>
         )}
         {!isLoading && all.length === 0 && (
-          <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-            No notifications yet.
-          </div>
+          <EmptyState
+            icon={Bell}
+            title="All caught up"
+            description="New alerts about overdue invoices, credit drops, and payments will appear here."
+            size="compact"
+          />
         )}
         {!isLoading && all.map((n) => {
           const Icon = typeIcons[n.type] || Bell;

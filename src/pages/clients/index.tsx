@@ -9,9 +9,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Plus, Users } from 'lucide-react';
+import { Search, ExternalLink, Plus, Users, AlertTriangle } from 'lucide-react';
 import { useClients, type ClientSummary } from '@/lib/hooks/use-clients';
 import { Pagination } from '@/components/ui/pagination';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const STATUS_TABS = ['all', 'prospect', 'onboarding', 'active', 'paused', 'churned'] as const;
 
@@ -85,9 +86,22 @@ export function ClientsPage() {
               ))}
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground"><Users className="size-8" /><p className="text-sm">Failed to load clients</p></div>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load clients"
+              description="Something went wrong reaching the server. Try refreshing the page."
+            />
           ) : !clients?.length ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground"><Users className="size-8" /><p className="text-sm">No clients found</p></div>
+            <EmptyState
+              icon={Users}
+              title={search || statusFilter !== 'all' ? 'No matching clients' : 'No clients yet'}
+              description={
+                search || statusFilter !== 'all'
+                  ? 'Try a different search or filter.'
+                  : 'Add your first client to start tracking campaigns, invoices, and credit.'
+              }
+              link={search || statusFilter !== 'all' ? undefined : { label: 'Add client', to: '/clients/new', icon: Plus }}
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>

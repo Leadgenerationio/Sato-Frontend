@@ -17,6 +17,7 @@ import {
   useTasks, useTaskStats,
   type TaskSummary,
 } from '@/lib/hooks/use-tasks';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const STATUS_TABS = ['all', 'todo', 'in_progress', 'completed', 'blocked'] as const;
 
@@ -280,19 +281,22 @@ export function TasksPage() {
       ) : error ? (
         <Card>
           <CardContent className="p-0">
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <CheckSquare className="size-8" />
-              <p className="text-sm">Failed to load tasks</p>
-            </div>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load tasks"
+              description="Something went wrong reaching the server. Try refreshing the page."
+            />
           </CardContent>
         </Card>
       ) : !tasks?.length ? (
         <Card>
           <CardContent className="p-0">
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <CheckSquare className="size-8" />
-              <p className="text-sm">No tasks found</p>
-            </div>
+            <EmptyState
+              icon={CheckSquare}
+              title="No tasks yet"
+              description="Create a task to track work and assign it to a teammate."
+              link={{ label: 'New task', to: '/tasks/new', icon: Plus }}
+            />
           </CardContent>
         </Card>
       ) : viewMode === 'board' ? (

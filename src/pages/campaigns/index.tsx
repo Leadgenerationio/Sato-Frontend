@@ -9,9 +9,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Megaphone } from 'lucide-react';
+import { Search, ExternalLink, Megaphone, AlertTriangle } from 'lucide-react';
 import { useCampaigns, type CampaignSummary } from '@/lib/hooks/use-campaigns';
 import { Pagination } from '@/components/ui/pagination';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const STATUS_TABS = ['all', 'active', 'paused', 'inactive'] as const;
 const TYPE_TABS = [
@@ -116,15 +117,21 @@ export function CampaignsPage() {
               ))}
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <Megaphone className="size-8" />
-              <p className="text-sm">Failed to load campaigns</p>
-            </div>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load campaigns"
+              description="Something went wrong reaching the server. Try refreshing the page."
+            />
           ) : !campaigns?.length ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <Megaphone className="size-8" />
-              <p className="text-sm">No campaigns found</p>
-            </div>
+            <EmptyState
+              icon={Megaphone}
+              title={search || statusFilter !== 'all' || typeFilter !== 'all' ? 'No matching campaigns' : 'No campaigns yet'}
+              description={
+                search || statusFilter !== 'all' || typeFilter !== 'all'
+                  ? 'Try a different filter or search term.'
+                  : 'Campaigns sync from LeadByte. Check that LeadByte is connected and has active campaigns.'
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>

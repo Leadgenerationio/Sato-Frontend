@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useClient, useCreditHistory, useRunCreditCheck } from '@/lib/hooks/use-clients';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const statusColors: Record<string, string> = {
   prospect: 'bg-blue-500/10 text-blue-600 border-blue-200',
@@ -169,7 +170,12 @@ export function ClientDetailPage() {
                   <p className="text-sm">View campaigns for this client on the <Link to="/campaigns" className="text-primary underline">Campaigns page</Link>.</p>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No active campaigns for this client.</p>
+                <EmptyState
+                  icon={Megaphone}
+                  title="No active campaigns"
+                  description="This client has no campaigns running yet. Campaigns sync automatically from LeadByte."
+                  size="compact"
+                />
               )}
             </CardContent>
           </Card>
@@ -243,7 +249,12 @@ export function ClientDetailPage() {
               {creditLoading ? (
                 <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
               ) : !creditHistory?.length ? (
-                <p className="text-sm text-muted-foreground py-4">No credit history. Run a credit check to start tracking.</p>
+                <EmptyState
+                  icon={Shield}
+                  title="No credit history"
+                  description='Run a credit check (button above) to record this client&apos;s score and track changes over time.'
+                  size="compact"
+                />
               ) : (
                 <div className="space-y-3">
                   {creditHistory.map((entry) => (
@@ -428,9 +439,12 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
       </CardHeader>
       <CardContent>
         {docs.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-            No documents uploaded yet. Use the button above to add one.
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No documents"
+            description="Upload contracts, agreements, or compliance docs using the button above. Files are stored securely in Cloudflare R2."
+            size="compact"
+          />
         ) : (
           <div className="space-y-2">
             {docs.map((d) => (

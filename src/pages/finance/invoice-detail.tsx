@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from '@/components/ui/table';
-import { ArrowLeft, Send, Download, Check, Loader2, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Download, Check, Loader2, FileText, Trash2, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useInvoice,
@@ -20,6 +20,7 @@ import {
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
@@ -355,9 +356,12 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
       </CardHeader>
       <CardContent>
         {invoice.attachments.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-            No attachments yet.
-          </div>
+          <EmptyState
+            icon={Paperclip}
+            title="No attachments"
+            description="Attach receipts, proof of payment, or supporting documents using the button above."
+            size="compact"
+          />
         ) : (
           <div className="space-y-2">
             {invoice.attachments.map((a) => (

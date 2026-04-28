@@ -20,6 +20,7 @@ import {
 import { useClients } from '@/lib/hooks/use-clients';
 import { FileUpload } from '@/components/shared/file-upload';
 import type { PresignedUpload } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function statusBadge(status: AgreementStatus) {
   const map: Record<AgreementStatus, { label: string; classes: string; icon: React.ElementType }> = {
@@ -224,9 +225,11 @@ export function AgreementsPage() {
             </div>
           )}
           {!isLoading && agreements.length === 0 && (
-            <div className="p-10 text-center text-sm text-muted-foreground">
-              No agreements sent yet. Click “Send for signature” to create one.
-            </div>
+            <EmptyState
+              icon={FileSignature}
+              title="No agreements yet"
+              description='Send a contract or onboarding document for e-signature. Use "Send for signature" above to start.'
+            />
           )}
           {!isLoading && agreements.length > 0 && (
             <Table>

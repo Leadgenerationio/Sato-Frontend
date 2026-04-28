@@ -26,6 +26,7 @@ import {
 } from '@/lib/hooks/use-staff';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
 
 // ─── Helpers ───
 
@@ -348,10 +349,11 @@ function TeamTab() {
               <p className="text-sm">Failed to load staff</p>
             </div>
           ) : !staff?.length ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <Users className="size-8" />
-              <p className="text-sm">No staff members found</p>
-            </div>
+            <EmptyState
+              icon={Users}
+              title="No staff members yet"
+              description="Add your team to track roles, departments, holidays, and documents."
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>

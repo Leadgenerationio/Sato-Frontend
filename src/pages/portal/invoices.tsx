@@ -3,9 +3,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import { usePortalInvoices, type PortalInvoice } from '@/lib/hooks/use-portal';
 import { toMoney } from '@/lib/hooks/use-invoices';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500',
@@ -93,6 +94,12 @@ export function PortalInvoicesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6 space-y-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+          ) : !invoices?.length ? (
+            <EmptyState
+              icon={FileText}
+              title="No invoices yet"
+              description="When an invoice is issued, it will appear here for download."
+            />
           ) : (
             <Table>
               <TableHeader>

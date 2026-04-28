@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Plus, BookOpen } from 'lucide-react';
+import { Search, Plus, BookOpen, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useSops, type SopSummary } from '@/lib/hooks/use-sops';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const CATEGORY_TABS = ['all', 'operations', 'finance', 'onboarding', 'compliance', 'campaigns'] as const;
 
@@ -106,15 +107,18 @@ export function SopsPage() {
           ))}
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-          <BookOpen className="size-8" />
-          <p className="text-sm">Failed to load SOPs</p>
-        </div>
+        <EmptyState
+          icon={AlertTriangle}
+          title="Couldn't load SOPs"
+          description="Something went wrong reaching the server. Try refreshing the page."
+        />
       ) : !sops?.length ? (
-        <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-          <BookOpen className="size-8" />
-          <p className="text-sm">No SOPs found</p>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="No SOPs yet"
+          description="Standard operating procedures help your team work consistently. Document your first one to get started."
+          link={{ label: 'New SOP', to: '/sops/create', icon: Plus }}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sops.map((sop: SopSummary) => (
