@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 export function WidgetSkeleton({ className, height = 'h-[300px]' }: { className?: string; height?: string }) {
   return (
     <Card className={className}>
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="space-y-3">
           <Skeleton className="h-5 w-36" />
           <Skeleton className="h-4 w-52" />
@@ -21,13 +21,13 @@ export function WidgetSkeleton({ className, height = 'h-[300px]' }: { className?
 
 export function StatSkeleton() {
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <Card className="gap-3 py-5">
+      <CardContent>
         <div className="flex items-center justify-between">
           <Skeleton className="size-10 rounded-lg" />
           <Skeleton className="h-4 w-14" />
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 space-y-2">
           <Skeleton className="h-7 w-24" />
           <Skeleton className="h-4 w-32" />
         </div>

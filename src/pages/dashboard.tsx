@@ -76,20 +76,20 @@ const recentActivity = [
 
 function StatCard({ title, value, change, trend, icon: Icon }: { title: string; value: string; change: string; trend: 'up' | 'down'; icon: React.ElementType }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-neutral-100">
+    <Card className="gap-3 py-5">
+      <CardContent>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
             <Icon className="size-5 text-neutral-700" />
           </div>
-          <div className={`flex items-center gap-1 text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
-            {trend === 'up' ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
-            {change}
+          <div className={`flex min-w-0 items-center gap-1 text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
+            {trend === 'up' ? <ArrowUpRight className="size-3 shrink-0" /> : <ArrowDownRight className="size-3 shrink-0" />}
+            <span className="truncate">{change}</span>
           </div>
         </div>
-        <div className="mt-4">
-          <p className="text-2xl font-bold text-neutral-900">{value}</p>
-          <p className="text-sm text-neutral-500 mt-0.5">{title}</p>
+        <div className="mt-3">
+          <p className="truncate text-2xl font-bold tabular-nums text-neutral-900">{value}</p>
+          <p className="mt-0.5 truncate text-sm text-neutral-500">{title}</p>
         </div>
       </CardContent>
     </Card>

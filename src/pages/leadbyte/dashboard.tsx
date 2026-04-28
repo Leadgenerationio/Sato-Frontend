@@ -36,11 +36,11 @@ function formatNumber(value: number) {
 
 function StatCard({ label, value, subValue }: { label: string; value: string; subValue?: string }) {
   return (
-    <Card>
-      <CardContent className="p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="mt-2 text-2xl font-semibold">{value}</p>
-        {subValue && <p className="mt-1 text-xs text-muted-foreground">{subValue}</p>}
+    <Card className="gap-1 overflow-hidden py-4">
+      <CardContent className="px-4">
+        <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">{value}</p>
+        {subValue && <p className="mt-1 truncate text-xs text-muted-foreground">{subValue}</p>}
       </CardContent>
     </Card>
   );
@@ -104,7 +104,7 @@ export function LeadByteDashboardPage() {
       </div>
 
       {/* Top-line stats */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {summary.isLoading ? (
           [...Array(5)].map((_, i) => <Skeleton key={i} className="h-[96px] w-full" />)
         ) : (
@@ -136,30 +136,32 @@ export function LeadByteDashboardPage() {
             <div className="p-6 text-sm text-muted-foreground">No campaign activity in this window.</div>
           )}
           {campaigns.data && campaigns.data.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead className="text-right">Leads</TableHead>
-                  <TableHead className="text-right">Valid</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">Payout</TableHead>
-                  <TableHead className="text-right">Profit</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {campaigns.data.map((row, idx) => (
-                  <TableRow key={`${row.campaign}-${idx}`}>
-                    <TableCell className="font-medium">{row.campaign}</TableCell>
-                    <TableCell className="text-right">{formatNumber(row.leads)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(row.valid)}</TableCell>
-                    <TableCell className="text-right">{formatMoney(row.revenue, row.currency || currency)}</TableCell>
-                    <TableCell className="text-right">{formatMoney(row.payout, row.currency || currency)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatMoney(row.profit, row.currency || currency)}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead className="text-right">Leads</TableHead>
+                    <TableHead className="text-right">Valid</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="text-right">Payout</TableHead>
+                    <TableHead className="text-right">Profit</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {campaigns.data.map((row, idx) => (
+                    <TableRow key={`${row.campaign}-${idx}`}>
+                      <TableCell className="font-medium">{row.campaign}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatNumber(row.leads)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatNumber(row.valid)}</TableCell>
+                      <TableCell className="text-right tabular-nums whitespace-nowrap">{formatMoney(row.revenue, row.currency || currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums whitespace-nowrap">{formatMoney(row.payout, row.currency || currency)}</TableCell>
+                      <TableCell className="text-right font-medium tabular-nums whitespace-nowrap">{formatMoney(row.profit, row.currency || currency)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -179,28 +181,30 @@ export function LeadByteDashboardPage() {
             <div className="p-6 text-sm text-muted-foreground">No supplier activity in this window.</div>
           )}
           {suppliers.data && suppliers.data.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead className="text-right">Leads</TableHead>
-                  <TableHead className="text-right">Spend</TableHead>
-                  <TableHead className="text-right">CPL</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {suppliers.data.map((row) => (
-                  <TableRow key={row.supplierId}>
-                    <TableCell className="font-medium">{row.supplierName}</TableCell>
-                    <TableCell className="text-muted-foreground">{row.campaignName}</TableCell>
-                    <TableCell className="text-right">{formatNumber(row.leads)}</TableCell>
-                    <TableCell className="text-right">{formatMoney(row.spend, currency)}</TableCell>
-                    <TableCell className="text-right">{formatMoney(row.cpl, currency)}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead className="text-right">Leads</TableHead>
+                    <TableHead className="text-right">Spend</TableHead>
+                    <TableHead className="text-right">CPL</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {suppliers.data.map((row) => (
+                    <TableRow key={row.supplierId}>
+                      <TableCell className="font-medium">{row.supplierName}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.campaignName}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatNumber(row.leads)}</TableCell>
+                      <TableCell className="text-right tabular-nums whitespace-nowrap">{formatMoney(row.spend, currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums whitespace-nowrap">{formatMoney(row.cpl, currency)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

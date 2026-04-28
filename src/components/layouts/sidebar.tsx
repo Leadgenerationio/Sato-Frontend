@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Logo } from '@/components/shared/logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useUiStore } from '@/stores/ui-store';
@@ -205,43 +204,70 @@ export function Sidebar() {
 
       {/* Mobile sidebar */}
       <aside className={cn(
-        'fixed left-0 top-0 z-50 h-screen w-64 border-r bg-sidebar-background transition-transform md:hidden',
+        'fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r bg-sidebar-background transition-transform md:hidden',
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
       )}>
-        <div className="flex h-16 items-center justify-between border-b px-4">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b px-4">
           <Logo size="sm" />
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <nav className="flex flex-col gap-1 p-2">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
           {renderNav(() => setMobileOpen(false))}
         </nav>
+        {user && (
+          <div className="shrink-0 border-t px-3 py-3">
+            <div className="flex items-center gap-2 px-3">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate text-xs capitalize text-muted-foreground">{user.role.replace('_', ' ')}</span>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* Desktop sidebar */}
       <aside className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r bg-sidebar-background transition-all duration-300 hidden md:block',
+        'fixed left-0 top-0 z-40 hidden h-screen flex-col border-r bg-sidebar-background transition-all duration-300 md:flex',
         sidebarOpen ? 'w-64' : 'w-16',
       )}>
-        <div className="flex h-16 items-center justify-between border-b px-3">
-          {sidebarOpen ? <Logo size="sm" /> : <Logo size="sm" showText={false} />}
-          <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+        <div className={cn(
+          'flex h-16 shrink-0 items-center border-b',
+          sidebarOpen ? 'justify-between px-3' : 'justify-center px-0',
+        )}>
+          {sidebarOpen && <Logo size="sm" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
             <ChevronLeft className={cn('h-4 w-4 transition-transform', !sidebarOpen && 'rotate-180')} />
           </Button>
         </div>
-        <nav className="flex flex-col gap-1 p-2">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
           {renderNav(undefined, !sidebarOpen)}
         </nav>
-        <div className="absolute bottom-4 left-0 right-0 px-3">
-          <Separator className="mb-3" />
-          {sidebarOpen && user && (
-            <div className="flex items-center gap-2 px-3">
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground capitalize">{user.role.replace('_', ' ')}</span>
-            </div>
-          )}
-        </div>
+        {user && (
+          <div className={cn(
+            'shrink-0 border-t py-3',
+            sidebarOpen ? 'px-3' : 'px-0',
+          )}>
+            {sidebarOpen ? (
+              <div className="flex items-center gap-2 px-3">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate text-xs capitalize text-muted-foreground">{user.role.replace('_', ' ')}</span>
+              </div>
+            ) : (
+              <div
+                className="flex items-center justify-center"
+                title={user.role.replace('_', ' ')}
+              >
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        )}
       </aside>
     </>
   );
