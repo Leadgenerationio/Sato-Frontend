@@ -96,7 +96,9 @@ export function UsersManagement() {
       const res = await fetch(`${API_URL}/api/v1/permissions`, { headers: { Authorization: `Bearer ${token}` } });
       const data: ApiResponse<{ permissions: PermissionEntry[] }> = await res.json();
       if (data.status === 'success' && data.data) setPermissions(data.data.permissions);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.warn('fetchPermissions failed', err);
+    }
   }, [token]);
 
   const fetchUsers = useCallback(async () => {
@@ -104,7 +106,9 @@ export function UsersManagement() {
       const res = await fetch(`${API_URL}/api/v1/users`, { headers: { Authorization: `Bearer ${token}` } });
       const data: ApiResponse<{ users: UserItem[] }> = await res.json();
       if (data.status === 'success' && data.data) setUsers(data.data.users);
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch (err) {
+      console.warn('fetchUsers failed', err);
+    } finally { setLoading(false); }
   }, [token]);
 
   useEffect(() => { fetchUsers(); fetchPermissions(); }, [fetchUsers, fetchPermissions]);
@@ -138,7 +142,11 @@ export function UsersManagement() {
         setAddError(data.message || 'Failed to create user');
         toast.error('Failed to create user', { description: data.message });
       }
-    } catch { setAddError('Network error'); toast.error('Network error'); } finally { setAddLoading(false); }
+    } catch (err) {
+      console.error('Add user failed', err);
+      setAddError('Network error');
+      toast.error('Network error');
+    } finally { setAddLoading(false); }
   }
 
   // ─── Edit User ───
@@ -168,7 +176,11 @@ export function UsersManagement() {
         setEditError(data.message || 'Failed to update user');
         toast.error('Failed to update user', { description: data.message });
       }
-    } catch { setEditError('Network error'); toast.error('Network error'); } finally { setEditLoading(false); }
+    } catch (err) {
+      console.error('Edit user failed', err);
+      setEditError('Network error');
+      toast.error('Network error');
+    } finally { setEditLoading(false); }
   }
 
   // ─── Confirm role change / toggle ───
@@ -210,7 +222,10 @@ export function UsersManagement() {
           toast.success(confirmAction.isActive ? 'User deactivated' : 'User activated', { description: `${confirmAction.userName} has been ${confirmAction.isActive ? 'deactivated' : 'activated'}.` });
         }
       }
-    } catch { toast.error('Action failed'); } finally { setUpdating(null); setConfirmAction(null); }
+    } catch (err) {
+      console.error('Confirm action failed', err);
+      toast.error('Action failed');
+    } finally { setUpdating(null); setConfirmAction(null); }
   }
 
   // ─── Permission toggle ───
@@ -236,7 +251,10 @@ export function UsersManagement() {
           description: `"${pendingPerm.permission}" ${pendingPerm.newValue ? 'enabled' : 'disabled'} for ${getRoleLabel(pendingPerm.role)}.`,
         });
       }
-    } catch { toast.error('Failed to update permission'); } finally { setPermUpdating(false); setPendingPerm(null); }
+    } catch (err) {
+      console.error('Permission update failed', err);
+      toast.error('Failed to update permission');
+    } finally { setPermUpdating(false); setPendingPerm(null); }
   }
 
   if (!user) return null;

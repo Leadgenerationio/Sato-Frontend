@@ -44,7 +44,7 @@ export function FinancialReportPage() {
       <Card>
         <CardHeader><CardTitle>Revenue vs Expenses</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-[350px]">
+          <div className="h-[270px] sm:h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />

@@ -225,7 +225,7 @@ export function CampaignDetailPage() {
           <CardDescription>{WINDOW_OPTIONS.find((o) => o.value === window)?.label} — daily lead deliveries</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[220px] sm:h-[300px]">
             {chartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No deliveries in this window</div>
             ) : (
@@ -250,7 +250,7 @@ export function CampaignDetailPage() {
           <CardDescription>Daily revenue and cost breakdown</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[220px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -274,7 +274,7 @@ export function CampaignDetailPage() {
             <CardDescription>Cost per lead by traffic source</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[220px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={supplierData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />

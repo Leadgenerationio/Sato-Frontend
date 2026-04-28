@@ -152,7 +152,7 @@ export function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Revenue Overview</CardTitle><CardDescription>Monthly revenue vs expenses (2025)</CardDescription></CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[220px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={revenueData}>
                   <defs>
@@ -173,7 +173,7 @@ export function DashboardPage() {
         <Card>
           <CardHeader><CardTitle>Leads This Week</CardTitle><CardDescription>Daily lead volume</CardDescription></CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[220px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%"><BarChart data={leadsData}><CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#a3a3a3" /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" /><Tooltip {...tooltipStyle} /><Bar dataKey="leads" name="Leads" fill="#171717" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
             </div>
           </CardContent>
@@ -187,7 +187,7 @@ export function DashboardPage() {
         <Card>
           <CardHeader><CardTitle>Campaign Sources</CardTitle><CardDescription>Lead distribution by channel</CardDescription></CardHeader>
           <CardContent>
-            <div className="h-[240px]">
+            <div className="h-[180px] sm:h-[240px]">
               <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={campaignData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" stroke="none">{campaignData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip {...tooltipStyle} formatter={(value: any) => [`${value}%`, '']} /></PieChart></ResponsiveContainer>
             </div>
             <div className="grid grid-cols-1 gap-3 mt-2 sm:grid-cols-2">{campaignData.map((item) => (<div key={item.name} className="flex items-center gap-2"><div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} /><span className="truncate text-xs text-neutral-600">{item.name}</span><span className="ml-auto text-xs font-medium tabular-nums text-neutral-900">{item.value}%</span></div>))}</div>
@@ -198,7 +198,7 @@ export function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Invoice Status</CardTitle><CardDescription>Monthly breakdown by payment status</CardDescription></CardHeader>
           <CardContent>
-            <div className="h-[280px]">
+            <div className="h-[200px] sm:h-[280px]">
               <ResponsiveContainer width="100%" height="100%"><BarChart data={invoiceData}><CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" interval="preserveStartEnd" minTickGap={16} /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" /><Tooltip {...tooltipStyle} /><Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} /><Bar dataKey="paid" name="Paid" stackId="a" fill="#171717" /><Bar dataKey="pending" name="Pending" stackId="a" fill="#a3a3a3" /><Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
             </div>
           </CardContent>

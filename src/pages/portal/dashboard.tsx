@@ -86,7 +86,7 @@ export function PortalDashboardPage() {
               description="Once leads are delivered against your campaigns, you'll see daily volumes here."
             />
           ) : (
-            <div className="h-[250px]">
+            <div className="h-[180px] sm:h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />

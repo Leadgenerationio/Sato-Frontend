@@ -61,7 +61,7 @@ export function CampaignReportPage() {
       <Card>
         <CardHeader><CardTitle>Revenue vs Cost by Campaign</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-[350px]">
+          <div className="h-[270px] sm:h-[350px]">
             {data.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No data in this window</div>
             ) : (

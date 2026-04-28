@@ -78,9 +78,9 @@ export function AdSpendReportPage() {
       </div>
 
       {statusData && !statusData.configured && (
-        <Card className="border-amber-300 bg-amber-50">
-          <CardContent className="pt-4 pb-4 text-sm text-amber-900">
-            Catchr is not configured. Set <code className="px-1 rounded bg-amber-100">CATCHR_ACCESS_TOKEN</code> in the backend .env and restart the API.
+        <Card className="border-amber-300 bg-amber-50 py-4">
+          <CardContent className="text-sm text-amber-900">
+            Catchr is not configured. Set <code className="rounded bg-amber-100 px-1">CATCHR_ACCESS_TOKEN</code> in the backend .env and restart the API.
           </CardContent>
         </Card>
       )}

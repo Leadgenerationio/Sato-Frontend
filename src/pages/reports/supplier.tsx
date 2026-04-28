@@ -60,7 +60,7 @@ export function SupplierReportPage() {
       <Card>
         <CardHeader><CardTitle>CPL by Supplier</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[220px] sm:h-[300px]">
             {data.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No spend in this window</div>
             ) : (

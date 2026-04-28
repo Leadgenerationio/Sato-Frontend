@@ -36,7 +36,7 @@ export function PortalLeadsPage() {
       <Card>
         <CardHeader><CardTitle>Daily Volume</CardTitle><CardDescription>Leads delivered per day</CardDescription></CardHeader>
         <CardContent>
-          <div className="h-[280px]">
+          <div className="h-[200px] sm:h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
