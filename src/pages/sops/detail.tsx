@@ -68,7 +68,7 @@ export function SopDetailPage() {
             )}
             {canWrite && (
               <Button variant="outline" size="sm" asChild>
-                <Link to={`/sops/${sop.id}`}>
+                <Link to={`/sops/${sop.id}/edit`}>
                   <Pencil className="size-4 mr-1.5" />
                   Edit
                 </Link>

@@ -39,6 +39,7 @@ import { NotificationsPage } from '@/pages/notifications';
 import { SopsPage } from '@/pages/sops/index';
 import { SopDetailPage } from '@/pages/sops/detail';
 import { SopCreatePage } from '@/pages/sops/create';
+import { SopEditPage } from '@/pages/sops/edit';
 import { StaffPage } from '@/pages/staff/index';
 import { StaffDetailPage } from '@/pages/staff/detail';
 import { OrgChartPage } from '@/pages/staff/org-chart';
@@ -169,6 +170,7 @@ export default function App() {
             <Route path="/tasks/:id" element={<TaskDetailPage />} />
             <Route path="/sops" element={<SopsPage />} />
             <Route path="/sops/create" element={<SopCreatePage />} />
+            <Route path="/sops/:id/edit" element={<SopEditPage />} />
             <Route path="/sops/:id" element={<SopDetailPage />} />
             <Route
               path="/staff"
