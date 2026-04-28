@@ -123,41 +123,43 @@ export function SubscriptionsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Service</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead>Frequency</TableHead>
-                <TableHead>Next Billing</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {subscriptions.map((sub) => (
-                <TableRow key={sub.id} className={sub.status === 'cancelled' ? 'opacity-50' : ''}>
-                  <TableCell>
-                    <div className="font-medium">{sub.name}</div>
-                    <div className="text-xs text-muted-foreground">{sub.provider}</div>
-                  </TableCell>
-                  <TableCell><Badge variant="secondary" className="text-xs">{sub.category}</Badge></TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">{formatCurrency(sub.cost, sub.currency)}</TableCell>
-                  <TableCell className="text-muted-foreground capitalize">{sub.frequency}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(sub.nextBillingDate)}</TableCell>
-                  <TableCell>
-                    <Badge className={sub.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-neutral-500/10 text-neutral-500'}>{sub.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {sub.status === 'active' && (
-                      <Button variant="ghost" size="icon" className="size-8" onClick={() => handleCancel(sub.id)}><Trash2 className="size-4 text-muted-foreground" /></Button>
-                    )}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead>Frequency</TableHead>
+                  <TableHead>Next Billing</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {subscriptions.map((sub) => (
+                  <TableRow key={sub.id} className={sub.status === 'cancelled' ? 'opacity-50' : ''}>
+                    <TableCell>
+                      <div className="font-medium">{sub.name}</div>
+                      <div className="text-xs text-muted-foreground">{sub.provider}</div>
+                    </TableCell>
+                    <TableCell><Badge variant="secondary" className="text-xs">{sub.category}</Badge></TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(sub.cost, sub.currency)}</TableCell>
+                    <TableCell className="text-muted-foreground capitalize">{sub.frequency}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(sub.nextBillingDate)}</TableCell>
+                    <TableCell>
+                      <Badge className={sub.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-neutral-500/10 text-neutral-500'}>{sub.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {sub.status === 'active' && (
+                        <Button variant="ghost" size="icon" className="size-8" onClick={() => handleCancel(sub.id)}><Trash2 className="size-4 text-muted-foreground" /></Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

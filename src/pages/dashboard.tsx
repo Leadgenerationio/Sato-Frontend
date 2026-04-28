@@ -231,19 +231,21 @@ export function DashboardPage() {
         <Card className="lg:col-span-4">
           <CardHeader><CardTitle>Recent Invoices</CardTitle><CardDescription>Latest billing activity</CardDescription></CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader><TableRow><TableHead>Invoice</TableHead><TableHead>Client</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {stats.recentInvoices.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell><div><div className="font-medium">{inv.invoiceNumber}</div><div className="text-xs text-muted-foreground">{formatDate(inv.createdAt)}</div></div></TableCell>
-                    <TableCell className="font-medium">{inv.clientName}</TableCell>
-                    <TableCell><Badge variant={statusVariant(inv.status)} className="capitalize">{inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}</Badge></TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(toMoney(inv.total))}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader><TableRow><TableHead>Invoice</TableHead><TableHead>Client</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {stats.recentInvoices.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell><div><div className="font-medium">{inv.invoiceNumber}</div><div className="text-xs text-muted-foreground">{formatDate(inv.createdAt)}</div></div></TableCell>
+                      <TableCell className="font-medium">{inv.clientName}</TableCell>
+                      <TableCell><Badge variant={statusVariant(inv.status)} className="capitalize">{inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}</Badge></TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(toMoney(inv.total))}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
         </WidgetContainer>

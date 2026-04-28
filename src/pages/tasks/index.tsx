@@ -168,8 +168,8 @@ export function TasksPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="gap-3 py-5">
+            <CardContent>
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
                   <ListTodo className="size-5 text-muted-foreground" />
@@ -181,8 +181,8 @@ export function TasksPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="gap-3 py-5">
+            <CardContent>
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
                   <Clock className="size-5 text-blue-600" />
@@ -194,8 +194,8 @@ export function TasksPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="gap-3 py-5">
+            <CardContent>
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10">
                   <CheckSquare className="size-5 text-emerald-600" />
@@ -207,8 +207,8 @@ export function TasksPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="gap-3 py-5">
+            <CardContent>
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-red-500/10">
                   <AlertTriangle className="size-5 text-red-600" />

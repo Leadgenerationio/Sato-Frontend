@@ -79,8 +79,8 @@ function StatCard({ label, value, icon: Icon, trend }: {
   trend?: { value: string; positive: boolean };
 }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <Card className="gap-3 py-5">
+      <CardContent>
         <div className="flex items-center justify-between">
           <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
             <Icon className="size-5 text-muted-foreground" />
@@ -213,9 +213,9 @@ export function CampaignDetailPage() {
 
       {/* Window totals */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Leads</p><p className="mt-1 text-xl font-bold tabular-nums">{windowTotals.leads.toLocaleString()}</p></CardContent></Card>
-        <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Revenue</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.revenue)}</p></CardContent></Card>
-        <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Cost</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.cost)}</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent><p className="text-xs text-muted-foreground">Leads</p><p className="mt-1 text-xl font-bold tabular-nums">{windowTotals.leads.toLocaleString()}</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent><p className="text-xs text-muted-foreground">Revenue</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.revenue)}</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent><p className="text-xs text-muted-foreground">Cost</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.cost)}</p></CardContent></Card>
       </div>
 
       {/* Lead Volume Chart */}
@@ -336,38 +336,40 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Platform</TableHead>
-              <TableHead>Catchr URL</TableHead>
-              <TableHead className="text-right">Spend</TableHead>
-              <TableHead className="text-right">Leads</TableHead>
-              <TableHead className="text-right">CPL</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sources.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.name}</TableCell>
-                <TableCell><Badge variant="secondary" className="text-xs">{s.platform}</Badge></TableCell>
-                <TableCell className="text-muted-foreground">
-                  {s.catchrUrl ? (
-                    <span className="inline-flex items-center gap-1 text-xs">
-                      <ExternalLink className="size-3" /> configured
-                    </span>
-                  ) : (
-                    <span className="text-xs">Not set</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{formatCurrency(s.totalSpend)}</TableCell>
-                <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatCurrency(s.cpl)}</TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead>Catchr URL</TableHead>
+                <TableHead className="text-right">Spend</TableHead>
+                <TableHead className="text-right">Leads</TableHead>
+                <TableHead className="text-right">CPL</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {sources.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell><Badge variant="secondary" className="text-xs">{s.platform}</Badge></TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {s.catchrUrl ? (
+                      <span className="inline-flex items-center gap-1 text-xs">
+                        <ExternalLink className="size-3" /> configured
+                      </span>
+                    ) : (
+                      <span className="text-xs">Not set</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCurrency(s.totalSpend)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCurrency(s.cpl)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

@@ -41,36 +41,38 @@ export function LeadByteRespondersPage() {
             />
           )}
           {responders && responders.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Pushes</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">Profit</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {responders.map((r) => {
-                  const totalRevenue = (r.pushes ?? []).reduce((acc, p) => acc + (p.revenue ?? 0), 0);
-                  const totalProfit = (r.pushes ?? []).reduce((acc, p) => acc + (p.profit ?? 0), 0);
-                  return (
-                    <TableRow key={String(r.id)}>
-                      <TableCell className="font-mono text-xs">{r.reference ?? r.id}</TableCell>
-                      <TableCell>{r.campaign?.name ?? '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant={r.status === 'Active' ? 'default' : 'secondary'}>{r.status ?? 'Unknown'}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{r.pushes?.length ?? 0}</TableCell>
-                      <TableCell className="text-right">{formatMoney(totalRevenue)}</TableCell>
-                      <TableCell className="text-right">{formatMoney(totalProfit)}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Pushes</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="text-right">Profit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {responders.map((r) => {
+                    const totalRevenue = (r.pushes ?? []).reduce((acc, p) => acc + (p.revenue ?? 0), 0);
+                    const totalProfit = (r.pushes ?? []).reduce((acc, p) => acc + (p.profit ?? 0), 0);
+                    return (
+                      <TableRow key={String(r.id)}>
+                        <TableCell className="font-mono text-xs">{r.reference ?? r.id}</TableCell>
+                        <TableCell>{r.campaign?.name ?? '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant={r.status === 'Active' ? 'default' : 'secondary'}>{r.status ?? 'Unknown'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{r.pushes?.length ?? 0}</TableCell>
+                        <TableCell className="text-right">{formatMoney(totalRevenue)}</TableCell>
+                        <TableCell className="text-right">{formatMoney(totalProfit)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

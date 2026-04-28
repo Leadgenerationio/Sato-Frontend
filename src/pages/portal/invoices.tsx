@@ -85,8 +85,8 @@ export function PortalInvoicesPage() {
 
       {!isLoading && invoices && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</p><p className="text-sm text-muted-foreground">Total Paid</p></CardContent></Card>
-          <Card><CardContent className="pt-6 text-center"><p className={`text-2xl font-bold ${totalOutstanding > 0 ? 'text-amber-600' : ''}`}>{formatCurrency(totalOutstanding)}</p><p className="text-sm text-muted-foreground">Outstanding</p></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</p><p className="text-sm text-muted-foreground">Total Paid</p></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent className="text-center"><p className={`text-2xl font-bold ${totalOutstanding > 0 ? 'text-amber-600' : ''}`}>{formatCurrency(totalOutstanding)}</p><p className="text-sm text-muted-foreground">Outstanding</p></CardContent></Card>
         </div>
       )}
 
@@ -101,44 +101,46 @@ export function PortalInvoicesPage() {
               description="When an invoice is issued, it will appear here for download."
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Paid Date</TableHead>
-                  <TableHead className="text-right">Download</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices?.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                    <TableCell>
-                      <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
-                        {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
-                    <TableCell className="text-muted-foreground">{inv.paidDate ? formatDate(inv.paidDate) : '—'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7"
-                        onClick={() => handleDownloadInvoice(inv)}
-                      >
-                        <Download className="size-3.5 mr-1" />
-                        Download
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Paid Date</TableHead>
+                    <TableHead className="text-right">Download</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {invoices?.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                      <TableCell>
+                        <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
+                          {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
+                      <TableCell className="text-muted-foreground">{inv.paidDate ? formatDate(inv.paidDate) : '—'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7"
+                          onClick={() => handleDownloadInvoice(inv)}
+                        >
+                          <Download className="size-3.5 mr-1" />
+                          Download
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

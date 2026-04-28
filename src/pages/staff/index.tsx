@@ -83,7 +83,7 @@ function StatsCards() {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}><CardContent className="pt-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
+          <Card key={i}><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
         ))}
       </div>
     );
@@ -102,7 +102,7 @@ function StatsCards() {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((c) => (
         <Card key={c.label}>
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="flex items-center gap-3">
               <div className={`flex size-10 items-center justify-center rounded-lg ${c.bg}`}>
                 <c.icon className={`size-5 ${c.iconColor}`} />
@@ -503,7 +503,7 @@ function RecruitmentTab() {
     return (
       <div className="space-y-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}><CardContent className="pt-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
+          <Card key={i}><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
         ))}
       </div>
     );

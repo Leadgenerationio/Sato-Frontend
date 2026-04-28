@@ -198,42 +198,44 @@ export function InvoiceDetailPage() {
             <CardTitle className="text-base">Line Items</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoice.lineItems.map((item, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice, invoice.currency)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(item.amount, invoice.currency)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</TableCell>
-                </TableRow>
-                {toMoney(invoice.vatAmount) > 0 && (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-right font-medium">VAT (20%)</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</TableCell>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                )}
-                <TableRow>
-                  <TableCell colSpan={3} className="text-right text-base font-bold">Total</TableCell>
-                  <TableCell className="text-right text-base font-bold tabular-nums">{formatCurrency(toMoney(invoice.total), invoice.currency)}</TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {invoice.lineItems.map((item, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice, invoice.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(item.amount, invoice.currency)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</TableCell>
+                  </TableRow>
+                  {toMoney(invoice.vatAmount) > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-right font-medium">VAT (20%)</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</TableCell>
+                    </TableRow>
+                  )}
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right text-base font-bold">Total</TableCell>
+                    <TableCell className="text-right text-base font-bold tabular-nums">{formatCurrency(toMoney(invoice.total), invoice.currency)}</TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 

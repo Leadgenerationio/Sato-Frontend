@@ -232,37 +232,39 @@ export function AgreementsPage() {
             />
           )}
           {!isLoading && agreements.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Signer</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Sent</TableHead>
-                  <TableHead>Signed</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {agreements.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.signerName}</TableCell>
-                    <TableCell className="text-muted-foreground">{a.signerEmail}</TableCell>
-                    <TableCell>{formatDateTime(a.sentAt)}</TableCell>
-                    <TableCell>{formatDateTime(a.signedAt)}</TableCell>
-                    <TableCell>{statusBadge(a.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <RefreshButton id={a.id} />
-                      {a.documentUrl && (
-                        <a href={a.documentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline ml-2">
-                          PDF
-                        </a>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Signer</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Sent</TableHead>
+                    <TableHead>Signed</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {agreements.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.signerName}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.signerEmail}</TableCell>
+                      <TableCell>{formatDateTime(a.sentAt)}</TableCell>
+                      <TableCell>{formatDateTime(a.signedAt)}</TableCell>
+                      <TableCell>{statusBadge(a.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <RefreshButton id={a.id} />
+                        {a.documentUrl && (
+                          <a href={a.documentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline ml-2">
+                            PDF
+                          </a>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

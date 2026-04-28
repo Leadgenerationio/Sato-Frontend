@@ -54,7 +54,7 @@ export function WorkflowsPage() {
             const StatusIcon = statusIcons[wf.status] || Clock;
             return (
               <Card key={wf.id}>
-                <CardContent className="pt-6">
+                <CardContent>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">

@@ -214,24 +214,24 @@ export function ClientDetailPage() {
 
           {client.creditScore !== null && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Card>
-                <CardContent className="pt-6 text-center">
+              <Card className="gap-3 py-5">
+                <CardContent className="text-center">
                   <p className={`text-4xl font-bold tabular-nums ${client.creditScore >= 65 ? 'text-emerald-600' : client.creditScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                     {client.creditScore}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">Credit Score</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="pt-6 text-center">
+              <Card className="gap-3 py-5">
+                <CardContent className="text-center">
                   <p className={`text-lg font-semibold capitalize ${riskColors[client.creditRiskRating || ''] || ''}`}>
                     {(client.creditRiskRating || '').replace('_', ' ')}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">Risk Rating</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="pt-6 text-center">
+              <Card className="gap-3 py-5">
+                <CardContent className="text-center">
                   <p className="text-lg font-semibold">{client.activeCampaigns}</p>
                   <p className="text-sm text-muted-foreground mt-1">Active Campaigns</p>
                 </CardContent>

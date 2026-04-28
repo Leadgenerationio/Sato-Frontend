@@ -72,41 +72,43 @@ export function LeadByteBuyersPage() {
             />
           )}
           {buyers && buyers.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Company</TableHead>
-                  <TableHead>BID</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Credit Amount</TableHead>
-                  <TableHead className="text-right">Credit Balance</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {buyers.map((b) => (
-                  <TableRow key={String(b.id ?? b.bid ?? b.company)}>
-                    <TableCell className="font-medium">{b.company}</TableCell>
-                    <TableCell className="font-mono text-xs">{b.bid ?? '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant={b.status === 'Active' ? 'default' : 'secondary'}>{b.status ?? 'Unknown'}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{formatMoney(b.credit_amount)}</TableCell>
-                    <TableCell className="text-right">{formatMoney(b.credit_balance)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={updateBuyer.isPending || !b.id}
-                        onClick={() => toggleStatus(b)}
-                      >
-                        {b.status === 'Active' ? 'Deactivate' : 'Activate'}
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company</TableHead>
+                    <TableHead>BID</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Credit Amount</TableHead>
+                    <TableHead className="text-right">Credit Balance</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {buyers.map((b) => (
+                    <TableRow key={String(b.id ?? b.bid ?? b.company)}>
+                      <TableCell className="font-medium">{b.company}</TableCell>
+                      <TableCell className="font-mono text-xs">{b.bid ?? '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant={b.status === 'Active' ? 'default' : 'secondary'}>{b.status ?? 'Unknown'}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{formatMoney(b.credit_amount)}</TableCell>
+                      <TableCell className="text-right">{formatMoney(b.credit_balance)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={updateBuyer.isPending || !b.id}
+                          onClick={() => toggleStatus(b)}
+                        >
+                          {b.status === 'Active' ? 'Deactivate' : 'Activate'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

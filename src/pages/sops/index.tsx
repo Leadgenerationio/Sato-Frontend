@@ -98,7 +98,7 @@ export function SopsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i}>
-              <CardContent className="pt-6 space-y-3">
+              <CardContent className="space-y-3">
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-4 w-full" />
@@ -127,7 +127,7 @@ export function SopsPage() {
               className="cursor-pointer transition-colors hover:bg-accent/50"
               onClick={() => navigate(`/sops/${sop.id}`)}
             >
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="text-sm font-semibold leading-tight line-clamp-2">{sop.title}</h3>

@@ -59,30 +59,32 @@ export function LeadByteDeliveriesPage() {
             />
           )}
           {deliveries && deliveries.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {deliveries.map((d) => (
-                  <TableRow key={String(d.id)}>
-                    <TableCell className="font-mono text-xs">{d.reference ?? d.id}</TableCell>
-                    <TableCell>{d.campaign?.name ?? '—'}</TableCell>
-                    <TableCell>{d.deliver_to ?? '—'}</TableCell>
-                    <TableCell>{d.buyer?.name ?? '—'} {d.buyer?.bid && <span className="text-neutral-400">({d.buyer.bid})</span>}</TableCell>
-                    <TableCell>
-                      <Badge variant={d.status === 'Active' ? 'default' : 'secondary'}>{d.status ?? 'Unknown'}</Badge>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Buyer</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {deliveries.map((d) => (
+                    <TableRow key={String(d.id)}>
+                      <TableCell className="font-mono text-xs">{d.reference ?? d.id}</TableCell>
+                      <TableCell>{d.campaign?.name ?? '—'}</TableCell>
+                      <TableCell>{d.deliver_to ?? '—'}</TableCell>
+                      <TableCell>{d.buyer?.name ?? '—'} {d.buyer?.bid && <span className="text-neutral-400">({d.buyer.bid})</span>}</TableCell>
+                      <TableCell>
+                        <Badge variant={d.status === 'Active' ? 'default' : 'secondary'}>{d.status ?? 'Unknown'}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
