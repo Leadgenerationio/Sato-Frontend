@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export function StatCardSkeleton() {
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <Card className="gap-3 py-5">
+      <CardContent>
         <div className="flex items-center justify-between">
           <Skeleton className="size-10 rounded-lg" />
           <Skeleton className="h-4 w-14" />
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 space-y-2">
           <Skeleton className="h-7 w-24" />
           <Skeleton className="h-4 w-32" />
         </div>
@@ -186,9 +186,38 @@ export function PermissionMatrixSkeleton() {
   );
 }
 
+function WidgetCardSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <Skeleton className="size-10 shrink-0 rounded-lg" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {Array.from({ length: rows }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between gap-3">
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Skeleton className="h-4 w-16 shrink-0" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DashboardSkeleton() {
   return (
-    <div className="flex flex-col gap-6 animate-pulse">
+    <div className="flex animate-pulse flex-col gap-6">
       {/* Header */}
       <div className="space-y-2">
         <Skeleton className="h-7 w-32" />
@@ -198,6 +227,13 @@ export function DashboardSkeleton() {
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCardSkeleton />
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+      </div>
+
+      {/* Secondary KPIs */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCardSkeleton />
         <StatCardSkeleton />
         <StatCardSkeleton />
@@ -213,6 +249,25 @@ export function DashboardSkeleton() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <ChartCardSkeleton />
         <ChartCardSkeleton className="lg:col-span-2" />
+      </div>
+
+      {/* Widgets Row 1: Bank / Overdue / VAT */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <WidgetCardSkeleton rows={3} />
+        <WidgetCardSkeleton rows={4} />
+        <WidgetCardSkeleton rows={2} />
+      </div>
+
+      {/* Widgets Row 2: P&L / Credit / Notifications */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <WidgetCardSkeleton rows={3} />
+        <WidgetCardSkeleton rows={3} />
+        <WidgetCardSkeleton rows={4} />
+      </div>
+
+      {/* Task Summary */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <WidgetCardSkeleton rows={3} />
       </div>
 
       {/* Table + Activity */}
