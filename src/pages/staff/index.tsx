@@ -410,7 +410,14 @@ function ApplicantPipeline({ jobId }: { jobId: string }) {
   }
 
   if (!applicants?.length) {
-    return <p className="p-4 text-sm text-muted-foreground">No applicants yet.</p>;
+    return (
+      <EmptyState
+        icon={Users}
+        title="No applicants yet"
+        description="When someone applies to this job posting, they'll appear here in the pipeline."
+        size="compact"
+      />
+    );
   }
 
   const rejected = applicants.filter((a) => a.stage === 'rejected');
@@ -504,19 +511,21 @@ function RecruitmentTab() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-        <Briefcase className="size-8" />
-        <p className="text-sm">Failed to load job postings</p>
-      </div>
+      <EmptyState
+        icon={Briefcase}
+        title="Couldn't load job postings"
+        description="Something went wrong reaching the server. Try refreshing the page."
+      />
     );
   }
 
   if (!jobs?.length) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-        <Briefcase className="size-8" />
-        <p className="text-sm">No job postings found</p>
-      </div>
+      <EmptyState
+        icon={Briefcase}
+        title="No job postings yet"
+        description="Post a job to start recruiting and tracking applicants through your hiring pipeline."
+      />
     );
   }
 
@@ -554,19 +563,21 @@ function HolidaysTab() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-        <Calendar className="size-8" />
-        <p className="text-sm">Failed to load holiday requests</p>
-      </div>
+      <EmptyState
+        icon={Calendar}
+        title="Couldn't load holiday requests"
+        description="Something went wrong reaching the server. Try refreshing the page."
+      />
     );
   }
 
   if (!holidays?.length) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-        <Calendar className="size-8" />
-        <p className="text-sm">No holiday requests found</p>
-      </div>
+      <EmptyState
+        icon={Calendar}
+        title="No holiday requests"
+        description="When a staff member submits a holiday request, it will appear here for approval."
+      />
     );
   }
 
@@ -717,11 +728,14 @@ function StaffDocumentsTab({ staffId }: { staffId: string }) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
+          <div className="space-y-2 py-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
         ) : documents.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-            No documents yet for this staff member.
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No documents"
+            description="Upload contracts, NDAs, payslips, or certifications using the button above."
+            size="compact"
+          />
         ) : (
           <div className="space-y-2">
             {documents.map((d) => (
