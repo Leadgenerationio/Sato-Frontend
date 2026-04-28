@@ -23,7 +23,6 @@ import {
   FileSignature,
   FileText,
   Receipt,
-  Repeat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -62,7 +61,6 @@ const navItems: NavEntry[] = [
     children: [
       { href: '/finance/invoices', label: 'Invoices', icon: FileText, roles: ['owner', 'finance_admin'] },
       { href: '/finance/bank-feed', label: 'Bank Feed', icon: Receipt, roles: ['owner', 'finance_admin'] },
-      { href: '/finance/subscriptions', label: 'Subscriptions', icon: Repeat, roles: ['owner', 'finance_admin'] },
     ],
   },
   { href: '/clients', label: 'Clients', icon: Users, roles: ['owner', 'finance_admin', 'ops_manager'] },

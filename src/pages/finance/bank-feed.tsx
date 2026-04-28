@@ -22,10 +22,24 @@ import {
   useCreateCategory,
   useCategorizeTransaction,
   useSyncBankFeed,
+  useBankFeedSyncStatus,
   toMoney,
   type BankTransaction,
   type CostCategory,
 } from '@/lib/hooks/use-bank-feed';
+
+function formatRelativeTime(iso: string | null): string {
+  if (!iso) return 'never';
+  const d = new Date(iso);
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
@@ -60,6 +74,7 @@ export function BankFeedPage() {
 
   const { data: categories } = useCostCategories();
   const sync = useSyncBankFeed();
+  const { data: syncStatus } = useBankFeedSyncStatus();
 
   async function handleSync() {
     try {
@@ -73,7 +88,14 @@ export function BankFeedPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Bank Feed" description="Categorise costs from your Xero bank feed">
+      <PageHeader
+        title="Bank Feed"
+        description={
+          syncStatus?.lastSyncAt
+            ? `Categorise costs from your Xero bank feed · last synced ${formatRelativeTime(syncStatus.lastSyncAt)}`
+            : 'Categorise costs from your Xero bank feed · auto-syncs hourly'
+        }
+      >
         <CategoryDialog />
         <Button size="sm" onClick={handleSync} disabled={sync.isPending}>
           {sync.isPending

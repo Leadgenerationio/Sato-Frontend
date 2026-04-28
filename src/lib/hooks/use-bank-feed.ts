@@ -143,6 +143,17 @@ export function useSyncBankFeed() {
   });
 }
 
+export function useBankFeedSyncStatus() {
+  return useQuery({
+    queryKey: ['bank-feed', 'sync-status'],
+    queryFn: async () => {
+      const res = await api.get<{ lastSyncAt: string | null }>('/api/v1/finance/bank-feed/sync/status');
+      return unwrap(res);
+    },
+    refetchInterval: 60_000,
+  });
+}
+
 export function useVendorRules() {
   return useQuery({
     queryKey: ['bank-feed', 'rules'],
