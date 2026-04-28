@@ -119,7 +119,7 @@ export function Sidebar() {
               key={item.key}
               onClick={toggleSidebar}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                'flex items-center justify-center rounded-lg px-3 py-2 text-sm transition-colors',
                 groupActive ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
               )}
               title={item.label}
@@ -174,7 +174,8 @@ export function Sidebar() {
           to={item.href}
           onClick={onClick}
           className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+            'flex items-center rounded-lg px-3 py-2 text-sm transition-colors',
+            compact ? 'justify-center' : 'gap-3',
             active ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
           )}
           title={compact ? item.label : undefined}
