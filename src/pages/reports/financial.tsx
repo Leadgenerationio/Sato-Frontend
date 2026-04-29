@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, BarChart3 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useFinancialReport, type FinancialOverviewRow } from '@/lib/hooks/use-reports';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function fmt(v: number) { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(v); }
 
@@ -21,6 +22,26 @@ export function FinancialReportPage() {
   const { data, isLoading } = useFinancialReport();
 
   if (isLoading || !data) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-80" /></div>;
+
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-4">
+          <Link to="/reports"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
+          <PageHeader title="Financial Overview" description="Revenue, expenses, and profit over 12 months" />
+        </div>
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={BarChart3}
+              title="No data available"
+              description="The financial overview pulls from paid invoices and lead-delivery costs. Once invoices are billed and synced, monthly revenue/expense/profit will appear here."
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const totalRevenue = data.reduce((s, r) => s + r.revenue, 0);
   const totalProfit = data.reduce((s, r) => s + r.profit, 0);
