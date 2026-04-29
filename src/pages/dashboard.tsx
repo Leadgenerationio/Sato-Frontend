@@ -28,27 +28,13 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
-// Static demo fallbacks used only when the financial-overview endpoint is
-// unavailable or the user lacks permission (e.g. ops_manager/readonly viewing
-// the dashboard). Real data comes from /api/v1/reports/financial-overview.
-
-const FALLBACK_REVENUE = [
-  { month: 'Jan', revenue: 18500, expenses: 12400 },
-  { month: 'Feb', revenue: 22300, expenses: 13100 },
-  { month: 'Mar', revenue: 19800, expenses: 11900 },
-  { month: 'Apr', revenue: 27600, expenses: 14200 },
-  { month: 'May', revenue: 32100, expenses: 15800 },
-  { month: 'Jun', revenue: 29400, expenses: 14600 },
-];
-
-const FALLBACK_INVOICES = [
-  { month: 'Jul', paid: 24, overdue: 3, pending: 5 },
-  { month: 'Aug', paid: 28, overdue: 2, pending: 4 },
-  { month: 'Sep', paid: 31, overdue: 4, pending: 6 },
-  { month: 'Oct', paid: 35, overdue: 2, pending: 3 },
-  { month: 'Nov', paid: 29, overdue: 5, pending: 7 },
-  { month: 'Dec', paid: 38, overdue: 1, pending: 4 },
-];
+// Empty fallbacks shown ONLY when the API errors or returns nothing
+// (e.g. ops_manager/readonly viewing the dashboard, or before any data has
+// been generated). Zero-filled so the chart renders flat-and-honest instead
+// of pretending there's revenue. Real data comes from /reports/financial-overview.
+const EMPTY_MONTHS_6 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+const FALLBACK_REVENUE = EMPTY_MONTHS_6.map((month) => ({ month, revenue: 0, expenses: 0 }));
+const FALLBACK_INVOICES = EMPTY_MONTHS_6.map((month) => ({ month, paid: 0, overdue: 0, pending: 0 }));
 
 const PIE_PALETTE = ['#171717', '#525252', '#a3a3a3', '#d4d4d4', '#737373', '#404040'];
 
