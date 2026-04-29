@@ -18,7 +18,7 @@ import { useCampaign, useTrafficSources } from '@/lib/hooks/use-campaigns';
 import { useCreatives, useCreateCreative, useDeleteCreative } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
-import { Image as ImageIcon, Video, FileText, Download, Trash2, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, Video, FileText, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type DeliveryWindow = 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'ytd';
@@ -443,8 +443,16 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center py-8 text-muted-foreground">
-            <Loader2 className="size-5 animate-spin" />
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+                <Skeleton className="size-9 shrink-0 rounded-lg" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : creatives.length === 0 ? (
           <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
