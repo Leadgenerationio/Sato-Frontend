@@ -165,8 +165,11 @@ export function CampaignDetailPage() {
         </Link>
         <div className="flex-1">
           <PageHeader
-            title={campaign.name}
-            description={[campaign.clientName, campaign.vertical].filter(Boolean).join(' · ') || undefined}
+            title={campaign.name?.trim() || 'Untitled campaign'}
+            description={[campaign.clientName, campaign.vertical]
+              .map((s) => (typeof s === 'string' ? s.trim() : ''))
+              .filter((s) => s.length > 0)
+              .join(' · ') || undefined}
           >
             <Badge className={`capitalize ${statusColors[campaign.status] || ''}`}>
               {campaign.status}
