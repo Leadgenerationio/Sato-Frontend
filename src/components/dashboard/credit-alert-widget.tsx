@@ -1,13 +1,21 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShieldAlert, TrendingDown, ExternalLink } from 'lucide-react';
+import { ShieldAlert, TrendingDown, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCreditAlerts } from '@/lib/hooks/use-clients';
+
+// Collapsed cap: keep the dashboard density consistent. Load-test data has
+// produced 400+ flagged clients which made the widget scroll past every other
+// dashboard tile. 10 collapsed / N expanded matches Sam's spec from the
+// 30-Apr test report.
+const COLLAPSED_LIMIT = 10;
 
 export function CreditAlertWidget() {
   const { data: alerts, isLoading } = useCreditAlerts();
+  const [expanded, setExpanded] = useState(false);
 
   if (isLoading) {
     return (
@@ -22,6 +30,8 @@ export function CreditAlertWidget() {
 
   const list = alerts ?? [];
   const severeAlerts = list.filter((a) => a.scoreChange <= -20);
+  const visible = expanded ? list : list.slice(0, COLLAPSED_LIMIT);
+  const hiddenCount = Math.max(0, list.length - COLLAPSED_LIMIT);
 
   return (
     <Card>
@@ -42,7 +52,7 @@ export function CreditAlertWidget() {
         {list.length === 0 && (
           <p className="text-sm text-muted-foreground py-2">No credit alerts — all clients above 55.</p>
         )}
-        {list.map((alert) => {
+        {visible.map((alert) => {
           const severe = alert.scoreChange <= -20;
           return (
             <Link key={alert.clientId} to={`/clients/${alert.clientId}`} className="block">
@@ -68,6 +78,27 @@ export function CreditAlertWidget() {
             </Link>
           );
         })}
+
+        {hiddenCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-1"
+            onClick={() => setExpanded((e) => !e)}
+          >
+            {expanded ? (
+              <>
+                <ChevronUp className="size-4 mr-1.5" />
+                Show less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="size-4 mr-1.5" />
+                Show {hiddenCount} more
+              </>
+            )}
+          </Button>
+        )}
 
         <Link to="/clients?status=all">
           <Button variant="outline" size="sm" className="w-full mt-1">
