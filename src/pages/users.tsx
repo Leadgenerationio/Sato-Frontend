@@ -16,6 +16,7 @@ import {
   Calculator, Briefcase, Eye, User, AlertTriangle, Plus, Pencil,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { API_URL } from '@/lib/env';
 import type { UserRole, ApiResponse } from '@/types';
 import { toast } from 'sonner';
 
@@ -23,8 +24,6 @@ interface PermissionEntry {
   permission: string;
   access: Record<UserRole, boolean>;
 }
-
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
 
 interface UserItem {
   id: string;
@@ -242,7 +241,11 @@ export function UsersManagement() {
       const res = await fetch(`${API_URL}/api/v1/permissions`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(pendingPerm),
+        body: JSON.stringify({
+          permission: pendingPerm.permission,
+          role: pendingPerm.role,
+          allowed: pendingPerm.newValue,
+        }),
       });
       const data: ApiResponse<{ permission: PermissionEntry }> = await res.json();
       if (data.status === 'success' && data.data) {

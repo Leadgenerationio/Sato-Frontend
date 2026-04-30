@@ -9,10 +9,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Plus, Download, FileText, AlertTriangle } from 'lucide-react';
+import { Search, ExternalLink, Plus, Download, FileText } from 'lucide-react';
 import { useInvoices, toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
+import { ErrorState } from '@/components/shared/error-state';
 
 const STATUS_TABS = ['all', 'draft', 'sent', 'authorised', 'paid', 'overdue'] as const;
 
@@ -50,7 +51,7 @@ export function InvoiceListPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const { data, isLoading, error } = useInvoices({ status: statusFilter, search, page, limit: 10 });
+  const { data, isLoading, error, refetch } = useInvoices({ status: statusFilter, search, page, limit: 10 });
   const invoices = data?.invoices;
 
   const handleStatusChange = (s: string) => { setStatusFilter(s); setPage(1); };
@@ -117,10 +118,10 @@ export function InvoiceListPage() {
               ))}
             </div>
           ) : error ? (
-            <EmptyState
-              icon={AlertTriangle}
+            <ErrorState
               title="Couldn't load invoices"
-              description="Something went wrong reaching the server. Try refreshing the page."
+              error={error}
+              onRetry={() => refetch()}
             />
           ) : !invoices?.length ? (
             <EmptyState

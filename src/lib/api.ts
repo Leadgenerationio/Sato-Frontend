@@ -1,6 +1,5 @@
 import type { ApiResponse, AuthTokens } from '@/types';
-
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
+import { API_URL } from '@/lib/env';
 
 class ApiClient {
   private token: string | null = null;

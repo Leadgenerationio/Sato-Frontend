@@ -1,8 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { api } from '@/lib/api';
+import { API_URL } from '@/lib/env';
 import type { User, AuthTokens, ApiResponse } from '@/types';
-
-const API_URL_FOR_PREFETCH = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
 
 /**
  * Fire-and-forget GET against the URLs the user is about to land on, immediately
@@ -16,7 +15,7 @@ const API_URL_FOR_PREFETCH = (import.meta.env.VITE_API_URL as string | undefined
  */
 function warmServerCache(accessToken: string, role: User['role']) {
   const fire = (path: string): void => {
-    void fetch(`${API_URL_FOR_PREFETCH}${path}`, {
+    void fetch(`${API_URL}${path}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     }).catch(() => {
       // Silent — this is best-effort. The actual page hooks will retry on mount.
@@ -32,8 +31,6 @@ function warmServerCache(accessToken: string, role: User['role']) {
     fire('/api/v1/clients?limit=100');
   }
 }
-
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
 
 interface AuthContextType {
   user: User | null;

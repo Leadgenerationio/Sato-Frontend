@@ -9,10 +9,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Megaphone, AlertTriangle } from 'lucide-react';
+import { Search, ExternalLink, Megaphone } from 'lucide-react';
 import { useCampaigns, type CampaignSummary } from '@/lib/hooks/use-campaigns';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
+import { ErrorState } from '@/components/shared/error-state';
 
 const STATUS_TABS = ['all', 'active', 'paused', 'inactive'] as const;
 const TYPE_TABS = [
@@ -43,7 +44,7 @@ export function CampaignsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const { data, isLoading, error } = useCampaigns({ status: statusFilter, type: typeFilter, search, page, limit: 10 });
+  const { data, isLoading, error, refetch } = useCampaigns({ status: statusFilter, type: typeFilter, search, page, limit: 10 });
   const campaigns = data?.campaigns;
 
   // Reset to page 1 when filters change
@@ -117,10 +118,10 @@ export function CampaignsPage() {
               ))}
             </div>
           ) : error ? (
-            <EmptyState
-              icon={AlertTriangle}
+            <ErrorState
               title="Couldn't load campaigns"
-              description="Something went wrong reaching the server. Try refreshing the page."
+              error={error}
+              onRetry={() => refetch()}
             />
           ) : !campaigns?.length ? (
             <EmptyState

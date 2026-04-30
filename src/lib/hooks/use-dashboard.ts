@@ -18,17 +18,14 @@ export function useFinancialOverview() {
   return useQuery({
     queryKey: ['reports-financial-overview'],
     queryFn: async () => {
-      try {
-        const res = await api.get<{ report: FinancialOverviewRow[] }>('/api/v1/reports/financial-overview');
-        return unwrap(res).report;
-      } catch {
-        // Endpoint requires owner/finance_admin role; ops_manager/readonly get
-        // 403. Return empty so the dashboard falls back to its built-in
-        // demo series instead of showing an error to the user.
-        return [] as FinancialOverviewRow[];
-      }
+      const res = await api.get<{ report: FinancialOverviewRow[] }>('/api/v1/reports/financial-overview');
+      return unwrap(res).report;
     },
-    retry: false,
+    retry: (failureCount, error) => {
+      const status = (error as { status?: number } | null)?.status;
+      if (status === 401 || status === 403) return false;
+      return failureCount < 2;
+    },
   });
 }
 

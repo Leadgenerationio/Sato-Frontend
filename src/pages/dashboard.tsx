@@ -1,6 +1,7 @@
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/layouts/page-header';
 import { DashboardSkeleton } from '@/components/shared/loading-skeleton';
+import { ErrorState } from '@/components/shared/error-state';
 import { WidgetContainer, WidgetSkeleton } from '@/components/dashboard/widget-container';
 import { BankWidget } from '@/components/dashboard/bank-widget';
 import { OverdueWidget } from '@/components/dashboard/overdue-widget';
@@ -111,14 +112,28 @@ const tooltipStyle = {
 
 export function DashboardPage() {
   const { user } = useAuth();
-  const { data: stats, isLoading } = useDashboardStats();
+  const { data: stats, isLoading, isError, error, refetch } = useDashboardStats();
   const { data: financialOverview } = useFinancialOverview();
   const { data: campaignsData } = useCampaigns({ limit: 100 });
   const { data: leadsByDay } = useLeadsByDay(7);
   const { data: activityFeed } = useRecentActivity(5);
 
   if (!user) return null;
-  if (isLoading || !stats) return <DashboardSkeleton />;
+  if (isLoading) return <DashboardSkeleton />;
+  if (isError || !stats) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Dashboard" description={`Welcome back, ${user.name}`} />
+        <ErrorState
+          title="Couldn't load dashboard"
+          description="We couldn't fetch your stats. Check your connection and try again."
+          error={error}
+          onRetry={() => refetch()}
+          size="page"
+        />
+      </div>
+    );
+  }
 
   // Real financial data → revenue/expenses chart + invoice status chart.
   // Falls back to demo data if the user lacks permission (ops_manager/readonly)
