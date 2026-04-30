@@ -48,9 +48,9 @@ export function ChartCardSkeleton({ className }: { className?: string }) {
   );
 }
 
-export function TableCardSkeleton({ rows = 5 }: { rows?: number }) {
+export function TableCardSkeleton({ rows = 5, className }: { rows?: number; className?: string }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <Skeleton className="h-5 w-36" />
         <Skeleton className="h-4 w-52 mt-1" />
@@ -82,9 +82,9 @@ export function TableCardSkeleton({ rows = 5 }: { rows?: number }) {
   );
 }
 
-export function ActivityCardSkeleton({ rows = 5 }: { rows?: number }) {
+export function ActivityCardSkeleton({ rows = 5, className }: { rows?: number; className?: string }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-4 w-48 mt-1" />
@@ -272,8 +272,8 @@ export function DashboardSkeleton() {
 
       {/* Table + Activity */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
-        <TableCardSkeleton rows={5} />
-        <ActivityCardSkeleton rows={5} />
+        <TableCardSkeleton rows={5} className="lg:col-span-4" />
+        <ActivityCardSkeleton rows={5} className="lg:col-span-3" />
       </div>
     </div>
   );
