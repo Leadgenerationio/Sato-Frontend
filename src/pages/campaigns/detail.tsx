@@ -166,7 +166,7 @@ export function CampaignDetailPage() {
         <div className="flex-1">
           <PageHeader
             title={campaign.name}
-            description={`${campaign.clientName} · ${campaign.vertical}`}
+            description={[campaign.clientName, campaign.vertical].filter(Boolean).join(' · ') || undefined}
           >
             <Badge className={`capitalize ${statusColors[campaign.status] || ''}`}>
               {campaign.status}
