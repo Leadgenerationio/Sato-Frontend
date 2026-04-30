@@ -82,6 +82,11 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger }: Se
     setUploaded(null);
   };
 
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) reset();
+  };
+
   const handleUploaded = (result: PresignedUpload, file: File) => {
     if (file.type !== 'application/pdf') {
       toast.error('Only PDF files are supported for signing.');
@@ -106,8 +111,7 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger }: Se
         documentName: uploaded.name,
       });
       toast.success('Envelope sent via SignNow.');
-      setOpen(false);
-      reset();
+      handleOpenChange(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to send agreement';
       toast.error(msg);
@@ -115,7 +119,7 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger }: Se
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button size="sm">
@@ -175,7 +179,7 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger }: Se
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={send.isPending}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={send.isPending}>Cancel</Button>
             <Button type="submit" disabled={send.isPending}>
               {send.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               Send envelope
