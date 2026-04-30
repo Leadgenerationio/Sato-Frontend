@@ -131,7 +131,7 @@ export function InvoiceListPage() {
                   ? 'Try a different search or status filter.'
                   : 'Create your first invoice to bill clients and push it through to Xero.'
               }
-              link={search || statusFilter !== 'all' ? undefined : { label: 'New invoice', to: '/finance/invoices/new', icon: Plus }}
+              link={search || statusFilter !== 'all' ? undefined : { label: 'New invoice', to: '/finance/invoices/create', icon: Plus }}
             />
           ) : (
             <div className="overflow-x-auto">

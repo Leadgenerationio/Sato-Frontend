@@ -157,8 +157,12 @@ export function ClientDetailPage() {
                 <CardDescription>How this client maps to LeadByte, Endole, and Xero</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1">
-                <InfoRow icon={Link2} label="LeadByte Client ID" value={client.leadbyteClientId || 'Not linked'} />
-                <Separator />
+                {client.leadbyteClientId && (
+                  <>
+                    <InfoRow icon={Link2} label="LeadByte Client ID" value={client.leadbyteClientId} />
+                    <Separator />
+                  </>
+                )}
                 <InfoRow icon={Link2} label="Endole Company ID" value={client.endoleCompanyId || 'Not linked'} />
                 <Separator />
                 <InfoRow icon={Link2} label="Xero Contact ID" value={client.xeroContactId || 'Not linked'} />

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 const BASE = '/api/v1/leadbyte';
@@ -112,6 +112,7 @@ export function useLbBuyers(status?: 'Active' | 'Inactive') {
   return useQuery<LbBuyer[]>({
     queryKey: ['lb-buyers', status],
     queryFn: () => unwrap(api.get<Wrap<LbBuyer[]>>(`${BASE}/buyers${qs}`)),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -148,6 +149,7 @@ export function useLbDeliveries(status?: 'Active' | 'Inactive' | 'Saved') {
   return useQuery<LbDelivery[]>({
     queryKey: ['lb-deliveries', status],
     queryFn: () => unwrap(api.get<Wrap<LbDelivery[]>>(`${BASE}/deliveries${qs}`)),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -352,8 +354,11 @@ export interface LbSupplierSpendRow {
   cpl: number;
 }
 
-// Live dashboard polls every 30s so data stays close to the 2-min backend sync.
-const LIVE_REFETCH_MS = 30_000;
+// Background poll cadence. Backend prewarms the LeadByte cache every 90s,
+// so polling at the same cadence keeps the UI close to fresh without
+// firing redundant fetches in between prewarm cycles. `keepPreviousData`
+// ensures a slow / failed background refetch never blanks the table.
+const LIVE_REFETCH_MS = 90_000;
 
 export function useLbSummary(window: LbWindow) {
   return useQuery<LbSummaryTotals>({
@@ -361,6 +366,7 @@ export function useLbSummary(window: LbWindow) {
     queryFn: () => unwrap(api.get<Wrap<LbSummaryTotals>>(`${BASE}/reports/summary?window=${window}`)),
     refetchInterval: LIVE_REFETCH_MS,
     refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -370,6 +376,7 @@ export function useLbCampaignReport(window: LbWindow) {
     queryFn: () => unwrap(api.get<Wrap<LbCampaignRow[]>>(`${BASE}/reports/campaign?window=${window}`)),
     refetchInterval: LIVE_REFETCH_MS,
     refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -379,6 +386,7 @@ export function useLbSupplierSpend(window: LbWindow) {
     queryFn: () => unwrap(api.get<Wrap<LbSupplierSpendRow[]>>(`${BASE}/reports/supplier-spend?window=${window}`)),
     refetchInterval: LIVE_REFETCH_MS,
     refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
 }
 
