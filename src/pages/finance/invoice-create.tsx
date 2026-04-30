@@ -155,8 +155,9 @@ export function InvoiceCreatePage() {
                       <Input
                         type="number"
                         min={1}
-                        value={line.quantity}
+                        value={line.quantity === 0 ? '' : line.quantity}
                         onChange={(e) => updateLine(i, 'quantity', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -166,8 +167,9 @@ export function InvoiceCreatePage() {
                         type="number"
                         min={0}
                         step={0.01}
-                        value={line.unitPrice}
+                        value={line.unitPrice === 0 ? '' : line.unitPrice}
                         onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                       />
                     </div>
                     <div className="sm:col-span-2 sm:text-right">

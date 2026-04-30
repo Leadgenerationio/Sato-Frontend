@@ -327,6 +327,7 @@ function CreditCheckIntegration() {
 interface ResendStatus { configured: boolean; fromEmail: string | null; fromName: string | null; }
 interface SignNowStatus { configured: boolean; baseUrl: string | null; username: string | null; sandbox: boolean; }
 interface R2Status { configured: boolean; bucket: string | null; publicBaseUrl: string | null; }
+interface CatchrStatus { configured: boolean; mcpUrl: string | null; lastSyncAt: string | null; }
 
 function SimpleIntegrationCard<T extends { configured: boolean }>({
   title, description, icon: Icon, iconColor, endpoint, envHint, renderDetails,
@@ -444,6 +445,30 @@ function SignNowIntegration() {
           )}
           {d.baseUrl && <div className="text-xs">API host: {d.baseUrl}{d.sandbox && ' (sandbox)'}</div>}
           <p className="text-xs">OAuth2 password grant; access tokens cached and refreshed automatically.</p>
+        </div>
+      )}
+    />
+  );
+}
+
+function CatchrIntegration() {
+  return (
+    <SimpleIntegrationCard<CatchrStatus>
+      title="Catchr"
+      description="Multi-platform ad-spend (Google Ads, Facebook, LinkedIn, Bing, TikTok)"
+      icon={HardDrive}
+      iconColor="#0ea5e9"
+      endpoint="/api/v1/integrations/catchr/status"
+      envHint="CATCHR_API_KEY + CATCHR_MCP_URL"
+      renderDetails={(d) => (
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {d.mcpUrl && (
+            <div className="flex items-center gap-2"><Mail className="size-4" />MCP URL: <code className="rounded bg-muted px-1 py-0.5 text-xs">{d.mcpUrl}</code></div>
+          )}
+          {d.lastSyncAt && (
+            <div className="text-xs">Last sync: {new Date(d.lastSyncAt).toLocaleString('en-GB')}</div>
+          )}
+          <p className="text-xs">Backend pulls fresh spend hourly at minute 5; data feeds Reports → Ad Spend.</p>
         </div>
       )}
     />
@@ -724,6 +749,7 @@ export function SettingsPage() {
             <CreditCheckIntegration />
             <ResendIntegration />
             <SignNowIntegration />
+            <CatchrIntegration />
             <R2Integration />
             <BankingIntegration />
           </TabsContent>
