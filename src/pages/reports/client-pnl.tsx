@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useClientPnlReport, type ClientPnlRow } from '@/lib/hooks/use-reports';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function fmt(v: number) { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(v); }
 
@@ -21,6 +22,26 @@ export function ClientPnlReportPage() {
   const { data, isLoading } = useClientPnlReport();
 
   if (isLoading || !data) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-80" /></div>;
+
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-4">
+          <Link to="/reports"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
+          <PageHeader title="Client P&L" description="Monthly profit per client" />
+        </div>
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={BarChart3}
+              title="No data available"
+              description="Client P&L populates from paid invoices and lead-delivery costs. As you bill clients and sync data, profit-per-client will appear here."
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Aggregate by client for chart
   const clients = [...new Set(data.map((r) => r.clientName))];
@@ -48,11 +69,11 @@ export function ClientPnlReportPage() {
       <Card>
         <CardHeader><CardTitle>Monthly Profit by Client</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-[350px]">
+          <div className="h-[270px] sm:h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={16} />
                 <YAxis tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => [fmt(Number(v)), '']} />
                 <Legend />
@@ -67,32 +88,34 @@ export function ClientPnlReportPage() {
 
       <Card>
         <CardContent className="p-0 max-h-[500px] overflow-y-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>Month</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead className="text-right">Profit</TableHead>
-                <TableHead className="text-right">Margin</TableHead>
-                <TableHead className="text-right">Leads</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((r, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-medium">{r.clientName}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.month}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.revenue)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.cost)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.profit)}</TableCell>
-                  <TableCell className="text-right tabular-nums"><span className={r.margin >= 50 ? 'text-emerald-600' : 'text-amber-600'}>{r.margin}%</span></TableCell>
-                  <TableCell className="text-right tabular-nums">{r.leadsDelivered}</TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Month</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
+                  <TableHead className="text-right">Margin</TableHead>
+                  <TableHead className="text-right">Leads</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((r, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{r.clientName}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.month}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.revenue)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.cost)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(r.profit)}</TableCell>
+                    <TableCell className="text-right tabular-nums"><span className={r.margin >= 50 ? 'text-emerald-600' : 'text-amber-600'}>{r.margin}%</span></TableCell>
+                    <TableCell className="text-right tabular-nums">{r.leadsDelivered}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

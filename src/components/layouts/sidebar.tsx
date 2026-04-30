@@ -4,7 +4,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronDown,
-  Menu,
   X,
   ShieldCheck,
   Banknote,
@@ -18,10 +17,11 @@ import {
   Bell,
   Building2,
   Truck,
-  Send,
   Database,
   Activity,
   FileSignature,
+  FileText,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,16 @@ const isGroup = (entry: NavEntry): entry is NavGroup => 'children' in entry;
 
 const navItems: NavEntry[] = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'] },
-  { href: '/finance/invoices', label: 'Finance', icon: Banknote, roles: ['owner', 'finance_admin'] },
+  {
+    key: 'finance',
+    label: 'Finance',
+    icon: Banknote,
+    roles: ['owner', 'finance_admin'],
+    children: [
+      { href: '/finance/invoices', label: 'Invoices', icon: FileText, roles: ['owner', 'finance_admin'] },
+      { href: '/finance/bank-feed', label: 'Bank Feed', icon: Receipt, roles: ['owner', 'finance_admin'] },
+    ],
+  },
   { href: '/clients', label: 'Clients', icon: Users, roles: ['owner', 'finance_admin', 'ops_manager'] },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone, roles: ['owner', 'ops_manager'] },
   {
@@ -64,7 +73,6 @@ const navItems: NavEntry[] = [
       { href: '/leadbyte', label: 'Dashboard', icon: Activity, roles: ['owner', 'ops_manager', 'finance_admin'] },
       { href: '/leadbyte/buyers', label: 'Buyers', icon: Building2, roles: ['owner', 'ops_manager'] },
       { href: '/leadbyte/deliveries', label: 'Deliveries', icon: Truck, roles: ['owner', 'ops_manager'] },
-      { href: '/leadbyte/responders', label: 'Responders', icon: Send, roles: ['owner', 'ops_manager'] },
     ],
   },
   { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: ['owner', 'ops_manager'] },
@@ -90,8 +98,7 @@ function isGroupActive(pathname: string, group: NavGroup): boolean {
 export function Sidebar() {
   const { user } = useAuth();
   const location = useLocation();
-  const { sidebarOpen, toggleSidebar } = useUiStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { sidebarOpen, toggleSidebar, mobileSidebarOpen, setMobileSidebarOpen } = useUiStore();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const filteredNav = useMemo(() =>
@@ -119,7 +126,7 @@ export function Sidebar() {
               key={item.key}
               onClick={toggleSidebar}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                'flex items-center justify-center rounded-lg px-3 py-2 text-sm transition-colors',
                 groupActive ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
               )}
               title={item.label}
@@ -174,7 +181,8 @@ export function Sidebar() {
           to={item.href}
           onClick={onClick}
           className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+            'flex items-center rounded-lg px-3 py-2 text-sm transition-colors',
+            compact ? 'justify-center' : 'gap-3',
             active ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
           )}
           title={compact ? item.label : undefined}
@@ -187,34 +195,24 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed left-4 top-4 z-50 md:hidden"
-        onClick={() => setMobileOpen(true)}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-
       {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileSidebarOpen(false)} />
       )}
 
       {/* Mobile sidebar */}
       <aside className={cn(
         'fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r bg-sidebar-background transition-transform md:hidden',
-        mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full',
       )}>
         <div className="flex h-16 shrink-0 items-center justify-between border-b px-4">
           <Logo size="sm" />
-          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
+          <Button variant="ghost" size="icon" onClick={() => setMobileSidebarOpen(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
-          {renderNav(() => setMobileOpen(false))}
+          {renderNav(() => setMobileSidebarOpen(false))}
         </nav>
         {user && (
           <div className="shrink-0 border-t px-3 py-3">

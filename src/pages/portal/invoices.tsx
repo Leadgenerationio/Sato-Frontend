@@ -3,8 +3,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import { usePortalInvoices, type PortalInvoice } from '@/lib/hooks/use-portal';
+import { toMoney } from '@/lib/hooks/use-invoices';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500',
@@ -59,7 +61,7 @@ function handleDownloadInvoice(inv: PortalInvoice) {
         ${inv.paidDate ? `<tr><td>Paid Date</td><td class="text-right">${new Date(inv.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td></tr>` : ''}
       </table>
       <table>
-        <tr class="total-row"><td>Total</td><td class="text-right">${new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(inv.total)}</td></tr>
+        <tr class="total-row"><td>Total</td><td class="text-right">${new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(toMoney(inv.total))}</td></tr>
       </table>
       <script>window.onload = function() { window.print(); }</script>
     </body>
@@ -71,8 +73,8 @@ function handleDownloadInvoice(inv: PortalInvoice) {
 export function PortalInvoicesPage() {
   const { data: invoices, isLoading } = usePortalInvoices();
 
-  const totalOutstanding = invoices?.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + i.total, 0) ?? 0;
-  const totalPaid = invoices?.filter((i) => i.status === 'paid').reduce((sum, i) => sum + i.total, 0) ?? 0;
+  const totalOutstanding = invoices?.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + toMoney(i.total), 0) ?? 0;
+  const totalPaid = invoices?.filter((i) => i.status === 'paid').reduce((sum, i) => sum + toMoney(i.total), 0) ?? 0;
 
   return (
     <div className="space-y-6">
@@ -83,8 +85,8 @@ export function PortalInvoicesPage() {
 
       {!isLoading && invoices && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Card><CardContent className="pt-6 text-center"><p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</p><p className="text-sm text-muted-foreground">Total Paid</p></CardContent></Card>
-          <Card><CardContent className="pt-6 text-center"><p className={`text-2xl font-bold ${totalOutstanding > 0 ? 'text-amber-600' : ''}`}>{formatCurrency(totalOutstanding)}</p><p className="text-sm text-muted-foreground">Outstanding</p></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</p><p className="text-sm text-muted-foreground">Total Paid</p></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent className="text-center"><p className={`text-2xl font-bold ${totalOutstanding > 0 ? 'text-amber-600' : ''}`}>{formatCurrency(totalOutstanding)}</p><p className="text-sm text-muted-foreground">Outstanding</p></CardContent></Card>
         </div>
       )}
 
@@ -92,45 +94,53 @@ export function PortalInvoicesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6 space-y-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+          ) : !invoices?.length ? (
+            <EmptyState
+              icon={FileText}
+              title="No invoices yet"
+              description="When an invoice is issued, it will appear here for download."
+            />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Paid Date</TableHead>
-                  <TableHead className="text-right">Download</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices?.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                    <TableCell>
-                      <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
-                        {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(inv.total, inv.currency)}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
-                    <TableCell className="text-muted-foreground">{inv.paidDate ? formatDate(inv.paidDate) : '—'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7"
-                        onClick={() => handleDownloadInvoice(inv)}
-                      >
-                        <Download className="size-3.5 mr-1" />
-                        Download
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Paid Date</TableHead>
+                    <TableHead className="text-right">Download</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {invoices?.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                      <TableCell>
+                        <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
+                          {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
+                      <TableCell className="text-muted-foreground">{inv.paidDate ? formatDate(inv.paidDate) : '—'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7"
+                          onClick={() => handleDownloadInvoice(inv)}
+                        >
+                          <Download className="size-3.5 mr-1" />
+                          Download
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -10,12 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Building, Mail, Phone, MapPin, Shield, FileText, Megaphone,
   CreditCard, ClipboardCheck, Loader2, TrendingDown, TrendingUp, AlertTriangle, Link2,
-  Download, Trash2,
+  Download, Trash2, FileSignature,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClient, useCreditHistory, useRunCreditCheck } from '@/lib/hooks/use-clients';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
+import { SendAgreementDialog } from '@/pages/agreements';
 
 const statusColors: Record<string, string> = {
   prospect: 'bg-blue-500/10 text-blue-600 border-blue-200',
@@ -73,11 +75,13 @@ export function ClientDetailPage() {
   }
 
   async function handleCreditCheck() {
+    if (runCheck.isPending) return;
     try {
       const result = await runCheck.mutateAsync(id!);
       toast.success(`Credit check complete — score: ${result.creditScore}`);
-    } catch {
-      toast.error('Credit check failed');
+    } catch (err) {
+      console.error('Credit check failed', err);
+      toast.error(err instanceof Error ? err.message : 'Credit check failed');
     }
   }
 
@@ -87,7 +91,23 @@ export function ClientDetailPage() {
         <Link to="/clients"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
         <div className="flex-1">
           <PageHeader title={client.companyName} description={`${client.contactName} · ${client.companyNumber}`}>
-            <Badge className={`capitalize ${statusColors[client.status] || ''}`}>{client.status}</Badge>
+            <div className="flex items-center gap-3">
+              <Badge className={`capitalize ${statusColors[client.status] || ''}`}>{client.status}</Badge>
+              <SendAgreementDialog
+                lockClient
+                prefill={{
+                  clientId: client.id,
+                  signerName: client.contactName,
+                  signerEmail: client.contactEmail,
+                }}
+                trigger={
+                  <Button size="sm" variant="default">
+                    <FileSignature className="size-4 mr-1.5" />
+                    Create Agreement
+                  </Button>
+                }
+              />
+            </div>
           </PageHeader>
         </div>
       </div>
@@ -167,7 +187,12 @@ export function ClientDetailPage() {
                   <p className="text-sm">View campaigns for this client on the <Link to="/campaigns" className="text-primary underline">Campaigns page</Link>.</p>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No active campaigns for this client.</p>
+                <EmptyState
+                  icon={Megaphone}
+                  title="No active campaigns"
+                  description="This client has no campaigns running yet. Campaigns sync automatically from LeadByte."
+                  size="compact"
+                />
               )}
             </CardContent>
           </Card>
@@ -206,24 +231,24 @@ export function ClientDetailPage() {
 
           {client.creditScore !== null && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Card>
-                <CardContent className="pt-6 text-center">
+              <Card className="gap-3 py-5">
+                <CardContent className="text-center">
                   <p className={`text-4xl font-bold tabular-nums ${client.creditScore >= 65 ? 'text-emerald-600' : client.creditScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                     {client.creditScore}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">Credit Score</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="pt-6 text-center">
+              <Card className="gap-3 py-5">
+                <CardContent className="text-center">
                   <p className={`text-lg font-semibold capitalize ${riskColors[client.creditRiskRating || ''] || ''}`}>
                     {(client.creditRiskRating || '').replace('_', ' ')}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">Risk Rating</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="pt-6 text-center">
+              <Card className="gap-3 py-5">
+                <CardContent className="text-center">
                   <p className="text-lg font-semibold">{client.activeCampaigns}</p>
                   <p className="text-sm text-muted-foreground mt-1">Active Campaigns</p>
                 </CardContent>
@@ -241,7 +266,12 @@ export function ClientDetailPage() {
               {creditLoading ? (
                 <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
               ) : !creditHistory?.length ? (
-                <p className="text-sm text-muted-foreground py-4">No credit history. Run a credit check to start tracking.</p>
+                <EmptyState
+                  icon={Shield}
+                  title="No credit history"
+                  description='Run a credit check (button above) to record this client&apos;s score and track changes over time.'
+                  size="compact"
+                />
               ) : (
                 <div className="space-y-3">
                   {creditHistory.map((entry) => (
@@ -394,7 +424,8 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
       setDownloadingKey(doc.key);
       const url = await fetchFreshDownloadUrl(doc.folder, doc.key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to generate download link');
     } finally {
       setDownloadingKey(null);
@@ -426,9 +457,12 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
       </CardHeader>
       <CardContent>
         {docs.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-            No documents uploaded yet. Use the button above to add one.
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No documents"
+            description="Upload contracts, agreements, or compliance docs using the button above. Files are stored securely in Cloudflare R2."
+            size="compact"
+          />
         ) : (
           <div className="space-y-2">
             {docs.map((d) => (

@@ -74,7 +74,8 @@ export function WorkflowCreatePage() {
       });
       toast.success(`Workflow "${wf.name}" created`);
       navigate(`/workflows/${wf.id}`);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to create workflow');
     }
   }
@@ -97,8 +98,8 @@ export function WorkflowCreatePage() {
                   <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold mt-1">
                     {i + 1}
                   </div>
-                  <div className="flex-1 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="flex-1 space-y-3 min-w-0">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-1">
                         <Label className="text-xs">Step Name</Label>
                         <Input

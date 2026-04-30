@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export interface SopSummary {
   id: string;
@@ -32,7 +32,7 @@ export function useSops(filters?: { category?: string; search?: string; status?:
     queryKey: ['sops', filters],
     queryFn: async () => {
       const res = await api.get<PaginatedSops>(`/api/v1/sops${qs ? `?${qs}` : ''}`);
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -42,7 +42,7 @@ export function useSop(id: string) {
     queryKey: ['sop', id],
     queryFn: async () => {
       const res = await api.get<{ sop: SopSummary }>(`/api/v1/sops/${id}`);
-      return res.data!.sop;
+      return unwrap(res).sop;
     },
     enabled: !!id,
   });
@@ -53,7 +53,7 @@ export function useCreateSop() {
   return useMutation({
     mutationFn: async (data: { title: string; content: string; category: string; status: string }) => {
       const res = await api.post<{ sop: SopSummary }>('/api/v1/sops', data);
-      return res.data!.sop;
+      return unwrap(res).sop;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sops'] });
@@ -66,7 +66,7 @@ export function useUpdateSop() {
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string; title?: string; content?: string; category?: string; status?: string }) => {
       const res = await api.put<{ sop: SopSummary }>(`/api/v1/sops/${id}`, data);
-      return res.data!.sop;
+      return unwrap(res).sop;
     },
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ['sops'] });

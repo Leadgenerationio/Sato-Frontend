@@ -4,8 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Stato — business management platform for lead generation companies. Real-time analytics, automated invoicing, agreements, compliance, and client portals." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Warm the connection to the API server during HTML parse so the first
+         API call doesn't pay the full TCP + TLS handshake (~150-300ms saved). -->
+    <link rel="preconnect" href="https://sato-backend-production.up.railway.app" crossorigin />
+    <link rel="dns-prefetch" href="https://sato-backend-production.up.railway.app" />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet" />
     <title>Stato</title>
   </head>

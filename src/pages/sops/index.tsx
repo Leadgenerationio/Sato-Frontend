@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Plus, BookOpen } from 'lucide-react';
+import { Search, Plus, BookOpen, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useSops, type SopSummary } from '@/lib/hooks/use-sops';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const CATEGORY_TABS = ['all', 'operations', 'finance', 'onboarding', 'compliance', 'campaigns'] as const;
 
@@ -97,7 +98,7 @@ export function SopsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i}>
-              <CardContent className="pt-6 space-y-3">
+              <CardContent className="space-y-3">
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-4 w-full" />
@@ -106,15 +107,22 @@ export function SopsPage() {
           ))}
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-          <BookOpen className="size-8" />
-          <p className="text-sm">Failed to load SOPs</p>
-        </div>
+        <EmptyState
+          icon={AlertTriangle}
+          title="Couldn't load SOPs"
+          description="Something went wrong reaching the server. Try refreshing the page."
+        />
       ) : !sops?.length ? (
-        <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-          <BookOpen className="size-8" />
-          <p className="text-sm">No SOPs found</p>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title={search || categoryFilter !== 'all' ? 'No matching SOPs' : 'No SOPs yet'}
+          description={
+            search || categoryFilter !== 'all'
+              ? 'Try a different search or category filter.'
+              : 'Standard operating procedures help your team work consistently. Document your first one to get started.'
+          }
+          link={search || categoryFilter !== 'all' ? undefined : (canWrite ? { label: 'New SOP', to: '/sops/create', icon: Plus } : undefined)}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sops.map((sop: SopSummary) => (
@@ -123,7 +131,7 @@ export function SopsPage() {
               className="cursor-pointer transition-colors hover:bg-accent/50"
               onClick={() => navigate(`/sops/${sop.id}`)}
             >
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="text-sm font-semibold leading-tight line-clamp-2">{sop.title}</h3>

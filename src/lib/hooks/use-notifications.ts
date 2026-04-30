@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export type NotificationType =
   | 'invoice_overdue'
@@ -39,7 +39,7 @@ export function useNotifications(filters?: { filter?: string; page?: number; lim
     queryKey: ['notifications', filters],
     queryFn: async () => {
       const res = await api.get<NotificationListResponse>(`/api/v1/notifications${qs ? `?${qs}` : ''}`);
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -49,7 +49,7 @@ export function useMarkAsRead() {
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await api.put<{ notification: Notification }>(`/api/v1/notifications/${id}/read`);
-      return res.data!.notification;
+      return unwrap(res).notification;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
@@ -62,7 +62,7 @@ export function useMarkAllAsRead() {
   return useMutation({
     mutationFn: async () => {
       const res = await api.put<{ updated: number }>('/api/v1/notifications/read-all');
-      return res.data!;
+      return unwrap(res);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications'] });

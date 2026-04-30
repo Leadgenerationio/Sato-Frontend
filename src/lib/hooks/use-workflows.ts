@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export interface WorkflowSummary {
   id: string;
@@ -43,7 +43,7 @@ export function useWorkflows() {
     queryKey: ['workflows'],
     queryFn: async () => {
       const res = await api.get<{ workflows: WorkflowSummary[] }>('/api/v1/workflows');
-      return res.data!.workflows;
+      return unwrap(res).workflows;
     },
   });
 }
@@ -53,7 +53,7 @@ export function useWorkflow(id: string) {
     queryKey: ['workflow', id],
     queryFn: async () => {
       const res = await api.get<{ workflow: WorkflowDetail }>(`/api/v1/workflows/${id}`);
-      return res.data!.workflow;
+      return unwrap(res).workflow;
     },
     enabled: !!id,
   });
@@ -64,7 +64,7 @@ export function useCreateWorkflow() {
   return useMutation({
     mutationFn: async (data: { name: string; description: string; type: string; schedule?: string | null; scheduleConfig?: { frequency: string; day?: string; time: string }; steps: { name: string; type: string; config: string }[] }) => {
       const res = await api.post<{ workflow: WorkflowDetail }>('/api/v1/workflows', data);
-      return res.data!.workflow;
+      return unwrap(res).workflow;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['workflows'] }),
   });
@@ -75,7 +75,7 @@ export function useToggleWorkflowStatus() {
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await api.post<{ workflow: WorkflowDetail }>(`/api/v1/workflows/${id}/toggle-status`);
-      return res.data!.workflow;
+      return unwrap(res).workflow;
     },
     onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: ['workflows'] });
@@ -89,7 +89,7 @@ export function useExecuteWorkflow() {
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await api.post<{ execution: WorkflowExecution }>(`/api/v1/workflows/${id}/execute`);
-      return res.data!.execution;
+      return unwrap(res).execution;
     },
     onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: ['workflow', id] });

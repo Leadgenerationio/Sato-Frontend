@@ -9,9 +9,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Megaphone } from 'lucide-react';
+import { Search, ExternalLink, Megaphone, AlertTriangle } from 'lucide-react';
 import { useCampaigns, type CampaignSummary } from '@/lib/hooks/use-campaigns';
 import { Pagination } from '@/components/ui/pagination';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const STATUS_TABS = ['all', 'active', 'paused', 'inactive'] as const;
 const TYPE_TABS = [
@@ -57,12 +58,12 @@ export function CampaignsPage() {
       {/* Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleStatusChange(tab)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors capitalize ${
+                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                   statusFilter === tab
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -72,12 +73,12 @@ export function CampaignsPage() {
               </button>
             ))}
           </div>
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
             {TYPE_TABS.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => handleTypeChange(tab.value)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                   typeFilter === tab.value
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -116,15 +117,21 @@ export function CampaignsPage() {
               ))}
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <Megaphone className="size-8" />
-              <p className="text-sm">Failed to load campaigns</p>
-            </div>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load campaigns"
+              description="Something went wrong reaching the server. Try refreshing the page."
+            />
           ) : !campaigns?.length ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <Megaphone className="size-8" />
-              <p className="text-sm">No campaigns found</p>
-            </div>
+            <EmptyState
+              icon={Megaphone}
+              title={search || statusFilter !== 'all' || typeFilter !== 'all' ? 'No matching campaigns' : 'No campaigns yet'}
+              description={
+                search || statusFilter !== 'all' || typeFilter !== 'all'
+                  ? 'Try a different filter or search term.'
+                  : 'Campaigns sync from LeadByte. Check that LeadByte is connected and has active campaigns.'
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -146,9 +153,9 @@ export function CampaignsPage() {
                 <TableBody>
                   {campaigns.map((c: CampaignSummary) => (
                     <TableRow key={c.id}>
-                      <TableCell className="max-w-[220px]">
-                        <div className="font-medium truncate">{c.name}</div>
-                        <div className="text-xs text-muted-foreground">LeadByte ID: {c.id.replace(/^lb-/, '')}</div>
+                      <TableCell className="max-w-[140px] sm:max-w-[220px]">
+                        <div className="truncate font-medium">{c.name}</div>
+                        <div className="truncate text-xs text-muted-foreground">LeadByte ID: {c.id.replace(/^lb-/, '')}</div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{c.clientName}</TableCell>
                       <TableCell>

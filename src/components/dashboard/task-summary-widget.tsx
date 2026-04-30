@@ -10,8 +10,8 @@ export function TaskSummaryWidget() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6 space-y-3">
+      <Card className="gap-3 py-5">
+        <CardContent className="space-y-3">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />

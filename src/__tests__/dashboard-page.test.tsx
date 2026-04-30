@@ -26,6 +26,49 @@ vi.mock('@/lib/hooks/use-dashboard', () => ({
     isLoading: false,
     error: null,
   }),
+  useFinancialOverview: () => ({
+    data: [
+      { month: 'Jan 2026', revenue: 25000, expenses: 12000, profit: 13000, invoicesPaid: 12, invoicesOverdue: 1, vatCollected: 5000 },
+      { month: 'Feb 2026', revenue: 28000, expenses: 13500, profit: 14500, invoicesPaid: 14, invoicesOverdue: 0, vatCollected: 5600 },
+    ],
+    isLoading: false,
+    error: null,
+  }),
+  useLeadsByDay: () => ({
+    data: [
+      { day: 'Mon', date: '2026-04-21', leads: 12 },
+      { day: 'Tue', date: '2026-04-22', leads: 18 },
+      { day: 'Wed', date: '2026-04-23', leads: 9 },
+      { day: 'Thu', date: '2026-04-24', leads: 25 },
+      { day: 'Fri', date: '2026-04-25', leads: 14 },
+      { day: 'Sat', date: '2026-04-26', leads: 4 },
+      { day: 'Sun', date: '2026-04-27', leads: 2 },
+    ],
+    isLoading: false,
+    error: null,
+  }),
+  useRecentActivity: () => ({
+    data: [
+      { id: 'inv-1', user: 'System', action: 'Invoice INV-1050 created for Apex Media (£632)', timestamp: new Date().toISOString(), category: 'invoice' },
+    ],
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/lib/hooks/use-campaigns', () => ({
+  useCampaigns: () => ({
+    data: {
+      campaigns: [
+        { id: '1', name: 'Solar UK', vertical: 'Solar', status: 'active', leadsThisMonth: 100, totalRevenue: 1000, totalCost: 400, currency: 'GBP', clientName: 'Apex', leadPrice: 10, totalLeads: 200, leadsToday: 5, leadsThisWeek: 25, cpl: 4, margin: 60, startDate: '2026-01-01', campaignType: 'pay_per_lead' },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    },
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 vi.mock('@/components/dashboard/bank-widget', () => ({

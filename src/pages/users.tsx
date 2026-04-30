@@ -96,7 +96,9 @@ export function UsersManagement() {
       const res = await fetch(`${API_URL}/api/v1/permissions`, { headers: { Authorization: `Bearer ${token}` } });
       const data: ApiResponse<{ permissions: PermissionEntry[] }> = await res.json();
       if (data.status === 'success' && data.data) setPermissions(data.data.permissions);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.warn('fetchPermissions failed', err);
+    }
   }, [token]);
 
   const fetchUsers = useCallback(async () => {
@@ -104,7 +106,9 @@ export function UsersManagement() {
       const res = await fetch(`${API_URL}/api/v1/users`, { headers: { Authorization: `Bearer ${token}` } });
       const data: ApiResponse<{ users: UserItem[] }> = await res.json();
       if (data.status === 'success' && data.data) setUsers(data.data.users);
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch (err) {
+      console.warn('fetchUsers failed', err);
+    } finally { setLoading(false); }
   }, [token]);
 
   useEffect(() => { fetchUsers(); fetchPermissions(); }, [fetchUsers, fetchPermissions]);
@@ -138,7 +142,11 @@ export function UsersManagement() {
         setAddError(data.message || 'Failed to create user');
         toast.error('Failed to create user', { description: data.message });
       }
-    } catch { setAddError('Network error'); toast.error('Network error'); } finally { setAddLoading(false); }
+    } catch (err) {
+      console.error('Add user failed', err);
+      setAddError('Network error');
+      toast.error('Network error');
+    } finally { setAddLoading(false); }
   }
 
   // ─── Edit User ───
@@ -168,7 +176,11 @@ export function UsersManagement() {
         setEditError(data.message || 'Failed to update user');
         toast.error('Failed to update user', { description: data.message });
       }
-    } catch { setEditError('Network error'); toast.error('Network error'); } finally { setEditLoading(false); }
+    } catch (err) {
+      console.error('Edit user failed', err);
+      setEditError('Network error');
+      toast.error('Network error');
+    } finally { setEditLoading(false); }
   }
 
   // ─── Confirm role change / toggle ───
@@ -210,7 +222,10 @@ export function UsersManagement() {
           toast.success(confirmAction.isActive ? 'User deactivated' : 'User activated', { description: `${confirmAction.userName} has been ${confirmAction.isActive ? 'deactivated' : 'activated'}.` });
         }
       }
-    } catch { toast.error('Action failed'); } finally { setUpdating(null); setConfirmAction(null); }
+    } catch (err) {
+      console.error('Confirm action failed', err);
+      toast.error('Action failed');
+    } finally { setUpdating(null); setConfirmAction(null); }
   }
 
   // ─── Permission toggle ───
@@ -236,7 +251,10 @@ export function UsersManagement() {
           description: `"${pendingPerm.permission}" ${pendingPerm.newValue ? 'enabled' : 'disabled'} for ${getRoleLabel(pendingPerm.role)}.`,
         });
       }
-    } catch { toast.error('Failed to update permission'); } finally { setPermUpdating(false); setPendingPerm(null); }
+    } catch (err) {
+      console.error('Permission update failed', err);
+      toast.error('Failed to update permission');
+    } finally { setPermUpdating(false); setPendingPerm(null); }
   }
 
   if (!user) return null;
@@ -260,9 +278,9 @@ export function UsersManagement() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card><CardContent className="pt-6"><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-neutral-100"><Users className="size-5 text-neutral-700" /></div><div><p className="text-2xl font-bold">{stats.total}</p><p className="text-sm text-muted-foreground">Total Users</p></div></div></CardContent></Card>
-          <Card><CardContent className="pt-6"><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-emerald-50"><UserCheck className="size-5 text-emerald-600" /></div><div><p className="text-2xl font-bold">{stats.active}</p><p className="text-sm text-muted-foreground">Active Users</p></div></div></CardContent></Card>
-          <Card><CardContent className="pt-6"><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-amber-50"><Crown className="size-5 text-amber-600" /></div><div><p className="text-2xl font-bold">{stats.owners}</p><p className="text-sm text-muted-foreground">Owners</p></div></div></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-neutral-100"><Users className="size-5 text-neutral-700" /></div><div><p className="text-2xl font-bold">{stats.total}</p><p className="text-sm text-muted-foreground">Total Users</p></div></div></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-emerald-50"><UserCheck className="size-5 text-emerald-600" /></div><div><p className="text-2xl font-bold">{stats.active}</p><p className="text-sm text-muted-foreground">Active Users</p></div></div></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-amber-50"><Crown className="size-5 text-amber-600" /></div><div><p className="text-2xl font-bold">{stats.owners}</p><p className="text-sm text-muted-foreground">Owners</p></div></div></CardContent></Card>
         </div>
       )}
 
@@ -328,87 +346,89 @@ export function UsersManagement() {
           {loading ? (
             <UserTableSkeleton rows={5} />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((u) => {
-                  const RoleIcon = getRoleIcon(u.role);
-                  const isSelf = u.id === user.id;
-                  const isProtected = u.isPrimaryOwner === true && !isSelf;
-                  const roleLocked = isSelf || isProtected;
-                  return (
-                    <TableRow key={u.id} className={!u.isActive ? 'opacity-50' : ''}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar><AvatarFallback>{u.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}</AvatarFallback></Avatar>
-                          <div>
-                            <div className="font-medium flex items-center gap-2">
-                              {u.name}
-                              {isSelf && <Badge variant="outline" className="text-[10px] px-1.5">You</Badge>}
-                              {u.isPrimaryOwner && <Badge variant="secondary" className="text-[10px] px-1.5 gap-1"><Crown className="size-2.5" />Primary</Badge>}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => {
+                    const RoleIcon = getRoleIcon(u.role);
+                    const isSelf = u.id === user.id;
+                    const isProtected = u.isPrimaryOwner === true && !isSelf;
+                    const roleLocked = isSelf || isProtected;
+                    return (
+                      <TableRow key={u.id} className={!u.isActive ? 'opacity-50' : ''}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar><AvatarFallback>{u.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}</AvatarFallback></Avatar>
+                            <div>
+                              <div className="font-medium flex items-center gap-2">
+                                {u.name}
+                                {isSelf && <Badge variant="outline" className="text-[10px] px-1.5">You</Badge>}
+                                {u.isPrimaryOwner && <Badge variant="secondary" className="text-[10px] px-1.5 gap-1"><Crown className="size-2.5" />Primary</Badge>}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{u.email}</div>
                             </div>
-                            <div className="text-xs text-muted-foreground">{u.email}</div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {roleLocked ? (
-                          <Badge className="capitalize gap-1"><RoleIcon className="size-3" />{u.role.replace('_', ' ')}</Badge>
-                        ) : (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="gap-1.5 h-7 px-2" disabled={updating === u.id}>
-                                {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : <RoleIcon className="size-3" />}
-                                <span className="capitalize">{u.role.replace('_', ' ')}</span>
-                                <ChevronDown className="size-3" />
+                        </TableCell>
+                        <TableCell>
+                          {roleLocked ? (
+                            <Badge className="capitalize gap-1"><RoleIcon className="size-3" />{u.role.replace('_', ' ')}</Badge>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="gap-1.5 h-7 px-2" disabled={updating === u.id}>
+                                  {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : <RoleIcon className="size-3" />}
+                                  <span className="capitalize">{u.role.replace('_', ' ')}</span>
+                                  <ChevronDown className="size-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-64">
+                                <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {allRoles.map((r) => (
+                                  <DropdownMenuItem key={r.value} onClick={() => requestRoleChange(u.id, u.name, u.role, r.value)} className="flex items-start gap-3 py-2">
+                                    <r.icon className="size-4 mt-0.5 shrink-0" />
+                                    <div><p className="text-sm font-medium">{r.label}</p><p className="text-xs text-muted-foreground">{r.desc}</p></div>
+                                    {u.role === r.value && <div className="size-2 rounded-full bg-neutral-900 ml-auto mt-1.5 shrink-0" />}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={u.isActive ? 'default' : 'destructive'}>{u.isActive ? 'Active' : 'Inactive'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {!isSelf && !isProtected && (
+                              <Button variant="ghost" size="sm" onClick={() => openEditDialog(u)} className="gap-1.5">
+                                <Pencil className="size-3" /> Edit
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-64">
-                              <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {allRoles.map((r) => (
-                                <DropdownMenuItem key={r.value} onClick={() => requestRoleChange(u.id, u.name, u.role, r.value)} className="flex items-start gap-3 py-2">
-                                  <r.icon className="size-4 mt-0.5 shrink-0" />
-                                  <div><p className="text-sm font-medium">{r.label}</p><p className="text-xs text-muted-foreground">{r.desc}</p></div>
-                                  {u.role === r.value && <div className="size-2 rounded-full bg-neutral-900 ml-auto mt-1.5 shrink-0" />}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={u.isActive ? 'default' : 'destructive'}>{u.isActive ? 'Active' : 'Inactive'}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {!isSelf && !isProtected && (
-                            <Button variant="ghost" size="sm" onClick={() => openEditDialog(u)} className="gap-1.5">
-                              <Pencil className="size-3" /> Edit
-                            </Button>
-                          )}
-                          {!isSelf && !isProtected && (
-                            <Button variant="ghost" size="sm" onClick={() => requestToggle(u.id, u.name, u.isActive)} disabled={updating === u.id} className="gap-1.5">
-                              {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : u.isActive ? <><UserX className="size-3" /> Deactivate</> : <><UserCheck className="size-3" /> Activate</>}
-                            </Button>
-                          )}
-                          {isProtected && (
-                            <Badge variant="outline" className="text-[10px] gap-1"><Shield className="size-2.5" />Protected</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                            )}
+                            {!isSelf && !isProtected && (
+                              <Button variant="ghost" size="sm" onClick={() => requestToggle(u.id, u.name, u.isActive)} disabled={updating === u.id} className="gap-1.5">
+                                {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : u.isActive ? <><UserX className="size-3" /> Deactivate</> : <><UserCheck className="size-3" /> Activate</>}
+                              </Button>
+                            )}
+                            {isProtected && (
+                              <Badge variant="outline" className="text-[10px] gap-1"><Shield className="size-2.5" />Protected</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

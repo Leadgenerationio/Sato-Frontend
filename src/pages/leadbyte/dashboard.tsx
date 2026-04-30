@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Megaphone, Truck, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LbWindowSelector } from '@/components/shared/lb-window-selector';
+import { EmptyState } from '@/components/shared/empty-state';
 import {
   useLbSummary,
   useLbCampaignReport,
@@ -72,7 +73,8 @@ export function LeadByteDashboardPage() {
     try {
       await manualSync.mutateAsync();
       toast.success('Sync queued — refreshing data in a moment');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to queue sync');
     }
   }
@@ -130,10 +132,20 @@ export function LeadByteDashboardPage() {
             </div>
           )}
           {campaigns.isError && (
-            <div className="p-6 text-sm text-red-600">Failed to load campaign report.</div>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load campaign report"
+              description="LeadByte may be unreachable. Try again or pick a different window."
+              size="compact"
+            />
           )}
           {campaigns.data && campaigns.data.length === 0 && !campaigns.isLoading && (
-            <div className="p-6 text-sm text-muted-foreground">No campaign activity in this window.</div>
+            <EmptyState
+              icon={Megaphone}
+              title="No campaign activity"
+              description="There are no leads or revenue recorded in this window. Pick a wider date range or check that LeadByte is syncing."
+              size="compact"
+            />
           )}
           {campaigns.data && campaigns.data.length > 0 && (
             <div className="overflow-x-auto">
@@ -178,7 +190,12 @@ export function LeadByteDashboardPage() {
             </div>
           )}
           {suppliers.data && suppliers.data.length === 0 && !suppliers.isLoading && (
-            <div className="p-6 text-sm text-muted-foreground">No supplier activity in this window.</div>
+            <EmptyState
+              icon={Truck}
+              title="No supplier activity"
+              description="No supplier spend recorded in this window. Suppliers appear here once leads are delivered through LeadByte."
+              size="compact"
+            />
           )}
           {suppliers.data && suppliers.data.length > 0 && (
             <div className="overflow-x-auto">

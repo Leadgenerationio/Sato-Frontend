@@ -20,7 +20,7 @@ export function ReportsHubPage() {
         {reports.map((r) => (
           <Link key={r.href} to={r.href}>
             <Card className="h-full hover:border-foreground/20 transition-colors cursor-pointer">
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex items-start gap-4">
                   <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted">
                     <r.icon className="size-5 text-muted-foreground" />

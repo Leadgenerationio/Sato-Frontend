@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { AlertTriangle, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
@@ -28,7 +29,7 @@ export function OverdueWidget() {
   });
 
   const overdue = data ?? [];
-  const totalOverdue = overdue.reduce((sum, inv) => sum + inv.total, 0);
+  const totalOverdue = overdue.reduce((sum, inv) => sum + toMoney(inv.total), 0);
   const top = overdue.slice(0, 4);
 
   return (
@@ -57,9 +58,12 @@ export function OverdueWidget() {
         </div>
 
         {!isLoading && overdue.length === 0 && (
-          <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-            No overdue invoices.
-          </div>
+          <EmptyState
+            icon={CheckCircle2}
+            title="All paid up"
+            description="No invoices are overdue. Anything past its due date will show up here."
+            size="compact"
+          />
         )}
 
         {!isLoading && overdue.length > 0 && (
@@ -75,7 +79,7 @@ export function OverdueWidget() {
                     {inv.daysOverdue}d
                   </Badge>
                   <span className="text-sm font-medium tabular-nums whitespace-nowrap">
-                    {formatCurrency(inv.total, inv.currency)}
+                    {formatCurrency(toMoney(inv.total), inv.currency)}
                   </span>
                 </div>
               </div>

@@ -9,9 +9,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Plus, Download, FileText } from 'lucide-react';
-import { useInvoices, type InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { Search, ExternalLink, Plus, Download, FileText, AlertTriangle } from 'lucide-react';
+import { useInvoices, toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import { Pagination } from '@/components/ui/pagination';
+import { EmptyState } from '@/components/shared/empty-state';
 
 const STATUS_TABS = ['all', 'draft', 'sent', 'authorised', 'paid', 'overdue'] as const;
 
@@ -79,7 +80,7 @@ export function InvoiceListPage() {
             <button
               key={tab}
               onClick={() => handleStatusChange(tab)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors capitalize whitespace-nowrap ${
+              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                 statusFilter === tab
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -116,15 +117,22 @@ export function InvoiceListPage() {
               ))}
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <FileText className="size-8" />
-              <p className="text-sm">Failed to load invoices</p>
-            </div>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load invoices"
+              description="Something went wrong reaching the server. Try refreshing the page."
+            />
           ) : !invoices?.length ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <FileText className="size-8" />
-              <p className="text-sm">No invoices found</p>
-            </div>
+            <EmptyState
+              icon={FileText}
+              title={search || statusFilter !== 'all' ? 'No matching invoices' : 'No invoices yet'}
+              description={
+                search || statusFilter !== 'all'
+                  ? 'Try a different search or status filter.'
+                  : 'Create your first invoice to bill clients and push it through to Xero.'
+              }
+              link={search || statusFilter !== 'all' ? undefined : { label: 'New invoice', to: '/finance/invoices/new', icon: Plus }}
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -157,9 +165,9 @@ export function InvoiceListPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(inv.subtotal, inv.currency)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(inv.vatAmount, inv.currency)}</TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">{formatCurrency(inv.total, inv.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(inv.subtotal), inv.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(inv.vatAmount), inv.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
                       <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
                       <TableCell className="text-muted-foreground">{formatDate(inv.createdAt)}</TableCell>
                       <TableCell>

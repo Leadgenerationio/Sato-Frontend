@@ -72,7 +72,8 @@ export function TaskDetailPage() {
     try {
       await updateStatus.mutateAsync({ id: id!, status: nextStatus });
       toast.success(`Task moved to ${statusLabels[nextStatus] || nextStatus}`);
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to update task status');
     }
   }
@@ -84,7 +85,8 @@ export function TaskDetailPage() {
       await addComment.mutateAsync({ taskId: id!, text: commentText });
       setCommentText('');
       toast.success('Comment added');
-    } catch {
+    } catch (err) {
+      console.error('Operation failed', err);
       toast.error('Failed to add comment');
     }
   }

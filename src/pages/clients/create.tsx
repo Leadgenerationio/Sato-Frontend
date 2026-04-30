@@ -32,7 +32,7 @@ export function ClientCreatePage() {
     notes: '',
   });
 
-  function update(field: string, value: any) {
+  function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -46,8 +46,9 @@ export function ClientCreatePage() {
       const client = await createClient.mutateAsync(form);
       toast.success(`${client.companyName} created`);
       navigate(`/clients/${client.id}`);
-    } catch {
-      toast.error('Failed to create client');
+    } catch (err) {
+      console.error('Create client failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to create client');
     }
   }
 
@@ -128,8 +129,8 @@ export function ClientCreatePage() {
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex items-center justify-between">
-                  <Label>VAT Registered</Label>
-                  <input type="checkbox" checked={form.vatRegistered} onChange={(e) => { update('vatRegistered', e.target.checked); update('addVatToInvoices', e.target.checked); }} className="size-4 rounded border-input" />
+                  <Label htmlFor="vat-registered">VAT Registered</Label>
+                  <input id="vat-registered" type="checkbox" checked={form.vatRegistered} onChange={(e) => { update('vatRegistered', e.target.checked); update('addVatToInvoices', e.target.checked); }} className="size-4 rounded border-input" />
                 </div>
                 <div className="space-y-2">
                   <Label>Billing Workflow</Label>

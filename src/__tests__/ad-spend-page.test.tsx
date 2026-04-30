@@ -56,6 +56,10 @@ vi.mock('@/lib/api', () => ({
     post: vi.fn(),
   },
   ApiError: class extends Error { constructor(m: string, public status: number) { super(m); } },
+  unwrap: <T,>(res: { data?: T }) => {
+    if (res.data === undefined || res.data === null) throw new Error('No data');
+    return res.data;
+  },
 }));
 
 function renderPage() {

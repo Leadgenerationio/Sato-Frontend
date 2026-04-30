@@ -20,6 +20,7 @@ import {
 import { useClients } from '@/lib/hooks/use-clients';
 import { FileUpload } from '@/components/shared/file-upload';
 import type { PresignedUpload } from '@/lib/hooks/use-uploads';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function statusBadge(status: AgreementStatus) {
   const map: Record<AgreementStatus, { label: string; classes: string; icon: React.ElementType }> = {
@@ -44,22 +45,46 @@ function formatDateTime(iso?: string | null) {
   return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function SendDialog() {
+interface SendAgreementDialogProps {
+  /** Pre-fill any of the form fields. Useful when launching from a client/buyer profile. */
+  prefill?: { clientId?: string; signerName?: string; signerEmail?: string };
+  /** Lock the client selector when launched from a specific client/buyer page. */
+  lockClient?: boolean;
+  /** Custom trigger node. Defaults to a "Send for signature" button. */
+  trigger?: React.ReactNode;
+}
+
+export function SendAgreementDialog({ prefill, lockClient = false, trigger }: SendAgreementDialogProps = {}) {
   const [open, setOpen] = useState(false);
-  const [clientId, setClientId] = useState('');
-  const [signerEmail, setSignerEmail] = useState('');
-  const [signerName, setSignerName] = useState('');
+  const [clientId, setClientId] = useState(prefill?.clientId ?? '');
+  const [signerEmail, setSignerEmail] = useState(prefill?.signerEmail ?? '');
+  const [signerName, setSignerName] = useState(prefill?.signerName ?? '');
   const [uploaded, setUploaded] = useState<{ key: string; name: string } | null>(null);
   const { data: clientsData } = useClients({ limit: 100 });
   const send = useSendAgreement();
 
   const clients = useMemo(() => clientsData?.clients ?? [], [clientsData]);
 
-  const reset = () => {
-    setClientId('');
-    setSignerEmail('');
-    setSignerName('');
+  // Re-sync state from prefill when the dialog opens — handles the case where
+  // prefill arrives async (e.g. client data loads after parent renders).
+  useEffect(() => {
+    if (!open) return;
+    setClientId(prefill?.clientId ?? '');
+    setSignerEmail(prefill?.signerEmail ?? '');
+    setSignerName(prefill?.signerName ?? '');
     setUploaded(null);
+  }, [open, prefill?.clientId, prefill?.signerEmail, prefill?.signerName]);
+
+  const reset = () => {
+    setClientId(prefill?.clientId ?? '');
+    setSignerEmail(prefill?.signerEmail ?? '');
+    setSignerName(prefill?.signerName ?? '');
+    setUploaded(null);
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) reset();
   };
 
   const handleUploaded = (result: PresignedUpload, file: File) => {
@@ -86,8 +111,7 @@ function SendDialog() {
         documentName: uploaded.name,
       });
       toast.success('Envelope sent via SignNow.');
-      setOpen(false);
-      reset();
+      handleOpenChange(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to send agreement';
       toast.error(msg);
@@ -95,12 +119,14 @@ function SendDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <FileSignature className="size-4" />
-          Send for signature
-        </Button>
+        {trigger ?? (
+          <Button size="sm">
+            <FileSignature className="size-4" />
+            Send for signature
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <form onSubmit={handleSubmit}>
@@ -117,7 +143,8 @@ function SendDialog() {
                 id="clientId"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                disabled={lockClient}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 required
               >
                 <option value="">Select a client…</option>
@@ -152,7 +179,7 @@ function SendDialog() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={send.isPending}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={send.isPending}>Cancel</Button>
             <Button type="submit" disabled={send.isPending}>
               {send.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               Send envelope
@@ -215,7 +242,7 @@ export function AgreementsPage() {
               {hasPending ? 'Auto-refreshing every 30s while envelopes are pending…' : 'Envelope statuses update via webhook.'}
             </CardDescription>
           </div>
-          <SendDialog />
+          <SendAgreementDialog />
         </CardHeader>
         <CardContent className="p-0">
           {isLoading && (
@@ -224,42 +251,46 @@ export function AgreementsPage() {
             </div>
           )}
           {!isLoading && agreements.length === 0 && (
-            <div className="p-10 text-center text-sm text-muted-foreground">
-              No agreements sent yet. Click “Send for signature” to create one.
-            </div>
+            <EmptyState
+              icon={FileSignature}
+              title="No agreements yet"
+              description='Send a contract or onboarding document for e-signature. Use "Send for signature" above to start.'
+            />
           )}
           {!isLoading && agreements.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Signer</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Sent</TableHead>
-                  <TableHead>Signed</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {agreements.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.signerName}</TableCell>
-                    <TableCell className="text-muted-foreground">{a.signerEmail}</TableCell>
-                    <TableCell>{formatDateTime(a.sentAt)}</TableCell>
-                    <TableCell>{formatDateTime(a.signedAt)}</TableCell>
-                    <TableCell>{statusBadge(a.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <RefreshButton id={a.id} />
-                      {a.documentUrl && (
-                        <a href={a.documentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline ml-2">
-                          PDF
-                        </a>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Signer</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Sent</TableHead>
+                    <TableHead>Signed</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {agreements.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.signerName}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.signerEmail}</TableCell>
+                      <TableCell>{formatDateTime(a.sentAt)}</TableCell>
+                      <TableCell>{formatDateTime(a.signedAt)}</TableCell>
+                      <TableCell>{statusBadge(a.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <RefreshButton id={a.id} />
+                        {a.documentUrl && (
+                          <a href={a.documentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline ml-2">
+                            PDF
+                          </a>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

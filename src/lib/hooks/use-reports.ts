@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export type DeliveryWindow =
   | 'today'
@@ -72,7 +72,7 @@ export function useCampaignReport(window: DeliveryWindow = 'this_month') {
       const res = await api.get<{ report: CampaignReportRow[]; window: DeliveryWindow }>(
         `/api/v1/reports/campaign-performance?window=${window}`,
       );
-      return res.data!.report;
+      return unwrap(res).report;
     },
   });
 }
@@ -82,7 +82,7 @@ export function useClientPnlReport() {
     queryKey: ['report-client-pnl'],
     queryFn: async () => {
       const res = await api.get<{ report: ClientPnlRow[] }>('/api/v1/reports/client-pnl');
-      return res.data!.report;
+      return unwrap(res).report;
     },
   });
 }
@@ -94,7 +94,7 @@ export function useSupplierReport(window: DeliveryWindow = 'this_month') {
       const res = await api.get<{ report: SupplierReportRow[]; window: DeliveryWindow }>(
         `/api/v1/reports/supplier-performance?window=${window}`,
       );
-      return res.data!.report;
+      return unwrap(res).report;
     },
   });
 }
@@ -104,7 +104,7 @@ export function useFinancialReport() {
     queryKey: ['report-financial'],
     queryFn: async () => {
       const res = await api.get<{ report: FinancialOverviewRow[] }>('/api/v1/reports/financial-overview');
-      return res.data!.report;
+      return unwrap(res).report;
     },
   });
 }

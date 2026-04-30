@@ -94,7 +94,7 @@ export function LoginPage() {
             </p>
 
             {/* Features */}
-            <div className="mt-10 grid grid-cols-2 gap-4">
+            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {features.map((feature, i) => (
                 <div
                   key={feature.title}
@@ -125,9 +125,9 @@ export function LoginPage() {
       </div>
 
       {/* ─── Right Panel ─── */}
-      <div className="flex flex-1 items-center justify-center bg-neutral-50 p-6 sm:p-10 relative">
+      <main className="flex flex-1 items-center justify-center bg-neutral-50 p-6 sm:p-10 relative">
 
-        <div className="relative z-10 w-full max-w-[400px]">
+        <div className="relative z-10 w-full max-w-[calc(100%-1rem)] sm:max-w-[400px]">
 
           {/* Mobile logo */}
           <div className="mb-10 flex flex-col items-center lg:hidden animate-scale-in">
@@ -189,6 +189,7 @@ export function LoginPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-0 top-0 flex h-full items-center px-3 text-neutral-400 hover:text-neutral-700 transition-colors"
                       tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
@@ -240,12 +241,12 @@ export function LoginPage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-8 flex items-center justify-center text-xs text-neutral-400 animate-fade-in delay-800">
+          <div className="mt-8 flex items-center justify-center text-xs text-neutral-600 animate-fade-in delay-800">
             <Logo size="sm" showText={false} className="opacity-30 scale-75" />
             <span className="ml-1">Stato Business Management</span>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

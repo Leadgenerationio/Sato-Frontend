@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLbDeliveries } from '@/lib/hooks/use-leadbyte';
+import { EmptyState } from '@/components/shared/empty-state';
+import { Truck, AlertTriangle } from 'lucide-react';
 
 const STATUS_TABS = ['all', 'Active', 'Inactive', 'Saved'] as const;
 
@@ -39,36 +41,50 @@ export function LeadByteDeliveriesPage() {
             </div>
           )}
           {error && (
-            <div className="p-6 text-sm text-red-600">Failed to load deliveries.</div>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load deliveries"
+              description="LeadByte may be unreachable. Try again in a moment."
+            />
           )}
           {deliveries && deliveries.length === 0 && (
-            <div className="p-6 text-sm text-neutral-500">No deliveries found.</div>
+            <EmptyState
+              icon={Truck}
+              title={statusFilter === 'all' ? 'No deliveries yet' : `No ${statusFilter.toLowerCase()} deliveries`}
+              description={
+                statusFilter === 'all'
+                  ? 'Delivery rules sync from LeadByte. Configure routing in LeadByte to populate this list.'
+                  : 'No deliveries match this filter. Try switching to "All".'
+              }
+            />
           )}
           {deliveries && deliveries.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {deliveries.map((d) => (
-                  <TableRow key={String(d.id)}>
-                    <TableCell className="font-mono text-xs">{d.reference ?? d.id}</TableCell>
-                    <TableCell>{d.campaign?.name ?? '—'}</TableCell>
-                    <TableCell>{d.deliver_to ?? '—'}</TableCell>
-                    <TableCell>{d.buyer?.name ?? '—'} {d.buyer?.bid && <span className="text-neutral-400">({d.buyer.bid})</span>}</TableCell>
-                    <TableCell>
-                      <Badge variant={d.status === 'Active' ? 'default' : 'secondary'}>{d.status ?? 'Unknown'}</Badge>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Buyer</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {deliveries.map((d) => (
+                    <TableRow key={String(d.id)}>
+                      <TableCell className="font-mono text-xs">{d.reference ?? d.id}</TableCell>
+                      <TableCell>{d.campaign?.name ?? '—'}</TableCell>
+                      <TableCell>{d.deliver_to ?? '—'}</TableCell>
+                      <TableCell>{d.buyer?.name ?? '—'} {d.buyer?.bid && <span className="text-neutral-400">({d.buyer.bid})</span>}</TableCell>
+                      <TableCell>
+                        <Badge variant={d.status === 'Active' ? 'default' : 'secondary'}>{d.status ?? 'Unknown'}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

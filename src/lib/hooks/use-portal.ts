@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 
 export interface PortalDashboard {
   companyName: string;
@@ -36,7 +36,8 @@ export interface PortalInvoice {
   id: string;
   invoiceNumber: string;
   status: string;
-  total: number;
+  // Money on the wire is a decimal string; parse with toMoney() before arithmetic.
+  total: string;
   currency: string;
   dueDate: string;
   paidDate: string | null;
@@ -63,7 +64,7 @@ export function usePortalDashboard() {
     queryKey: ['portal-dashboard'],
     queryFn: async () => {
       const res = await api.get<PortalDashboard>('/api/v1/portal/dashboard');
-      return res.data!;
+      return unwrap(res);
     },
   });
 }
@@ -73,17 +74,32 @@ export function usePortalCampaigns() {
     queryKey: ['portal-campaigns'],
     queryFn: async () => {
       const res = await api.get<{ campaigns: PortalCampaign[] }>('/api/v1/portal/campaigns');
-      return res.data!.campaigns;
+      return unwrap(res).campaigns;
     },
   });
 }
 
-export function usePortalLeads() {
+export interface PortalLeadsRange {
+  from: string;
+  to: string;
+}
+
+export interface PortalLeadsResponse {
+  leads: PortalLeadDay[];
+  range: PortalLeadsRange;
+}
+
+export function usePortalLeads(filter?: { from?: string; to?: string }) {
+  const params = new URLSearchParams();
+  if (filter?.from) params.set('from', filter.from);
+  if (filter?.to) params.set('to', filter.to);
+  const qs = params.toString();
+
   return useQuery({
-    queryKey: ['portal-leads'],
+    queryKey: ['portal-leads', filter?.from, filter?.to],
     queryFn: async () => {
-      const res = await api.get<{ leads: PortalLeadDay[] }>('/api/v1/portal/leads');
-      return res.data!.leads;
+      const res = await api.get<PortalLeadsResponse>(`/api/v1/portal/leads${qs ? `?${qs}` : ''}`);
+      return unwrap(res);
     },
   });
 }
@@ -93,7 +109,7 @@ export function usePortalInvoices() {
     queryKey: ['portal-invoices'],
     queryFn: async () => {
       const res = await api.get<{ invoices: PortalInvoice[] }>('/api/v1/portal/invoices');
-      return res.data!.invoices;
+      return unwrap(res).invoices;
     },
   });
 }
@@ -103,7 +119,7 @@ export function usePortalCompliance() {
     queryKey: ['portal-compliance'],
     queryFn: async () => {
       const res = await api.get<{ compliance: PortalCompliance[] }>('/api/v1/portal/compliance');
-      return res.data!.compliance;
+      return unwrap(res).compliance;
     },
   });
 }
@@ -113,7 +129,7 @@ export function usePortalAgreement() {
     queryKey: ['portal-agreement'],
     queryFn: async () => {
       const res = await api.get<{ agreement: PortalAgreement }>('/api/v1/portal/agreement');
-      return res.data!.agreement;
+      return unwrap(res).agreement;
     },
   });
 }

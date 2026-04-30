@@ -1,69 +1,98 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCreateSop } from '@/lib/hooks/use-sops';
+import { useSop, useUpdateSop } from '@/lib/hooks/use-sops';
 
 const CATEGORIES = ['Operations', 'Finance', 'Onboarding', 'Compliance', 'Campaigns'] as const;
 
-export function SopCreatePage() {
+export function SopEditPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const createSop = useCreateSop();
+  const { data: sop, isLoading, error } = useSop(id!);
+  const updateSop = useUpdateSop();
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<string>('Operations');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
 
+  useEffect(() => {
+    if (sop) {
+      setTitle(sop.title);
+      setCategory(sop.category);
+      setContent(sop.content);
+      setStatus(sop.status);
+    }
+  }, [sop]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!id) return;
     if (!title.trim()) { toast.error('SOP title is required'); return; }
     if (!content.trim()) { toast.error('SOP content is required'); return; }
 
     try {
-      const sop = await createSop.mutateAsync({
-        title,
-        category,
-        content,
-        status,
-      });
-      toast.success(`SOP "${sop.title}" created`);
-      navigate(`/sops/${sop.id}`);
+      const updated = await updateSop.mutateAsync({ id, title, category, content, status });
+      toast.success(`SOP "${updated.title}" updated`);
+      navigate(`/sops/${updated.id}`);
     } catch (err) {
-      console.error('Operation failed', err);
-      toast.error('Failed to create SOP');
+      console.error('Update SOP failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update SOP');
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  if (error || !sop) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-16 text-muted-foreground">
+        <p>SOP not found</p>
+        <Link to="/sops">
+          <Button variant="outline"><ArrowLeft className="size-4 mr-2" />Back to SOPs</Button>
+        </Link>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
-        <Link to="/sops"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <PageHeader title="Create SOP" description="Add a new standard operating procedure" />
+        <Link to={`/sops/${id}`}><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
+        <PageHeader title="Edit SOP" description={sop.title} />
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Form Fields */}
           <Card className="lg:col-span-2">
             <CardHeader><CardTitle className="text-base">SOP Details</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Title</Label>
+                <Label htmlFor="sop-title">Title</Label>
                 <Input
+                  id="sop-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., New Client Onboarding Procedure"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Category</Label>
+                <Label htmlFor="sop-category">Category</Label>
                 <select
+                  id="sop-category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
@@ -74,8 +103,9 @@ export function SopCreatePage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Content</Label>
+                <Label htmlFor="sop-content">Content</Label>
                 <textarea
+                  id="sop-content"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Write the SOP content here. Use separate paragraphs for each section..."
@@ -86,17 +116,19 @@ export function SopCreatePage() {
             </CardContent>
           </Card>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            <Button type="submit" className="w-full" disabled={createSop.isPending}>
-              {createSop.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
-              Create SOP
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button type="submit" className="w-full" disabled={updateSop.isPending}>
+                {updateSop.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+                Save changes
+              </Button>
+              <Button type="button" variant="outline" className="w-full" onClick={() => navigate(`/sops/${id}`)} disabled={updateSop.isPending}>
+                Cancel
+              </Button>
+            </div>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Status</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-base">Status</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3">
                   <button
@@ -122,6 +154,13 @@ export function SopCreatePage() {
                     Published
                   </button>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base">Version</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Currently <span className="font-medium text-foreground">v{sop.version}</span>. The backend bumps this automatically when content changes.</p>
               </CardContent>
             </Card>
           </div>

@@ -1,8 +1,70 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, unwrap } from '@/lib/api';
 import type { CampaignSummary } from './use-campaigns';
 import type { InvoiceSummary } from './use-invoices';
 import type { ClientSummary } from './use-clients';
+
+export interface FinancialOverviewRow {
+  month: string;
+  revenue: number;
+  expenses: number;
+  profit: number;
+  invoicesPaid: number;
+  invoicesOverdue: number;
+  vatCollected: number;
+}
+
+export function useFinancialOverview() {
+  return useQuery({
+    queryKey: ['reports-financial-overview'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ report: FinancialOverviewRow[] }>('/api/v1/reports/financial-overview');
+        return unwrap(res).report;
+      } catch {
+        // Endpoint requires owner/finance_admin role; ops_manager/readonly get
+        // 403. Return empty so the dashboard falls back to its built-in
+        // demo series instead of showing an error to the user.
+        return [] as FinancialOverviewRow[];
+      }
+    },
+    retry: false,
+  });
+}
+
+export interface LeadsByDayPoint {
+  day: string;
+  date: string;
+  leads: number;
+}
+
+export function useLeadsByDay(days = 7) {
+  return useQuery({
+    queryKey: ['dashboard-leads-by-day', days],
+    queryFn: async () => {
+      const res = await api.get<{ points: LeadsByDayPoint[] }>(`/api/v1/dashboard/leads-by-day?days=${days}`);
+      return unwrap(res).points;
+    },
+  });
+}
+
+export interface ActivityItem {
+  id: string;
+  user: string;
+  action: string;
+  timestamp: string;
+  category: 'invoice' | 'agreement' | 'credit' | 'system';
+}
+
+export function useRecentActivity(limit = 10) {
+  return useQuery({
+    queryKey: ['dashboard-recent-activity', limit],
+    queryFn: async () => {
+      const res = await api.get<{ items: ActivityItem[] }>(`/api/v1/dashboard/recent-activity?limit=${limit}`);
+      return unwrap(res).items;
+    },
+  });
+}
 
 export interface DashboardStats {
   totalRevenue: number;

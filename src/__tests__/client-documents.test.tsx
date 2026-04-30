@@ -36,7 +36,7 @@ describe('DocumentsTab', () => {
 
   it('shows the empty state when no docs are stored', () => {
     render(wrap(<DocumentsTab clientId="client-empty" />));
-    expect(screen.getByText(/No documents uploaded yet/i)).toBeTruthy();
+    expect(screen.getByText(/No documents/i)).toBeTruthy();
   });
 
   it('persists an uploaded doc to localStorage and renders it', async () => {
