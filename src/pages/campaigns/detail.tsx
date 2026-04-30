@@ -72,6 +72,16 @@ function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
 
+function buildSubtitle(...parts: (string | undefined | null)[]): string | undefined {
+  const cleaned: string[] = [];
+  for (const part of parts) {
+    if (typeof part !== 'string') continue;
+    const trimmed = part.trim();
+    if (trimmed.length > 0) cleaned.push(trimmed);
+  }
+  return cleaned.length > 0 ? cleaned.join(' · ') : undefined;
+}
+
 function StatCard({ label, value, icon: Icon, trend }: {
   label: string;
   value: string;
@@ -143,7 +153,10 @@ export function CampaignDetailPage() {
     cost: d.cost,
   }));
 
-  const windowTotals = filteredDeliveries.reduce(
+  // Per-window totals come from the server (computed from /reports/campaign,
+  // which has accurate revenue + cost). Fall back to client-side summing of
+  // the daily deliveries only if the server hasn't been redeployed yet.
+  const windowTotals = campaign.windowReports?.[window] ?? filteredDeliveries.reduce(
     (acc, d) => ({ leads: acc.leads + d.leadCount, revenue: acc.revenue + d.revenue, cost: acc.cost + d.cost }),
     { leads: 0, revenue: 0, cost: 0 },
   );
@@ -166,10 +179,7 @@ export function CampaignDetailPage() {
         <div className="flex-1">
           <PageHeader
             title={campaign.name?.trim() || 'Untitled campaign'}
-            description={[campaign.clientName, campaign.vertical]
-              .map((s) => (typeof s === 'string' ? s.trim() : ''))
-              .filter((s) => s.length > 0)
-              .join(' · ') || undefined}
+            description={buildSubtitle(campaign.clientName, campaign.vertical)}
           >
             <Badge className={`capitalize ${statusColors[campaign.status] || ''}`}>
               {campaign.status}

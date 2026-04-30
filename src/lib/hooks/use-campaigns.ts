@@ -23,6 +23,21 @@ export interface CampaignSummary {
   startDate: string;
 }
 
+export interface CampaignWindowTotals {
+  leads: number;
+  revenue: number;
+  cost: number;
+}
+
+export type CampaignWindowKey =
+  | 'today'
+  | 'yesterday'
+  | 'this_week'
+  | 'last_week'
+  | 'this_month'
+  | 'last_month'
+  | 'ytd';
+
 export interface CampaignDetail extends CampaignSummary {
   leadDeliveries: {
     date: string;
@@ -32,6 +47,7 @@ export interface CampaignDetail extends CampaignSummary {
     revenue: number;
     cost: number;
   }[];
+  windowReports?: Record<CampaignWindowKey, CampaignWindowTotals>;
   suppliers: {
     id: string;
     name: string;
