@@ -12,7 +12,7 @@ import { Logo } from '@/components/shared/logo';
 
 export function Header() {
   const { user, logout } = useAuth();
-  const { sidebarOpen } = useUiStore();
+  const { sidebarOpen, toggleMobileSidebar } = useUiStore();
   const { data: unreadData } = useNotifications({ filter: 'unread', limit: 1 });
 
   if (!user) return null;
