@@ -1,7 +1,18 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { api } from '@/lib/api';
 import { API_URL } from '@/lib/env';
+import { queryClient } from '@/components/providers/query-provider';
 import type { User, AuthTokens, ApiResponse } from '@/types';
+
+// Set the api singleton's token from localStorage at module-evaluation time so
+// that any synchronous render which reaches a child hook (which immediately
+// fires a request) already carries the Authorization header. Without this,
+// the first request after a hard refresh races AuthProvider's effect and
+// hits 401 before tryRefresh kicks in.
+if (typeof window !== 'undefined') {
+  const stored = window.localStorage.getItem('accessToken');
+  if (stored) api.setToken(stored);
+}
 
 /**
  * Fire-and-forget GET against the URLs the user is about to land on, immediately
@@ -126,6 +137,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
     api.setToken(null);
+    // Drop every cached query so the next user can't see the previous user's
+    // data while their first requests are in-flight.
+    queryClient.clear();
   }
 
   async function login(email: string, password: string): Promise<{ error: string | null; user: User | null }> {
@@ -157,6 +171,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
+    // Best-effort notify the backend so it can revoke the refresh token. If
+    // the endpoint isn't there yet (BE rolling out in parallel) or the network
+    // is down, we still clear local state below — the user gets logged out
+    // either way.
+    api.post('/api/v1/auth/logout', {}).catch(() => {
+      // Swallow — local logout still proceeds.
+    });
     clearAuth();
   }
 
