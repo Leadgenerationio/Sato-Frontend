@@ -11,6 +11,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, ExternalLink, Megaphone } from 'lucide-react';
 import { useCampaigns, type CampaignSummary } from '@/lib/hooks/use-campaigns';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -43,8 +44,9 @@ export function CampaignsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
-  const { data, isLoading, error, refetch } = useCampaigns({ status: statusFilter, type: typeFilter, search, page, limit: 10 });
+  const { data, isLoading, error, refetch } = useCampaigns({ status: statusFilter, type: typeFilter, search: debouncedSearch, page, limit: 10 });
   const campaigns = data?.campaigns;
 
   // Reset to page 1 when filters change

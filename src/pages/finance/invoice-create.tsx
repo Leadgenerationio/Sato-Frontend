@@ -12,6 +12,14 @@ import { ArrowLeft, Plus, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoiceClients, useCreateInvoice, type LineItem, type InvoiceClient } from '@/lib/hooks/use-invoices';
 
+// Local row type — adds a stable id so we can key by id rather than array index.
+// The id is stripped before submission; only the LineItem-shaped fields are sent.
+type EditableLine = LineItem & { id: string };
+
+function makeLine(): EditableLine {
+  return { id: crypto.randomUUID(), description: '', quantity: 1, unitPrice: 0, amount: 0 };
+}
+
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
@@ -34,9 +42,7 @@ export function InvoiceCreatePage() {
   const [currency, setCurrency] = useState('GBP');
   const [addVat, setAddVat] = useState(false);
   const [dueDate, setDueDate] = useState<Date | undefined>(new Date(Date.now() + 30 * 86400000));
-  const [lines, setLines] = useState<LineItem[]>([
-    { description: '', quantity: 1, unitPrice: 0, amount: 0 },
-  ]);
+  const [lines, setLines] = useState<EditableLine[]>([makeLine()]);
 
   const selectedClient = clients?.find((c: InvoiceClient) => c.id === selectedClientId);
 
@@ -72,7 +78,7 @@ export function InvoiceCreatePage() {
   }
 
   function addLine() {
-    setLines((prev) => [...prev, { description: '', quantity: 1, unitPrice: 0, amount: 0 }]);
+    setLines((prev) => [...prev, makeLine()]);
   }
 
   function removeLine(index: number) {
@@ -99,7 +105,15 @@ export function InvoiceCreatePage() {
     }
 
     try {
-      const invoice = await createInvoice.mutateAsync({ clientId: selectedClientId, currency, lineItems: lines, addVat });
+      // Strip local id from line items — backend only knows about the LineItem shape.
+      const lineItems: LineItem[] = lines.map(({ id: _id, ...rest }) => rest);
+      const invoice = await createInvoice.mutateAsync({
+        clientId: selectedClientId,
+        currency,
+        lineItems,
+        addVat,
+        dueDate: dueDate ? dueDate.toISOString() : undefined,
+      });
       toast.success(`Invoice ${invoice.invoiceNumber} created`);
       navigate(`/finance/invoices/${invoice.id}`);
     } catch (err) {
@@ -136,7 +150,7 @@ export function InvoiceCreatePage() {
             <CardContent className="space-y-4">
               {lines.map((line, i) => (
                 <div
-                  key={i}
+                  key={line.id}
                   className="grid grid-cols-1 gap-3 rounded-md border p-3 sm:grid-cols-12 sm:items-end sm:rounded-none sm:border-0 sm:p-0"
                 >
                   <div className="sm:col-span-5">

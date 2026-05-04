@@ -65,7 +65,7 @@ function formatRelativeTime(iso: string): string {
 
 // ─── Components ───
 
-function StatCard({ title, value, change, trend, icon: Icon }: { title: string; value: string; change: string; trend: 'up' | 'down'; icon: React.ElementType }) {
+function StatCard({ title, value, change, trend, icon: Icon }: { title: string; value: string; change: string | null; trend: 'up' | 'down'; icon: React.ElementType }) {
   return (
     <Card className="gap-3 py-5">
       <CardContent>
@@ -73,10 +73,12 @@ function StatCard({ title, value, change, trend, icon: Icon }: { title: string; 
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
             <Icon className="size-5 text-neutral-700" />
           </div>
-          <div className={`flex min-w-0 items-center gap-1 text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
-            {trend === 'up' ? <ArrowUpRight className="size-3 shrink-0" /> : <ArrowDownRight className="size-3 shrink-0" />}
-            <span className="truncate">{change}</span>
-          </div>
+          {change !== null && (
+            <div className={`flex min-w-0 items-center gap-1 text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
+              {trend === 'up' ? <ArrowUpRight className="size-3 shrink-0" /> : <ArrowDownRight className="size-3 shrink-0" />}
+              <span className="truncate">{change}</span>
+            </div>
+          )}
         </div>
         <div className="mt-3">
           <p className="truncate text-2xl font-bold tabular-nums text-neutral-900">{value}</p>
@@ -185,10 +187,10 @@ export function DashboardPage() {
 
       {/* Stats — derived from actual API data */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change={`+${stats.revenueChange}%`} trend="up" icon={DollarSign} />
-        <StatCard title="Active Clients" value={String(stats.activeClients)} change={`+${stats.clientChange}`} trend="up" icon={Users} />
-        <StatCard title="Active Campaigns" value={String(stats.activeCampaigns)} change={`+${stats.campaignChange}`} trend="up" icon={TrendingUp} />
-        <StatCard title="Leads This Month" value={stats.totalLeadsThisMonth.toLocaleString()} change={`+${stats.leadsChange}%`} trend="up" icon={Activity} />
+        <StatCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change={stats.revenueChange !== null ? `+${stats.revenueChange}%` : null} trend="up" icon={DollarSign} />
+        <StatCard title="Active Clients" value={String(stats.activeClients)} change={stats.clientChange !== null ? `+${stats.clientChange}` : null} trend="up" icon={Users} />
+        <StatCard title="Active Campaigns" value={String(stats.activeCampaigns)} change={stats.campaignChange !== null ? `+${stats.campaignChange}` : null} trend="up" icon={TrendingUp} />
+        <StatCard title="Leads This Month" value={stats.totalLeadsThisMonth.toLocaleString()} change={stats.leadsChange !== null ? `+${stats.leadsChange}%` : null} trend="up" icon={Activity} />
       </div>
 
       {/* Secondary financial KPIs — matches Leadreports.io top strip */}

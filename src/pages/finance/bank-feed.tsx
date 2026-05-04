@@ -27,6 +27,7 @@ import {
   type BankTransaction,
   type CostCategory,
 } from '@/lib/hooks/use-bank-feed';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 
 function formatRelativeTime(iso: string | null): string {
   if (!iso) return 'never';
@@ -62,12 +63,13 @@ const bucketLabels: Record<BucketTab, string> = {
 export function BankFeedPage() {
   const [bucket, setBucket] = useState<BucketTab>('uncategorized');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useBankTransactions({
     uncategorized: bucket === 'uncategorized' ? true : undefined,
     bucket: bucket === 'fixed' || bucket === 'one_off' ? bucket : undefined,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     page,
     limit: 25,
   });

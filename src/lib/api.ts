@@ -62,10 +62,10 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      throw new ApiError(data.message || statusMessage(response.status, 'Request failed'), response.status);
+      throw new ApiError(buildErrorMessage(data, statusMessage(response.status, 'Request failed')), response.status, data.code);
     }
     if (data.status !== 'success') {
-      throw new ApiError(data.message || 'Request failed', response.status);
+      throw new ApiError(buildErrorMessage(data, 'Request failed'), response.status, data.code);
     }
     return data;
   }
@@ -78,9 +78,24 @@ class ApiClient {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(message: string, public status: number, public code?: string) {
     super(message);
   }
+}
+
+// If the response carries a list of validation issues (`errors` or `issues`),
+// expand them into a multi-line message so the UI can show every problem at
+// once. Falls back to `data.message` or the provided default.
+function buildErrorMessage(data: ApiResponse<unknown>, fallback: string): string {
+  const issues = data.errors ?? data.issues;
+  if (issues && issues.length > 0) {
+    const lines = issues.map((e) => (e.path ? `${e.path}: ${e.message}` : e.message));
+    if (data.message) {
+      return [data.message, ...lines].join('\n');
+    }
+    return lines.join('\n');
+  }
+  return data.message || fallback;
 }
 
 function statusMessage(status: number, fallback: string): string {

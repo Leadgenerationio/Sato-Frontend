@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Plus, BookOpen, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useSops, type SopSummary } from '@/lib/hooks/use-sops';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 import { EmptyState } from '@/components/shared/empty-state';
 
 const CATEGORY_TABS = ['all', 'operations', 'finance', 'onboarding', 'compliance', 'campaigns'] as const;
@@ -39,12 +40,13 @@ export function SopsPage() {
   const { user } = useAuth();
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
 
   const canWrite = user?.role === 'owner' || user?.role === 'ops_manager';
 
   const { data, isLoading, error } = useSops({
     category: categoryFilter,
-    search,
+    search: debouncedSearch,
     limit: 50,
   });
   const sops = data?.sops;

@@ -108,7 +108,7 @@ export function useInvoiceClients() {
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { clientId: string; currency: string; lineItems: LineItem[]; addVat: boolean }) => {
+    mutationFn: async (data: { clientId: string; currency: string; lineItems: LineItem[]; addVat: boolean; dueDate?: string }) => {
       const res = await api.post<{ invoice: InvoiceDetail }>('/api/v1/invoices', data);
       return unwrap(res).invoice;
     },

@@ -11,6 +11,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, ExternalLink, Plus, Download, FileText } from 'lucide-react';
 import { useInvoices, toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -50,8 +51,9 @@ function exportCsv(invoices: InvoiceSummary[]) {
 export function InvoiceListPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
-  const { data, isLoading, error, refetch } = useInvoices({ status: statusFilter, search, page, limit: 10 });
+  const { data, isLoading, error, refetch } = useInvoices({ status: statusFilter, search: debouncedSearch, page, limit: 10 });
   const invoices = data?.invoices;
 
   const handleStatusChange = (s: string) => { setStatusFilter(s); setPage(1); };

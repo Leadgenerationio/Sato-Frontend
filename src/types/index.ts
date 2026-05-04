@@ -16,8 +16,19 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
+export interface ApiValidationIssue {
+  path?: string;
+  message: string;
+}
+
 export interface ApiResponse<T = unknown> {
   status: 'success' | 'error';
   data?: T;
   message?: string;
+  code?: string;
+  // BE may return validation issues under either `errors` or `issues`. Both
+  // arrays follow the same {path, message} shape; we surface them as a
+  // multi-line message on ApiError.
+  errors?: ApiValidationIssue[];
+  issues?: ApiValidationIssue[];
 }

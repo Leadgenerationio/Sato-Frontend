@@ -65,13 +65,15 @@ export function useRecentActivity(limit = 10) {
 
 export interface DashboardStats {
   totalRevenue: number;
-  revenueChange: number;
+  // Change/trend deltas are null until the backend reports historical
+  // comparisons. Consumers MUST hide the trend chip when null.
+  revenueChange: number | null;
   activeClients: number;
-  clientChange: number;
+  clientChange: number | null;
   activeCampaigns: number;
-  campaignChange: number;
+  campaignChange: number | null;
   totalLeadsThisMonth: number;
-  leadsChange: number;
+  leadsChange: number | null;
   totalCost: number;
   netProfit: number;
   profitMargin: number;
@@ -82,6 +84,9 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
+      // TODO: replace with /api/v1/dashboard/stats aggregate when BE adds it — see audit 2026-05-03.
+      // List endpoints are capped at limit=100, so businesses with more than 100
+      // campaigns/invoices/clients will see undercounted totals here.
       const [campaignRes, invoiceRes, clientRes] = await Promise.all([
         api.get<{ campaigns: CampaignSummary[]; total: number }>('/api/v1/campaigns?limit=100'),
         api.get<{ invoices: InvoiceSummary[]; total: number }>('/api/v1/invoices?limit=100'),
@@ -107,13 +112,16 @@ export function useDashboardStats() {
 
       return {
         totalRevenue: Math.round(totalRevenue * 100) / 100,
-        revenueChange: 12.4, // mock trend — would calculate from historical data
+        // Trend deltas require historical comparison data the BE doesn't surface
+        // yet. Returning null lets the UI hide the trend chip entirely instead
+        // of showing fabricated numbers.
+        revenueChange: null,
         activeClients: activeClients.length,
-        clientChange: 2,
+        clientChange: null,
         activeCampaigns: activeCampaigns.length,
-        campaignChange: 1,
+        campaignChange: null,
         totalLeadsThisMonth,
-        leadsChange: 8.2,
+        leadsChange: null,
         totalCost: Math.round(totalCost * 100) / 100,
         netProfit: Math.round(netProfit * 100) / 100,
         profitMargin: Math.round(profitMargin * 10) / 10,

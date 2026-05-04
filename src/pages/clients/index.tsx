@@ -11,14 +11,16 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, ExternalLink, Plus, Users, AlertTriangle } from 'lucide-react';
 import { useClients, type ClientSummary } from '@/lib/hooks/use-clients';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
 
-const STATUS_TABS = ['all', 'prospect', 'onboarding', 'active', 'paused', 'churned'] as const;
+// 'onboarding' was removed because the BE has no matching client status — the
+// tab just returned empty results. Audit 2026-05-03.
+const STATUS_TABS = ['all', 'prospect', 'active', 'paused', 'churned'] as const;
 
 const statusColors: Record<string, string> = {
   prospect: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  onboarding: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
   active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
   paused: 'bg-amber-500/10 text-amber-600 border-amber-200',
   churned: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
@@ -39,8 +41,9 @@ function formatCurrency(value: number) {
 export function ClientsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
-  const { data, isLoading, error } = useClients({ status: statusFilter, search, page, limit: 10 });
+  const { data, isLoading, error } = useClients({ status: statusFilter, search: debouncedSearch, page, limit: 10 });
   const clients = data?.clients;
 
   const handleStatusChange = (s: string) => { setStatusFilter(s); setPage(1); };
