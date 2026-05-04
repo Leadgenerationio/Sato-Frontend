@@ -9,6 +9,8 @@ export interface FinancialOverviewRow {
   profit: number;
   invoicesPaid: number;
   invoicesOverdue: number;
+  /** Optional — older BE snapshots without this field treat it as 0 client-side. */
+  invoicesPending?: number;
   vatCollected: number;
 }
 

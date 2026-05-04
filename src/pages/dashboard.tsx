@@ -149,8 +149,10 @@ export function DashboardPage() {
         month: r.month.split(' ')[0],
         paid: r.invoicesPaid,
         overdue: r.invoicesOverdue,
-        // Pending isn't in the financial-overview shape; show 0 until BE reports it.
-        pending: 0,
+        // BE now returns pending = anything that's not paid and not overdue
+        // (drafts, sent, due-but-not-late). Older snapshots may omit it, so
+        // fall back to 0 for safety.
+        pending: r.invoicesPending ?? 0,
       }))
     : FALLBACK_INVOICES;
 
