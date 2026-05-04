@@ -51,7 +51,31 @@ export function useMarkAsRead() {
       const res = await api.put<{ notification: Notification }>(`/api/v1/notifications/${id}/read`);
       return unwrap(res).notification;
     },
-    onSuccess: () => {
+    // Optimistic update — flip the row's `read` flag locally before the
+    // server round-trip so the bell-badge and list update instantly. If the
+    // mutation fails (e.g. user lost auth), onError rolls every list page
+    // back to its prior snapshot.
+    onMutate: async (id: string) => {
+      await qc.cancelQueries({ queryKey: ['notifications'] });
+      const snapshots = qc.getQueriesData<NotificationListResponse>({ queryKey: ['notifications'] });
+      for (const [key, data] of snapshots) {
+        if (!data) continue;
+        qc.setQueryData<NotificationListResponse>(key, {
+          ...data,
+          notifications: data.notifications.map((n) =>
+            n.id === id ? { ...n, read: true } : n,
+          ),
+        });
+      }
+      return { snapshots };
+    },
+    onError: (_err, _id, ctx) => {
+      if (!ctx) return;
+      for (const [key, data] of ctx.snapshots) {
+        qc.setQueryData(key, data);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
@@ -64,7 +88,26 @@ export function useMarkAllAsRead() {
       const res = await api.put<{ updated: number }>('/api/v1/notifications/read-all');
       return unwrap(res);
     },
-    onSuccess: () => {
+    // Same optimistic pattern as markAsRead, but flip every notification.
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ['notifications'] });
+      const snapshots = qc.getQueriesData<NotificationListResponse>({ queryKey: ['notifications'] });
+      for (const [key, data] of snapshots) {
+        if (!data) continue;
+        qc.setQueryData<NotificationListResponse>(key, {
+          ...data,
+          notifications: data.notifications.map((n) => ({ ...n, read: true })),
+        });
+      }
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (!ctx) return;
+      for (const [key, data] of ctx.snapshots) {
+        qc.setQueryData(key, data);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
     },
   });

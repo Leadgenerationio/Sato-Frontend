@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
-import type { CampaignSummary } from './use-campaigns';
 import type { InvoiceSummary } from './use-invoices';
-import type { ClientSummary } from './use-clients';
 
 export interface FinancialOverviewRow {
   month: string;
@@ -80,51 +78,57 @@ export interface DashboardStats {
   recentInvoices: InvoiceSummary[];
 }
 
+interface BackendStats {
+  totalRevenue: number;
+  totalCost: number;
+  netProfit: number;
+  profitMargin: number;
+  activeClients: number;
+  activeCampaigns: number;
+  leadsThisMonth: number;
+  asOf: string;
+}
+
 export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      // TODO: replace with /api/v1/dashboard/stats aggregate when BE adds it — see audit 2026-05-03.
-      // List endpoints are capped at limit=100, so businesses with more than 100
-      // campaigns/invoices/clients will see undercounted totals here.
-      const [campaignRes, invoiceRes, clientRes] = await Promise.all([
-        api.get<{ campaigns: CampaignSummary[]; total: number }>('/api/v1/campaigns?limit=100'),
-        api.get<{ invoices: InvoiceSummary[]; total: number }>('/api/v1/invoices?limit=100'),
-        api.get<{ clients: ClientSummary[]; total: number }>('/api/v1/clients?limit=100'),
+      // The new /api/v1/dashboard/stats aggregate endpoint computes
+      // revenue / cost / profit / leadsThisMonth / activeClients / activeCampaigns
+      // server-side as 5 small SQL queries — replaces the previous 3-list
+      // round-trip pattern that capped at limit=100 and double-counted some
+      // numbers.
+      //
+      // Recent invoices still come from /invoices?limit=20 — they need full
+      // row data for the dashboard table, not just an aggregate. The 100→20
+      // limit drop here also makes the request faster.
+      const [statsRes, invoiceRes] = await Promise.all([
+        api.get<BackendStats>('/api/v1/dashboard/stats'),
+        api.get<{ invoices: InvoiceSummary[]; total: number }>('/api/v1/invoices?limit=20'),
       ]);
 
-      const campaigns = campaignRes.data?.campaigns ?? [];
+      const stats = statsRes.data!;
       const invoices = invoiceRes.data?.invoices ?? [];
-      const clients = clientRes.data?.clients ?? [];
 
-      const activeCampaigns = campaigns.filter((c) => c.status === 'active');
-      const activeClients = clients.filter((c) => c.status === 'active');
-      const totalRevenue = campaigns.reduce((sum, c) => sum + c.totalRevenue, 0);
-      const totalCost = campaigns.reduce((sum, c) => sum + c.totalCost, 0);
-      const netProfit = totalRevenue - totalCost;
-      const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-      const totalLeadsThisMonth = campaigns.reduce((sum, c) => sum + c.leadsThisMonth, 0);
-
-      // Sort invoices by creation date descending, take latest 5
       const recentInvoices = [...invoices]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 5);
 
       return {
-        totalRevenue: Math.round(totalRevenue * 100) / 100,
-        // Trend deltas require historical comparison data the BE doesn't surface
-        // yet. Returning null lets the UI hide the trend chip entirely instead
-        // of showing fabricated numbers.
+        totalRevenue: stats.totalRevenue,
+        // Trend deltas require historical comparison data the BE doesn't
+        // surface yet. Returning null lets the UI hide the trend chip
+        // entirely instead of showing fabricated numbers.
         revenueChange: null,
-        activeClients: activeClients.length,
+        activeClients: stats.activeClients,
         clientChange: null,
-        activeCampaigns: activeCampaigns.length,
+        activeCampaigns: stats.activeCampaigns,
         campaignChange: null,
-        totalLeadsThisMonth,
+        totalLeadsThisMonth: stats.leadsThisMonth,
         leadsChange: null,
-        totalCost: Math.round(totalCost * 100) / 100,
-        netProfit: Math.round(netProfit * 100) / 100,
-        profitMargin: Math.round(profitMargin * 10) / 10,
+        totalCost: stats.totalCost,
+        netProfit: stats.netProfit,
+        profitMargin: stats.profitMargin,
         recentInvoices,
       } as DashboardStats;
     },
