@@ -94,22 +94,34 @@ export function PortalCompliancePage() {
                   size="compact"
                 />
               ) : (
-                campaign.landingPages.map((lp) => (
-                  <div key={lp.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
-                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                        <Globe className="size-4 text-muted-foreground" />
+                campaign.landingPages.map((lp) => {
+                  // Cheap open-redirect guard: only render the clickable link
+                  // when the URL is plainly http(s). javascript:, data:, etc.
+                  // would otherwise execute in the user's session if clicked.
+                  const isSafeUrl = typeof lp.url === 'string' && (lp.url.startsWith('http://') || lp.url.startsWith('https://'));
+                  return (
+                    <div key={lp.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                          <Globe className="size-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="break-all text-sm font-medium">{lp.url}</p>
+                          <p className="text-xs text-muted-foreground">Last checked {formatDate(lp.lastChecked)}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="break-all text-sm font-medium">{lp.url}</p>
-                        <p className="text-xs text-muted-foreground">Last checked {formatDate(lp.lastChecked)}</p>
-                      </div>
+                      {isSafeUrl ? (
+                        <a href={lp.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                          <ExternalLink className="size-4 text-muted-foreground hover:text-foreground" />
+                        </a>
+                      ) : (
+                        <span className="shrink-0 text-xs text-muted-foreground" title="Link not shown — URL did not pass safety check">
+                          (link hidden)
+                        </span>
+                      )}
                     </div>
-                    <a href={lp.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                      <ExternalLink className="size-4 text-muted-foreground hover:text-foreground" />
-                    </a>
-                  </div>
-                ))
+                  );
+                })
               )}
             </CardContent>
           </Card>

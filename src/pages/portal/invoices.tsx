@@ -15,6 +15,9 @@ const statusColors: Record<string, string> = {
   overdue: 'bg-red-500/10 text-red-600',
 };
 
+// Escape any user-provided string before interpolating into the print-window HTML.
+const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
@@ -31,7 +34,7 @@ function handleDownloadInvoice(inv: PortalInvoice) {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>${inv.invoiceNumber}</title>
+      <title>${escapeHtml(inv.invoiceNumber)}</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111; }
         h1 { font-size: 24px; margin-bottom: 4px; }
@@ -50,18 +53,18 @@ function handleDownloadInvoice(inv: PortalInvoice) {
       </style>
     </head>
     <body>
-      <h1>Invoice ${inv.invoiceNumber}</h1>
+      <h1>Invoice ${escapeHtml(inv.invoiceNumber)}</h1>
       <div class="meta">
-        <span class="status status-${inv.status}">${inv.status}${inv.daysOverdue > 0 ? ` (${inv.daysOverdue} days overdue)` : ''}</span>
+        <span class="status status-${escapeHtml(inv.status)}">${escapeHtml(inv.status)}${inv.daysOverdue > 0 ? ` (${escapeHtml(inv.daysOverdue)} days overdue)` : ''}</span>
       </div>
       <table>
         <tr><th>Detail</th><th class="text-right">Value</th></tr>
-        <tr><td>Currency</td><td class="text-right">${inv.currency}</td></tr>
-        <tr><td>Due Date</td><td class="text-right">${new Date(inv.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td></tr>
-        ${inv.paidDate ? `<tr><td>Paid Date</td><td class="text-right">${new Date(inv.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td></tr>` : ''}
+        <tr><td>Currency</td><td class="text-right">${escapeHtml(inv.currency)}</td></tr>
+        <tr><td>Due Date</td><td class="text-right">${escapeHtml(new Date(inv.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</td></tr>
+        ${inv.paidDate ? `<tr><td>Paid Date</td><td class="text-right">${escapeHtml(new Date(inv.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</td></tr>` : ''}
       </table>
       <table>
-        <tr class="total-row"><td>Total</td><td class="text-right">${new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(toMoney(inv.total))}</td></tr>
+        <tr class="total-row"><td>Total</td><td class="text-right">${escapeHtml(new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(toMoney(inv.total)))}</td></tr>
       </table>
       <script>window.onload = function() { window.print(); }</script>
     </body>

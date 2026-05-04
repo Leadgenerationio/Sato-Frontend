@@ -30,6 +30,10 @@ const statusColors: Record<string, string> = {
   overdue: 'bg-red-500/10 text-red-600 border-red-200',
 };
 
+// Escape any user-provided string before interpolating into the print-window HTML.
+// Without this, a malicious clientName / lineItem.description could inject script.
+const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
@@ -44,10 +48,10 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
 
   const lineItemsHtml = invoice.lineItems.map((item) => `
     <tr>
-      <td>${item.description}</td>
-      <td class="text-right">${item.quantity}</td>
-      <td class="text-right">${new Intl.NumberFormat('en-GB', { style: 'currency', currency: invoice.currency }).format(item.unitPrice)}</td>
-      <td class="text-right">${new Intl.NumberFormat('en-GB', { style: 'currency', currency: invoice.currency }).format(item.amount)}</td>
+      <td>${escapeHtml(item.description)}</td>
+      <td class="text-right">${escapeHtml(item.quantity)}</td>
+      <td class="text-right">${escapeHtml(new Intl.NumberFormat('en-GB', { style: 'currency', currency: invoice.currency }).format(item.unitPrice))}</td>
+      <td class="text-right">${escapeHtml(new Intl.NumberFormat('en-GB', { style: 'currency', currency: invoice.currency }).format(item.amount))}</td>
     </tr>
   `).join('');
 
@@ -58,7 +62,7 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>${invoice.invoiceNumber}</title>
+      <title>${escapeHtml(invoice.invoiceNumber)}</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111; max-width: 800px; margin: 0 auto; }
         h1 { font-size: 24px; margin-bottom: 4px; }
@@ -83,20 +87,20 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
       </style>
     </head>
     <body>
-      <h1>Invoice ${invoice.invoiceNumber}</h1>
+      <h1>Invoice ${escapeHtml(invoice.invoiceNumber)}</h1>
       <div class="subtitle">
-        ${invoice.clientName} &middot;
-        <span class="status status-${invoice.status}">${invoice.status}${invoice.daysOverdue > 0 ? ` (${invoice.daysOverdue} days overdue)` : ''}</span>
+        ${escapeHtml(invoice.clientName)} &middot;
+        <span class="status status-${escapeHtml(invoice.status)}">${escapeHtml(invoice.status)}${invoice.daysOverdue > 0 ? ` (${escapeHtml(invoice.daysOverdue)} days overdue)` : ''}</span>
       </div>
 
       <dl class="info-grid">
-        <dt>Client</dt><dd>${invoice.clientName}</dd>
-        <dt>Email</dt><dd>${invoice.clientEmail}</dd>
-        <dt>Currency</dt><dd>${invoice.currency}</dd>
+        <dt>Client</dt><dd>${escapeHtml(invoice.clientName)}</dd>
+        <dt>Email</dt><dd>${escapeHtml(invoice.clientEmail)}</dd>
+        <dt>Currency</dt><dd>${escapeHtml(invoice.currency)}</dd>
         <dt>VAT</dt><dd>${invoice.vatRegistered ? 'Yes (20%)' : 'No'}</dd>
-        <dt>Due Date</dt><dd>${fmtDate(invoice.dueDate)}</dd>
-        ${invoice.paidDate ? `<dt>Paid Date</dt><dd>${fmtDate(invoice.paidDate)}</dd>` : ''}
-        <dt>Created</dt><dd>${fmtDate(invoice.createdAt)}</dd>
+        <dt>Due Date</dt><dd>${escapeHtml(fmtDate(invoice.dueDate))}</dd>
+        ${invoice.paidDate ? `<dt>Paid Date</dt><dd>${escapeHtml(fmtDate(invoice.paidDate))}</dd>` : ''}
+        <dt>Created</dt><dd>${escapeHtml(fmtDate(invoice.createdAt))}</dd>
       </dl>
 
       <table>
@@ -107,9 +111,9 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
       </table>
 
       <table class="total-section">
-        <tr><td class="text-right" colspan="3">Subtotal</td><td class="text-right">${fmt(toMoney(invoice.subtotal))}</td></tr>
-        ${toMoney(invoice.vatAmount) > 0 ? `<tr><td class="text-right" colspan="3">VAT (20%)</td><td class="text-right">${fmt(toMoney(invoice.vatAmount))}</td></tr>` : ''}
-        <tr class="grand-total"><td class="text-right" colspan="3">Total</td><td class="text-right">${fmt(toMoney(invoice.total))}</td></tr>
+        <tr><td class="text-right" colspan="3">Subtotal</td><td class="text-right">${escapeHtml(fmt(toMoney(invoice.subtotal)))}</td></tr>
+        ${toMoney(invoice.vatAmount) > 0 ? `<tr><td class="text-right" colspan="3">VAT (20%)</td><td class="text-right">${escapeHtml(fmt(toMoney(invoice.vatAmount)))}</td></tr>` : ''}
+        <tr class="grand-total"><td class="text-right" colspan="3">Total</td><td class="text-right">${escapeHtml(fmt(toMoney(invoice.total)))}</td></tr>
       </table>
 
       <script>window.onload = function() { window.print(); }</script>
