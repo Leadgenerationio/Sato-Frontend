@@ -85,6 +85,31 @@ export function AdSpendReportPage() {
         </Card>
       )}
 
+      {statusData?.configured && statusData.lastSync && (
+        statusData.lastSync.errorAccounts > 0 || statusData.lastSync.skippedPlatforms.length > 0
+      ) && (
+        <Card className="border-blue-200 bg-blue-50 py-4">
+          <CardContent className="text-sm text-blue-900 space-y-1">
+            <p className="font-medium">
+              Coverage: {statusData.lastSync.accountsSynced} ad-accounts syncing across{' '}
+              {statusData.lastSync.platformsSynced} platform(s) — {statusData.lastSync.rowsWritten.toLocaleString()} rows last sync.
+            </p>
+            {statusData.lastSync.errorAccounts > 0 && (
+              <p>
+                <span className="font-medium">{statusData.lastSync.errorAccounts}</span> account(s) returned an error this sync — typically Google Ads <code className="rounded bg-blue-100 px-1">CUSTOMER_NOT_ENABLED</code> on accounts the Catchr connection hasn't been re-authorised for. Re-auth the affected accounts in the Catchr dashboard to include them.
+              </p>
+            )}
+            {statusData.lastSync.skippedPlatforms.length > 0 && (
+              <p>
+                Platform{statusData.lastSync.skippedPlatforms.length === 1 ? '' : 's'} skipped:{' '}
+                <span className="font-medium">{statusData.lastSync.skippedPlatforms.join(', ')}</span>{' '}
+                — field IDs not yet mapped. Pending Catchr support to confirm the correct field names so the sync can resume.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="gap-3 py-5">
         <CardContent className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">

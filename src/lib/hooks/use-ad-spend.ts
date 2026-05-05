@@ -38,6 +38,14 @@ export interface AdSpendFilters {
 export interface AdSpendStatus {
   configured: boolean;
   lastSyncAt: string | null;
+  /** Last sync coverage summary — present after the first hourly Catchr sync runs. */
+  lastSync?: {
+    platformsSynced: number;
+    accountsSynced: number;
+    rowsWritten: number;
+    skippedPlatforms: string[];
+    errorAccounts: number;
+  } | null;
 }
 
 function toQs(filters: AdSpendFilters): string {
