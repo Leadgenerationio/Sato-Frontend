@@ -88,6 +88,10 @@ interface BackendStats {
   activeClients: number;
   activeCampaigns: number;
   leadsThisMonth: number;
+  /** Period-over-period revenue change as a percentage. Null when last month had zero baseline. */
+  revenueChange?: number | null;
+  /** Period-over-period leads change as a percentage. Null when last month had zero baseline. */
+  leadsChange?: number | null;
   asOf: string;
 }
 
@@ -118,16 +122,18 @@ export function useDashboardStats() {
 
       return {
         totalRevenue: stats.totalRevenue,
-        // Trend deltas require historical comparison data the BE doesn't
-        // surface yet. Returning null lets the UI hide the trend chip
-        // entirely instead of showing fabricated numbers.
-        revenueChange: null,
+        // Trend deltas now come from the BE — month-over-month comparison.
+        // Null when there's no prior-period baseline to compare against;
+        // the dashboard chip is hidden in that case.
+        revenueChange: stats.revenueChange ?? null,
         activeClients: stats.activeClients,
+        // Client/campaign deltas not yet surfaced — the BE doesn't track
+        // historical headcount snapshots. Null hides the chip.
         clientChange: null,
         activeCampaigns: stats.activeCampaigns,
         campaignChange: null,
         totalLeadsThisMonth: stats.leadsThisMonth,
-        leadsChange: null,
+        leadsChange: stats.leadsChange ?? null,
         totalCost: stats.totalCost,
         netProfit: stats.netProfit,
         profitMargin: stats.profitMargin,

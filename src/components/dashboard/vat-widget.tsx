@@ -46,6 +46,10 @@ export function VatWidget() {
   const paid = toMoney(data?.paidOnPurchases);
   const currency = data?.currency ?? 'GBP';
   const isOwed = owed >= 0;
+  // When the Xero org isn't VAT-registered, the TaxSummary endpoint returns
+  // zeros for everything. Show a friendlier message instead of three £0.00
+  // lines that look like a bug.
+  const notVatRegistered = !!data?.configured && !data?.error && owed === 0 && collected === 0 && paid === 0;
 
   return (
     <Card>
@@ -85,7 +89,21 @@ export function VatWidget() {
           </div>
         )}
 
-        {!isLoading && data?.configured && !data.error && (
+        {!isLoading && data?.configured && !data.error && notVatRegistered && (
+          <div className="rounded-lg border border-dashed py-6 text-center">
+            <p className="text-2xl font-bold tabular-nums text-emerald-600">
+              {formatCurrency(0, currency)}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              No VAT registration on this Xero organisation.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Once VAT is registered, sales / purchases / liability will appear here automatically.
+            </p>
+          </div>
+        )}
+
+        {!isLoading && data?.configured && !data.error && !notVatRegistered && (
           <>
             <div className="text-center">
               <p className={`text-3xl font-bold tabular-nums ${isOwed ? 'text-amber-600' : 'text-emerald-600'}`}>
