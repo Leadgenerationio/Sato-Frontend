@@ -1,17 +1,25 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ChevronRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePortalLeads } from '@/lib/hooks/use-portal';
+import type { PortalLeadDay } from '@/lib/hooks/use-portal';
+import { cn } from '@/lib/utils';
 
 function isoDay(offsetDays = 0): string {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
   return d.toISOString().split('T')[0];
+}
+
+function formatDayShort(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 const PRESETS: { label: string; from: () => string; to: () => string }[] = [
@@ -21,9 +29,54 @@ const PRESETS: { label: string; from: () => string; to: () => string }[] = [
   { label: 'YTD', from: () => `${new Date().getFullYear()}-01-01`, to: () => isoDay(0) },
 ];
 
+interface DeliveryGroup {
+  campaignId: string;
+  campaignName: string;
+  totalLeads: number;
+  validLeads: number;
+  invalidLeads: number;
+  firstDate: string;
+  lastDate: string;
+  activeDays: number;
+  days: PortalLeadDay[];
+}
+
+function groupByDelivery(leads: PortalLeadDay[]): DeliveryGroup[] {
+  const map = new Map<string, DeliveryGroup>();
+  for (const row of leads) {
+    const key = row.campaignId;
+    const existing = map.get(key);
+    if (existing) {
+      existing.totalLeads += row.leadCount;
+      existing.validLeads += row.validLeads;
+      existing.invalidLeads += row.invalidLeads;
+      if (row.date < existing.firstDate) existing.firstDate = row.date;
+      if (row.date > existing.lastDate) existing.lastDate = row.date;
+      existing.activeDays += 1;
+      existing.days.push(row);
+    } else {
+      map.set(key, {
+        campaignId: row.campaignId,
+        campaignName: row.campaignName,
+        totalLeads: row.leadCount,
+        validLeads: row.validLeads,
+        invalidLeads: row.invalidLeads,
+        firstDate: row.date,
+        lastDate: row.date,
+        activeDays: 1,
+        days: [row],
+      });
+    }
+  }
+  return Array.from(map.values())
+    .map((g) => ({ ...g, days: g.days.slice().sort((a, b) => b.date.localeCompare(a.date)) }))
+    .sort((a, b) => b.totalLeads - a.totalLeads);
+}
+
 export function PortalLeadsPage() {
   const [from, setFrom] = useState<string>(isoDay(-29));
   const [to, setTo] = useState<string>(isoDay(0));
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const { data, isLoading } = usePortalLeads({ from, to });
   const leads = data?.leads;
 
@@ -39,12 +92,20 @@ export function PortalLeadsPage() {
       (leads ?? [])
         .slice()
         .sort((a, b) => a.date.localeCompare(b.date))
-        .map((d) => ({
-          date: new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-          leads: d.leadCount,
-        })),
+        .map((d) => ({ date: formatDayShort(d.date), leads: d.leadCount })),
     [leads],
   );
+
+  const deliveries = useMemo(() => groupByDelivery(leads ?? []), [leads]);
+
+  const toggleExpanded = (campaignId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(campaignId)) next.delete(campaignId);
+      else next.add(campaignId);
+      return next;
+    });
+  };
 
   const applyPreset = (preset: typeof PRESETS[number]) => {
     setFrom(preset.from());
@@ -134,41 +195,146 @@ export function PortalLeadsPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader><CardTitle>Daily Breakdown</CardTitle></CardHeader>
-            <CardContent className="p-0">
-              <div className="max-h-[400px] overflow-y-auto">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Campaign</TableHead>
-                        <TableHead className="text-right">Leads</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {leads && leads.length > 0 ? (
-                        leads.map((d, i) => (
-                          <TableRow key={i}>
-                            <TableCell>{new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</TableCell>
-                            <TableCell className="text-muted-foreground">{d.campaignName}</TableCell>
-                            <TableCell className="text-right tabular-nums font-medium">{d.leadCount}</TableCell>
+          <Tabs defaultValue="by-delivery" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="by-delivery">By Delivery</TabsTrigger>
+              <TabsTrigger value="daily">Daily</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="by-delivery">
+              <Card>
+                <CardHeader>
+                  <CardTitle>By Delivery</CardTitle>
+                  <CardDescription>Lead counts grouped per campaign delivery — click a row to see the daily breakdown</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="max-h-[500px] overflow-y-auto">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-8" />
+                            <TableHead>Delivery</TableHead>
+                            <TableHead>Date Range</TableHead>
+                            <TableHead className="text-right">Days</TableHead>
+                            <TableHead className="text-right">Leads</TableHead>
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
-                            No leads in this date range.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {deliveries.length > 0 ? (
+                            deliveries.map((d) => {
+                              const isExpanded = expanded.has(d.campaignId);
+                              return (
+                                <Fragment key={d.campaignId}>
+                                  <TableRow
+                                    className="cursor-pointer hover:bg-muted/50"
+                                    onClick={() => toggleExpanded(d.campaignId)}
+                                  >
+                                    <TableCell>
+                                      <ChevronRight
+                                        className={cn(
+                                          'size-4 text-muted-foreground transition-transform',
+                                          isExpanded && 'rotate-90',
+                                        )}
+                                      />
+                                    </TableCell>
+                                    <TableCell className="font-medium">{d.campaignName}</TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                      {d.firstDate === d.lastDate
+                                        ? formatDayShort(d.firstDate)
+                                        : `${formatDayShort(d.firstDate)} – ${formatDayShort(d.lastDate)}`}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                                      {d.activeDays}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums font-medium">
+                                      {d.totalLeads}
+                                    </TableCell>
+                                  </TableRow>
+                                  {isExpanded && (
+                                    <TableRow>
+                                      <TableCell colSpan={5} className="bg-muted/30 p-0">
+                                        <div className="px-6 py-3">
+                                          <Table>
+                                            <TableHeader>
+                                              <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead className="text-right">Valid</TableHead>
+                                                <TableHead className="text-right">Invalid</TableHead>
+                                                <TableHead className="text-right">Leads</TableHead>
+                                              </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                              {d.days.map((day, i) => (
+                                                <TableRow key={i} className="hover:bg-transparent">
+                                                  <TableCell>{formatDayShort(day.date)}</TableCell>
+                                                  <TableCell className="text-right tabular-nums text-muted-foreground">{day.validLeads}</TableCell>
+                                                  <TableCell className="text-right tabular-nums text-muted-foreground">{day.invalidLeads}</TableCell>
+                                                  <TableCell className="text-right tabular-nums">{day.leadCount}</TableCell>
+                                                </TableRow>
+                                              ))}
+                                            </TableBody>
+                                          </Table>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </Fragment>
+                              );
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                                No leads in this date range.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="daily">
+              <Card>
+                <CardHeader><CardTitle>Daily Breakdown</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                  <div className="max-h-[400px] overflow-y-auto">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Delivery</TableHead>
+                            <TableHead className="text-right">Leads</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {leads && leads.length > 0 ? (
+                            leads.map((d, i) => (
+                              <TableRow key={i}>
+                                <TableCell>{formatDayShort(d.date)}</TableCell>
+                                <TableCell className="text-muted-foreground">{d.campaignName}</TableCell>
+                                <TableCell className="text-right tabular-nums font-medium">{d.leadCount}</TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
+                                No leads in this date range.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>

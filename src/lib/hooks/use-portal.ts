@@ -1,8 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
+
+export type PortalClientType = 'managed' | 'ppl';
 
 export interface PortalDashboard {
   companyName: string;
+  clientType: PortalClientType;
   activeCampaigns: number;
   totalLeadsThisMonth: number;
   totalLeadsAllTime: number;
@@ -26,6 +29,7 @@ export interface PortalCampaign {
 
 export interface PortalLeadDay {
   date: string;
+  campaignId: string;
   campaignName: string;
   leadCount: number;
   validLeads: number;
@@ -44,9 +48,29 @@ export interface PortalInvoice {
   daysOverdue: number;
 }
 
+export type CreativeApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface CreativeApprovalState {
+  status: CreativeApprovalStatus;
+  decidedAt: string | null;
+  decidedByName: string | null;
+  feedback: string | null;
+}
+
+export interface PortalCreative {
+  id: string;
+  name: string;
+  type: string;
+  uploadedAt: string;
+  fileUrl: string;
+  // Optional so a Vercel-first deploy (FE new, BE not yet redeployed) doesn't
+  // TypeError on the old API response shape. Treat missing as "pending".
+  approval?: CreativeApprovalState;
+}
+
 export interface PortalCompliance {
   campaignName: string;
-  creatives: { id: string; name: string; type: string; uploadedAt: string }[];
+  creatives: PortalCreative[];
   landingPages: { id: string; url: string; screenshotUrl: string | null; lastChecked: string }[];
 }
 
@@ -121,6 +145,26 @@ export function usePortalCompliance() {
       const res = await api.get<{ compliance: PortalCompliance[] }>('/api/v1/portal/compliance');
       return unwrap(res).compliance;
     },
+  });
+}
+
+export function useApproveCreative() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ creativeId }: { creativeId: string }) => {
+      await api.post(`/api/v1/portal/creatives/${creativeId}/approve`, {});
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-compliance'] }),
+  });
+}
+
+export function useRejectCreative() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ creativeId, feedback }: { creativeId: string; feedback: string }) => {
+      await api.post(`/api/v1/portal/creatives/${creativeId}/reject`, { feedback });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-compliance'] }),
   });
 }
 

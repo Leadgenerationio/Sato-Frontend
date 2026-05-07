@@ -32,6 +32,11 @@ export function ClientCreatePage() {
     notes: '',
   });
 
+  // Default: jump straight into the Send Agreement dialog after creation.
+  // Sam's #1 ask was making this an "error free" single-flow onboarding —
+  // staff who skip this step are the source of most missed agreements.
+  const [sendAgreementAfter, setSendAgreementAfter] = useState(true);
+
   function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
@@ -44,8 +49,17 @@ export function ClientCreatePage() {
     }
     try {
       const client = await createClient.mutateAsync(form);
-      toast.success(`${client.companyName} created`);
-      navigate(`/clients/${client.id}`);
+      // Backend fires credit check fire-and-forget; surface that to staff so
+      // they don't think nothing happened.
+      toast.success(
+        client.companyNumber
+          ? `${client.companyName} created — credit check running`
+          : `${client.companyName} created`,
+      );
+      const nextUrl = sendAgreementAfter
+        ? `/clients/${client.id}?send-agreement=1`
+        : `/clients/${client.id}`;
+      navigate(nextUrl);
     } catch (err) {
       console.error('Create client failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to create client');
@@ -179,11 +193,20 @@ export function ClientCreatePage() {
           </Card>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex items-center gap-4">
           <Button type="submit" disabled={createClient.isPending}>
             {createClient.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
             Create Client
           </Button>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sendAgreementAfter}
+              onChange={(e) => setSendAgreementAfter(e.target.checked)}
+              className="size-4 rounded border-input"
+            />
+            Send agreement immediately after creation
+          </label>
         </div>
       </form>
     </div>

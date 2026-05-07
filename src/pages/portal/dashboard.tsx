@@ -52,7 +52,12 @@ export function PortalDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{data.companyName}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">{data.companyName}</h1>
+          {data.clientType === 'managed' && (
+            <Badge variant="secondary" className="text-xs">Managed</Badge>
+          )}
+        </div>
         <p className="text-muted-foreground">Client Portal</p>
       </div>
 

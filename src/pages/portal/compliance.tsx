@@ -1,9 +1,20 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Image, Video, FileText, Globe, ExternalLink, Shield } from 'lucide-react';
-import { usePortalCompliance } from '@/lib/hooks/use-portal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Image, Video, FileText, Globe, ExternalLink, Shield, Check, X, Clock, AlertTriangle } from 'lucide-react';
+import {
+  usePortalCompliance,
+  useApproveCreative,
+  useRejectCreative,
+  type CreativeApprovalStatus,
+  type CreativeApprovalState,
+  type PortalCreative,
+} from '@/lib/hooks/use-portal';
 import { EmptyState } from '@/components/shared/empty-state';
+import { toast } from 'sonner';
 
 const typeIcons: Record<string, React.ElementType> = {
   image: Image,
@@ -15,19 +26,164 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function StatusBadge({ status }: { status: CreativeApprovalStatus }) {
+  if (status === 'approved') {
+    return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200"><Check className="size-3 mr-1" />Approved</Badge>;
+  }
+  if (status === 'rejected') {
+    return <Badge className="bg-rose-500/10 text-rose-600 border-rose-200"><X className="size-3 mr-1" />Rejected</Badge>;
+  }
+  return <Badge className="bg-amber-500/10 text-amber-600 border-amber-200"><Clock className="size-3 mr-1" />Pending review</Badge>;
+}
+
+const PENDING_APPROVAL: CreativeApprovalState = {
+  status: 'pending',
+  decidedAt: null,
+  decidedByName: null,
+  feedback: null,
+};
+
+function CreativeRow({ creative, onReject }: { creative: PortalCreative; onReject: (creative: PortalCreative) => void }) {
+  const Icon = typeIcons[creative.type] ?? FileText;
+  const approve = useApproveCreative();
+  // Defensive default — if API hasn't been redeployed yet (Vercel-first race),
+  // treat the missing approval block as pending.
+  const approval = creative.approval ?? PENDING_APPROVAL;
+
+  async function handleApprove() {
+    try {
+      await approve.mutateAsync({ creativeId: creative.id });
+      toast.success('Creative approved');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to record approval';
+      toast.error(message);
+    }
+  }
+
+  const isPending = approval.status === 'pending';
+  const isSafeFileUrl = typeof creative.fileUrl === 'string' && (creative.fileUrl.startsWith('http://') || creative.fileUrl.startsWith('https://'));
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+            <Icon className="size-5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{creative.name}</p>
+            <p className="text-xs text-muted-foreground">
+              Uploaded {formatDate(creative.uploadedAt)} · <Badge variant="secondary" className="text-xs capitalize">{creative.type}</Badge>
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0 flex items-center gap-2">
+          <StatusBadge status={approval.status} />
+          {isSafeFileUrl && (
+            <a href={creative.fileUrl} target="_blank" rel="noopener noreferrer" title="Open creative">
+              <ExternalLink className="size-4 text-muted-foreground hover:text-foreground" />
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Decision metadata */}
+      {approval.status !== 'pending' && (
+        <div className="text-xs text-muted-foreground space-y-0.5">
+          <p>
+            {approval.status === 'approved' ? 'Approved' : 'Rejected'} on{' '}
+            {approval.decidedAt && formatDateTime(approval.decidedAt)}
+            {approval.decidedByName && ` by ${approval.decidedByName}`}
+          </p>
+          {approval.feedback && (
+            <p className="rounded-md bg-muted/50 p-2 text-foreground">
+              <span className="font-medium">Feedback:</span> {approval.feedback}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Action buttons (pending only) */}
+      {isPending && (
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={handleApprove} disabled={approve.isPending}>
+            <Check className="size-4" />
+            Approve
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onReject(creative)}>
+            <X className="size-4" />
+            Reject
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface RejectDialogState {
+  creative: PortalCreative | null;
+  feedback: string;
+}
+
 export function PortalCompliancePage() {
   const { data: compliance, isLoading } = usePortalCompliance();
+  const reject = useRejectCreative();
+  const [rejectState, setRejectState] = useState<RejectDialogState>({ creative: null, feedback: '' });
 
   if (isLoading) {
     return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-96" /></div>;
   }
 
+  function openRejectFor(creative: PortalCreative) {
+    setRejectState({ creative, feedback: '' });
+  }
+
+  async function submitReject() {
+    if (!rejectState.creative) return;
+    const trimmed = rejectState.feedback.trim();
+    if (trimmed.length === 0) {
+      toast.error('Please tell us what needs to change');
+      return;
+    }
+    try {
+      await reject.mutateAsync({ creativeId: rejectState.creative.id, feedback: trimmed });
+      toast.success('Creative rejected with feedback');
+      setRejectState({ creative: null, feedback: '' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to record rejection';
+      toast.error(message);
+    }
+  }
+
+  // Counts for the headline summary banner — gives the client an at-a-glance
+  // sense of what still needs their attention.
+  const allCreatives = compliance?.flatMap((c) => c.creatives) ?? [];
+  const pendingCount = allCreatives.filter((c) => (c.approval?.status ?? 'pending') === 'pending').length;
+  const approvedCount = allCreatives.filter((c) => c.approval?.status === 'approved').length;
+  const rejectedCount = allCreatives.filter((c) => c.approval?.status === 'rejected').length;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Compliance</h1>
-        <p className="text-muted-foreground">Creatives and landing pages used in your campaigns</p>
+        <p className="text-muted-foreground">Review and approve creatives used in your campaigns</p>
       </div>
+
+      {pendingCount > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          <AlertTriangle className="size-5 shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium">{pendingCount} creative{pendingCount === 1 ? '' : 's'} need your review</p>
+            <p className="mt-0.5 text-amber-800 dark:text-amber-300">
+              Each decision is timestamped with your IP address as a record of approval.
+            </p>
+          </div>
+        </div>
+      )}
 
       {!compliance?.length && (
         <Card>
@@ -35,10 +191,18 @@ export function PortalCompliancePage() {
             <EmptyState
               icon={Shield}
               title="No compliance assets yet"
-              description="Creatives and landing pages used in your campaigns will appear here once they're approved and live."
+              description="Creatives and landing pages used in your campaigns will appear here once uploaded by the team."
             />
           </CardContent>
         </Card>
+      )}
+
+      {compliance && compliance.length > 0 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-amber-600">{pendingCount}</p><p className="text-xs text-muted-foreground">Pending review</p></CardContent></Card>
+          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-emerald-600">{approvedCount}</p><p className="text-xs text-muted-foreground">Approved</p></CardContent></Card>
+          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-rose-600">{rejectedCount}</p><p className="text-xs text-muted-foreground">Rejected</p></CardContent></Card>
+        </div>
       )}
 
       {compliance?.map((campaign) => (
@@ -55,27 +219,13 @@ export function PortalCompliancePage() {
                 <EmptyState
                   icon={Image}
                   title="No creatives"
-                  description="Approved creatives for this campaign will appear here."
+                  description="Creatives for this campaign will appear here once uploaded."
                   size="compact"
                 />
               ) : (
-                campaign.creatives.map((cr) => {
-                  const Icon = typeIcons[cr.type] || FileText;
-                  return (
-                    <div key={cr.id} className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex size-9 items-center justify-center rounded-lg bg-muted">
-                          <Icon className="size-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{cr.name}</p>
-                          <p className="text-xs text-muted-foreground">Uploaded {formatDate(cr.uploadedAt)}</p>
-                        </div>
-                      </div>
-                      <Badge variant="secondary" className="text-xs capitalize">{cr.type}</Badge>
-                    </div>
-                  );
-                })
+                campaign.creatives.map((cr) => (
+                  <CreativeRow key={cr.id} creative={cr} onReject={openRejectFor} />
+                ))
               )}
             </CardContent>
           </Card>
@@ -95,9 +245,6 @@ export function PortalCompliancePage() {
                 />
               ) : (
                 campaign.landingPages.map((lp) => {
-                  // Cheap open-redirect guard: only render the clickable link
-                  // when the URL is plainly http(s). javascript:, data:, etc.
-                  // would otherwise execute in the user's session if clicked.
                   const isSafeUrl = typeof lp.url === 'string' && (lp.url.startsWith('http://') || lp.url.startsWith('https://'));
                   return (
                     <div key={lp.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
@@ -127,6 +274,36 @@ export function PortalCompliancePage() {
           </Card>
         </div>
       ))}
+
+      <Dialog open={!!rejectState.creative} onOpenChange={(open) => { if (!open) setRejectState({ creative: null, feedback: '' }); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject creative</DialogTitle>
+            <DialogDescription>
+              Please tell us what needs to change. The team will see your feedback and revise the asset.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            placeholder="What needs to change? (e.g. logo too small, wrong call-to-action)"
+            value={rejectState.feedback}
+            onChange={(e) => setRejectState((s) => ({ ...s, feedback: e.target.value }))}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectState({ creative: null, feedback: '' })}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={submitReject}
+              disabled={reject.isPending || rejectState.feedback.trim().length === 0}
+            >
+              Submit rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

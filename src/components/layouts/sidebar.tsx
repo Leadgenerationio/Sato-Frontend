@@ -22,6 +22,7 @@ import {
   FileSignature,
   FileText,
   Receipt,
+  Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,7 @@ const navItems: NavEntry[] = [
   { href: '/staff', label: 'Staff', icon: UsersRound, roles: ['owner', 'ops_manager'] },
   { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['owner', 'finance_admin'] },
   { href: '/notifications', label: 'Notifications', icon: Bell, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'] },
+  { href: '/integrations', label: 'Integrations', icon: Plug, roles: ['owner'] },
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['owner', 'finance_admin', 'ops_manager'] },
 ];
 

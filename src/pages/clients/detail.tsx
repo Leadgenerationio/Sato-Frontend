@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,9 +57,23 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: client, isLoading, error } = useClient(id!);
   const { data: creditHistory, isLoading: creditLoading } = useCreditHistory(id!);
   const runCheck = useRunCreditCheck();
+
+  // Auto-open the Send Agreement dialog when arriving from /clients/create
+  // with the "send agreement immediately" toggle on. Strip the query param
+  // so a refresh doesn't re-open the dialog.
+  const [agreementDialogOpen, setAgreementDialogOpen] = useState(false);
+  useEffect(() => {
+    if (searchParams.get('send-agreement') === '1' && client) {
+      setAgreementDialogOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('send-agreement');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, client, setSearchParams]);
 
   if (isLoading) {
     return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-64" /><Skeleton className="h-96" /></div>;
@@ -93,6 +107,10 @@ export function ClientDetailPage() {
           <PageHeader title={client.companyName} description={`${client.contactName} · ${client.companyNumber}`}>
             <div className="flex items-center gap-3">
               <Badge className={`capitalize ${statusColors[client.status] || ''}`}>{client.status}</Badge>
+              <Button size="sm" variant="default" onClick={() => setAgreementDialogOpen(true)}>
+                <FileSignature className="size-4 mr-1.5" />
+                Create Agreement
+              </Button>
               <SendAgreementDialog
                 lockClient
                 prefill={{
@@ -100,12 +118,8 @@ export function ClientDetailPage() {
                   signerName: client.contactName,
                   signerEmail: client.contactEmail,
                 }}
-                trigger={
-                  <Button size="sm" variant="default">
-                    <FileSignature className="size-4 mr-1.5" />
-                    Create Agreement
-                  </Button>
-                }
+                open={agreementDialogOpen}
+                onOpenChange={setAgreementDialogOpen}
               />
             </div>
           </PageHeader>

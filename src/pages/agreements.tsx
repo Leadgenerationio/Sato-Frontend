@@ -17,7 +17,7 @@ import {
   type AgreementStatus,
   type Agreement,
 } from '@/lib/hooks/use-agreements';
-import { useClients } from '@/lib/hooks/use-clients';
+import { useClient, useClients } from '@/lib/hooks/use-clients';
 import { FileUpload } from '@/components/shared/file-upload';
 import type { PresignedUpload } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -52,16 +52,28 @@ interface SendAgreementDialogProps {
   lockClient?: boolean;
   /** Custom trigger node. Defaults to a "Send for signature" button. */
   trigger?: React.ReactNode;
+  /** Controlled-mode: parent owns open state. When provided, hides the trigger. */
+  open?: boolean;
+  /** Controlled-mode: notify parent when dialog opens/closes. */
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function SendAgreementDialog({ prefill, lockClient = false, trigger }: SendAgreementDialogProps = {}) {
-  const [open, setOpen] = useState(false);
+export function SendAgreementDialog({ prefill, lockClient = false, trigger, open: openProp, onOpenChange: onOpenChangeProp }: SendAgreementDialogProps = {}) {
+  const [openInternal, setOpenInternal] = useState(false);
+  // Allow parent to drive the dialog open state (used by /clients/create →
+  // /clients/:id?send-agreement=1 auto-open flow).
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : openInternal;
   const [clientId, setClientId] = useState(prefill?.clientId ?? '');
   const [signerEmail, setSignerEmail] = useState(prefill?.signerEmail ?? '');
   const [signerName, setSignerName] = useState(prefill?.signerName ?? '');
   const [uploaded, setUploaded] = useState<{ key: string; name: string } | null>(null);
   const { data: clientsData } = useClients({ limit: 100 });
   const send = useSendAgreement();
+  // When prefill carries a clientId, fetch its full record so we can show
+  // staff the company info as read-only context — fewer "wrong client"
+  // mistakes per Sam's "make it error free" ask.
+  const { data: prefilledClient } = useClient(prefill?.clientId ?? '');
 
   const clients = useMemo(() => clientsData?.clients ?? [], [clientsData]);
 
@@ -83,7 +95,8 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger }: Se
   };
 
   const handleOpenChange = (next: boolean) => {
-    setOpen(next);
+    if (!isControlled) setOpenInternal(next);
+    onOpenChangeProp?.(next);
     if (!next) reset();
   };
 
@@ -120,14 +133,16 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger }: Se
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm">
-            <FileSignature className="size-4" />
-            Send for signature
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button size="sm">
+              <FileSignature className="size-4" />
+              Send for signature
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-lg">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -136,6 +151,20 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger }: Se
               A SignNow envelope will be created and emailed to the signer. Status will update here once they sign.
             </DialogDescription>
           </DialogHeader>
+          {prefilledClient && lockClient && (
+            <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs">
+              <p className="font-medium text-foreground">{prefilledClient.companyName}</p>
+              <p className="text-muted-foreground">
+                {prefilledClient.companyNumber ? `Co. ${prefilledClient.companyNumber} · ` : ''}
+                {prefilledClient.address || 'No address on file'}
+              </p>
+              {typeof prefilledClient.creditScore === 'number' && (
+                <p className="mt-1 text-muted-foreground">
+                  Credit score: <span className="font-medium text-foreground">{prefilledClient.creditScore}</span>
+                </p>
+              )}
+            </div>
+          )}
           <div className="space-y-3 py-4">
             <div className="space-y-1.5">
               <Label htmlFor="clientId">Client</Label>
