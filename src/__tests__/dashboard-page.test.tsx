@@ -75,8 +75,8 @@ vi.mock('@/components/dashboard/bank-widget', () => ({
   BankWidget: () => <div data-testid="bank-widget">BankWidget</div>,
 }));
 
-vi.mock('@/components/dashboard/overdue-widget', () => ({
-  OverdueWidget: () => <div data-testid="overdue-widget">OverdueWidget</div>,
+vi.mock('@/components/dashboard/invoices-owed-widget', () => ({
+  InvoicesOwedWidget: () => <div data-testid="invoices-owed-widget">InvoicesOwedWidget</div>,
 }));
 
 vi.mock('@/components/dashboard/vat-widget', () => ({

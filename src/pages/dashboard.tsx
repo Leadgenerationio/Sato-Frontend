@@ -4,7 +4,7 @@ import { DashboardSkeleton } from '@/components/shared/loading-skeleton';
 import { ErrorState } from '@/components/shared/error-state';
 import { WidgetContainer, WidgetSkeleton } from '@/components/dashboard/widget-container';
 import { BankWidget } from '@/components/dashboard/bank-widget';
-import { OverdueWidget } from '@/components/dashboard/overdue-widget';
+import { InvoicesOwedWidget } from '@/components/dashboard/invoices-owed-widget';
 import { VatWidget } from '@/components/dashboard/vat-widget';
 import { PnlWidget } from '@/components/dashboard/pnl-widget';
 import { CreditAlertWidget } from '@/components/dashboard/credit-alert-widget';
@@ -265,7 +265,7 @@ export function DashboardPage() {
       {/* Widgets Row 1: Bank, Overdue, VAT */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <WidgetContainer><BankWidget /></WidgetContainer>
-        <WidgetContainer><OverdueWidget /></WidgetContainer>
+        <WidgetContainer><InvoicesOwedWidget /></WidgetContainer>
         <WidgetContainer><VatWidget /></WidgetContainer>
       </div>
 
