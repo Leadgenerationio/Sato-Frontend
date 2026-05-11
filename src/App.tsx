@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ProtectedRoute } from '@/components/shared/protected-route';
@@ -36,12 +36,9 @@ const WorkflowCreatePage = lazy(() => import('@/pages/workflows/create').then((m
 const TasksPage = lazy(() => import('@/pages/tasks/index').then((m) => ({ default: m.TasksPage })));
 const TaskDetailPage = lazy(() => import('@/pages/tasks/detail').then((m) => ({ default: m.TaskDetailPage })));
 const TaskCreatePage = lazy(() => import('@/pages/tasks/create').then((m) => ({ default: m.TaskCreatePage })));
-const ReportsHubPage = lazy(() => import('@/pages/reports/index').then((m) => ({ default: m.ReportsHubPage })));
-const CampaignReportPage = lazy(() => import('@/pages/reports/campaign').then((m) => ({ default: m.CampaignReportPage })));
-const ClientPnlReportPage = lazy(() => import('@/pages/reports/client-pnl').then((m) => ({ default: m.ClientPnlReportPage })));
-const SupplierReportPage = lazy(() => import('@/pages/reports/supplier').then((m) => ({ default: m.SupplierReportPage })));
-const FinancialReportPage = lazy(() => import('@/pages/reports/financial').then((m) => ({ default: m.FinancialReportPage })));
-const AdSpendReportPage = lazy(() => import('@/pages/reports/ad-spend').then((m) => ({ default: m.AdSpendReportPage })));
+// Slice 4 Day 3 — the 5 split reports were folded into UnifiedReportPage.
+// Old routes still resolve so deep links from Sam, dashboards, or external
+// docs don't 404 — they redirect to /reports/unified.
 const UnifiedReportPage = lazy(() => import('@/pages/reports/unified').then((m) => ({ default: m.UnifiedReportPage })));
 const PortalDashboardPage = lazy(() => import('@/pages/portal/dashboard').then((m) => ({ default: m.PortalDashboardPage })));
 const PortalLeadsPage = lazy(() => import('@/pages/portal/leads').then((m) => ({ default: m.PortalLeadsPage })));
@@ -238,56 +235,16 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
-                  <ReportsHubPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports/campaign"
-              element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
-                  <CampaignReportPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports/client-pnl"
-              element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
-                  <ClientPnlReportPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports/supplier"
-              element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
-                  <SupplierReportPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports/financial"
-              element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
-                  <FinancialReportPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports/ad-spend"
-              element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
-                  <AdSpendReportPage />
-                </ProtectedRoute>
-              }
-            />
-            {/* Slice 4: unified report — Sam Loom #72-85. Old report routes
-                stay live during the frontend migration so links don't break. */}
+            {/* Slice 4 — unified report (Sam Loom #72-85). The 5 old split
+                reports are folded into one page. Old paths redirect so deep
+                links from sidebar caches, dashboards, integrations.tsx, and
+                Sam's bookmarks keep working. */}
+            <Route path="/reports" element={<Navigate to="/reports/unified" replace />} />
+            <Route path="/reports/campaign" element={<Navigate to="/reports/unified" replace />} />
+            <Route path="/reports/client-pnl" element={<Navigate to="/reports/unified" replace />} />
+            <Route path="/reports/supplier" element={<Navigate to="/reports/unified" replace />} />
+            <Route path="/reports/financial" element={<Navigate to="/reports/unified" replace />} />
+            <Route path="/reports/ad-spend" element={<Navigate to="/reports/unified" replace />} />
             <Route
               path="/reports/unified"
               element={

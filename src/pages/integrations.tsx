@@ -210,7 +210,7 @@ export function IntegrationsPage() {
       metricLabel: 'Ad spend · last 30 days',
       metricValue: formatCurrency(data.catchr.adSpendLast30Days, data.catchr.currency),
       lastSyncAt: data.catchr.lastSyncAt,
-      secondaryAction: { label: 'View Reports', href: '/reports/ad-spend' },
+      secondaryAction: { label: 'View Reports', href: '/reports/unified' },
     },
     {
       key: 'signnow',

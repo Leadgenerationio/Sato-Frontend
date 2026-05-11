@@ -20,94 +20,12 @@ export const WINDOW_OPTIONS: { value: DeliveryWindow; label: string }[] = [
   { value: 'ytd', label: 'Year to Date' },
 ];
 
-export interface CampaignReportRow {
-  campaignId: string;
-  campaignName: string;
-  clientName: string;
-  vertical: string;
-  leads: number;
-  validLeads: number;
-  cost: number;
-  revenue: number;
-  cpl: number;
-  profit: number;
-  margin: number;
-}
-
-export interface ClientPnlRow {
-  clientId: string;
-  clientName: string;
-  month: string;
-  revenue: number;
-  cost: number;
-  profit: number;
-  margin: number;
-  leadsDelivered: number;
-}
-
-export interface SupplierReportRow {
-  supplierId: string;
-  supplierName: string;
-  platform: string;
-  totalSpend: number;
-  totalLeads: number;
-  cpl: number;
-  campaigns: number;
-}
-
-export interface FinancialOverviewRow {
-  month: string;
-  revenue: number;
-  expenses: number;
-  profit: number;
-  invoicesPaid: number;
-  invoicesOverdue: number;
-  vatCollected: number;
-}
-
-export function useCampaignReport(window: DeliveryWindow = 'this_month') {
-  return useQuery({
-    queryKey: ['report-campaign', window],
-    queryFn: async () => {
-      const res = await api.get<{ report: CampaignReportRow[]; window: DeliveryWindow }>(
-        `/api/v1/reports/campaign-performance?window=${window}`,
-      );
-      return unwrap(res).report;
-    },
-  });
-}
-
-export function useClientPnlReport() {
-  return useQuery({
-    queryKey: ['report-client-pnl'],
-    queryFn: async () => {
-      const res = await api.get<{ report: ClientPnlRow[] }>('/api/v1/reports/client-pnl');
-      return unwrap(res).report;
-    },
-  });
-}
-
-export function useSupplierReport(window: DeliveryWindow = 'this_month') {
-  return useQuery({
-    queryKey: ['report-supplier', window],
-    queryFn: async () => {
-      const res = await api.get<{ report: SupplierReportRow[]; window: DeliveryWindow }>(
-        `/api/v1/reports/supplier-performance?window=${window}`,
-      );
-      return unwrap(res).report;
-    },
-  });
-}
-
-export function useFinancialReport() {
-  return useQuery({
-    queryKey: ['report-financial'],
-    queryFn: async () => {
-      const res = await api.get<{ report: FinancialOverviewRow[] }>('/api/v1/reports/financial-overview');
-      return unwrap(res).report;
-    },
-  });
-}
+// Slice 4 Day 3 — the per-page report hooks (useCampaignReport,
+// useClientPnlReport, useSupplierReport, useFinancialReport) and their row
+// types were removed when the 5 split report pages were folded into
+// /reports/unified. Backend endpoints stay live for now in case dashboards
+// or external integrations still hit them; useFinancialOverview (in
+// use-dashboard.ts) is the one remaining consumer.
 
 // ─── Slice 4 — unified leadreports.io-style report (Sam Loom #72-85) ────────
 // One row per (campaign × supplier), with revenue + profit + margin
