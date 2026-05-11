@@ -47,9 +47,12 @@ beforeEach(() => {
 
 describe('ClientCreatePage — buyer creation flow (Roadmap B)', () => {
   function fillRequired() {
+    // Slice 1 Day 2: Contact Details card was replaced by a Contacts repeater.
+    // The first row is the locked-Primary contact; its name/email placeholders
+    // changed from "John Smith"/"john@acme.co.uk" to "Jamie Roberts"/"jamie@uken.co.uk".
     fireEvent.change(screen.getByPlaceholderText('Acme Ltd'), { target: { value: 'Acme Ltd' } });
-    fireEvent.change(screen.getByPlaceholderText('John Smith'), { target: { value: 'John Smith' } });
-    fireEvent.change(screen.getByPlaceholderText('john@acme.co.uk'), { target: { value: 'john@acme.co.uk' } });
+    fireEvent.change(screen.getByPlaceholderText('Jamie Roberts'), { target: { value: 'John Smith' } });
+    fireEvent.change(screen.getByPlaceholderText('jamie@uken.co.uk'), { target: { value: 'john@acme.co.uk' } });
   }
 
   it('renders the "Send agreement immediately" toggle, default ON', () => {
