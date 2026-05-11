@@ -49,7 +49,7 @@ export function BankWidget() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base">Bank Accounts</CardTitle>
-            <CardDescription>Synced from Xero</CardDescription>
+            <CardDescription>Statement balance · live from Xero</CardDescription>
           </div>
           <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
             <Landmark className="size-5 text-muted-foreground" />

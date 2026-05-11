@@ -5,15 +5,26 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Receipt } from 'lucide-react';
 import { api, unwrap } from '@/lib/api';
 
-interface VatLiabilityResponse {
-  configured: boolean;
+// Sam Loom #7-12: VAT widget shows TWO numbers — the most-recently-completed
+// quarter's total liability (the headline number Sam files with HMRC) AND
+// the currently-running quarter accruing so far. Empty Xero org / non-VAT
+// company still renders cleanly.
+
+interface VatPeriod {
   fromDate?: string;
   toDate?: string;
+  label?: string;
   owed?: string;
   collectedOnSales?: string;
   paidOnPurchases?: string;
-  currency?: string;
   error?: string;
+}
+
+interface VatLiabilityResponse {
+  configured: boolean;
+  currency?: string;
+  current?: VatPeriod;
+  past?: VatPeriod;
 }
 
 function toMoney(s?: string): number {
@@ -26,11 +37,6 @@ function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
 
-function formatDate(iso?: string) {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
 export function VatWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ['xero', 'vat-liability'],
@@ -41,15 +47,17 @@ export function VatWidget() {
     refetchInterval: 30 * 60_000, // refresh every 30 min
   });
 
-  const owed = toMoney(data?.owed);
-  const collected = toMoney(data?.collectedOnSales);
-  const paid = toMoney(data?.paidOnPurchases);
   const currency = data?.currency ?? 'GBP';
-  const isOwed = owed >= 0;
-  // When the Xero org isn't VAT-registered, the TaxSummary endpoint returns
-  // zeros for everything. Show a friendlier message instead of three £0.00
-  // lines that look like a bug.
-  const notVatRegistered = !!data?.configured && !data?.error && owed === 0 && collected === 0 && paid === 0;
+  const current = data?.current;
+  const past = data?.past;
+  const currentOwed = toMoney(current?.owed);
+  const pastOwed = toMoney(past?.owed);
+
+  // If both periods report £0 across the board, the Xero org likely isn't
+  // VAT-registered — render the friendly empty state instead of three £0s.
+  const notVatRegistered = !!data?.configured && !current?.error && !past?.error
+    && currentOwed === 0 && pastOwed === 0
+    && toMoney(current?.collectedOnSales) === 0 && toMoney(past?.collectedOnSales) === 0;
 
   return (
     <Card>
@@ -57,23 +65,18 @@ export function VatWidget() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base">VAT Liability</CardTitle>
-            <CardDescription>
-              {data?.fromDate
-                ? `Since end of last quarter (${formatDate(data.fromDate)})`
-                : 'Live from Xero'}
-            </CardDescription>
+            <CardDescription>Past + current quarter from Xero</CardDescription>
           </div>
-          <div className={`flex size-10 items-center justify-center rounded-lg ${isOwed ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
-            <Receipt className={`size-5 ${isOwed ? 'text-amber-600' : 'text-emerald-600'}`} />
+          <div className={`flex size-10 items-center justify-center rounded-lg ${pastOwed >= 0 ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
+            <Receipt className={`size-5 ${pastOwed >= 0 ? 'text-amber-600' : 'text-emerald-600'}`} />
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {isLoading && (
           <div className="space-y-2">
-            <Skeleton className="h-10 w-32 mx-auto" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
           </div>
         )}
 
@@ -83,13 +86,13 @@ export function VatWidget() {
           </div>
         )}
 
-        {!isLoading && data?.configured && data.error && (
+        {!isLoading && data?.configured && (current?.error || past?.error) && (
           <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
             Couldn't load VAT report from Xero. Make sure the Custom Connection has the <code className="rounded bg-muted px-1 text-xs">accounting.reports.read</code> scope.
           </div>
         )}
 
-        {!isLoading && data?.configured && !data.error && notVatRegistered && (
+        {!isLoading && data?.configured && !current?.error && !past?.error && notVatRegistered && (
           <div className="rounded-lg border border-dashed py-6 text-center">
             <p className="text-2xl font-bold tabular-nums text-emerald-600">
               {formatCurrency(0, currency)}
@@ -97,38 +100,53 @@ export function VatWidget() {
             <p className="mt-2 text-xs text-muted-foreground">
               No VAT registration on this Xero organisation.
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Once VAT is registered, sales / purchases / liability will appear here automatically.
-            </p>
           </div>
         )}
 
-        {!isLoading && data?.configured && !data.error && !notVatRegistered && (
+        {!isLoading && data?.configured && !current?.error && !past?.error && !notVatRegistered && (
           <>
-            <div className="text-center">
-              <p className={`text-3xl font-bold tabular-nums ${isOwed ? 'text-amber-600' : 'text-emerald-600'}`}>
-                {formatCurrency(Math.abs(owed), currency)}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {isOwed ? 'Owed to HMRC' : 'Refund due'}
-              </p>
-            </div>
-
+            <PeriodRow
+              label={past?.label ?? 'Last quarter'}
+              sub="Due to HMRC"
+              amount={pastOwed}
+              currency={currency}
+              emphasised
+            />
             <Separator />
-
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Collected on sales</span>
-                <span className="font-medium tabular-nums">{formatCurrency(collected, currency)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Paid on purchases</span>
-                <span className="font-medium tabular-nums">-{formatCurrency(paid, currency)}</span>
-              </div>
-            </div>
+            <PeriodRow
+              label={current?.label ?? 'This quarter'}
+              sub="Accruing so far"
+              amount={currentOwed}
+              currency={currency}
+            />
           </>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function PeriodRow({
+  label, sub, amount, currency, emphasised,
+}: {
+  label: string;
+  sub: string;
+  amount: number;
+  currency: string;
+  emphasised?: boolean;
+}) {
+  const positive = amount >= 0;
+  return (
+    <div className="flex items-baseline justify-between">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{sub}</p>
+      </div>
+      <p
+        className={`tabular-nums font-bold ${emphasised ? 'text-2xl' : 'text-lg'} ${positive ? 'text-amber-600' : 'text-emerald-600'}`}
+      >
+        {formatCurrency(Math.abs(amount), currency)}
+      </p>
+    </div>
   );
 }
