@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, Pencil, Video, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { useSop } from '@/lib/hooks/use-sops';
+import { useSop, loomEmbedUrl } from '@/lib/hooks/use-sops';
+import { useUploadUrl } from '@/lib/hooks/use-uploads';
 
 const categoryColors: Record<string, string> = {
   Operations: 'bg-blue-500/10 text-blue-600 border-blue-200',
@@ -26,6 +27,7 @@ export function SopDetailPage() {
   const { data: sop, isLoading, error } = useSop(id!);
 
   const canWrite = user?.role === 'owner' || user?.role === 'ops_manager';
+  const embedUrl = loomEmbedUrl(sop?.loomUrl);
 
   if (isLoading) {
     return (
@@ -80,7 +82,37 @@ export function SopDetailPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
+          {embedUrl && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Video className="size-4" /> Walkthrough
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative w-full overflow-hidden rounded-md border" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    src={embedUrl}
+                    title="Loom walkthrough"
+                    allowFullScreen
+                    className="absolute inset-0 h-full w-full"
+                  />
+                </div>
+                {sop.loomUrl && (
+                  <a
+                    href={sop.loomUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-xs text-muted-foreground hover:underline"
+                  >
+                    Open in Loom →
+                  </a>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Content</CardTitle>
@@ -91,6 +123,23 @@ export function SopDetailPage() {
               </pre>
             </CardContent>
           </Card>
+
+          {sop.screenshots.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ImageIcon className="size-4" /> Screenshots ({sop.screenshots.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {sop.screenshots.map((s) => (
+                    <ScreenshotThumb key={s.key} screenshot={s} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -124,8 +173,45 @@ export function SopDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {sop.tags.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Tags</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {sop.tags.map((t) => (
+                    <Link key={t} to={`/sops?tag=${encodeURIComponent(t)}`}>
+                      <Badge variant="outline" className="hover:bg-muted cursor-pointer">{t}</Badge>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function ScreenshotThumb({ screenshot }: { screenshot: { key: string; name: string } }) {
+  const { data: url } = useUploadUrl(screenshot.key);
+  return (
+    <a
+      href={url ?? '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group relative aspect-video overflow-hidden rounded-md border bg-muted"
+      title={screenshot.name}
+    >
+      {url ? (
+        // eslint-disable-next-line jsx-a11y/img-redundant-alt
+        <img src={url} alt={screenshot.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading…</div>
+      )}
+    </a>
   );
 }
