@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   ArrowLeft, TrendingUp, TrendingDown, DollarSign, Users, Target, ExternalLink,
@@ -14,11 +15,15 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
-import { useCampaign, useTrafficSources } from '@/lib/hooks/use-campaigns';
+import {
+  useCampaign, useTrafficSources, useUpdateCampaign,
+  useCreateTrafficSource, useUpdateTrafficSource, useDeleteTrafficSource,
+} from '@/lib/hooks/use-campaigns';
 import { useCreatives, useCreateCreative, useDeleteCreative } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
-import { Image as ImageIcon, Video, FileText, Download, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Video, FileText, Download, Trash2, Save, Loader2, Pencil, Users as UsersIcon, Plus } from 'lucide-react';
+import type { CampaignLinkedClient } from '@/lib/hooks/use-campaigns';
 import { toast } from 'sonner';
 
 type DeliveryWindow = 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'ytd';
@@ -231,6 +236,12 @@ export function CampaignDetailPage() {
         <Card className="gap-3 py-5"><CardContent><p className="text-xs text-muted-foreground">Cost</p><p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(windowTotals.cost)}</p></CardContent></Card>
       </div>
 
+      {/* Sam #41 cost-per-lead editor + Slice 2 Day 1 buyer list */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <CostPerLeadCard campaignId={campaign.id} value={campaign.costPerLead} computedCpl={campaign.cpl} currency={campaign.currency} />
+        <LinkedClientsCard linkedClients={campaign.linkedClients} currency={campaign.currency} />
+      </div>
+
       {/* Lead Volume Chart */}
       <Card>
         <CardHeader>
@@ -308,8 +319,27 @@ export function CampaignDetailPage() {
   );
 }
 
+// Sam Loom #42-46 — leadreports.io-style mapping table. Each row pins a
+// supplier (Facebook/Google/Bing/TikTok/Taboola/Outbrain) → Catchr NCP URL
+// and surfaces spend (Catchr), leads (LeadByte), CPL, revenue, net profit.
+
+const SUPPLIER_OPTIONS = [
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'google', label: 'Google' },
+  { value: 'bing', label: 'Bing' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'taboola', label: 'Taboola' },
+  { value: 'outbrain', label: 'Outbrain' },
+  { value: 'other', label: 'Other' },
+] as const;
+
 function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
   const { data: sources, isLoading } = useTrafficSources(campaignId);
+  const createSource = useCreateTrafficSource(campaignId);
+  const deleteSource = useDeleteTrafficSource(campaignId);
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -323,29 +353,41 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
     );
   }
 
-  if (!sources || sources.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Traffic Sources</CardTitle>
-          <CardDescription>No active traffic sources on this campaign</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
+  const rows = sources ?? [];
+  const totals = rows.reduce(
+    (acc, r) => ({
+      spend: acc.spend + r.totalSpend,
+      leads: acc.leads + r.totalLeads,
+      revenue: acc.revenue + r.revenue,
+      profit: acc.profit + r.netProfit,
+    }),
+    { spend: 0, leads: 0, revenue: 0, profit: 0 },
+  );
 
-  const totalSpend = sources.reduce((s, r) => s + r.totalSpend, 0);
+  const handleDelete = async (sourceId: string, name: string) => {
+    try {
+      await deleteSource.mutateAsync(sourceId);
+      toast.success(`Removed "${name}"`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle>Traffic Sources</CardTitle>
             <CardDescription>
-              {sources.length} source{sources.length === 1 ? '' : 's'} · total spend {formatCurrency(totalSpend)}
+              {rows.length === 0
+                ? 'Map suppliers (Facebook/Google/etc) to their Catchr NCP. Spend syncs from Catchr; leads from LeadByte.'
+                : `${rows.length} source${rows.length === 1 ? '' : 's'} · spend ${formatCurrency(totals.spend)} · revenue ${formatCurrency(totals.revenue)} · profit ${formatCurrency(totals.profit)}`}
             </CardDescription>
           </div>
+          <Button size="sm" onClick={() => setIsAdding(true)} disabled={isAdding}>
+            <Plus className="size-4 mr-1.5" />Add source
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -354,37 +396,207 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Platform</TableHead>
-                <TableHead>Catchr URL</TableHead>
+                <TableHead>Supplier</TableHead>
+                <TableHead>Catchr NCP</TableHead>
                 <TableHead className="text-right">Spend</TableHead>
                 <TableHead className="text-right">Leads</TableHead>
                 <TableHead className="text-right">CPL</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="text-right">Profit</TableHead>
+                <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sources.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.name}</TableCell>
-                  <TableCell><Badge variant="secondary" className="text-xs">{s.platform}</Badge></TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {s.catchrUrl ? (
-                      <span className="inline-flex items-center gap-1 text-xs">
-                        <ExternalLink className="size-3" /> configured
-                      </span>
-                    ) : (
-                      <span className="text-xs">Not set</span>
-                    )}
+              {isAdding && (
+                <AddSourceRow
+                  pending={createSource.isPending}
+                  onSubmit={async (input) => {
+                    try {
+                      await createSource.mutateAsync(input);
+                      toast.success(`Added "${input.name}"`);
+                      setIsAdding(false);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Create failed');
+                    }
+                  }}
+                  onCancel={() => setIsAdding(false)}
+                />
+              )}
+              {rows.length === 0 && !isAdding && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-8">
+                    No traffic sources yet. Click <span className="font-medium">Add source</span> to map your first one.
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(s.totalSpend)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(s.cpl)}</TableCell>
                 </TableRow>
-              ))}
+              )}
+              {rows.map((s) =>
+                editingId === s.id ? (
+                  <EditSourceRow
+                    key={s.id}
+                    campaignId={campaignId}
+                    source={s}
+                    onDone={() => setEditingId(null)}
+                  />
+                ) : (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-xs capitalize">{s.platform || '—'}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-[240px]">
+                      {s.catchrUrl ? (
+                        <a href={s.catchrUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline truncate">
+                          <ExternalLink className="size-3 shrink-0" />
+                          <span className="truncate">{s.catchrUrl}</span>
+                        </a>
+                      ) : (
+                        <span className="text-xs">Not set</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(s.totalSpend)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(s.cpl)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(s.revenue)}</TableCell>
+                    <TableCell className={`text-right tabular-nums font-medium ${s.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {formatCurrency(s.netProfit)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setEditingId(s.id)} aria-label="Edit">
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id, s.name)} aria-label="Delete">
+                          <Trash2 className="size-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ),
+              )}
             </TableBody>
           </Table>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function AddSourceRow({
+  pending, onSubmit, onCancel,
+}: {
+  pending: boolean;
+  onSubmit: (input: { name: string; platform?: string; catchrUrl?: string }) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [platform, setPlatform] = useState<string>('facebook');
+  const [catchrUrl, setCatchrUrl] = useState('');
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    await onSubmit({ name: name.trim(), platform, catchrUrl: catchrUrl.trim() || undefined });
+  };
+
+  return (
+    <TableRow className="bg-muted/40">
+      <TableCell>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Facebook · Solar UK" autoFocus />
+      </TableCell>
+      <TableCell>
+        <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+          {SUPPLIER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </TableCell>
+      <TableCell colSpan={5}>
+        <Input value={catchrUrl} onChange={(e) => setCatchrUrl(e.target.value)} placeholder="https://catchr.io/ncp/..." />
+      </TableCell>
+      <TableCell colSpan={2} className="text-right">
+        <div className="flex justify-end gap-1">
+          <Button size="sm" onClick={handleSave} disabled={pending}>
+            {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onCancel} disabled={pending}>Cancel</Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function EditSourceRow({
+  campaignId, source, onDone,
+}: {
+  campaignId: string;
+  source: { id: string; name: string; platform: string; catchrUrl: string | null; totalSpend: number; totalLeads: number };
+  onDone: () => void;
+}) {
+  const update = useUpdateTrafficSource(campaignId);
+  const [name, setName] = useState(source.name);
+  const [platform, setPlatform] = useState(source.platform || 'facebook');
+  const [catchrUrl, setCatchrUrl] = useState(source.catchrUrl ?? '');
+  const [spend, setSpend] = useState(String(source.totalSpend));
+  const [leads, setLeads] = useState(String(source.totalLeads));
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    const spendNum = spend.trim() === '' ? 0 : Number(spend);
+    const leadsNum = leads.trim() === '' ? 0 : Number(leads);
+    if (!Number.isFinite(spendNum) || spendNum < 0 || !Number.isFinite(leadsNum) || leadsNum < 0) {
+      toast.error('Spend and leads must be positive numbers');
+      return;
+    }
+    try {
+      await update.mutateAsync({
+        sourceId: source.id,
+        name: name.trim(),
+        platform,
+        catchrUrl: catchrUrl.trim() === '' ? null : catchrUrl.trim(),
+        totalSpend: spendNum,
+        totalLeads: Math.floor(leadsNum),
+      });
+      toast.success(`Updated "${name}"`);
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Update failed');
+    }
+  };
+
+  return (
+    <TableRow className="bg-muted/40">
+      <TableCell>
+        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+      </TableCell>
+      <TableCell>
+        <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+          {SUPPLIER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </TableCell>
+      <TableCell>
+        <Input value={catchrUrl} onChange={(e) => setCatchrUrl(e.target.value)} placeholder="https://catchr.io/ncp/..." />
+      </TableCell>
+      <TableCell>
+        <Input type="number" min={0} step="0.01" value={spend} onChange={(e) => setSpend(e.target.value)} className="text-right tabular-nums" />
+      </TableCell>
+      <TableCell>
+        <Input type="number" min={0} step={1} value={leads} onChange={(e) => setLeads(e.target.value)} className="text-right tabular-nums" />
+      </TableCell>
+      <TableCell colSpan={3} className="text-xs text-muted-foreground">
+        CPL / revenue / profit auto-recompute on save.
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1">
+          <Button size="sm" onClick={handleSave} disabled={update.isPending}>
+            {update.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onDone} disabled={update.isPending}>Cancel</Button>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -449,7 +661,9 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
         <div>
           <CardTitle className="text-base">Creatives</CardTitle>
           <CardDescription>
-            Ad assets running on this campaign. Visible to the client in the Compliance tab of their portal.
+            Assets live on the <span className="font-medium">campaign</span> (this vertical) and are
+            shared across every linked buyer. Each buyer approves their own copy via the Compliance
+            tab on their portal — IP + timestamp captured per decision for audit.
           </CardDescription>
         </div>
         <FileUpload folder="misc" maxSizeMB={50} label="Upload creative" onUploaded={handleUploaded} />
@@ -501,6 +715,126 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
                 </div>
               );
             })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Cost-per-lead editor (Sam #41) ─────────────────────────────────────────
+function CostPerLeadCard({
+  campaignId, value, computedCpl, currency,
+}: {
+  campaignId: string;
+  value: number | null;
+  computedCpl: number;
+  currency: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(value != null ? String(value) : '');
+  const update = useUpdateCampaign(campaignId);
+
+  const handleSave = async () => {
+    const parsed = draft.trim() === '' ? null : Number(draft);
+    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) {
+      toast.error('Enter a positive number (or leave blank to clear)');
+      return;
+    }
+    try {
+      await update.mutateAsync({ costPerLead: parsed });
+      setEditing(false);
+      toast.success(parsed != null ? `Cost per lead set to ${formatCurrency(parsed, currency)}` : 'Cost per lead cleared');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Cost per lead</CardTitle>
+        <CardDescription>
+          Manual supplier cost target. Distinct from the LeadByte-computed CPL of {formatCurrency(computedCpl, currency)}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!editing ? (
+          <div className="flex items-baseline justify-between">
+            <p className="text-3xl font-bold tabular-nums">
+              {value != null ? formatCurrency(value, currency) : <span className="text-muted-foreground text-base font-normal">Not set</span>}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => { setDraft(value != null ? String(value) : ''); setEditing(true); }}>
+              <Pencil className="size-4 mr-1.5" />Edit
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="0.00"
+              autoFocus
+              className="max-w-[180px]"
+            />
+            <Button size="sm" onClick={handleSave} disabled={update.isPending}>
+              {update.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Save className="size-4 mr-1.5" />}
+              Save
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={update.isPending}>
+              Cancel
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Linked clients (Slice 2 Day 1 join table — Sam #40) ───────────────────
+function LinkedClientsCard({
+  linkedClients, currency,
+}: {
+  linkedClients: CampaignLinkedClient[];
+  currency: string;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <UsersIcon className="size-4" />
+          Buyers
+        </CardTitle>
+        <CardDescription>
+          {linkedClients.length === 0
+            ? 'No buyers linked to this campaign yet.'
+            : `${linkedClients.length} client${linkedClients.length !== 1 ? 's' : ''} buying leads on this vertical`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {linkedClients.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Link buyers to this campaign via <code className="rounded bg-muted px-1 text-xs">POST /api/v1/campaigns/:id/clients</code>.
+            UI for adding buyers ships in a later Slice 2 day.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {linkedClients.map((c) => (
+              <div key={c.clientId} className="flex items-center justify-between rounded-lg border p-2.5">
+                <div className="min-w-0">
+                  <Link to={`/clients/${c.clientId}`} className="text-sm font-medium underline-offset-2 hover:underline">
+                    {c.clientName}
+                  </Link>
+                  <p className="text-xs text-muted-foreground capitalize">{c.status}</p>
+                </div>
+                <p className="text-sm font-medium tabular-nums">
+                  {c.leadPrice != null ? formatCurrency(c.leadPrice, c.currency || currency) : <span className="text-muted-foreground font-normal">—</span>}
+                </p>
+              </div>
+            ))}
           </div>
         )}
       </CardContent>

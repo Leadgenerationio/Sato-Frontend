@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Megaphone } from 'lucide-react';
+import { Search, ExternalLink, Megaphone, ChevronDown, ChevronRight, Layers, List as ListIcon } from 'lucide-react';
 import { useCampaigns, type CampaignSummary } from '@/lib/hooks/use-campaigns';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
@@ -40,13 +40,31 @@ function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
 
+type GroupMode = 'flat' | 'vertical';
+
+const GROUP_MODE_KEY = 'stato:campaigns:groupMode';
+
 export function CampaignsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
-  const { data, isLoading, error, refetch } = useCampaigns({ status: statusFilter, type: typeFilter, search: debouncedSearch, page, limit: 10 });
+  // Sam Loom #40 — campaigns grouped by vertical (Solar Panels / Hearing
+  // Aids / etc) is closer to his mental model than the flat list. Default
+  // to grouped; persist the choice so staff who prefer flat keep flat.
+  const [groupMode, setGroupMode] = useState<GroupMode>(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(GROUP_MODE_KEY) : null;
+    return stored === 'flat' ? 'flat' : 'vertical';
+  });
+  const handleGroupModeChange = (m: GroupMode) => {
+    setGroupMode(m);
+    try { localStorage.setItem(GROUP_MODE_KEY, m); } catch { /* ignore */ }
+  };
+  // Pull a bigger slice when grouped — Sam's expecting to see ALL the
+  // verticals on one page, not paginate by row count.
+  const limit = groupMode === 'vertical' ? 100 : 10;
+  const { data, isLoading, error, refetch } = useCampaigns({ status: statusFilter, type: typeFilter, search: debouncedSearch, page, limit });
   const campaigns = data?.campaigns;
 
   // Reset to page 1 when filters change
@@ -92,14 +110,38 @@ export function CampaignsPage() {
             ))}
           </div>
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search campaigns..."
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-lg bg-muted p-1">
+            <button
+              onClick={() => handleGroupModeChange('vertical')}
+              className={`shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                groupMode === 'vertical' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-pressed={groupMode === 'vertical'}
+            >
+              <Layers className="size-4" />
+              Group by vertical
+            </button>
+            <button
+              onClick={() => handleGroupModeChange('flat')}
+              className={`shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                groupMode === 'flat' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-pressed={groupMode === 'flat'}
+            >
+              <ListIcon className="size-4" />
+              Flat
+            </button>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search campaigns..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
       </div>
 
@@ -135,6 +177,8 @@ export function CampaignsPage() {
                   : 'Campaigns sync from LeadByte. Check that LeadByte is connected and has active campaigns.'
               }
             />
+          ) : groupMode === 'vertical' ? (
+            <VerticalGroupedView campaigns={campaigns} />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -196,7 +240,7 @@ export function CampaignsPage() {
             </div>
           )}
         </CardContent>
-        {data && data.total > 0 && (
+        {data && data.total > 0 && groupMode === 'flat' && (
           <Pagination
             page={data.page}
             pageSize={data.pageSize}
@@ -205,6 +249,128 @@ export function CampaignsPage() {
           />
         )}
       </Card>
+    </div>
+  );
+}
+
+// Sam Loom #40 — Solar Panels appears once at top level with its buyer
+// campaigns collapsible underneath. Each vertical row shows aggregate totals
+// so Sam can scan the verticals without drilling into every campaign.
+function VerticalGroupedView({ campaigns }: { campaigns: CampaignSummary[] }) {
+  // Group by vertical name. Empty/missing vertical → "(Uncategorised)".
+  const groups = new Map<string, CampaignSummary[]>();
+  for (const c of campaigns) {
+    const key = c.vertical?.trim() || '(Uncategorised)';
+    const existing = groups.get(key) ?? [];
+    existing.push(c);
+    groups.set(key, existing);
+  }
+  // Sort verticals by aggregate revenue desc so the highest-impact verticals
+  // float to the top — matches the leadreports.io ordering Sam called out.
+  const ordered = Array.from(groups.entries())
+    .map(([vertical, rows]) => ({
+      vertical,
+      rows,
+      totalLeadsMonth: rows.reduce((s, r) => s + r.leadsThisMonth, 0),
+      totalRevenue: rows.reduce((s, r) => s + r.totalRevenue, 0),
+      totalCost: rows.reduce((s, r) => s + r.totalCost, 0),
+    }))
+    .sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+  return (
+    <div className="p-2">
+      {ordered.map((g) => (
+        <VerticalGroup key={g.vertical} group={g} />
+      ))}
+    </div>
+  );
+}
+
+function VerticalGroup({
+  group,
+}: {
+  group: {
+    vertical: string;
+    rows: CampaignSummary[];
+    totalLeadsMonth: number;
+    totalRevenue: number;
+    totalCost: number;
+  };
+}) {
+  const [open, setOpen] = useState(true);
+  const margin = group.totalRevenue > 0
+    ? Math.round(((group.totalRevenue - group.totalCost) / group.totalRevenue) * 1000) / 10
+    : 0;
+
+  return (
+    <div className="border-b last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
+        aria-expanded={open}
+      >
+        {open ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
+        <Layers className="size-4 text-muted-foreground" />
+        <span className="font-semibold">{group.vertical}</span>
+        <Badge variant="secondary" className="text-xs">
+          {group.rows.length} buyer{group.rows.length === 1 ? '' : 's'}
+        </Badge>
+        <div className="ml-auto flex flex-wrap items-center gap-x-6 gap-y-1 text-xs tabular-nums">
+          <span><span className="text-muted-foreground">Month:</span> <span className="font-medium">{group.totalLeadsMonth.toLocaleString()}</span></span>
+          <span><span className="text-muted-foreground">Revenue:</span> <span className="font-medium">{formatCurrency(group.totalRevenue)}</span></span>
+          <span>
+            <span className="text-muted-foreground">Margin:</span>{' '}
+            <span className={`font-medium ${margin >= 50 ? 'text-emerald-600' : margin >= 30 ? 'text-amber-600' : 'text-destructive'}`}>
+              {margin}%
+            </span>
+          </span>
+        </div>
+      </button>
+      {open && (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="pl-12">Campaign</TableHead>
+              <TableHead>Client</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Month</TableHead>
+              <TableHead className="text-right">Revenue</TableHead>
+              <TableHead className="text-right">CPL</TableHead>
+              <TableHead className="text-right">Margin</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {group.rows.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell className="pl-12 max-w-[220px]">
+                  <div className="truncate font-medium">{c.name}</div>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{c.clientName}</TableCell>
+                <TableCell>
+                  <Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>{c.status}</Badge>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{c.leadsThisMonth}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(c.totalRevenue)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(c.cpl)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  <span className={c.margin >= 50 ? 'text-emerald-600' : c.margin >= 30 ? 'text-amber-600' : 'text-destructive'}>
+                    {c.margin}%
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <Link to={`/campaigns/${c.id}`}>
+                    <Button variant="ghost" size="icon" className="size-8">
+                      <ExternalLink className="size-4" />
+                    </Button>
+                  </Link>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </div>
   );
 }

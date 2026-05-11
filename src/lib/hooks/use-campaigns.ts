@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 
 export type CampaignType = 'pay_per_lead' | 'managed' | 'internal';
@@ -38,7 +38,23 @@ export type CampaignWindowKey =
   | 'last_month'
   | 'ytd';
 
+export interface CampaignLinkedClient {
+  clientId: string;
+  clientName: string;
+  leadPrice: number | null;
+  currency: string;
+  status: string;
+}
+
 export interface CampaignDetail extends CampaignSummary {
+  /** Sato DB UUID — distinct from `id` (LeadByte). Used as the PATCH target
+   * when editing Stato-side fields like cost_per_lead. */
+  satoId: string | null;
+  /** Manual supplier cost-per-lead (Sam #41). Distinct from the computed
+   * `cpl` field which is totalCost/totalLeads from LeadByte. */
+  costPerLead: number | null;
+  /** Slice 2 Day 1: buyers linked to this campaign via the join table. */
+  linkedClients: CampaignLinkedClient[];
   leadDeliveries: {
     date: string;
     leadCount: number;
@@ -95,16 +111,42 @@ export function useCampaign(id: string) {
   });
 }
 
+export interface UpdateCampaignInput {
+  costPerLead?: number | null;
+}
+
+export function useUpdateCampaign(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateCampaignInput) => {
+      const res = await api.patch<{ campaign: { id: string; costPerLead: number | null } }>(
+        `/api/v1/campaigns/${id}`,
+        input,
+      );
+      return unwrap(res).campaign;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['campaign', id] });
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+    },
+  });
+}
+
 export interface TrafficSource {
   id: string;
   campaignId: string;
   name: string;
   platform: string;
+  accountId: string;
   catchrUrl: string | null;
   isActive: boolean;
   totalSpend: number;
   totalLeads: number;
   cpl: number;
+  // Slice 2 Day 3 — leadreports.io-style row: revenue + net profit live on
+  // the same response so the table is one round-trip.
+  revenue: number;
+  netProfit: number;
   createdAt: string;
 }
 
@@ -118,5 +160,61 @@ export function useTrafficSources(campaignId: string) {
       return unwrap(res).sources;
     },
     enabled: !!campaignId,
+  });
+}
+
+export interface CreateTrafficSourceInput {
+  name: string;
+  platform?: string;
+  accountId?: string;
+  catchrUrl?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateTrafficSourceInput {
+  name?: string;
+  platform?: string;
+  accountId?: string;
+  catchrUrl?: string | null;
+  isActive?: boolean;
+  totalSpend?: number;
+  totalLeads?: number;
+}
+
+export function useCreateTrafficSource(campaignId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateTrafficSourceInput) => {
+      const res = await api.post<{ source: TrafficSource }>(
+        `/api/v1/campaigns/${campaignId}/sources`,
+        input,
+      );
+      return unwrap(res).source;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['campaign', campaignId, 'sources'] }),
+  });
+}
+
+export function useUpdateTrafficSource(campaignId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sourceId, ...input }: UpdateTrafficSourceInput & { sourceId: string }) => {
+      const res = await api.patch<{ source: TrafficSource }>(
+        `/api/v1/campaigns/${campaignId}/sources/${sourceId}`,
+        input,
+      );
+      return unwrap(res).source;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['campaign', campaignId, 'sources'] }),
+  });
+}
+
+export function useDeleteTrafficSource(campaignId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sourceId: string) => {
+      await api.delete(`/api/v1/campaigns/${campaignId}/sources/${sourceId}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['campaign', campaignId, 'sources'] }),
   });
 }
