@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateClient, type ClientContactInput, type ContactType } from '@/lib/hooks/use-clients';
+import { useLbBuyers } from '@/lib/hooks/use-leadbyte';
 
 export function ClientCreatePage() {
   const navigate = useNavigate();
@@ -261,8 +262,11 @@ export function ClientCreatePage() {
             <CardContent className="space-y-4">
               <p className="text-xs text-muted-foreground">Optional — link this client to external systems. Leave blank if unknown; you can fill in later.</p>
               <div className="space-y-2">
-                <Label>LeadByte Client ID</Label>
-                <Input value={form.leadbyteClientId} onChange={(e) => update('leadbyteClientId', e.target.value)} placeholder="e.g. lb-1" />
+                <Label>LeadByte Buyer</Label>
+                <LeadByteBuyerSelect
+                  value={form.leadbyteClientId}
+                  onChange={(v) => update('leadbyteClientId', v)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Endole Company ID</Label>
@@ -294,17 +298,78 @@ export function ClientCreatePage() {
             {createClient.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
             Create Client
           </Button>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-            <input
-              type="checkbox"
-              checked={sendAgreementAfter}
-              onChange={(e) => setSendAgreementAfter(e.target.checked)}
-              className="size-4 rounded border-input"
-            />
-            Send agreement immediately after creation
-          </label>
+          <div className="flex flex-col">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sendAgreementAfter}
+                onChange={(e) => setSendAgreementAfter(e.target.checked)}
+                className="size-4 rounded border-input"
+              />
+              Send agreement immediately after creation
+            </label>
+            {sendAgreementAfter && (
+              // Sam #27: he hit "no agreement to send" because nothing was
+              // uploaded yet. Make the prereq visible inline so staff know
+              // what the dialog will need.
+              <p className="text-xs text-muted-foreground mt-1.5 ml-6">
+                You'll need an agreement PDF ready to upload, or this dialog will be empty.
+              </p>
+            )}
+          </div>
         </div>
       </form>
     </div>
+  );
+}
+
+// Sam #26: replace the free-text LeadByte client id input with a dropdown
+// fed by /api/v1/leadbyte/buyers so staff don't have to memorise (or
+// fat-finger) the LeadByte buyer id.
+function LeadByteBuyerSelect({
+  value, onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { data: buyers, isLoading, isError } = useLbBuyers('Active');
+  const options = (buyers ?? []).slice().sort((a, b) => (a.company ?? '').localeCompare(b.company ?? ''));
+
+  if (isLoading) {
+    return <p className="text-xs text-muted-foreground">Loading buyers from LeadByte…</p>;
+  }
+  if (isError) {
+    // Fallback to text input so a LeadByte outage doesn't block client creation.
+    return (
+      <>
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="e.g. lb-1" />
+        <p className="text-xs text-amber-600">LeadByte unreachable — entering buyer id manually.</p>
+      </>
+    );
+  }
+  if (options.length === 0) {
+    return (
+      <>
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="e.g. lb-1" />
+        <p className="text-xs text-muted-foreground">No active LeadByte buyers found — enter id manually.</p>
+      </>
+    );
+  }
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+    >
+      <option value="">Select a buyer…</option>
+      {options.map((b) => {
+        const id = String(b.id ?? b.bid ?? '');
+        return (
+          <option key={id || b.company} value={id}>
+            {b.company}{b.bid ? ` · ${b.bid}` : id ? ` · ${id}` : ''}
+          </option>
+        );
+      })}
+    </select>
   );
 }
