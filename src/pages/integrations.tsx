@@ -19,7 +19,7 @@ interface IntegrationsOverview {
   signnow: { configured: boolean; sandbox: boolean; agreementCount: number };
   r2: { configured: boolean; bucket: string | null; fileCount: number };
   resend: { configured: boolean; fromEmail: string | null };
-  creditCheck: { configured: boolean; provider: 'creditsafe' | 'endole' | 'mock'; checksRun: number };
+  creditCheck: { configured: boolean; provider: 'creditsafe' | 'endole' | 'mock'; sandbox?: boolean; checksRun: number };
 }
 
 type CardStatus = 'live' | 'mock' | 'not_configured';
@@ -241,10 +241,12 @@ export function IntegrationsPage() {
       description: data.creditCheck.provider === 'mock' ? 'No provider configured' : `Powered by ${data.creditCheck.provider === 'creditsafe' ? 'Creditsafe' : 'Endole'}`,
       icon: ShieldCheck,
       iconColor: '#8b5cf6',
-      status: statusFor(true, data.creditCheck.configured),
+      status: statusFor(true, data.creditCheck.configured && !data.creditCheck.sandbox),
       metricLabel: 'Checks run',
       metricValue: data.creditCheck.checksRun.toLocaleString(),
-      detail: `Provider: ${data.creditCheck.provider}`,
+      detail: data.creditCheck.sandbox
+        ? 'SANDBOX — returns sample data, not real scores. Unset ENDOLE_SANDBOX to switch to production.'
+        : `Provider: ${data.creditCheck.provider}`,
     },
     {
       key: 'resend',

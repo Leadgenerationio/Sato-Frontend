@@ -19,6 +19,7 @@ interface PnlSummary {
   netProfit: string;
   margin: string; // "0..1" fraction
   uncategorisedCount: number;
+  unattributedSpendRows?: number;
 }
 
 function toMoney(s: string | number | null | undefined): number {
@@ -147,6 +148,14 @@ export function PnlWidget() {
               -{formatCurrency(adSpend, data.currency)}
             </span>
           </div>
+          {data.unattributedSpendRows && data.unattributedSpendRows > 0 ? (
+            <div className="flex items-start gap-1.5 rounded border border-amber-200 bg-amber-500/10 p-1.5 text-[11px] text-amber-700">
+              <AlertCircle className="size-3 mt-0.5 shrink-0" />
+              <span>
+                {data.unattributedSpendRows} Catchr row{data.unattributedSpendRows === 1 ? '' : 's'} unmapped — not counted in this P&amp;L. Map them in Integrations → Catchr.
+              </span>
+            </div>
+          ) : null}
           <Separator />
           <div className="flex items-center justify-between font-medium">
             <span>Total costs</span>
