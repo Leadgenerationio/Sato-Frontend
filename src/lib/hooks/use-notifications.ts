@@ -19,6 +19,8 @@ export interface Notification {
   message: string;
   read: boolean;
   createdAt: string;
+  severity?: 'info' | 'warning' | 'error' | null;
+  actionUrl?: string | null;
 }
 
 export interface NotificationListResponse {

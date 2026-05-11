@@ -18,7 +18,6 @@ import {
   Building2,
   Truck,
   Database,
-  Activity,
   FileSignature,
   FileText,
   Receipt,
@@ -72,7 +71,6 @@ const navItems: NavEntry[] = [
     icon: Database,
     roles: ['owner', 'ops_manager', 'finance_admin'],
     children: [
-      { href: '/leadbyte', label: 'Dashboard', icon: Activity, roles: ['owner', 'ops_manager', 'finance_admin'] },
       { href: '/leadbyte/buyers', label: 'Buyers', icon: Building2, roles: ['owner', 'ops_manager'] },
       { href: '/leadbyte/deliveries', label: 'Deliveries', icon: Truck, roles: ['owner', 'ops_manager'] },
     ],

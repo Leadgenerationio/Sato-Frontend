@@ -59,7 +59,6 @@ const NotFoundPage = lazy(() => import('@/pages/not-found').then((m) => ({ defau
 const LeadByteBuyersPage = lazy(() => import('@/pages/leadbyte/buyers').then((m) => ({ default: m.LeadByteBuyersPage })));
 const LeadByteDeliveriesPage = lazy(() => import('@/pages/leadbyte/deliveries').then((m) => ({ default: m.LeadByteDeliveriesPage })));
 const LeadByteRespondersPage = lazy(() => import('@/pages/leadbyte/responders').then((m) => ({ default: m.LeadByteRespondersPage })));
-const LeadByteDashboardPage = lazy(() => import('@/pages/leadbyte/dashboard').then((m) => ({ default: m.LeadByteDashboardPage })));
 const AgreementsPage = lazy(() => import('@/pages/agreements').then((m) => ({ default: m.AgreementsPage })));
 const AgreementEditorPage = lazy(() => import('@/pages/agreements/editor').then((m) => ({ default: m.AgreementEditorPage })));
 const IntegrationsPage = lazy(() => import('@/pages/integrations').then((m) => ({ default: m.IntegrationsPage })));
@@ -272,14 +271,10 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/leadbyte"
-              element={
-                <ProtectedRoute allowedRoles={['owner', 'ops_manager', 'finance_admin']}>
-                  <LeadByteDashboardPage />
-                </ProtectedRoute>
-              }
-            />
+            {/* /leadbyte standalone view was killed per Sam's feedback (Issue #70 / Section 14).
+                The native LeadByte dashboard isn't surfaced anymore; the canonical view is
+                Reports → Campaign. Redirect any stale links to deliveries. */}
+            <Route path="/leadbyte" element={<Navigate to="/leadbyte/deliveries" replace />} />
             <Route
               path="/leadbyte/buyers"
               element={
