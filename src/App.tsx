@@ -42,6 +42,7 @@ const ClientPnlReportPage = lazy(() => import('@/pages/reports/client-pnl').then
 const SupplierReportPage = lazy(() => import('@/pages/reports/supplier').then((m) => ({ default: m.SupplierReportPage })));
 const FinancialReportPage = lazy(() => import('@/pages/reports/financial').then((m) => ({ default: m.FinancialReportPage })));
 const AdSpendReportPage = lazy(() => import('@/pages/reports/ad-spend').then((m) => ({ default: m.AdSpendReportPage })));
+const UnifiedReportPage = lazy(() => import('@/pages/reports/unified').then((m) => ({ default: m.UnifiedReportPage })));
 const PortalDashboardPage = lazy(() => import('@/pages/portal/dashboard').then((m) => ({ default: m.PortalDashboardPage })));
 const PortalLeadsPage = lazy(() => import('@/pages/portal/leads').then((m) => ({ default: m.PortalLeadsPage })));
 const PortalInvoicesPage = lazy(() => import('@/pages/portal/invoices').then((m) => ({ default: m.PortalInvoicesPage })));
@@ -282,6 +283,16 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
                   <AdSpendReportPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Slice 4: unified report — Sam Loom #72-85. Old report routes
+                stay live during the frontend migration so links don't break. */}
+            <Route
+              path="/reports/unified"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
+                  <UnifiedReportPage />
                 </ProtectedRoute>
               }
             />

@@ -108,3 +108,61 @@ export function useFinancialReport() {
     },
   });
 }
+
+// ─── Slice 4 — unified leadreports.io-style report (Sam Loom #72-85) ────────
+// One row per (campaign × supplier), with revenue + profit + margin
+// computed server-side. Replaces the 5 separate report pages.
+
+export interface UnifiedReportRow {
+  campaignId: string;
+  campaignName: string;
+  clientName: string;
+  vertical: string;
+  supplier: string;
+  supplierPlatform: string;
+  catchrUrl: string | null;
+  leads: number;
+  spend: number;
+  revenue: number;
+  profit: number;
+  cpl: number;
+  margin: number;
+}
+
+export interface UnifiedReportTotals {
+  leads: number;
+  spend: number;
+  revenue: number;
+  profit: number;
+  margin: number;
+}
+
+export interface UnifiedReportResponse {
+  window: DeliveryWindow;
+  supplier: string | null;
+  campaign: string | null;
+  rows: UnifiedReportRow[];
+  totals: UnifiedReportTotals;
+}
+
+export interface UnifiedReportFilters {
+  window?: DeliveryWindow;
+  supplier?: string;
+  campaign?: string;
+}
+
+export function useUnifiedReport(filters: UnifiedReportFilters = {}) {
+  const window = filters.window ?? 'this_month';
+  const supplier = filters.supplier ?? '';
+  const campaign = filters.campaign ?? '';
+  return useQuery({
+    queryKey: ['report-unified', window, supplier, campaign],
+    queryFn: async () => {
+      const params = new URLSearchParams({ window });
+      if (supplier) params.set('supplier', supplier);
+      if (campaign) params.set('campaign', campaign);
+      const res = await api.get<UnifiedReportResponse>(`/api/v1/reports/unified?${params}`);
+      return unwrap(res);
+    },
+  });
+}
