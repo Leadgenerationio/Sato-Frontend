@@ -11,6 +11,14 @@ interface XeroBankAccount {
   code: string | null;
   currency: string;
   balance: string;
+  balanceDate: string | null;
+  unreconciledLines: number | null;
+}
+
+function formatAsOf(iso: string): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(d);
 }
 
 interface BankAccountsResponse {
@@ -65,7 +73,7 @@ export function BankWidget() {
 
         {!isLoading && (isError || !configured) && (
           <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-            {!configured ? 'Xero not connected. Configure XERO_CLIENT_ID + XERO_CLIENT_SECRET to see live balances.' : "Couldn't load balances from Xero. Check that the Custom Connection has accounting.reports.read scope."}
+            {!configured ? 'Xero not connected. Configure XERO_CLIENT_ID + XERO_CLIENT_SECRET to see live balances.' : "Couldn't load balances from Xero. Check that the Custom Connection has finance.statements.read scope (Finance API must be enabled on the app)."}
           </div>
         )}
 
@@ -81,13 +89,18 @@ export function BankWidget() {
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{account.name}</p>
-                {account.code && (
-                  <p className="truncate text-xs text-muted-foreground">Code {account.code}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {account.balanceDate ? `Statement balance · as of ${formatAsOf(account.balanceDate)}` : account.code ? `Code ${account.code}` : 'Statement balance'}
+                </p>
+              </div>
+              <div className="ml-3 text-right">
+                <p className="text-sm font-bold tabular-nums">
+                  {formatCurrency(toMoney(account.balance), account.currency)}
+                </p>
+                {account.unreconciledLines !== null && account.unreconciledLines > 0 && (
+                  <p className="text-[10px] text-muted-foreground">{account.unreconciledLines} unreconciled</p>
                 )}
               </div>
-              <p className="ml-3 text-sm font-bold tabular-nums">
-                {formatCurrency(toMoney(account.balance), account.currency)}
-              </p>
             </div>
           </div>
         ))}
