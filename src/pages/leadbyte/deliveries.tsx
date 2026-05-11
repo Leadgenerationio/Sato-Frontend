@@ -11,14 +11,42 @@ import { Truck, AlertTriangle } from 'lucide-react';
 
 const STATUS_TABS = ['all', 'Active', 'Inactive', 'Saved'] as const;
 
+function StatCard({ label, value }: { label: string; value: number | string }) {
+  return (
+    <Card className="gap-1 py-4">
+      <CardContent className="px-4">
+        <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function LeadByteDeliveriesPage() {
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_TABS)[number]>('all');
   const status = statusFilter === 'all' ? undefined : statusFilter;
   const { data: deliveries, isLoading, error } = useLbDeliveries(status);
+  // Always pull the full list for the count summary so the stat cards don't
+  // change when the user filters the table.
+  const { data: allDeliveries } = useLbDeliveries();
+  const totalCount = allDeliveries?.length ?? 0;
+  const activeCount = allDeliveries?.filter((d) => d.status === 'Active').length ?? 0;
+  const inactiveCount = allDeliveries?.filter((d) => d.status === 'Inactive').length ?? 0;
+  const savedCount = allDeliveries?.filter((d) => d.status === 'Saved').length ?? 0;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="LeadByte Deliveries" description="Delivery rules and routing configured in LeadByte" />
+      <PageHeader
+        title="LeadByte Deliveries"
+        description="Each row is a delivery rule — where leads from a campaign are routed (buyer, email, SMS, direct post). Counts below show how many rules are configured, not lead volume."
+      />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total" value={totalCount} />
+        <StatCard label="Active" value={activeCount} />
+        <StatCard label="Inactive" value={inactiveCount} />
+        <StatCard label="Saved" value={savedCount} />
+      </div>
 
       <div className="flex gap-2">
         {STATUS_TABS.map((s) => (
