@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
+import type { InvoiceSummary } from './use-invoices';
 
 export interface ClientSummary {
   id: string;
@@ -14,13 +15,39 @@ export interface ClientSummary {
   createdAt: string;
 }
 
+export type ContactType = 'primary' | 'billing' | 'compliance' | 'other';
+
+export interface ClientContact {
+  id: string;
+  contactType: ContactType;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
+export interface ClientContactInput {
+  contactType: ContactType;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
 export interface ClientDetail extends ClientSummary {
   companyNumber: string;
   contactPhone: string;
   address: string;
+  addressLine: string;
+  addressTown: string;
+  addressCounty: string;
+  addressCountry: string;
+  addressPostcode: string;
   paymentTermsDays: number;
   vatRegistered: boolean;
   addVatToInvoices: boolean;
+  vatNumber: string;
+  vatRate: number;
   leadPrice: number;
   billingWorkflow: string;
   onboardingStatus: string;
@@ -31,6 +58,7 @@ export interface ClientDetail extends ClientSummary {
   endoleCompanyId: string | null;
   xeroContactId: string | null;
   notes: string;
+  contacts: ClientContact[];
 }
 
 export interface CreditCheckEntry {
@@ -78,10 +106,14 @@ export function useClient(id: string) {
   });
 }
 
+export type ClientWriteInput = Omit<Partial<ClientDetail>, 'contacts'> & {
+  contacts?: ClientContactInput[];
+};
+
 export function useCreateClient() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Partial<ClientDetail>) => {
+    mutationFn: async (data: ClientWriteInput) => {
       const res = await api.post<{ client: ClientDetail }>('/api/v1/clients', data);
       return unwrap(res).client;
     },
@@ -92,7 +124,7 @@ export function useCreateClient() {
 export function useUpdateClient() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<ClientDetail> & { id: string }) => {
+    mutationFn: async ({ id, ...data }: ClientWriteInput & { id: string }) => {
       const res = await api.put<{ client: ClientDetail }>(`/api/v1/clients/${id}`, data);
       return unwrap(res).client;
     },
@@ -123,6 +155,106 @@ export function useRunCreditCheck() {
     },
     onSuccess: (_, clientId) => {
       qc.invalidateQueries({ queryKey: ['credit-history', clientId] });
+      qc.invalidateQueries({ queryKey: ['client', clientId] });
+    },
+  });
+}
+
+// ─── Client documents (Sam Loom #36) ───
+// Persisted in Postgres + R2. Replaces the localStorage-backed prototype.
+
+export interface ClientDocument {
+  id: string;
+  clientId: string;
+  r2Key: string;
+  folder: string;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy: string | null;
+  createdAt: string;
+}
+
+export interface AddDocumentInput {
+  r2Key: string;
+  folder?: string;
+  name: string;
+  contentType?: string;
+  sizeBytes?: number;
+}
+
+export function useClientDocuments(clientId: string) {
+  return useQuery({
+    queryKey: ['client-documents', clientId],
+    queryFn: async () => {
+      const res = await api.get<{ documents: ClientDocument[] }>(`/api/v1/clients/${clientId}/documents`);
+      return unwrap(res).documents;
+    },
+    enabled: !!clientId,
+  });
+}
+
+export function useAddClientDocument(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AddDocumentInput) => {
+      const res = await api.post<{ document: ClientDocument }>(`/api/v1/clients/${clientId}/documents`, input);
+      return unwrap(res).document;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['client-documents', clientId] }),
+  });
+}
+
+export function useRemoveClientDocument(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (docId: string) => {
+      await api.delete(`/api/v1/clients/${clientId}/documents/${docId}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['client-documents', clientId] }),
+  });
+}
+
+// ─── Client invoices (Sam Loom #30) ───
+// "I don't get why there is no invoices for this client" — the Invoices tab
+// on the client detail page now lists this client's Stato-DB invoices
+// instead of just linking off to the main invoices page.
+
+export interface ClientInvoicesResponse {
+  invoices: InvoiceSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export function useClientInvoices(clientId: string) {
+  return useQuery({
+    queryKey: ['client-invoices', clientId],
+    queryFn: async () => {
+      const res = await api.get<ClientInvoicesResponse>(`/api/v1/clients/${clientId}/invoices`);
+      return unwrap(res);
+    },
+    enabled: !!clientId,
+  });
+}
+
+export interface SyncInvoicesResult {
+  synced: number;
+  skipped: number;
+  totalRemote: number;
+  linkedContact: boolean;
+  message?: string;
+}
+
+export function useSyncClientInvoices(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<SyncInvoicesResult>(`/api/v1/clients/${clientId}/sync-invoices`);
+      return unwrap(res);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['client-invoices', clientId] });
       qc.invalidateQueries({ queryKey: ['client', clientId] });
     },
   });

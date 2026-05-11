@@ -1,29 +1,49 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCreateClient } from '@/lib/hooks/use-clients';
+import { useCreateClient, type ClientContactInput, type ContactType } from '@/lib/hooks/use-clients';
 
 export function ClientCreatePage() {
   const navigate = useNavigate();
   const createClient = useCreateClient();
 
+  // Sam's Loom #17: a real client (e.g. UK Energy Saving Network) has several
+  // contacts — primary, billing, compliance, sometimes more. Start with one
+  // empty primary row; staff can add more as needed.
+  const [contacts, setContacts] = useState<ClientContactInput[]>([
+    { contactType: 'primary', name: '', email: '', phone: '', role: '' },
+  ]);
+
+  function updateContact(idx: number, patch: Partial<ClientContactInput>) {
+    setContacts((prev) => prev.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
+  }
+  function addContact(type: ContactType) {
+    setContacts((prev) => [...prev, { contactType: type, name: '', email: '', phone: '', role: '' }]);
+  }
+  function removeContact(idx: number) {
+    setContacts((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   const [form, setForm] = useState({
     companyName: '',
     companyNumber: '',
-    contactName: '',
-    contactEmail: '',
-    contactPhone: '',
-    address: '',
+    addressLine: '',
+    addressTown: '',
+    addressCounty: '',
+    addressCountry: 'United Kingdom',
+    addressPostcode: '',
     currency: 'GBP',
     paymentTermsDays: 30,
     vatRegistered: false,
     addVatToInvoices: false,
+    vatNumber: '',
+    vatRate: 20,
     leadPrice: 0,
     billingWorkflow: 'weekly_auto',
     leadbyteClientId: '',
@@ -43,12 +63,13 @@ export function ClientCreatePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.companyName || !form.contactName || !form.contactEmail) {
-      toast.error('Please fill in company name, contact name, and email');
+    const primary = contacts.find((c) => c.contactType === 'primary');
+    if (!form.companyName || !primary || !primary.name || !primary.email) {
+      toast.error('Please fill in company name + primary contact name + email');
       return;
     }
     try {
-      const client = await createClient.mutateAsync(form);
+      const client = await createClient.mutateAsync({ ...form, contacts });
       // Backend fires credit check fire-and-forget; surface that to staff so
       // they don't think nothing happened.
       toast.success(
@@ -89,28 +110,91 @@ export function ClientCreatePage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Address</Label>
-                <Input value={form.address} onChange={(e) => update('address', e.target.value)} placeholder="10 Fleet Street, London" />
+                <Label>Address Line</Label>
+                <Input value={form.addressLine} onChange={(e) => update('addressLine', e.target.value)} placeholder="10 Fleet Street" />
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Town / City</Label>
+                  <Input value={form.addressTown} onChange={(e) => update('addressTown', e.target.value)} placeholder="London" />
+                </div>
+                <div className="space-y-2">
+                  <Label>County</Label>
+                  <Input value={form.addressCounty} onChange={(e) => update('addressCounty', e.target.value)} placeholder="Greater London" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Country</Label>
+                  <Input value={form.addressCountry} onChange={(e) => update('addressCountry', e.target.value)} placeholder="United Kingdom" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Postcode</Label>
+                  <Input value={form.addressPostcode} onChange={(e) => update('addressPostcode', e.target.value)} placeholder="EC4Y 1AA" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader><CardTitle className="text-base">Contact Details</CardTitle></CardHeader>
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Contacts</CardTitle>
+              <CardDescription>One primary contact required. Add billing or compliance contacts as needed.</CardDescription>
+            </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Contact Name *</Label>
-                <Input value={form.contactName} onChange={(e) => update('contactName', e.target.value)} placeholder="John Smith" />
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Email *</Label>
-                  <Input type="email" value={form.contactEmail} onChange={(e) => update('contactEmail', e.target.value)} placeholder="john@acme.co.uk" />
+              {contacts.map((c, idx) => (
+                <div key={idx} className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="space-y-1.5 flex-1">
+                      <Label>Type</Label>
+                      <select
+                        value={c.contactType}
+                        onChange={(e) => updateContact(idx, { contactType: e.target.value as ContactType })}
+                        disabled={idx === 0}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm disabled:opacity-60"
+                      >
+                        <option value="primary">Primary</option>
+                        <option value="billing">Billing</option>
+                        <option value="compliance">Compliance</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    {idx > 0 && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeContact(idx)} aria-label="Remove contact">
+                        <Trash2 className="size-4 text-red-600" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Name {c.contactType === 'primary' && '*'}</Label>
+                      <Input value={c.name} onChange={(e) => updateContact(idx, { name: e.target.value })} placeholder="Jamie Roberts" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Role / Title</Label>
+                      <Input value={c.role} onChange={(e) => updateContact(idx, { role: e.target.value })} placeholder="National Sales Director" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Email {c.contactType === 'primary' && '*'}</Label>
+                      <Input type="email" value={c.email} onChange={(e) => updateContact(idx, { email: e.target.value })} placeholder="jamie@uken.co.uk" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Phone</Label>
+                      <Input value={c.phone} onChange={(e) => updateContact(idx, { phone: e.target.value })} placeholder="+44 20 1234 5678" />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  <Input value={form.contactPhone} onChange={(e) => update('contactPhone', e.target.value)} placeholder="+44 20 1234 5678" />
-                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => addContact('billing')}>
+                  <Plus className="size-4 mr-1.5" />Add billing contact
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => addContact('compliance')}>
+                  <Plus className="size-4 mr-1.5" />Add compliance contact
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => addContact('other')}>
+                  <Plus className="size-4 mr-1.5" />Add other
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -155,6 +239,18 @@ export function ClientCreatePage() {
                   </select>
                 </div>
               </div>
+              {form.vatRegistered && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>VAT Number</Label>
+                    <Input value={form.vatNumber} onChange={(e) => update('vatNumber', e.target.value)} placeholder="GB123456789" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>VAT Rate (%)</Label>
+                    <Input type="number" min={0} max={100} step={0.01} value={form.vatRate} onChange={(e) => update('vatRate', Number(e.target.value))} />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
