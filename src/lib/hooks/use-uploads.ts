@@ -1,7 +1,7 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api';
 
-export type UploadFolder = 'invoices' | 'agreements' | 'creatives' | 'landing-pages' | 'misc';
+export type UploadFolder = 'invoices' | 'agreements' | 'creatives' | 'landing-pages' | 'sops' | 'misc';
 
 interface PresignInput {
   folder: UploadFolder;
@@ -72,4 +72,19 @@ export async function fetchFreshDownloadUrl(folder: UploadFolder, key: string): 
   const qs = new URLSearchParams({ folder, key });
   const res = await unwrap<{ url: string }>(api.get(`/api/v1/uploads/signed-url?${qs.toString()}`));
   return res.url;
+}
+
+/**
+ * React-Query wrapper that returns a 1-hour signed view URL for an uploaded
+ * file. Cached per (folder, key) so re-rendering grids of thumbnails doesn't
+ * re-fetch. Refreshes every 50 minutes to stay ahead of the 1-hour expiry.
+ */
+export function useUploadUrl(key: string | null | undefined, folder: UploadFolder = 'sops') {
+  return useQuery({
+    queryKey: ['upload-url', folder, key],
+    queryFn: () => fetchFreshDownloadUrl(folder, key!),
+    enabled: !!key,
+    staleTime: 50 * 60_000,
+    refetchInterval: 50 * 60_000,
+  });
 }
