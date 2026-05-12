@@ -3,6 +3,7 @@ import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/utils';
+import { SosButton } from '@/components/shared/sos-button';
 
 export function DashboardLayout() {
   const { sidebarOpen } = useUiStore();
@@ -18,6 +19,7 @@ export function DashboardLayout() {
       )}>
         <Outlet />
       </main>
+      <SosButton />
     </div>
   );
 }

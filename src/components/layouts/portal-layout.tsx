@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/shared/logo';
+import { SosButton } from '@/components/shared/sos-button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -86,6 +87,7 @@ export function PortalLayout() {
       <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
         <Outlet />
       </main>
+      <SosButton />
     </div>
   );
 }
