@@ -210,6 +210,28 @@ export function useUpdateTask(taskId: string) {
   });
 }
 
+// #91 AI new-task button — calls /tasks/ai-generate with a sentence,
+// returns a structured suggestion the user reviews + edits before save.
+export interface AiTaskSuggestion {
+  title: string;
+  description: string;
+  category: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  timeBlockMinutes: number | null;
+  linkedSopId: string | null;
+  linkedSopTitle: string | null;
+  subtasks: string[];
+}
+
+export function useGenerateTaskFromPrompt() {
+  return useMutation({
+    mutationFn: async (prompt: string) => {
+      const res = await api.post<{ suggestion: AiTaskSuggestion }>('/api/v1/tasks/ai-generate', { prompt });
+      return unwrap(res).suggestion;
+    },
+  });
+}
+
 export function useTaskChildren(taskId: string) {
   return useQuery({
     queryKey: ['task-children', taskId],

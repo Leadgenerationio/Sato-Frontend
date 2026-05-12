@@ -7,14 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Loader2, FileText, Repeat } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Repeat, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useCreateTask, useTaskTemplates, useTasks,
-  type TaskTemplate,
+  useGenerateTaskFromPrompt,
+  type TaskTemplate, type AiTaskSuggestion,
 } from '@/lib/hooks/use-tasks';
 import { useSops } from '@/lib/hooks/use-sops';
 import { useSearchParams } from 'react-router-dom';
+import { api } from '@/lib/api';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 
 const ASSIGNEES = ['Sam Owner', 'Finance Admin', 'Ops Manager'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
@@ -83,12 +88,48 @@ export function TaskCreatePage() {
   const [recurPreset, setRecurPreset] = useState<string>('none');
   const [customCron, setCustomCron] = useState<string>('');
 
+  // #91 AI new-task — pending subtasks after the AI suggestion lands.
+  // The form has no subtasks UI of its own (subtasks live on detail), so
+  // we stash the AI-suggested ones and create them post-task-insert.
+  const [pendingSubtasks, setPendingSubtasks] = useState<string[]>([]);
+  // Dialog state for the prompt input.
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const aiGenerate = useGenerateTaskFromPrompt();
+
   function fillFromTemplate(template: TaskTemplate) {
     setTitle(template.name);
     setDescription(template.description);
     setPriority(template.priority);
     setCategory(template.category);
     toast.success(`Template "${template.name}" applied`);
+  }
+
+  function applyAiSuggestion(s: AiTaskSuggestion) {
+    setTitle(s.title);
+    setDescription(s.description);
+    setPriority(s.priority);
+    setCategory(s.category);
+    setTimeBlockMinutes(s.timeBlockMinutes);
+    if (s.linkedSopId) setLinkedSopId(s.linkedSopId);
+    setPendingSubtasks(s.subtasks);
+  }
+
+  async function handleAiGenerate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!aiPrompt.trim()) return;
+    try {
+      const suggestion = await aiGenerate.mutateAsync(aiPrompt.trim());
+      applyAiSuggestion(suggestion);
+      setAiOpen(false);
+      setAiPrompt('');
+      toast.success('AI suggestion applied — review and edit before saving');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to generate';
+      // 503 → not configured; 502 → bad output. Both should land here as
+      // Error.message from the api unwrap helper.
+      toast.error(msg);
+    }
   }
 
   // Resolve recurrence picker state → the cron string we send to backend.
@@ -123,6 +164,23 @@ export function TaskCreatePage() {
         parentTaskId: parentTaskId || null,
         recurrenceCron: resolveRecurrenceCron(),
       });
+
+      // #91 — once the task exists, fan out the AI-suggested subtasks.
+      // Hit the endpoint directly (useCreateSubtask is bound to a taskId
+      // at hook creation, which we don't have until now). Failure here
+      // is non-fatal — the task is already created and the user can
+      // re-add subtasks manually on the detail page.
+      if (pendingSubtasks.length > 0) {
+        try {
+          await Promise.all(pendingSubtasks.map((subtaskTitle) =>
+            api.post(`/api/v1/tasks/${task.id}/subtasks`, { title: subtaskTitle }),
+          ));
+        } catch (err) {
+          console.error('Subtask creation failed', err);
+          toast.warning('Task created but some subtasks failed — add them on the detail page');
+        }
+      }
+
       toast.success(`Task "${task.title}" created`);
       navigate(`/tasks/${task.id}`);
     } catch (err) {
@@ -135,8 +193,58 @@ export function TaskCreatePage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
         <Link to="/tasks"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <PageHeader title="Create Task" description="Add a new task for the team" />
+        <PageHeader title="Create Task" description="Add a new task for the team">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAiOpen(true)}
+            className="gap-1.5"
+          >
+            <Sparkles className="size-4 text-violet-500" />
+            Generate with AI
+          </Button>
+        </PageHeader>
       </div>
+
+      {/* #91 AI dialog */}
+      <Dialog open={aiOpen} onOpenChange={setAiOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="size-5 text-violet-500" />
+              Generate task from a sentence
+            </DialogTitle>
+            <DialogDescription>
+              Describe what needs doing in one line. The AI will draft the title,
+              description, subtasks, time estimate, and suggest a linked SOP.
+              You can edit everything before saving.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAiGenerate} className="space-y-3">
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="e.g. monthly Xero VAT export and submission"
+              rows={3}
+              maxLength={500}
+              autoFocus
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">
+              Keep it short — a sentence is enough. Up to 500 chars.
+            </p>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAiOpen(false)} disabled={aiGenerate.isPending}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={aiGenerate.isPending || !aiPrompt.trim()}>
+                {aiGenerate.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Sparkles className="size-4 mr-1.5" />}
+                Generate
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -299,6 +407,37 @@ export function TaskCreatePage() {
               {createTask.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
               Create Task
             </Button>
+
+            {/* AI-suggested subtasks preview (#91) — shown only when AI
+                filled them; user can drop any line by clicking ✕ */}
+            {pendingSubtasks.length > 0 && (
+              <Card className="border-violet-200 bg-violet-50/50">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="size-4 text-violet-500" />
+                    AI-suggested subtasks
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Will be created after the task. Edit on the detail page.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-1.5">
+                  {pendingSubtasks.map((s, i) => (
+                    <div key={i} className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5">
+                      <span className="flex-1 text-sm">{s}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingSubtasks((prev) => prev.filter((_, idx) => idx !== i))}
+                        aria-label="Remove subtask"
+                        className="text-muted-foreground hover:text-red-600 text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Templates */}
             {templates && templates.length > 0 && (
