@@ -32,6 +32,39 @@ const TIME_BLOCKS: { label: string; minutes: number | null }[] = [
   { label: 'Full day', minutes: 480 },
 ];
 
+// Slice 5 Day 7 — recurrence presets. 99% of recurring tasks fall into
+// one of these. "Custom" reveals a free-form cron input for the rare case.
+// Backend validates the syntax server-side; we only do a cheap 5-field
+// check here so the Save button can disable on obvious typos.
+const RECURRENCE_PRESETS: { id: string; cron: string | null; label: string }[] = [
+  { id: 'none',     cron: null,           label: 'No repeat' },
+  { id: 'daily',    cron: '0 9 * * *',    label: 'Daily at 09:00' },
+  { id: 'weekday',  cron: '0 9 * * 1-5',  label: 'Weekdays at 09:00' },
+  { id: 'weekly',   cron: '0 9 * * 1',    label: 'Every Monday at 09:00' },
+  { id: 'monthly',  cron: '0 9 1 * *',    label: '1st of every month at 09:00' },
+  { id: 'custom',   cron: '',             label: 'Custom…' },
+];
+
+// Quick check: 5 non-empty fields separated by whitespace. Backend does
+// the real parse — this is just to gate the Save button on obvious typos.
+function looksLikeCron(s: string): boolean {
+  return s.trim().split(/\s+/).filter(Boolean).length === 5;
+}
+
+// Match an existing cron string against the presets so the picker shows
+// the right preset selected when opening edit on an already-recurring task.
+function cronToPresetId(cron: string | null | undefined): string {
+  if (!cron) return 'none';
+  const hit = RECURRENCE_PRESETS.find((p) => p.cron === cron);
+  return hit?.id ?? 'custom';
+}
+
+function describeRecurrence(cron: string | null | undefined): string {
+  if (!cron) return 'No repeat';
+  const hit = RECURRENCE_PRESETS.find((p) => p.cron === cron);
+  return hit?.label ?? cron;
+}
+
 const statusColors: Record<string, string> = {
   todo: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
   in_progress: 'bg-blue-500/10 text-blue-600 border-blue-200',
@@ -524,16 +557,45 @@ function RelationshipsCard({ task }: { task: TaskDetail }) {
   const [tb, setTb] = useState<number | null>(task.timeBlockMinutes ?? null);
   const [sop, setSop] = useState<string>(task.linkedSopId ?? '');
   const [parent, setParent] = useState<string>(task.parentTaskId ?? '');
+  // Recurrence: preset id ('none' | 'daily' | … | 'custom') drives the
+  // dropdown; for 'custom' we hold the raw cron string in customCron.
+  const [recurPreset, setRecurPreset] = useState<string>(cronToPresetId(task.recurrenceCron));
+  const [customCron, setCustomCron] = useState<string>(
+    cronToPresetId(task.recurrenceCron) === 'custom' ? (task.recurrenceCron ?? '') : '',
+  );
 
   const linkedSop = sopsPage?.sops.find((s) => s.id === task.linkedSopId);
   const parentTask = parentCandidatesPage?.tasks.find((t) => t.id === task.parentTaskId);
 
+  // Resolve the picker state to the cron string we send to backend.
+  // null = clear recurrence; '' (empty custom) = keep current (treat as no-op).
+  function resolveCron(): string | null | undefined {
+    if (recurPreset === 'none') return null;
+    if (recurPreset === 'custom') {
+      const v = customCron.trim();
+      return v.length === 0 ? undefined : v;
+    }
+    const preset = RECURRENCE_PRESETS.find((p) => p.id === recurPreset);
+    return preset?.cron ?? null;
+  }
+
+  const canSave = (() => {
+    if (recurPreset !== 'custom') return true;
+    const v = customCron.trim();
+    return v.length === 0 || looksLikeCron(v);
+  })();
+
   const handleSave = async () => {
     try {
+      const cronValue = resolveCron();
+      // Only include recurrenceCron in the payload if it changed — saves a
+      // pointless activity event when the user only touched other fields.
+      const recurChanged = cronValue !== undefined && cronValue !== task.recurrenceCron;
       await update.mutateAsync({
         timeBlockMinutes: tb,
         linkedSopId: sop || null,
         parentTaskId: parent || null,
+        ...(recurChanged ? { recurrenceCron: cronValue } : {}),
       });
       setEditing(false);
       toast.success('Task updated');
@@ -546,6 +608,8 @@ function RelationshipsCard({ task }: { task: TaskDetail }) {
     setTb(task.timeBlockMinutes ?? null);
     setSop(task.linkedSopId ?? '');
     setParent(task.parentTaskId ?? '');
+    setRecurPreset(cronToPresetId(task.recurrenceCron));
+    setCustomCron(cronToPresetId(task.recurrenceCron) === 'custom' ? (task.recurrenceCron ?? '') : '');
     setEditing(false);
   };
 
@@ -636,9 +700,62 @@ function RelationshipsCard({ task }: { task: TaskDetail }) {
           )}
         </div>
 
+        {/* Recurrence (Slice 5 Day 7 — Sam #96) */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1.5">
+            <Repeat className="size-3.5" />Repeat
+          </label>
+          {editing ? (
+            <>
+              <select
+                value={recurPreset}
+                onChange={(e) => setRecurPreset(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              >
+                {RECURRENCE_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+              {recurPreset === 'custom' && (
+                <div className="space-y-1">
+                  <Input
+                    value={customCron}
+                    onChange={(e) => setCustomCron(e.target.value)}
+                    placeholder="e.g. */15 9-17 * * 1-5"
+                    className="font-mono text-xs"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    5-field cron: minute hour day-of-month month day-of-week.
+                    {customCron.trim() && !looksLikeCron(customCron) && (
+                      <span className="text-red-600"> Need 5 space-separated fields.</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </>
+          ) : task.recurrenceCron ? (
+            <div>
+              <p className="text-sm">{describeRecurrence(task.recurrenceCron)}</p>
+              {task.recurrenceNextRun && (
+                <p className="text-xs text-muted-foreground">
+                  Next: {formatDateTime(task.recurrenceNextRun)}
+                </p>
+              )}
+              {/* If we showed a friendly label, expose the raw cron too for power users. */}
+              {describeRecurrence(task.recurrenceCron) !== task.recurrenceCron && (
+                <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                  {task.recurrenceCron}
+                </code>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No repeat</p>
+          )}
+        </div>
+
         {editing && (
           <div className="flex gap-2 pt-2 border-t">
-            <Button size="sm" onClick={handleSave} disabled={update.isPending}>
+            <Button size="sm" onClick={handleSave} disabled={update.isPending || !canSave}>
               {update.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
               Save
             </Button>

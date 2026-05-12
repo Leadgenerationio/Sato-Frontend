@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useCreateTask, useTaskTemplates, useTasks,
@@ -31,6 +31,21 @@ const TIME_BLOCKS: { label: string; minutes: number | null }[] = [
   { label: 'Half day', minutes: 240 },
   { label: 'Full day', minutes: 480 },
 ];
+
+// Slice 5 Day 7 — recurrence presets (mirror of detail.tsx). Backend
+// auto-computes recurrenceNextRun when only cron is sent.
+const RECURRENCE_PRESETS: { id: string; cron: string | null; label: string }[] = [
+  { id: 'none',     cron: null,           label: 'No repeat' },
+  { id: 'daily',    cron: '0 9 * * *',    label: 'Daily at 09:00' },
+  { id: 'weekday',  cron: '0 9 * * 1-5',  label: 'Weekdays at 09:00' },
+  { id: 'weekly',   cron: '0 9 * * 1',    label: 'Every Monday at 09:00' },
+  { id: 'monthly',  cron: '0 9 1 * *',    label: '1st of every month at 09:00' },
+  { id: 'custom',   cron: '',             label: 'Custom…' },
+];
+
+function looksLikeCron(s: string): boolean {
+  return s.trim().split(/\s+/).filter(Boolean).length === 5;
+}
 
 const priorityColors: Record<string, string> = {
   urgent: 'bg-red-500/10 text-red-600 border-red-200',
@@ -65,6 +80,8 @@ export function TaskCreatePage() {
   const [timeBlockMinutes, setTimeBlockMinutes] = useState<number | null>(null);
   const [linkedSopId, setLinkedSopId] = useState<string>('');
   const [parentTaskId, setParentTaskId] = useState<string>(initialParent ?? '');
+  const [recurPreset, setRecurPreset] = useState<string>('none');
+  const [customCron, setCustomCron] = useState<string>('');
 
   function fillFromTemplate(template: TaskTemplate) {
     setTitle(template.name);
@@ -74,10 +91,24 @@ export function TaskCreatePage() {
     toast.success(`Template "${template.name}" applied`);
   }
 
+  // Resolve recurrence picker state → the cron string we send to backend.
+  // null = none; valid 5-field cron = set; empty custom = skip (treat as none).
+  function resolveRecurrenceCron(): string | null {
+    if (recurPreset === 'none') return null;
+    if (recurPreset === 'custom') {
+      const v = customCron.trim();
+      return v.length === 0 ? null : v;
+    }
+    const preset = RECURRENCE_PRESETS.find((p) => p.id === recurPreset);
+    return preset?.cron ?? null;
+  }
+  const canSaveRecur = recurPreset !== 'custom' || customCron.trim().length === 0 || looksLikeCron(customCron);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) { toast.error('Task title is required'); return; }
     if (!assignee) { toast.error('Assignee is required'); return; }
+    if (!canSaveRecur) { toast.error('Repeat: cron needs 5 space-separated fields'); return; }
 
     try {
       const task = await createTask.mutateAsync({
@@ -90,6 +121,7 @@ export function TaskCreatePage() {
         timeBlockMinutes,
         linkedSopId: linkedSopId || null,
         parentTaskId: parentTaskId || null,
+        recurrenceCron: resolveRecurrenceCron(),
       });
       toast.success(`Task "${task.title}" created`);
       navigate(`/tasks/${task.id}`);
@@ -222,6 +254,41 @@ export function TaskCreatePage() {
                 <p className="text-xs text-muted-foreground">
                   Use this to group sub-tasks under a parent "project" task.
                 </p>
+              </div>
+              <div className="space-y-2">
+                <Label className="inline-flex items-center gap-1.5">
+                  <Repeat className="size-3.5" />Repeat
+                </Label>
+                <select
+                  value={recurPreset}
+                  onChange={(e) => setRecurPreset(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                >
+                  {RECURRENCE_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </select>
+                {recurPreset === 'custom' && (
+                  <div className="space-y-1">
+                    <Input
+                      value={customCron}
+                      onChange={(e) => setCustomCron(e.target.value)}
+                      placeholder="e.g. */15 9-17 * * 1-5"
+                      className="font-mono text-xs"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      5-field cron: minute hour day-of-month month day-of-week.
+                      {customCron.trim() && !looksLikeCron(customCron) && (
+                        <span className="text-red-600"> Need 5 space-separated fields.</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+                {recurPreset !== 'none' && recurPreset !== 'custom' && (
+                  <p className="text-xs text-muted-foreground">
+                    A fresh copy of this task will be auto-created on every fire.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

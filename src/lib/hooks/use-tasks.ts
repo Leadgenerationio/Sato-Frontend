@@ -162,6 +162,7 @@ export interface TaskMutationInput {
   timeBlockMinutes?: number | null;
   linkedSopId?: string | null;
   parentTaskId?: string | null;
+  recurrenceCron?: string | null;
 }
 
 export function useCreateTask() {
@@ -188,6 +189,9 @@ export interface UpdateTaskInput {
   timeBlockMinutes?: number | null;
   linkedSopId?: string | null;
   parentTaskId?: string | null;
+  // Slice 5 Day 7 — recurrence. null clears, a valid cron sets;
+  // backend auto-computes recurrenceNextRun when omitted.
+  recurrenceCron?: string | null;
 }
 
 export function useUpdateTask(taskId: string) {
