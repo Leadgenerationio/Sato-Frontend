@@ -36,6 +36,7 @@ const WorkflowCreatePage = lazy(() => import('@/pages/workflows/create').then((m
 const TasksPage = lazy(() => import('@/pages/tasks/index').then((m) => ({ default: m.TasksPage })));
 const TaskDetailPage = lazy(() => import('@/pages/tasks/detail').then((m) => ({ default: m.TaskDetailPage })));
 const TaskCreatePage = lazy(() => import('@/pages/tasks/create').then((m) => ({ default: m.TaskCreatePage })));
+const SosAdminPage = lazy(() => import('@/pages/sos/index').then((m) => ({ default: m.SosAdminPage })));
 // Slice 4 Day 3 — the 5 split reports were folded into UnifiedReportPage.
 // Old routes still resolve so deep links from Sam, dashboards, or external
 // docs don't 404 — they redirect to /reports/unified.
@@ -207,6 +208,14 @@ export default function App() {
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/tasks/create" element={<TaskCreatePage />} />
             <Route path="/tasks/:id" element={<TaskDetailPage />} />
+            <Route
+              path="/sos"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager', 'finance_admin']}>
+                  <SosAdminPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/sops" element={<SopsPage />} />
             <Route path="/sops/create" element={<SopCreatePage />} />
             <Route path="/sops/:id/edit" element={<SopEditPage />} />

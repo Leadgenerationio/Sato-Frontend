@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 
 // Slice 5 Day 6 (Sam Loom #100). The SOS button hits POST /sos which
@@ -24,6 +24,48 @@ export function useSendSos() {
     mutationFn: async (input: { pagePath?: string; message?: string }) => {
       const res = await api.post<SosCreateResponse>('/api/v1/sos', input);
       return unwrap(res);
+    },
+  });
+}
+
+// Slice 5 Day 7 — admin queue view. Backend gates list+resolve to
+// owner / ops_manager / finance_admin only.
+export interface SosHelpRequest {
+  id: string;
+  userId: string | null;
+  pagePath: string | null;
+  message: string | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  createdAt: string;
+  userName?: string | null;
+  userEmail?: string | null;
+}
+
+export function useListSos(opts: { unresolvedOnly?: boolean; limit?: number } = {}) {
+  const params = new URLSearchParams();
+  if (opts.unresolvedOnly) params.set('unresolved', 'true');
+  if (opts.limit) params.set('limit', String(opts.limit));
+  const qs = params.toString();
+
+  return useQuery({
+    queryKey: ['sos-list', opts],
+    queryFn: async () => {
+      const res = await api.get<{ requests: SosHelpRequest[] }>(`/api/v1/sos${qs ? `?${qs}` : ''}`);
+      return unwrap(res).requests;
+    },
+  });
+}
+
+export function useResolveSos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.post<{ request: SosHelpRequest }>(`/api/v1/sos/${id}/resolve`);
+      return unwrap(res).request;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sos-list'] });
     },
   });
 }
