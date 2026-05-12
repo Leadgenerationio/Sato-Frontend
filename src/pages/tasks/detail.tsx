@@ -1,16 +1,36 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Send, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft, Send, Loader2, Plus, Trash2, CheckSquare, Square, Paperclip,
+  Download, Activity as ActivityIcon, Repeat, Clock, FileText,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  useTask, useUpdateTaskStatus, useAddComment,
-  type TaskComment,
+  useTask, useUpdateTaskStatus, useAddComment, useUpdateTask, useTaskChildren, useTasks,
+  useCreateSubtask, useUpdateSubtask, useDeleteSubtask,
+  useAddTaskAttachment, useRemoveTaskAttachment,
+  type TaskComment, type TaskSubtask, type TaskAttachment, type TaskActivityEvent,
+  type TaskDetail, type TaskSummary,
 } from '@/lib/hooks/use-tasks';
+import { useSops } from '@/lib/hooks/use-sops';
+import { FileUpload } from '@/components/shared/file-upload';
+import { fetchFreshDownloadUrl, type PresignedUpload, type UploadFolder } from '@/lib/hooks/use-uploads';
+
+const TIME_BLOCKS: { label: string; minutes: number | null }[] = [
+  { label: 'No estimate', minutes: null },
+  { label: '15 min', minutes: 15 },
+  { label: '30 min', minutes: 30 },
+  { label: '1 hour', minutes: 60 },
+  { label: '2 hours', minutes: 120 },
+  { label: 'Half day', minutes: 240 },
+  { label: 'Full day', minutes: 480 },
+];
 
 const statusColors: Record<string, string> = {
   todo: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
@@ -59,6 +79,34 @@ function formatDateTime(dateStr: string) {
   return new Date(dateStr).toLocaleString('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Slice 5 Day 3 — activity-feed event labels. Falls back to the raw event
+// type if the vocabulary grows beyond what's listed here.
+function describeActivity(ev: TaskActivityEvent): string {
+  const actor = ev.actorName || 'Someone';
+  const p = ev.payload as Record<string, unknown> | null;
+  switch (ev.eventType) {
+    case 'task_created':       return `${actor} created the task`;
+    case 'task_updated':       return `${actor} updated the task`;
+    case 'status_changed':     return `${actor} moved status ${p?.from ?? '?'} → ${p?.to ?? '?'}`;
+    case 'assignee_changed':   return `${actor} changed the assignee`;
+    case 'comment_added':      return `${actor} commented`;
+    case 'subtask_added':      return `${actor} added subtask "${p?.title ?? ''}"`;
+    case 'subtask_completed':  return `${actor} completed "${p?.title ?? ''}"`;
+    case 'subtask_uncompleted':return `${actor} reopened "${p?.title ?? ''}"`;
+    case 'subtask_removed':    return `${actor} removed subtask "${p?.title ?? ''}"`;
+    case 'attachment_added':   return `${actor} attached "${p?.name ?? ''}"`;
+    case 'attachment_removed': return `${actor} removed "${p?.name ?? ''}"`;
+    case 'recurrence_set':     return `${actor} set recurrence "${p?.cron ?? ''}"`;
+    default:                   return `${actor} · ${ev.eventType}`;
+  }
 }
 
 export function TaskDetailPage() {
@@ -150,6 +198,18 @@ export function TaskDetailPage() {
             </Card>
           )}
 
+          {/* Relationships (Sam #94 time-block, #97 SOP, #95 parent) */}
+          <RelationshipsCard task={task} />
+
+          {/* Children (Sam #95 — child tasks of this parent) */}
+          <ChildrenCard taskId={id!} />
+
+          {/* Subtasks (Sam #90) */}
+          <SubtasksCard taskId={id!} subtasks={task.subtasks ?? []} />
+
+          {/* Attachments (Sam #87, #98) */}
+          <AttachmentsCard taskId={id!} attachments={task.attachments ?? []} />
+
           {/* Comments */}
           <Card>
             <CardHeader>
@@ -222,8 +282,31 @@ export function TaskDetailPage() {
                 <span className="text-muted-foreground">Created At</span>
                 <span className="font-medium tabular-nums">{formatDateTime(task.createdAt)}</span>
               </div>
+              {task.timeBlockMinutes != null && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                    <Clock className="size-3.5" />Time block
+                  </span>
+                  <span className="font-medium">
+                    {task.timeBlockMinutes < 60
+                      ? `${task.timeBlockMinutes} min`
+                      : `${(task.timeBlockMinutes / 60).toFixed(task.timeBlockMinutes % 60 === 0 ? 0 : 1)} hr`}
+                  </span>
+                </div>
+              )}
+              {task.recurrenceCron && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                    <Repeat className="size-3.5" />Recurrence
+                  </span>
+                  <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{task.recurrenceCron}</code>
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          {/* Activity feed (Sam #88) */}
+          <ActivityCard activity={task.activity ?? []} />
 
           {/* Status Actions */}
           {transitions.length > 0 && (
@@ -250,5 +333,392 @@ export function TaskDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Subtasks card (Sam #90) ────────────────────────────────────────────────
+function SubtasksCard({ taskId, subtasks }: { taskId: string; subtasks: TaskSubtask[] }) {
+  const create = useCreateSubtask(taskId);
+  const update = useUpdateSubtask(taskId);
+  const remove = useDeleteSubtask(taskId);
+  const [newTitle, setNewTitle] = useState('');
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const title = newTitle.trim();
+    if (!title) return;
+    try {
+      await create.mutateAsync({ title });
+      setNewTitle('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add subtask');
+    }
+  };
+
+  const toggleDone = async (s: TaskSubtask) => {
+    try {
+      await update.mutateAsync({ subtaskId: s.id, isDone: !s.isDone });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update subtask');
+    }
+  };
+
+  const handleRemove = async (s: TaskSubtask) => {
+    try {
+      await remove.mutateAsync(s.id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove');
+    }
+  };
+
+  const done = subtasks.filter((s) => s.isDone).length;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Subtasks {subtasks.length > 0 && (
+          <span className="text-sm text-muted-foreground font-normal ml-1">
+            {done}/{subtasks.length} done
+          </span>
+        )}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {subtasks.length === 0 && (
+          <p className="text-sm text-muted-foreground">No subtasks yet — add one below.</p>
+        )}
+        {subtasks.map((s) => (
+          <div key={s.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
+            <button
+              type="button"
+              onClick={() => toggleDone(s)}
+              aria-label={s.isDone ? 'Mark as not done' : 'Mark as done'}
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              {s.isDone ? <CheckSquare className="size-5 text-emerald-600" /> : <Square className="size-5" />}
+            </button>
+            <span className={`flex-1 text-sm ${s.isDone ? 'line-through text-muted-foreground' : ''}`}>
+              {s.title}
+            </span>
+            <Button variant="ghost" size="icon" onClick={() => handleRemove(s)} aria-label="Remove">
+              <Trash2 className="size-4 text-red-600" />
+            </Button>
+          </div>
+        ))}
+        <form onSubmit={handleAdd} className="flex gap-2 pt-2 border-t">
+          <Input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            placeholder="Add a subtask…"
+          />
+          <Button type="submit" size="icon" disabled={create.isPending || !newTitle.trim()} aria-label="Add subtask">
+            {create.isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Attachments card (Sam #87, #98) ────────────────────────────────────────
+function AttachmentsCard({ taskId, attachments }: { taskId: string; attachments: TaskAttachment[] }) {
+  const add = useAddTaskAttachment(taskId);
+  const remove = useRemoveTaskAttachment(taskId);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleUploaded = async (result: PresignedUpload, file: File) => {
+    try {
+      await add.mutateAsync({
+        r2Key: result.key,
+        folder: result.folder,
+        name: file.name,
+        contentType: result.contentType,
+        sizeBytes: result.sizeBytes,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Saved to storage, but failed to record');
+    }
+  };
+
+  const handleDownload = async (a: TaskAttachment) => {
+    try {
+      setDownloadingId(a.id);
+      const url = await fetchFreshDownloadUrl(a.folder as UploadFolder, a.r2Key);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate link');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleRemove = async (a: TaskAttachment) => {
+    try {
+      await remove.mutateAsync(a.id);
+      toast.info('Removed from task. File still in storage.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Paperclip className="size-4" />
+            Attachments
+          </CardTitle>
+          <CardDescription>{attachments.length === 0 ? 'No files attached yet' : `${attachments.length} file${attachments.length === 1 ? '' : 's'} attached`}</CardDescription>
+        </div>
+        <FileUpload folder="misc" maxSizeMB={50} label="Upload" onUploaded={handleUploaded} />
+      </CardHeader>
+      <CardContent>
+        {attachments.length > 0 && (
+          <div className="space-y-2">
+            {attachments.map((a) => (
+              <div key={a.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <FileText className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium" title={a.name}>{a.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBytes(a.sizeBytes)} · {formatDateTime(a.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => handleDownload(a)} disabled={downloadingId === a.id} aria-label="Download">
+                    {downloadingId === a.id ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemove(a)} aria-label="Remove">
+                    <Trash2 className="size-4 text-red-600" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Relationships (Slice 5 Day 5: time-block, linked SOP, parent task) ────
+// Inline-edit pattern: read-only by default, "Edit" toggles selects.
+// One "Save" button hits useUpdateTask which records a single activity event.
+function RelationshipsCard({ task }: { task: TaskDetail }) {
+  const update = useUpdateTask(task.id);
+  const { data: sopsPage } = useSops({ status: 'published', limit: 100 });
+  // Parent picker excludes self + own children (the BE won't validate this
+  // but we don't want the user to accidentally create a cycle).
+  const { data: parentCandidatesPage } = useTasks({ limit: 100 });
+  const { data: ownChildren } = useTaskChildren(task.id);
+  const ownChildIds = new Set((ownChildren ?? []).map((c) => c.id));
+  const eligibleParents = (parentCandidatesPage?.tasks ?? []).filter(
+    (t) => t.id !== task.id && !ownChildIds.has(t.id),
+  );
+
+  const [editing, setEditing] = useState(false);
+  const [tb, setTb] = useState<number | null>(task.timeBlockMinutes ?? null);
+  const [sop, setSop] = useState<string>(task.linkedSopId ?? '');
+  const [parent, setParent] = useState<string>(task.parentTaskId ?? '');
+
+  const linkedSop = sopsPage?.sops.find((s) => s.id === task.linkedSopId);
+  const parentTask = parentCandidatesPage?.tasks.find((t) => t.id === task.parentTaskId);
+
+  const handleSave = async () => {
+    try {
+      await update.mutateAsync({
+        timeBlockMinutes: tb,
+        linkedSopId: sop || null,
+        parentTaskId: parent || null,
+      });
+      setEditing(false);
+      toast.success('Task updated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update');
+    }
+  };
+
+  const handleCancel = () => {
+    setTb(task.timeBlockMinutes ?? null);
+    setSop(task.linkedSopId ?? '');
+    setParent(task.parentTaskId ?? '');
+    setEditing(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">Relationships</CardTitle>
+        {!editing && (
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Edit</Button>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Time block */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1.5">
+            <Clock className="size-3.5" />Time block
+          </label>
+          {editing ? (
+            <select
+              value={tb === null ? '' : String(tb)}
+              onChange={(e) => setTb(e.target.value === '' ? null : Number(e.target.value))}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            >
+              {TIME_BLOCKS.map((b) => (
+                <option key={b.label} value={b.minutes === null ? '' : String(b.minutes)}>{b.label}</option>
+              ))}
+            </select>
+          ) : (
+            <p className="text-sm">
+              {task.timeBlockMinutes == null
+                ? <span className="text-muted-foreground">No estimate</span>
+                : (task.timeBlockMinutes < 60
+                  ? `${task.timeBlockMinutes} min`
+                  : `${(task.timeBlockMinutes / 60).toFixed(task.timeBlockMinutes % 60 === 0 ? 0 : 1)} hr`)}
+            </p>
+          )}
+        </div>
+
+        {/* Linked SOP */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1.5">
+            <FileText className="size-3.5" />Linked SOP
+          </label>
+          {editing ? (
+            <select
+              value={sop}
+              onChange={(e) => setSop(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="">No linked SOP</option>
+              {sopsPage?.sops.map((s) => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </select>
+          ) : linkedSop ? (
+            <Link to={`/sops/${linkedSop.id}`} className="text-sm text-primary hover:underline">
+              {linkedSop.title}
+            </Link>
+          ) : task.linkedSopId ? (
+            <p className="text-sm text-muted-foreground">SOP {task.linkedSopId.slice(0, 8)}…</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">No linked SOP</p>
+          )}
+        </div>
+
+        {/* Parent task */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Parent task</label>
+          {editing ? (
+            <select
+              value={parent}
+              onChange={(e) => setParent(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="">No parent (top-level)</option>
+              {eligibleParents.map((t) => (
+                <option key={t.id} value={t.id}>{t.title}</option>
+              ))}
+            </select>
+          ) : parentTask ? (
+            <Link to={`/tasks/${parentTask.id}`} className="text-sm text-primary hover:underline">
+              {parentTask.title}
+            </Link>
+          ) : task.parentTaskId ? (
+            <p className="text-sm text-muted-foreground">Task {task.parentTaskId.slice(0, 8)}…</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Top-level task</p>
+          )}
+        </div>
+
+        {editing && (
+          <div className="flex gap-2 pt-2 border-t">
+            <Button size="sm" onClick={handleSave} disabled={update.isPending}>
+              {update.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleCancel} disabled={update.isPending}>
+              Cancel
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Children (Slice 5 Day 5 — sub-tasks under a project parent) ───────────
+function ChildrenCard({ taskId }: { taskId: string }) {
+  const { data: children } = useTaskChildren(taskId);
+  const rows: TaskSummary[] = children ?? [];
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-base">Children</CardTitle>
+          <CardDescription>{rows.length === 0 ? 'No child tasks yet' : `${rows.length} child task${rows.length === 1 ? '' : 's'}`}</CardDescription>
+        </div>
+        <Link to={`/tasks/create?parent=${taskId}`}>
+          <Button variant="outline" size="sm"><Plus className="size-4 mr-1.5" />Add child</Button>
+        </Link>
+      </CardHeader>
+      {rows.length > 0 && (
+        <CardContent>
+          <div className="space-y-2">
+            {rows.map((c) => (
+              <Link
+                key={c.id}
+                to={`/tasks/${c.id}`}
+                className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/40 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{c.title}</p>
+                  <p className="text-xs text-muted-foreground">{c.assignee || 'Unassigned'}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge className={`text-[10px] capitalize ${priorityColors[c.priority] || ''}`}>{c.priority}</Badge>
+                  <Badge className={`text-[10px] capitalize ${statusColors[c.status] || ''}`}>{statusLabels[c.status] || c.status}</Badge>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+// ─── Activity feed (Sam #88) ────────────────────────────────────────────────
+function ActivityCard({ activity }: { activity: TaskActivityEvent[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ActivityIcon className="size-4" />
+          Activity
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {activity.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No activity yet</p>
+        ) : (
+          <ol className="relative space-y-3 border-l border-border pl-4">
+            {activity.map((ev) => (
+              <li key={ev.id} className="relative">
+                <span className="absolute -left-[19px] top-1.5 size-2 rounded-full bg-muted-foreground/40" />
+                <p className="text-sm leading-tight">{describeActivity(ev)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{formatDateTime(ev.createdAt)}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </CardContent>
+    </Card>
   );
 }

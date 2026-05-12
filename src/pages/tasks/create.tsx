@@ -9,10 +9,28 @@ import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCreateTask, useTaskTemplates, type TaskTemplate } from '@/lib/hooks/use-tasks';
+import {
+  useCreateTask, useTaskTemplates, useTasks,
+  type TaskTemplate,
+} from '@/lib/hooks/use-tasks';
+import { useSops } from '@/lib/hooks/use-sops';
+import { useSearchParams } from 'react-router-dom';
 
 const ASSIGNEES = ['Sam Owner', 'Finance Admin', 'Ops Manager'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+
+// Slice 5 Day 5 — Sam Loom #94: time-block buckets. Coarse, discoverable
+// chunks instead of a free-form minutes input — most ops tasks fall into
+// one of these. `null` = no estimate.
+const TIME_BLOCKS: { label: string; minutes: number | null }[] = [
+  { label: 'No estimate', minutes: null },
+  { label: '15 min', minutes: 15 },
+  { label: '30 min', minutes: 30 },
+  { label: '1 hour', minutes: 60 },
+  { label: '2 hours', minutes: 120 },
+  { label: 'Half day', minutes: 240 },
+  { label: 'Full day', minutes: 480 },
+];
 
 const priorityColors: Record<string, string> = {
   urgent: 'bg-red-500/10 text-red-600 border-red-200',
@@ -23,8 +41,20 @@ const priorityColors: Record<string, string> = {
 
 export function TaskCreatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const createTask = useCreateTask();
   const { data: templates } = useTaskTemplates();
+  // SOP picker pulls published SOPs only — drafts shouldn't be linkable
+  // as a "this is the procedure" target.
+  const { data: sopsPage } = useSops({ status: 'published', limit: 100 });
+  // Parent-task picker: lightweight list, all tasks for now (the org-wide
+  // assumption is already in scope from Day 4). Reasonable until we have
+  // thousands of tasks.
+  const { data: tasksPage } = useTasks({ limit: 100 });
+
+  // Allow pre-seeding parent via `?parent=<taskId>` — "Create child task"
+  // links on the detail page use this so we land here with the link set.
+  const initialParent = searchParams.get('parent');
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -32,6 +62,9 @@ export function TaskCreatePage() {
   const [priority, setPriority] = useState<string>('medium');
   const [category, setCategory] = useState('');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [timeBlockMinutes, setTimeBlockMinutes] = useState<number | null>(null);
+  const [linkedSopId, setLinkedSopId] = useState<string>('');
+  const [parentTaskId, setParentTaskId] = useState<string>(initialParent ?? '');
 
   function fillFromTemplate(template: TaskTemplate) {
     setTitle(template.name);
@@ -54,6 +87,9 @@ export function TaskCreatePage() {
         priority,
         category,
         dueDate: dueDate ? dueDate.toISOString() : null,
+        timeBlockMinutes,
+        linkedSopId: linkedSopId || null,
+        parentTaskId: parentTaskId || null,
       });
       toast.success(`Task "${task.title}" created`);
       navigate(`/tasks/${task.id}`);
@@ -138,6 +174,54 @@ export function TaskCreatePage() {
                     placeholder="Select due date"
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Time block</Label>
+                  <select
+                    value={timeBlockMinutes === null ? '' : String(timeBlockMinutes)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTimeBlockMinutes(v === '' ? null : Number(v));
+                    }}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  >
+                    {TIME_BLOCKS.map((b) => (
+                      <option key={b.label} value={b.minutes === null ? '' : String(b.minutes)}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Linked SOP</Label>
+                  <select
+                    value={linkedSopId}
+                    onChange={(e) => setLinkedSopId(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  >
+                    <option value="">No linked SOP</option>
+                    {sopsPage?.sops.map((s) => (
+                      <option key={s.id} value={s.id}>{s.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Parent task</Label>
+                <select
+                  value={parentTaskId}
+                  onChange={(e) => setParentTaskId(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                >
+                  <option value="">No parent (top-level task)</option>
+                  {tasksPage?.tasks.map((t) => (
+                    <option key={t.id} value={t.id}>{t.title}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Use this to group sub-tasks under a parent "project" task.
+                </p>
               </div>
             </CardContent>
           </Card>

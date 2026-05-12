@@ -11,12 +11,13 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/ui/pagination';
 import {
-  Search, Plus, CheckSquare, Clock, AlertTriangle, ListTodo, LayoutGrid, List,
+  Search, Plus, CheckSquare, Clock, AlertTriangle, ListTodo, LayoutGrid, List, Timer,
 } from 'lucide-react';
 import {
   useTasks, useTaskStats,
   type TaskSummary,
 } from '@/lib/hooks/use-tasks';
+import { useAuth } from '@/components/providers/auth-provider';
 import { EmptyState } from '@/components/shared/empty-state';
 
 const STATUS_TABS = ['all', 'todo', 'in_progress', 'completed', 'blocked'] as const;
@@ -48,6 +49,13 @@ const priorityColors: Record<string, string> = {
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '--';
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatTimeBlock(minutes: number | null | undefined): string | null {
+  if (minutes == null) return null;
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes % 60 === 0) return `${minutes / 60}h`;
+  return `${(minutes / 60).toFixed(1)}h`;
 }
 
 const BOARD_COLUMNS = [
@@ -89,6 +97,11 @@ function KanbanBoard({ tasks, navigate }: { tasks: TaskSummary[]; navigate: (pat
                         <Badge className={`text-[10px] capitalize ${priorityColors[t.priority] || ''}`}>
                           {t.priority}
                         </Badge>
+                        {formatTimeBlock(t.timeBlockMinutes) && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground tabular-nums">
+                            <Timer className="size-3" />{formatTimeBlock(t.timeBlockMinutes)}
+                          </span>
+                        )}
                         {t.dueDate && (
                           <span className="text-[10px] text-muted-foreground tabular-nums">{formatDate(t.dueDate)}</span>
                         )}
@@ -106,18 +119,38 @@ function KanbanBoard({ tasks, navigate }: { tasks: TaskSummary[]; navigate: (pat
   );
 }
 
+// Slice 5 Day 4 — Sam Loom #99: "I can overlook everyone in the business and
+// see all their tasks". `scope` toggles between My tasks (filter on the
+// current user's email/name) and All tasks (no assignee filter). Pinned
+// to localStorage so each staff member sees their preferred default.
+const SCOPE_KEY = 'stato:tasks:scope';
+
 export function TasksPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [scope, setScope] = useState<'all' | 'mine'>(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(SCOPE_KEY) : null;
+    return stored === 'mine' ? 'mine' : 'all';
+  });
+  const handleScopeChange = (s: 'all' | 'mine') => {
+    setScope(s); setPage(1);
+    try { localStorage.setItem(SCOPE_KEY, s); } catch { /* ignore */ }
+  };
+
+  // "My tasks" filters by the user's name OR email — backend assignee field
+  // is free text, set at create time to a name in most cases.
+  const myAssignee = user ? (user.name || user.email) : '';
 
   const { data, isLoading, error } = useTasks({
     status: statusFilter,
     priority: priorityFilter,
     search,
+    assignee: scope === 'mine' ? myAssignee : undefined,
     page,
     limit: 10,
   });
@@ -132,6 +165,28 @@ export function TasksPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Tasks" description="Track and manage team tasks">
         <div className="flex items-center gap-2">
+          <div className="flex rounded-lg bg-muted p-1">
+            <button
+              onClick={() => handleScopeChange('mine')}
+              className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                scope === 'mine'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              My tasks
+            </button>
+            <button
+              onClick={() => handleScopeChange('all')}
+              className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                scope === 'all'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              All tasks
+            </button>
+          </div>
           <div className="flex rounded-lg bg-muted p-1">
             <button
               onClick={() => setViewMode('list')}
@@ -317,6 +372,7 @@ export function TasksPage() {
                     <TableHead>Priority</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Due Date</TableHead>
+                    <TableHead>Time</TableHead>
                     <TableHead>Category</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -340,6 +396,15 @@ export function TasksPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground tabular-nums">{formatDate(t.dueDate)}</TableCell>
+                      <TableCell className="text-muted-foreground tabular-nums">
+                        {formatTimeBlock(t.timeBlockMinutes) ? (
+                          <span className="inline-flex items-center gap-1 text-xs">
+                            <Timer className="size-3.5" />{formatTimeBlock(t.timeBlockMinutes)}
+                          </span>
+                        ) : (
+                          <span className="text-xs">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="text-xs">{t.category}</Badge>
                       </TableCell>

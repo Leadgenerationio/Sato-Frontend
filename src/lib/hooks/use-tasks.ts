@@ -12,6 +12,8 @@ export interface TaskSummary {
   dueDate: string | null;
   createdBy: string;
   createdAt: string;
+  // Slice 5 Day 5 — surfaced on cards/rows so estimates are visible at a glance.
+  timeBlockMinutes?: number | null;
 }
 
 export interface TaskComment {
@@ -28,9 +30,51 @@ export interface TaskAuditEntry {
   timestamp: string;
 }
 
+// Slice 5 Day 3 — task gained subtasks, attachments, structured activity.
+export interface TaskSubtask {
+  id: string;
+  taskId: string;
+  title: string;
+  isDone: boolean;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  r2Key: string;
+  folder: string;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy: string | null;
+  createdAt: string;
+}
+
+export interface TaskActivityEvent {
+  id: string;
+  taskId: string;
+  actorUserId: string | null;
+  actorName: string | null;
+  eventType: string;
+  payload: unknown;
+  createdAt: string;
+}
+
 export interface TaskDetail extends TaskSummary {
   comments: TaskComment[];
   auditLog: TaskAuditEntry[];
+  // Slice 5 fields — all optional because listTasks omits them to stay cheap.
+  timeBlockMinutes?: number | null;
+  linkedSopId?: string | null;
+  parentTaskId?: string | null;
+  recurrenceCron?: string | null;
+  recurrenceNextRun?: string | null;
+  subtasks?: TaskSubtask[];
+  attachments?: TaskAttachment[];
+  activity?: TaskActivityEvent[];
 }
 
 export interface TaskStats {
@@ -55,11 +99,12 @@ export interface PaginatedTasks {
   pageSize: number;
 }
 
-export function useTasks(filters?: { status?: string; priority?: string; search?: string; page?: number; limit?: number }) {
+export function useTasks(filters?: { status?: string; priority?: string; search?: string; assignee?: string; page?: number; limit?: number }) {
   const params = new URLSearchParams();
   if (filters?.status && filters.status !== 'all') params.set('status', filters.status);
   if (filters?.priority && filters.priority !== 'all') params.set('priority', filters.priority);
   if (filters?.search) params.set('search', filters.search);
+  if (filters?.assignee) params.set('assignee', filters.assignee);
   if (filters?.page) params.set('page', String(filters.page));
   if (filters?.limit) params.set('limit', String(filters.limit));
   const qs = params.toString();
@@ -104,10 +149,25 @@ export function useTaskTemplates() {
   });
 }
 
+// Slice 5 Day 5 — create/update payload accepts the new optional fields.
+// Sent only when the user explicitly fills them; backend treats missing
+// keys as "no change", null as "clear".
+export interface TaskMutationInput {
+  title: string;
+  description: string;
+  assignee: string;
+  priority: string;
+  category: string;
+  dueDate: string | null;
+  timeBlockMinutes?: number | null;
+  linkedSopId?: string | null;
+  parentTaskId?: string | null;
+}
+
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { title: string; description: string; assignee: string; priority: string; category: string; dueDate: string | null }) => {
+    mutationFn: async (data: TaskMutationInput) => {
       const res = await api.post<{ task: TaskDetail }>('/api/v1/tasks', data);
       return unwrap(res).task;
     },
@@ -115,6 +175,45 @@ export function useCreateTask() {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['task-stats'] });
     },
+  });
+}
+
+export interface UpdateTaskInput {
+  title?: string;
+  description?: string;
+  assignee?: string;
+  priority?: string;
+  category?: string;
+  dueDate?: string | null;
+  timeBlockMinutes?: number | null;
+  linkedSopId?: string | null;
+  parentTaskId?: string | null;
+}
+
+export function useUpdateTask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: UpdateTaskInput) => {
+      const res = await api.put<{ task: TaskDetail }>(`/api/v1/tasks/${taskId}`, data);
+      return unwrap(res).task;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['task', taskId] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      qc.invalidateQueries({ queryKey: ['task-stats'] });
+      qc.invalidateQueries({ queryKey: ['task-children', taskId] });
+    },
+  });
+}
+
+export function useTaskChildren(taskId: string) {
+  return useQuery({
+    queryKey: ['task-children', taskId],
+    queryFn: async () => {
+      const res = await api.get<{ children: TaskSummary[] }>(`/api/v1/tasks/${taskId}/children`);
+      return unwrap(res).children;
+    },
+    enabled: !!taskId,
   });
 }
 
@@ -143,6 +242,86 @@ export function useAddComment() {
     onSuccess: (_, { taskId }) => {
       qc.invalidateQueries({ queryKey: ['task', taskId] });
     },
+  });
+}
+
+// ─── Slice 5 — subtasks ───
+export interface CreateSubtaskInput {
+  title: string;
+  isDone?: boolean;
+  position?: number;
+}
+export interface UpdateSubtaskInput {
+  title?: string;
+  isDone?: boolean;
+  position?: number;
+}
+
+export function useCreateSubtask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateSubtaskInput) => {
+      const res = await api.post<{ subtask: TaskSubtask }>(`/api/v1/tasks/${taskId}/subtasks`, input);
+      return unwrap(res).subtask;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['task', taskId] }),
+  });
+}
+
+export function useUpdateSubtask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ subtaskId, ...input }: UpdateSubtaskInput & { subtaskId: string }) => {
+      const res = await api.patch<{ subtask: TaskSubtask }>(
+        `/api/v1/tasks/${taskId}/subtasks/${subtaskId}`,
+        input,
+      );
+      return unwrap(res).subtask;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['task', taskId] }),
+  });
+}
+
+export function useDeleteSubtask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (subtaskId: string) => {
+      await api.delete(`/api/v1/tasks/${taskId}/subtasks/${subtaskId}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['task', taskId] }),
+  });
+}
+
+// ─── Slice 5 — attachments ───
+export interface AddTaskAttachmentInput {
+  r2Key: string;
+  folder?: string;
+  name: string;
+  contentType?: string;
+  sizeBytes?: number;
+}
+
+export function useAddTaskAttachment(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AddTaskAttachmentInput) => {
+      const res = await api.post<{ attachment: TaskAttachment }>(
+        `/api/v1/tasks/${taskId}/attachments`,
+        input,
+      );
+      return unwrap(res).attachment;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['task', taskId] }),
+  });
+}
+
+export function useRemoveTaskAttachment(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (attachmentId: string) => {
+      await api.delete(`/api/v1/tasks/${taskId}/attachments/${attachmentId}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['task', taskId] }),
   });
 }
 
