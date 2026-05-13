@@ -61,6 +61,7 @@ const LeadByteDeliveriesPage = lazy(() => import('@/pages/leadbyte/deliveries').
 const LeadByteRespondersPage = lazy(() => import('@/pages/leadbyte/responders').then((m) => ({ default: m.LeadByteRespondersPage })));
 const LeadByteDashboardPage = lazy(() => import('@/pages/leadbyte/dashboard').then((m) => ({ default: m.LeadByteDashboardPage })));
 const AgreementsPage = lazy(() => import('@/pages/agreements').then((m) => ({ default: m.AgreementsPage })));
+const AgreementEditorPage = lazy(() => import('@/pages/agreements/editor').then((m) => ({ default: m.AgreementEditorPage })));
 const IntegrationsPage = lazy(() => import('@/pages/integrations').then((m) => ({ default: m.IntegrationsPage })));
 
 // Suspense fallback for route-level lazy loading. Shows a generic page-shape
@@ -292,6 +293,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
                   <AgreementsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/agreements/editor"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
+                  <AgreementEditorPage />
                 </ProtectedRoute>
               }
             />

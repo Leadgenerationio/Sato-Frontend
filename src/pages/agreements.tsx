@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FileText, FileSignature, Loader2, RefreshCw, Send, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileText, FileSignature, Loader2, RefreshCw, Send, CheckCircle2, XCircle, Clock, AlertCircle, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useAgreements,
@@ -59,6 +60,7 @@ interface SendAgreementDialogProps {
 }
 
 export function SendAgreementDialog({ prefill, lockClient = false, trigger, open: openProp, onOpenChange: onOpenChangeProp }: SendAgreementDialogProps = {}) {
+  const navigate = useNavigate();
   const [openInternal, setOpenInternal] = useState(false);
   // Allow parent to drive the dialog open state (used by /clients/create →
   // /clients/:id?send-agreement=1 auto-open flow).
@@ -207,8 +209,32 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={send.isPending}>Cancel</Button>
+            {/* #47-50 — branch to the drag-place editor instead of sending
+                free-form. Open in editor only enables once the PDF + client
+                are populated; everything else can be edited from the editor. */}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={send.isPending || !uploaded || !clientId || !signerEmail || !signerName}
+              onClick={() => {
+                if (!uploaded) return;
+                const params = new URLSearchParams({
+                  r2Key: uploaded.key,
+                  r2Folder: 'misc',
+                  clientId,
+                  signerEmail,
+                  signerName,
+                  documentName: uploaded.name,
+                });
+                handleOpenChange(false);
+                navigate(`/agreements/editor?${params.toString()}`);
+              }}
+            >
+              <PenLine className="size-4" />
+              Place fields...
+            </Button>
             <Button type="submit" disabled={send.isPending}>
               {send.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               Send envelope
