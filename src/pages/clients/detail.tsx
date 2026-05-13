@@ -11,6 +11,7 @@ import {
   ArrowLeft, Building, Mail, Phone, MapPin, Shield, FileText, Megaphone,
   CreditCard, ClipboardCheck, Loader2, TrendingDown, TrendingUp, AlertTriangle, Link2,
   Download, Trash2, FileSignature, Users, RefreshCw,
+  Activity as ActivityIcon, Inbox, Send, Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -20,6 +21,11 @@ import {
   type ClientDocument,
 } from '@/lib/hooks/use-clients';
 import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
+import {
+  useClientActivity, useClientEmails, useLogClientEmail, useDeleteClientEmail,
+  type ClientActivityEvent, type ClientEmail,
+} from '@/lib/hooks/use-client-activity';
+import { Input } from '@/components/ui/input';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type UploadFolder } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -156,6 +162,8 @@ export function ClientDetailPage() {
           <TabsTrigger value="credit">Credit</TabsTrigger>
           <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="emails">Emails</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -425,6 +433,16 @@ export function ClientDetailPage() {
         {/* Documents Tab */}
         <TabsContent value="documents" className="mt-6">
           <DocumentsTab clientId={id!} />
+        </TabsContent>
+
+        {/* L #33 — Emails tab */}
+        <TabsContent value="emails" className="mt-6">
+          <EmailsTab clientId={id!} />
+        </TabsContent>
+
+        {/* L #38 — Activity tab */}
+        <TabsContent value="activity" className="mt-6">
+          <ActivityTab clientId={id!} />
         </TabsContent>
       </Tabs>
     </div>
@@ -701,3 +719,231 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
     </Card>
   );
 }
+
+// ─── Emails tab (L #33 — full email-thread integration) ───────────────────
+// Reads /api/v1/clients/:id/emails. Outbound rows are auto-logged from the
+// Resend send paths; inbound rows are manually logged via this UI for now
+// (a future IMAP/Gmail integration is XL-deferred).
+function EmailsTab({ clientId }: { clientId: string }) {
+  const { data: emails, isLoading } = useClientEmails(clientId);
+  const logEmail = useLogClientEmail(clientId);
+  const deleteEmail = useDeleteClientEmail(clientId);
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [fromAddress, setFromAddress] = useState('');
+  const [bodyText, setBodyText] = useState('');
+
+  const handleLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() && !bodyText.trim()) {
+      toast.error('Subject or body required');
+      return;
+    }
+    try {
+      await logEmail.mutateAsync({
+        direction: 'inbound',
+        subject: subject.trim() || undefined,
+        body: bodyText.trim() || undefined,
+        fromAddress: fromAddress.trim() || undefined,
+      });
+      setSubject('');
+      setFromAddress('');
+      setBodyText('');
+      setFormOpen(false);
+      toast.success('Inbound email logged');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to log email');
+    }
+  };
+
+  const handleDelete = async (email: ClientEmail) => {
+    try {
+      await deleteEmail.mutateAsync(email.id);
+      toast.info('Email removed from thread');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove');
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Email thread</CardTitle>
+            <CardDescription>
+              {emails?.length ?? 0} email{(emails?.length ?? 0) === 1 ? '' : 's'} on file ·
+              outbound rows are auto-logged when Stato sends mail for this client.
+            </CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setFormOpen((v) => !v)}>
+            <Plus className="size-4 mr-1.5" />
+            Log inbound email
+          </Button>
+        </CardHeader>
+        {formOpen && (
+          <CardContent>
+            <form onSubmit={handleLog} className="space-y-3 rounded-lg border bg-muted/30 p-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Input
+                  value={fromAddress}
+                  onChange={(e) => setFromAddress(e.target.value)}
+                  placeholder="From (sender email)"
+                />
+                <Input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Subject"
+                />
+              </div>
+              <textarea
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value)}
+                placeholder="Paste the email body..."
+                rows={4}
+                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setFormOpen(false)} disabled={logEmail.isPending}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={logEmail.isPending}>
+                  {logEmail.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+                  Save
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        )}
+      </Card>
+
+      {isLoading ? (
+        <Card><CardContent className="p-6"><Skeleton className="h-32" /></CardContent></Card>
+      ) : !emails || emails.length === 0 ? (
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Mail}
+              title="No emails yet"
+              description="Log an inbound email or wait for the next outbound Stato send to populate this thread."
+              size="compact"
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {emails.map((e) => (
+            <Card key={e.id}>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
+                      e.direction === 'inbound' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-600'
+                    }`}>
+                      {e.direction === 'inbound' ? <Inbox className="size-4" /> : <Send className="size-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{e.subject || '(no subject)'}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {e.direction === 'inbound' ? `From ${e.fromAddress || 'unknown'}` : `To ${e.toAddress || 'unknown'}`}
+                        {' · '}
+                        {new Date(e.occurredAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge className={`text-xs capitalize ${
+                      e.direction === 'inbound' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-blue-500/10 text-blue-600 border-blue-200'
+                    }`}>{e.direction}</Badge>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(e)} aria-label="Remove from thread">
+                      <Trash2 className="size-4 text-red-600" />
+                    </Button>
+                  </div>
+                </div>
+                {e.body && (
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-2 border-t pt-2">{e.body}</p>
+                )}
+                {e.resendEvent && (
+                  <p className="text-xs text-muted-foreground">
+                    Delivery: <span className="capitalize">{e.resendEvent}</span>
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Activity tab (L #38 — full activity feed) ────────────────────────────
+function describeClientActivity(ev: ClientActivityEvent): string {
+  const who = ev.actorName || 'Someone';
+  const p = ev.payload as Record<string, unknown> | null;
+  switch (ev.eventType) {
+    case 'client_created':           return `${who} created the client`;
+    case 'client_updated':           return `${who} updated ${(p?.changed as string[] | undefined)?.join(', ') || 'the client'}`;
+    case 'contact_added':            return `${who} added a contact`;
+    case 'contact_removed':          return `${who} removed a contact`;
+    case 'document_uploaded':        return `${who} uploaded "${p?.name ?? ''}"`;
+    case 'document_removed':         return `${who} removed "${p?.name ?? ''}"`;
+    case 'agreement_sent':           return `${who} sent an agreement`;
+    case 'agreement_signed':         return 'Agreement signed';
+    case 'agreement_declined':       return 'Agreement declined';
+    case 'agreement_status_changed': return `Agreement status: ${p?.status ?? '?'}`;
+    case 'credit_check_run': {
+      const score = p?.creditScore ?? '?';
+      const change = p?.scoreChange as number | null | undefined;
+      const delta = change != null ? ` (${change >= 0 ? '+' : ''}${change})` : '';
+      return `${who} ran a credit check — score ${score}${delta}`;
+    }
+    case 'email_logged_inbound':     return `${who} logged inbound email "${p?.subject ?? ''}"`;
+    case 'email_logged_outbound':    return `Stato sent "${p?.subject ?? ''}"`;
+    case 'email_removed':            return `${who} removed email "${p?.subject ?? ''}"`;
+    case 'invoice_synced':           return `${who} synced invoices from Xero`;
+    default:                         return `${who} · ${ev.eventType}`;
+  }
+}
+
+function ActivityTab({ clientId }: { clientId: string }) {
+  const { data: events, isLoading } = useClientActivity(clientId, { limit: 100 });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ActivityIcon className="size-4" />
+          Activity timeline
+        </CardTitle>
+        <CardDescription>Everything that happened to this client, newest first.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-40" />
+        ) : !events || events.length === 0 ? (
+          <EmptyState
+            icon={ActivityIcon}
+            title="No activity yet"
+            description="Events appear here as you create documents, agreements, credit checks, emails, and more."
+            size="compact"
+          />
+        ) : (
+          <ol className="relative space-y-3 border-l border-border pl-4">
+            {events.map((ev) => (
+              <li key={ev.id} className="relative">
+                <span className="absolute -left-[19px] top-1.5 size-2 rounded-full bg-muted-foreground/40" />
+                <p className="text-sm leading-tight">{describeClientActivity(ev)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {new Date(ev.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
