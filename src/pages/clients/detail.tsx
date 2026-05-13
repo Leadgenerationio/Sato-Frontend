@@ -20,6 +20,20 @@ import {
   useClientInvoices, useSyncClientInvoices,
   type ClientDocument,
 } from '@/lib/hooks/use-clients';
+import {
+  useClientCampaigns,
+  useUnlinkClientCampaign,
+  type ClientCampaignLink,
+} from '@/lib/hooks/use-client-campaigns';
+import { AddCampaignDialog } from '@/components/clients/add-campaign-dialog';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
 import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import {
   useClientActivity, useClientEmails, useLogClientEmail, useDeleteClientEmail,
@@ -30,6 +44,7 @@ import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type UploadFolder } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
 import { SendAgreementDialog } from '@/pages/agreements';
+import { EditClientButton } from '@/components/clients/edit-client-dialog';
 
 const contactTypeColors: Record<string, string> = {
   primary: 'bg-blue-500/10 text-blue-600 border-blue-200',
@@ -147,6 +162,7 @@ export function ClientDetailPage() {
           <PageHeader title={client.companyName} description={`${client.contactName} · ${client.companyNumber}`}>
             <div className="flex items-center gap-3">
               <Badge className={statusColors[client.status] || ''}>{statusLabels[client.status] ?? client.status}</Badge>
+              <EditClientButton client={client} />
               <Button size="sm" variant="default" onClick={() => setAgreementDialogOpen(true)}>
                 <FileSignature className="size-4 mr-1.5" />
                 Create Agreement
@@ -282,27 +298,7 @@ export function ClientDetailPage() {
 
         {/* Campaigns Tab */}
         <TabsContent value="campaigns" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Active Campaigns</CardTitle>
-              <CardDescription>{client.activeCampaigns} campaign{client.activeCampaigns !== 1 ? 's' : ''} running</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {client.activeCampaigns > 0 ? (
-                <div className="flex items-center gap-3">
-                  <Megaphone className="size-5 text-muted-foreground" />
-                  <p className="text-sm">View campaigns for this client on the <Link to="/campaigns" className="text-primary underline">Campaigns page</Link>.</p>
-                </div>
-              ) : (
-                <EmptyState
-                  icon={Megaphone}
-                  title="No active campaigns"
-                  description="This client has no campaigns running yet. Campaigns sync automatically from LeadByte."
-                  size="compact"
-                />
-              )}
-            </CardContent>
-          </Card>
+          <CampaignsTab clientId={id!} />
         </TabsContent>
 
         {/* Invoices Tab */}
@@ -461,6 +457,110 @@ export function ClientDetailPage() {
   );
 }
 
+// ─── Campaigns tab (P5 — inline list + Add Campaign dialog) ────────────────
+//
+// Sam's 12 May call: "how do we add a campaign here?". Was previously a stub
+// linking off to /campaigns. Now shows the linked campaigns inline with a
+// Remove button per row and an Add Campaign button that opens a dialog.
+
+const campaignStatusColors: Record<string, string> = {
+  active:   'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  paused:   'bg-amber-500/10 text-amber-600 border-amber-200',
+  inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  archived: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+};
+
+function CampaignsTab({ clientId }: { clientId: string }) {
+  const { data: campaigns = [], isLoading } = useClientCampaigns(clientId);
+  const unlink = useUnlinkClientCampaign();
+  const [addOpen, setAddOpen] = useState(false);
+
+  async function handleRemove(campaign: ClientCampaignLink) {
+    try {
+      await unlink.mutateAsync({ campaignId: campaign.id, clientId });
+      toast.success(`${campaign.name} removed from client`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove campaign');
+    }
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Campaigns</CardTitle>
+            <CardDescription>
+              {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''} linked to this client
+            </CardDescription>
+          </div>
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus className="size-4 mr-1.5" />
+            Add Campaign
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+            </div>
+          ) : campaigns.length === 0 ? (
+            <EmptyState
+              icon={Megaphone}
+              title="No campaigns linked"
+              description='No campaigns are linked to this client yet. Click "Add Campaign" above to link one.'
+              size="compact"
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Vertical</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Cost per lead</TableHead>
+                  <TableHead className="w-12" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {campaigns.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell className="text-muted-foreground capitalize">{c.vertical}</TableCell>
+                    <TableCell>
+                      <Badge className={`capitalize text-xs ${campaignStatusColors[c.status] || ''}`}>
+                        {c.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {c.costPerLead != null
+                        ? formatCurrency(c.costPerLead)
+                        : <span className="text-muted-foreground text-xs">default</span>}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Remove ${c.name}`}
+                        disabled={unlink.isPending}
+                        onClick={() => handleRemove(c)}
+                      >
+                        <Trash2 className="size-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <AddCampaignDialog clientId={clientId} open={addOpen} onOpenChange={setAddOpen} />
+    </>
+  );
+}
+
 // ─── Invoices tab (per-client Xero/Stato invoices) ─────────────────────────
 //
 // Sam's Loom #30: "I don't get why there is no invoices for this client".
@@ -475,10 +575,70 @@ const invoiceStatusColors: Record<string, string> = {
   overdue: 'bg-red-500/10 text-red-600 border-red-200',
 };
 
+// ─── Filter / sort options for the per-client Invoices tab ────────────────
+// P8: Sam asked for "filter by overdue, date" and "due date / issue date
+// ordering" on the client detail page. Controls live inside InvoicesTab so
+// they don't pollute InvoicesTable (which still just renders what it receives).
+
+type InvoiceFilterStatus = 'all' | 'due' | 'overdue' | 'authorised' | 'paid' | 'draft';
+type InvoiceSortKey =
+  | 'issue_desc'
+  | 'issue_asc'
+  | 'due_asc'
+  | 'due_desc'
+  | 'amount_desc'
+  | 'amount_asc';
+
+const SELECT_CLASS =
+  'flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+
+export function applyFilterSort(
+  invoices: InvoiceSummary[],
+  filter: InvoiceFilterStatus,
+  sort: InvoiceSortKey,
+): InvoiceSummary[] {
+  const now = Date.now();
+
+  // Filter
+  let filtered = invoices;
+  if (filter !== 'all') {
+    filtered = invoices.filter((inv) => {
+      if (filter === 'overdue') {
+        return inv.status === 'authorised' && new Date(inv.dueDate).getTime() < now;
+      }
+      if (filter === 'due') {
+        // "Due" = authorised and not yet past due date
+        return inv.status === 'authorised' && new Date(inv.dueDate).getTime() >= now;
+      }
+      return inv.status.toLowerCase() === filter;
+    });
+  }
+
+  // Sort — spread to avoid mutating the query cache reference
+  const sorted = [...filtered];
+  sorted.sort((a, b) => {
+    switch (sort) {
+      case 'issue_desc': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'issue_asc':  return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case 'due_asc':    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      case 'due_desc':   return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+      case 'amount_desc': return toMoney(b.total) - toMoney(a.total);
+      case 'amount_asc':  return toMoney(a.total) - toMoney(b.total);
+      default: return 0;
+    }
+  });
+  return sorted;
+}
+
 function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: string; clientCurrency: string; totalRevenue: number }) {
   const { data, isLoading, isError } = useClientInvoices(clientId);
   const sync = useSyncClientInvoices(clientId);
   const invoices = data?.invoices ?? [];
+
+  const [filterStatus, setFilterStatus] = useState<InvoiceFilterStatus>('all');
+  const [sortKey, setSortKey] = useState<InvoiceSortKey>('issue_desc');
+
+  const visibleInvoices = applyFilterSort(invoices, filterStatus, sortKey);
 
   const handleSync = async () => {
     try {
@@ -540,14 +700,54 @@ function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: str
             size="compact"
           />
         ) : (
-          <InvoicesTable invoices={invoices} />
+          <>
+            {/* P8 filter/sort controls */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <select
+                aria-label="Filter by status"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as InvoiceFilterStatus)}
+                className={SELECT_CLASS}
+              >
+                <option value="all">All</option>
+                <option value="due">Due</option>
+                <option value="overdue">Overdue</option>
+                <option value="authorised">Authorised</option>
+                <option value="paid">Paid</option>
+                <option value="draft">Draft</option>
+              </select>
+              <select
+                aria-label="Sort invoices"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as InvoiceSortKey)}
+                className={SELECT_CLASS}
+              >
+                <option value="issue_desc">Issue date (newest first)</option>
+                <option value="issue_asc">Issue date (oldest first)</option>
+                <option value="due_asc">Due date (soonest first)</option>
+                <option value="due_desc">Due date (latest first)</option>
+                <option value="amount_desc">Amount (high to low)</option>
+                <option value="amount_asc">Amount (low to high)</option>
+              </select>
+              {filterStatus !== 'all' && (
+                <span className="text-xs text-muted-foreground">
+                  {visibleInvoices.length} of {invoices.length} shown
+                </span>
+              )}
+            </div>
+            {visibleInvoices.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No invoices match the selected filter.</p>
+            ) : (
+              <InvoicesTable invoices={visibleInvoices} />
+            )}
+          </>
         )}
       </CardContent>
     </Card>
   );
 }
 
-function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
+export function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -573,7 +773,15 @@ function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
                 )}
               </td>
               <td className="py-3 px-3">
-                <Badge className={`capitalize text-xs ${invoiceStatusColors[inv.status] || ''}`}>{inv.status}</Badge>
+                <div className="flex flex-wrap items-center gap-1">
+                  <Badge className={`capitalize text-xs ${invoiceStatusColors[inv.status] || ''}`}>{inv.status}</Badge>
+                  {/* P8 — Sam's "this one's overdue but it says authorized" complaint.
+                      Show an inline Overdue badge when the invoice is past due AND still
+                      has an authorised (not paid) status, so Sam sees it at a glance. */}
+                  {inv.status === 'authorised' && new Date(inv.dueDate).getTime() < Date.now() && (
+                    <Badge className="bg-red-500/10 text-red-600 border-red-200 text-xs">Overdue</Badge>
+                  )}
+                </div>
               </td>
               <td className="py-3 px-3 text-muted-foreground">{formatDate(inv.dueDate)}</td>
               <td className="py-3 px-3 text-right tabular-nums font-medium">
@@ -653,7 +861,7 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
   const handleRemove = async (doc: ClientDocument) => {
     try {
       await removeDoc.mutateAsync(doc.id);
-      toast.info('Removed from list. File still exists in storage.');
+      toast.success('Document removed');
     } catch (err) {
       console.error('Remove failed', err);
       toast.error('Failed to remove document');
