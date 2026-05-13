@@ -63,6 +63,8 @@ const LeadByteDeliveriesPage = lazy(() => import('@/pages/leadbyte/deliveries').
 const LeadByteRespondersPage = lazy(() => import('@/pages/leadbyte/responders').then((m) => ({ default: m.LeadByteRespondersPage })));
 const AgreementsPage = lazy(() => import('@/pages/agreements').then((m) => ({ default: m.AgreementsPage })));
 const AgreementEditorPage = lazy(() => import('@/pages/agreements/editor').then((m) => ({ default: m.AgreementEditorPage })));
+const AgreementTemplatesPage = lazy(() => import('@/pages/agreements/templates').then((m) => ({ default: m.AgreementTemplatesPage })));
+const TemplateEditorPage = lazy(() => import('@/pages/agreements/template-editor').then((m) => ({ default: m.TemplateEditorPage })));
 const IntegrationsPage = lazy(() => import('@/pages/integrations').then((m) => ({ default: m.IntegrationsPage })));
 
 // Suspense fallback for route-level lazy loading. Shows a generic page-shape
@@ -306,6 +308,23 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
                   <AgreementsPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Template routes BEFORE /agreements/editor so they aren't masked */}
+            <Route
+              path="/agreements/templates"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
+                  <AgreementTemplatesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/agreements/templates/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
+                  <TemplateEditorPage />
                 </ProtectedRoute>
               }
             />

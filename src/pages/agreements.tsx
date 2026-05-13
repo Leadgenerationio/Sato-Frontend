@@ -22,6 +22,7 @@ import { useClient, useClients } from '@/lib/hooks/use-clients';
 import { FileUpload } from '@/components/shared/file-upload';
 import type { PresignedUpload } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
+import { useAgreementTemplates, usePreviewAgreementTemplate } from '@/lib/hooks/use-agreement-templates';
 
 function statusBadge(status: AgreementStatus) {
   const map: Record<AgreementStatus, { label: string; classes: string; icon: React.ElementType }> = {
@@ -72,6 +73,13 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
   // Sam Loom #68 — signatory role/title.
   const [signerRole, setSignerRole] = useState('');
   const [uploaded, setUploaded] = useState<{ key: string; name: string } | null>(null);
+  // Template picker state
+  const { data: templates } = useAgreementTemplates();
+  const preview = usePreviewAgreementTemplate();
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [effectiveDate, setEffectiveDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [overrides] = useState<Record<string, string>>({});
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { data: clientsData } = useClients({ limit: 100 });
   const send = useSendAgreement();
   // When prefill carries a clientId, fetch its full record so we can show
@@ -90,6 +98,9 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
     setSignerName(prefill?.signerName ?? '');
     setSignerRole('');
     setUploaded(null);
+    setSelectedTemplateId(null);
+    setEffectiveDate(new Date().toISOString().slice(0, 10));
+    setPreviewUrl(null);
   }, [open, prefill?.clientId, prefill?.signerEmail, prefill?.signerName]);
 
   const reset = () => {
@@ -98,6 +109,9 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
     setSignerName(prefill?.signerName ?? '');
     setSignerRole('');
     setUploaded(null);
+    setSelectedTemplateId(null);
+    setEffectiveDate(new Date().toISOString().slice(0, 10));
+    setPreviewUrl(null);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -116,20 +130,35 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientId || !signerEmail || !signerName || !uploaded) {
-      toast.error('All fields are required (upload a PDF first).');
+    if (!clientId || !signerEmail || !signerName) {
+      toast.error('Client, signer name and email are required.');
+      return;
+    }
+    if (!selectedTemplateId && !uploaded) {
+      toast.error('Either select a template or upload a PDF.');
       return;
     }
     try {
-      await send.mutateAsync({
-        clientId,
-        signerEmail,
-        signerName,
-        signerRole: signerRole.trim() || undefined,
-        r2SourceKey: uploaded.key,
-        r2SourceFolder: 'misc',
-        documentName: uploaded.name,
-      });
+      const payload = selectedTemplateId
+        ? {
+            clientId,
+            signerEmail,
+            signerName,
+            signerRole: signerRole.trim() || undefined,
+            templateId: selectedTemplateId,
+            overrides,
+            effectiveDate,
+          }
+        : {
+            clientId,
+            signerEmail,
+            signerName,
+            signerRole: signerRole.trim() || undefined,
+            r2SourceKey: uploaded!.key,
+            r2SourceFolder: 'misc' as const,
+            documentName: uploaded!.name,
+          };
+      await send.mutateAsync(payload);
       toast.success('Envelope sent via SignNow.');
       handleOpenChange(false);
     } catch (err: unknown) {
@@ -212,49 +241,118 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
                 The legal capacity they sign in — appears under the signature line + in the audit trail.
               </p>
             </div>
-            <div className="space-y-1.5">
-              <Label>PDF document</Label>
-              <FileUpload
-                folder="misc"
-                accept="application/pdf"
-                maxSizeMB={50}
-                label={uploaded ? 'Replace PDF' : 'Upload PDF'}
-                onUploaded={handleUploaded}
-              />
-              {uploaded && (
-                <p className="text-xs text-muted-foreground truncate">
-                  <FileText className="inline size-3.5 mr-1" />
-                  {uploaded.name} (uploaded to R2)
-                </p>
-              )}
-            </div>
+
+            {/* Template picker — only shown when templates exist */}
+            {templates && templates.length > 0 && (
+              <div className="space-y-3 p-4 border rounded-md bg-muted/30">
+                <div className="space-y-1.5">
+                  <Label>Use a template (optional)</Label>
+                  <select
+                    className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                    value={selectedTemplateId ?? ''}
+                    onChange={(e) => setSelectedTemplateId(e.target.value || null)}
+                  >
+                    <option value="">— No template (upload PDF below) —</option>
+                    {templates.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedTemplateId && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="effectiveDate">Effective date</Label>
+                      <Input
+                        id="effectiveDate"
+                        type="date"
+                        value={effectiveDate}
+                        onChange={(e) => setEffectiveDate(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      disabled={preview.isPending}
+                      onClick={async () => {
+                        const resolvedClientId = prefill?.clientId ?? clientId;
+                        if (!resolvedClientId) {
+                          toast.error('No client context');
+                          return;
+                        }
+                        try {
+                          const blob = await preview.mutateAsync({
+                            id: selectedTemplateId,
+                            clientId: resolvedClientId,
+                            overrides,
+                            effectiveDate,
+                          });
+                          setPreviewUrl(URL.createObjectURL(blob));
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : 'Preview failed');
+                        }
+                      }}
+                    >
+                      {preview.isPending ? <Loader2 className="size-3.5 animate-spin mr-1" /> : null}
+                      Refresh preview
+                    </Button>
+                    {previewUrl && (
+                      <iframe src={previewUrl} className="w-full h-96 border rounded" title="populated preview" />
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* PDF upload — only shown when no template is selected */}
+            {!selectedTemplateId && (
+              <div className="space-y-1.5">
+                <Label>PDF document</Label>
+                <FileUpload
+                  folder="misc"
+                  accept="application/pdf"
+                  maxSizeMB={50}
+                  label={uploaded ? 'Replace PDF' : 'Upload PDF'}
+                  onUploaded={handleUploaded}
+                />
+                {uploaded && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    <FileText className="inline size-3.5 mr-1" />
+                    {uploaded.name} (uploaded to R2)
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={send.isPending}>Cancel</Button>
             {/* #47-50 — branch to the drag-place editor instead of sending
                 free-form. Open in editor only enables once the PDF + client
-                are populated; everything else can be edited from the editor. */}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={send.isPending || !uploaded || !clientId || !signerEmail || !signerName}
-              onClick={() => {
-                if (!uploaded) return;
-                const params = new URLSearchParams({
-                  r2Key: uploaded.key,
-                  r2Folder: 'misc',
-                  clientId,
-                  signerEmail,
-                  signerName,
-                  documentName: uploaded.name,
-                });
-                handleOpenChange(false);
-                navigate(`/agreements/editor?${params.toString()}`);
-              }}
-            >
-              <PenLine className="size-4" />
-              Place fields...
-            </Button>
+                are populated; everything else can be edited from the editor.
+                Hidden when using a template (fields already on template). */}
+            {!selectedTemplateId && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={send.isPending || !uploaded || !clientId || !signerEmail || !signerName}
+                onClick={() => {
+                  if (!uploaded) return;
+                  const params = new URLSearchParams({
+                    r2Key: uploaded.key,
+                    r2Folder: 'misc',
+                    clientId,
+                    signerEmail,
+                    signerName,
+                    documentName: uploaded.name,
+                  });
+                  handleOpenChange(false);
+                  navigate(`/agreements/editor?${params.toString()}`);
+                }}
+              >
+                <PenLine className="size-4" />
+                Place fields...
+              </Button>
+            )}
             <Button type="submit" disabled={send.isPending}>
               {send.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               Send envelope
