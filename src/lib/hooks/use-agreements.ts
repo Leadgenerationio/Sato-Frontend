@@ -9,6 +9,9 @@ export interface Agreement {
   providerEnvelopeId: string;
   signerEmail: string;
   signerName: string;
+  /** Sam Loom #68 — signatory role/title ("Director", "CEO", etc.). Null on
+   *  agreements created before this column landed. */
+  signerRole?: string | null;
   status: AgreementStatus;
   sentAt: string;
   signedAt?: string | null;
@@ -56,12 +59,15 @@ export interface SendAgreementInput {
   clientId: string;
   signerEmail: string;
   signerName: string;
+  /** Sam Loom #68 — signatory role/title (e.g. "Director"). Bounded to 100
+   *  chars at the server. */
+  signerRole?: string;
   /** Inline base64-encoded PDF (legacy small-file path, capped at API body limit). */
   documentBase64?: string;
   /** R2 key from a prior <FileUpload> result. Bypasses body-size limits. */
   r2SourceKey?: string;
   /** R2 folder where the source PDF lives (matches FileUpload `folder` prop). */
-  r2SourceFolder?: 'invoices' | 'agreements' | 'creatives' | 'landing-pages' | 'misc';
+  r2SourceFolder?: 'invoices' | 'agreements' | 'creatives' | 'landing-pages' | 'sops' | 'misc';
   documentName?: string;
 }
 

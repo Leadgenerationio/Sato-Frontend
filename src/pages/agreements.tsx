@@ -69,6 +69,8 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
   const [clientId, setClientId] = useState(prefill?.clientId ?? '');
   const [signerEmail, setSignerEmail] = useState(prefill?.signerEmail ?? '');
   const [signerName, setSignerName] = useState(prefill?.signerName ?? '');
+  // Sam Loom #68 — signatory role/title.
+  const [signerRole, setSignerRole] = useState('');
   const [uploaded, setUploaded] = useState<{ key: string; name: string } | null>(null);
   const { data: clientsData } = useClients({ limit: 100 });
   const send = useSendAgreement();
@@ -86,6 +88,7 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
     setClientId(prefill?.clientId ?? '');
     setSignerEmail(prefill?.signerEmail ?? '');
     setSignerName(prefill?.signerName ?? '');
+    setSignerRole('');
     setUploaded(null);
   }, [open, prefill?.clientId, prefill?.signerEmail, prefill?.signerName]);
 
@@ -93,6 +96,7 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
     setClientId(prefill?.clientId ?? '');
     setSignerEmail(prefill?.signerEmail ?? '');
     setSignerName(prefill?.signerName ?? '');
+    setSignerRole('');
     setUploaded(null);
   };
 
@@ -121,6 +125,7 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
         clientId,
         signerEmail,
         signerName,
+        signerRole: signerRole.trim() || undefined,
         r2SourceKey: uploaded.key,
         r2SourceFolder: 'misc',
         documentName: uploaded.name,
@@ -191,6 +196,21 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
             <div className="space-y-1.5">
               <Label htmlFor="signerEmail">Signer email</Label>
               <Input id="signerEmail" type="email" value={signerEmail} onChange={(e) => setSignerEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="signerRole">
+                Signer role / title <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="signerRole"
+                value={signerRole}
+                onChange={(e) => setSignerRole(e.target.value)}
+                placeholder="e.g. Director, CEO, Compliance Officer"
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                The legal capacity they sign in — appears under the signature line + in the audit trail.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label>PDF document</Label>
@@ -328,7 +348,12 @@ export function AgreementsPage() {
                 <TableBody>
                   {agreements.map((a) => (
                     <TableRow key={a.id}>
-                      <TableCell className="font-medium">{a.signerName}</TableCell>
+                      <TableCell className="font-medium">
+                        {a.signerName}
+                        {a.signerRole && (
+                          <span className="block text-xs text-muted-foreground font-normal mt-0.5">{a.signerRole}</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{a.signerEmail}</TableCell>
                       <TableCell>{formatDateTime(a.sentAt)}</TableCell>
                       <TableCell>{formatDateTime(a.signedAt)}</TableCell>
