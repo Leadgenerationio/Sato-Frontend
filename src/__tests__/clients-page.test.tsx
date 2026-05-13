@@ -13,7 +13,7 @@ vi.mock('@/lib/hooks/use-clients', () => ({
     data: {
       clients: [
         { id: 'c-1', companyName: 'Apex Media Ltd', contactName: 'James Wright', contactEmail: 'billing@apex.co.uk', status: 'active', currency: 'GBP', creditScore: 82, activeCampaigns: 2, totalRevenue: 45200, createdAt: '2025-06-15' },
-        { id: 'c-2', companyName: 'Delta Solutions', contactName: 'Laura Davies', contactEmail: 'pay@delta.co.uk', status: 'paused', currency: 'GBP', creditScore: 42, activeCampaigns: 0, totalRevenue: 12400, createdAt: '2025-07-01' },
+        { id: 'c-2', companyName: 'Delta Solutions', contactName: 'Laura Davies', contactEmail: 'pay@delta.co.uk', status: 'churned', currency: 'GBP', creditScore: 42, activeCampaigns: 0, totalRevenue: 12400, createdAt: '2025-07-01' },
       ],
       total: 2,
       page: 1,
@@ -46,11 +46,12 @@ describe('ClientsPage', () => {
   });
 
   it('renders status filter tabs', () => {
+    // Sam Loom #31 (13 May response) — Onboarding / Active Client / Client Churned.
     renderPage();
     expect(screen.getAllByText(/^all$/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/^active$/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/^prospect$/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/^churned$/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Onboarding/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Active Client/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Client Churned/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders credit scores', () => {

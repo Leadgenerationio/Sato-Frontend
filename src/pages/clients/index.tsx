@@ -15,15 +15,23 @@ import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
 
-// 'onboarding' was removed because the BE has no matching client status — the
-// tab just returned empty results. Audit 2026-05-03.
-const STATUS_TABS = ['all', 'prospect', 'active', 'paused', 'churned'] as const;
+// Sam Loom #31 (13 May response) — only 3 statuses: Onboarding, Active
+// Client, Client Churned. 'prospect' and 'paused' were dropped; existing
+// rows migrated via 0022. UI labels diverge from DB values (we render
+// the longer label) so the underlying enum stays clean.
+const STATUS_TABS = ['all', 'onboarding', 'active', 'churned'] as const;
 
 const statusColors: Record<string, string> = {
-  prospect: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  paused: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  churned: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  onboarding: 'bg-blue-500/10 text-blue-600 border-blue-200',
+  active:     'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  churned:    'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+};
+
+const statusLabels: Record<string, string> = {
+  all: 'All',
+  onboarding: 'Onboarding',
+  active: 'Active Client',
+  churned: 'Client Churned',
 };
 
 function creditBadge(score: number | null) {
@@ -74,11 +82,11 @@ export function ClientsPage() {
             <button
               key={tab}
               onClick={() => handleStatusChange(tab)}
-              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 statusFilter === tab ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {tab}
+              {statusLabels[tab] ?? tab}
             </button>
           ))}
         </div>
@@ -136,7 +144,7 @@ export function ClientsPage() {
                         <div className="text-xs text-muted-foreground">{c.contactEmail}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>{c.status}</Badge>
+                        <Badge className={`text-xs ${statusColors[c.status] || ''}`}>{statusLabels[c.status] ?? c.status}</Badge>
                       </TableCell>
                       <TableCell className="text-center">{creditBadge(c.creditScore)}</TableCell>
                       <TableCell className="text-right tabular-nums">{c.activeCampaigns}</TableCell>

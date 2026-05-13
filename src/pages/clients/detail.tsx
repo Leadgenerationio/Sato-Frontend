@@ -38,12 +38,24 @@ const contactTypeColors: Record<string, string> = {
   other: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
+// Sam Loom #31 (13 May response) — only 3 statuses surfaced. 'prospect'
+// and 'paused' kept in the color map for back-compat in case a legacy row
+// slipped through 0022; would render with the closest visual.
 const statusColors: Record<string, string> = {
-  prospect: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  onboarding: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  paused: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  churned: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  onboarding: 'bg-blue-500/10 text-blue-600 border-blue-200',
+  active:     'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  churned:    'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  // Legacy fallbacks — should be empty post-migration but kept for safety.
+  prospect:   'bg-blue-500/10 text-blue-600 border-blue-200',
+  paused:     'bg-amber-500/10 text-amber-600 border-amber-200',
+};
+
+const statusLabels: Record<string, string> = {
+  onboarding: 'Onboarding',
+  active: 'Active Client',
+  churned: 'Client Churned',
+  prospect: 'Onboarding',
+  paused: 'Client Churned',
 };
 
 const riskColors: Record<string, string> = {
@@ -134,7 +146,7 @@ export function ClientDetailPage() {
         <div className="flex-1">
           <PageHeader title={client.companyName} description={`${client.contactName} · ${client.companyNumber}`}>
             <div className="flex items-center gap-3">
-              <Badge className={`capitalize ${statusColors[client.status] || ''}`}>{client.status}</Badge>
+              <Badge className={statusColors[client.status] || ''}>{statusLabels[client.status] ?? client.status}</Badge>
               <Button size="sm" variant="default" onClick={() => setAgreementDialogOpen(true)}>
                 <FileSignature className="size-4 mr-1.5" />
                 Create Agreement
