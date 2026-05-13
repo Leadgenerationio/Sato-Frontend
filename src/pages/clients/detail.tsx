@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -475,10 +475,47 @@ const invoiceStatusColors: Record<string, string> = {
   overdue: 'bg-red-500/10 text-red-600 border-red-200',
 };
 
+type ClientInvoiceSort = 'createdAt' | 'dueDate' | 'total' | 'status' | 'invoiceNumber';
+const CLIENT_INVOICE_STATUS_TABS = ['all', 'sent', 'authorised', 'paid', 'overdue'] as const;
+
 function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: string; clientCurrency: string; totalRevenue: number }) {
   const { data, isLoading, isError } = useClientInvoices(clientId);
   const sync = useSyncClientInvoices(clientId);
-  const invoices = data?.invoices ?? [];
+  const allInvoices = data?.invoices ?? [];
+
+  // Sam audit #8 — filter/sort on the per-client invoices tab. Done in-memory
+  // since /clients/:id/invoices returns the full list (typically <100 per
+  // client, well within memory budget).
+  const [statusFilter, setStatusFilter] = useState<(typeof CLIENT_INVOICE_STATUS_TABS)[number]>('all');
+  const [sortBy, setSortBy] = useState<ClientInvoiceSort>('createdAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const invoices = useMemo(() => {
+    const filtered = statusFilter === 'all'
+      ? allInvoices
+      : allInvoices.filter((inv) => inv.status === statusFilter);
+    const sorted = [...filtered].sort((a, b) => {
+      let av: string | number;
+      let bv: string | number;
+      switch (sortBy) {
+        case 'total': av = parseFloat(a.total) || 0; bv = parseFloat(b.total) || 0; break;
+        case 'dueDate': av = a.dueDate; bv = b.dueDate; break;
+        case 'invoiceNumber': av = a.invoiceNumber; bv = b.invoiceNumber; break;
+        case 'status': av = a.status; bv = b.status; break;
+        case 'createdAt':
+        default: av = a.createdAt; bv = b.createdAt;
+      }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [allInvoices, statusFilter, sortBy, sortDir]);
+
+  function toggleSort(col: ClientInvoiceSort) {
+    if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortBy(col); setSortDir('desc'); }
+  }
 
   const handleSync = async () => {
     try {
@@ -521,6 +558,23 @@ function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: str
         </div>
       </CardHeader>
       <CardContent>
+        {!isLoading && !isError && allInvoices.length > 0 && (
+          <div className="mb-3 flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+            {CLIENT_INVOICE_STATUS_TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setStatusFilter(tab)}
+                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                  statusFilter === tab
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        )}
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
@@ -532,31 +586,60 @@ function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: str
             description="There was a problem loading invoices for this client. Refresh the page to try again."
             size="compact"
           />
-        ) : invoices.length === 0 ? (
+        ) : allInvoices.length === 0 ? (
           <EmptyState
             icon={FileText}
             title="No invoices yet"
             description='No Stato invoices for this client. Click "Sync from Xero" above to pull invoices created directly in Xero, or "Open in invoices list" to create one.'
             size="compact"
           />
+        ) : invoices.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title={`No ${statusFilter} invoices`}
+            description="Try a different status tab — all invoices for this client are listed under All."
+            size="compact"
+          />
         ) : (
-          <InvoicesTable invoices={invoices} />
+          <InvoicesTable invoices={invoices} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
         )}
       </CardContent>
     </Card>
   );
 }
 
-function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
+function InvoicesTable({
+  invoices, sortBy, sortDir, onSort,
+}: {
+  invoices: InvoiceSummary[];
+  sortBy: ClientInvoiceSort;
+  sortDir: 'asc' | 'desc';
+  onSort: (col: ClientInvoiceSort) => void;
+}) {
+  function SortHead({ id, label, align = 'left' }: { id: ClientInvoiceSort; label: string; align?: 'left' | 'right' }) {
+    const active = sortBy === id;
+    const arrow = active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
+    return (
+      <th className={`py-2.5 px-3 font-medium ${align === 'right' ? 'text-right tabular-nums' : ''}`}>
+        <button
+          type="button"
+          onClick={() => onSort(id)}
+          className={`transition-colors ${active ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          {label}<span className="text-[10px]">{arrow}</span>
+        </button>
+      </th>
+    );
+  }
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="border-b text-left text-xs text-muted-foreground">
           <tr>
-            <th className="py-2.5 pl-2 pr-3 font-medium">Number</th>
-            <th className="py-2.5 px-3 font-medium">Status</th>
-            <th className="py-2.5 px-3 font-medium">Due</th>
-            <th className="py-2.5 px-3 font-medium text-right tabular-nums">Amount</th>
+            <SortHead id="invoiceNumber" label="Number" />
+            <SortHead id="status" label="Status" />
+            <SortHead id="dueDate" label="Due" />
+            <SortHead id="total" label="Amount" align="right" />
             <th className="py-2.5 px-3 font-medium text-right">Overdue</th>
             <th className="py-2.5 pl-3 pr-2 w-12"></th>
           </tr>
@@ -653,7 +736,7 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
   const handleRemove = async (doc: ClientDocument) => {
     try {
       await removeDoc.mutateAsync(doc.id);
-      toast.info('Removed from list. File still exists in storage.');
+      toast.success(`"${doc.name}" removed`);
     } catch (err) {
       console.error('Remove failed', err);
       toast.error('Failed to remove document');
