@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Receipt } from 'lucide-react';
+import { Receipt, ChevronDown, ChevronUp } from 'lucide-react';
 import { api, unwrap } from '@/lib/api';
 
 interface QuarterBlock {
@@ -21,6 +22,9 @@ interface VatLiabilityResponse {
   stagger?: 1 | 2 | 3;
   previousQuarter?: QuarterBlock;
   currentQuarter?: QuarterBlock;
+  /** Sam Loom #12 — past quarters, newest-first. Only present when the widget
+   *  asks for ?history=N (the expanded view). */
+  history?: QuarterBlock[];
 }
 
 function toMoney(s?: string): number {
@@ -52,11 +56,18 @@ function formatRange(block: QuarterBlock): string {
   return `${formatMonth(block.fromDate)} – ${formatMonth(block.toDate)}`;
 }
 
+const HISTORY_COUNT = 4;
+
 export function VatWidget() {
+  // Sam Loom #12 — history is lazy-fetched only when the user expands the
+  // "Past quarters" disclosure. Keeps the default dashboard mount cheap (no
+  // 5 extra Xero TaxSummary calls per page load).
+  const [showHistory, setShowHistory] = useState(false);
   const { data, isLoading } = useQuery({
-    queryKey: ['xero', 'vat-liability'],
+    queryKey: ['xero', 'vat-liability', showHistory ? HISTORY_COUNT : 0],
     queryFn: async () => {
-      const res = await api.get<VatLiabilityResponse>('/api/v1/integrations/xero/vat-liability');
+      const qs = showHistory ? `?history=${HISTORY_COUNT}` : '';
+      const res = await api.get<VatLiabilityResponse>(`/api/v1/integrations/xero/vat-liability${qs}`);
       return unwrap(res);
     },
     refetchInterval: 30 * 60_000,
@@ -155,6 +166,36 @@ export function VatWidget() {
                 <span className="tabular-nums">-{formatCurrency(toMoney(curr.paidOnPurchases), currency)}</span>
               </div>
             </div>
+
+            <Separator />
+
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>Past quarters</span>
+              {showHistory ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+            </button>
+
+            {showHistory && (
+              <div className="space-y-1">
+                {data.history === undefined || data.history.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic py-2 text-center">No earlier quarters on file.</p>
+                ) : (
+                  data.history.map((h) => (
+                    <div key={`${h.fromDate}-${h.toDate}`} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{formatRange(h)}</span>
+                      {h.error ? (
+                        <span className="text-amber-600">unavailable</span>
+                      ) : (
+                        <span className="tabular-nums font-medium">{formatCurrency(Math.abs(toMoney(h.owed)), currency)}</span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </>
         )}
       </CardContent>
