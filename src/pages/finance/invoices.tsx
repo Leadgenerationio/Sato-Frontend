@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Plus, Download, FileText, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Search, ExternalLink, Plus, Download, FileText, ArrowUp, ArrowDown, ArrowUpDown, Calendar } from 'lucide-react';
 import { useInvoices, toMoney, type InvoiceSummary, type InvoiceSortBy, type SortDir } from '@/lib/hooks/use-invoices';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
@@ -135,6 +135,12 @@ export function InvoiceListPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Invoices" description="Manage invoices synced with Xero">
         <div className="flex gap-2">
+          <Link to="/finance/auto-invoice">
+            <Button variant="outline" size="sm">
+              <Calendar className="size-4 mr-1.5" />
+              Auto-invoice
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" onClick={() => invoices && exportCsv(invoices)} disabled={!invoices?.length}>
             <Download className="size-4 mr-1.5" />
             CSV
