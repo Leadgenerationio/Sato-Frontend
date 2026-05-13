@@ -30,6 +30,7 @@ const BankFeedPage = lazy(() => import('@/pages/finance/bank-feed').then((m) => 
 const ClientsPage = lazy(() => import('@/pages/clients/index').then((m) => ({ default: m.ClientsPage })));
 const ClientDetailPage = lazy(() => import('@/pages/clients/detail').then((m) => ({ default: m.ClientDetailPage })));
 const ClientCreatePage = lazy(() => import('@/pages/clients/create').then((m) => ({ default: m.ClientCreatePage })));
+const ClientImportPage = lazy(() => import('@/pages/clients/import').then((m) => ({ default: m.ClientImportPage })));
 const WorkflowsPage = lazy(() => import('@/pages/workflows/index').then((m) => ({ default: m.WorkflowsPage })));
 const WorkflowDetailPage = lazy(() => import('@/pages/workflows/detail').then((m) => ({ default: m.WorkflowDetailPage })));
 const WorkflowCreatePage = lazy(() => import('@/pages/workflows/create').then((m) => ({ default: m.WorkflowCreatePage })));
@@ -154,6 +155,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
                   <ClientCreatePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clients/import"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
+                  <ClientImportPage />
                 </ProtectedRoute>
               }
             />

@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Plus, Users, AlertTriangle } from 'lucide-react';
+import { Search, ExternalLink, Plus, Users, AlertTriangle, Download } from 'lucide-react';
 import { useClients, type ClientSummary } from '@/lib/hooks/use-clients';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
@@ -52,12 +52,20 @@ export function ClientsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Clients" description="Manage your client accounts">
-        <Link to="/clients/create">
-          <Button size="sm">
-            <Plus className="size-4 mr-1.5" />
-            New Client
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/clients/import">
+            <Button size="sm" variant="outline">
+              <Download className="size-4 mr-1.5" />
+              Import from Attio
+            </Button>
+          </Link>
+          <Link to="/clients/create">
+            <Button size="sm">
+              <Plus className="size-4 mr-1.5" />
+              New Client
+            </Button>
+          </Link>
+        </div>
       </PageHeader>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
