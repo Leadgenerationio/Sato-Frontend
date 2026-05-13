@@ -27,6 +27,8 @@ const InvoiceListPage = lazy(() => import('@/pages/finance/invoices').then((m) =
 const InvoiceDetailPage = lazy(() => import('@/pages/finance/invoice-detail').then((m) => ({ default: m.InvoiceDetailPage })));
 const InvoiceCreatePage = lazy(() => import('@/pages/finance/invoice-create').then((m) => ({ default: m.InvoiceCreatePage })));
 const BankFeedPage = lazy(() => import('@/pages/finance/bank-feed').then((m) => ({ default: m.BankFeedPage })));
+const AutoInvoicePage = lazy(() => import('@/pages/finance/auto-invoice').then((m) => ({ default: m.AutoInvoicePage })));
+const AutoInvoiceRunDetailPage = lazy(() => import('@/pages/finance/auto-invoice-detail').then((m) => ({ default: m.AutoInvoiceRunDetailPage })));
 const ClientsPage = lazy(() => import('@/pages/clients/index').then((m) => ({ default: m.ClientsPage })));
 const ClientDetailPage = lazy(() => import('@/pages/clients/detail').then((m) => ({ default: m.ClientDetailPage })));
 const ClientCreatePage = lazy(() => import('@/pages/clients/create').then((m) => ({ default: m.ClientCreatePage })));
@@ -139,6 +141,22 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
                   <BankFeedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/finance/auto-invoice"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
+                  <AutoInvoicePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/finance/auto-invoice/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
+                  <AutoInvoiceRunDetailPage />
                 </ProtectedRoute>
               }
             />
