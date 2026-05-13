@@ -14,6 +14,7 @@ interface PnlSummary {
   revenue: string;
   fixedCosts: string;
   oneOffCosts: string;
+  advertisingCosts?: string;
   adSpend: string;
   totalCosts: string;
   netProfit: string;
@@ -80,6 +81,7 @@ export function PnlWidget() {
   const revenue = toMoney(data.revenue);
   const fixed = toMoney(data.fixedCosts);
   const oneOff = toMoney(data.oneOffCosts);
+  const advertising = toMoney(data.advertisingCosts);
   const adSpend = toMoney(data.adSpend);
   const totalCosts = toMoney(data.totalCosts);
   const netProfit = toMoney(data.netProfit);
@@ -142,8 +144,16 @@ export function PnlWidget() {
               -{formatCurrency(oneOff, data.currency)}
             </span>
           </div>
+          {advertising > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground" title="Bank-fed advertising rows (Facebook/Google bills you categorised as 'advertising')">Advertising (bank)</span>
+              <span className="font-medium tabular-nums text-red-600">
+                -{formatCurrency(advertising, data.currency)}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Ad spend</span>
+            <span className="text-muted-foreground" title="Ad spend pulled from Catchr (Facebook/Google ad-account APIs)">Ad spend (Catchr)</span>
             <span className="font-medium tabular-nums text-red-600">
               -{formatCurrency(adSpend, data.currency)}
             </span>
