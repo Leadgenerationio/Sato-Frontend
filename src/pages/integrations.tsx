@@ -177,17 +177,32 @@ export function IntegrationsPage() {
   }
 
   const cards: CardSpec[] = [
-    {
-      key: 'xero',
-      title: 'Xero',
-      description: 'Accounting · invoices · bank balances',
-      icon: Building2,
-      iconColor: '#13B5EA',
-      status: statusFor(data.xero.configured, data.xero.connected),
-      metricLabel: 'Organisation',
-      metricValue: data.xero.tenantName ?? (data.xero.configured ? 'Auth pending' : '—'),
-      secondaryAction: { label: 'Open Xero', href: 'https://go.xero.com' },
-    },
+    // When credentials are present but the token exchange hasn't succeeded
+    // yet, the card shows "Auth pending" — almost always because the Xero
+    // Custom Connection app is missing one of the 5 scopes Stato requests
+    // (most often `finance.statements.read`, the Finance API scope). In
+    // that state, "Open Xero" → go.xero.com (the org dashboard) is the
+    // wrong destination; the user needs developer.xero.com → their app →
+    // scopes. We route there + show a hint listing the scopes.
+    (() => {
+      const xeroAuthPending = data.xero.configured && !data.xero.connected;
+      return {
+        key: 'xero',
+        title: 'Xero',
+        description: 'Accounting · invoices · bank balances',
+        icon: Building2,
+        iconColor: '#13B5EA',
+        status: statusFor(data.xero.configured, data.xero.connected),
+        metricLabel: 'Organisation',
+        metricValue: data.xero.tenantName ?? (data.xero.configured ? 'Auth pending' : '—'),
+        detail: xeroAuthPending
+          ? 'Enable scopes: accounting.* + finance.statements.read'
+          : undefined,
+        secondaryAction: xeroAuthPending
+          ? { label: 'Configure in Xero', href: 'https://developer.xero.com/app/manage' }
+          : { label: 'Open Xero', href: 'https://go.xero.com' },
+      };
+    })(),
     {
       key: 'leadbyte',
       title: 'LeadByte',

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -70,5 +70,42 @@ describe('IntegrationsPage', () => {
     expect(screen.getAllByText('Live').length).toBeGreaterThan(0);
     expect(screen.getByText(/Mock \/ partial/)).toBeInTheDocument();
     expect(screen.getByText('Not configured')).toBeInTheDocument();
+  });
+});
+
+// Xero card behaviour in the "Auth pending" state — credentials are present
+// but the Xero token exchange hasn't succeeded (usually a missing scope on
+// the Custom Connection app, most often finance.statements.read). The card
+// must route the user to developer.xero.com (where they fix scopes), not to
+// go.xero.com (the org dashboard, useless for this state).
+//
+// The top-of-file `vi.mock('@/lib/api', ...)` is hoisted and singleton, so
+// to test a different fixture we mutate the shared `overviewFixture` object
+// in beforeEach (the mock reads it via reference) and restore it after.
+describe('IntegrationsPage — Xero auth pending', () => {
+  const liveXero = { ...overviewFixture.xero };
+
+  beforeEach(() => {
+    // Cast to bypass the literal-inferred type on overviewFixture (which had
+    // tenantName: string — non-nullable — based on the live fixture).
+    overviewFixture.xero = { configured: true, connected: false, tenantName: null as unknown as string };
+  });
+  afterEach(() => {
+    overviewFixture.xero = liveXero;
+  });
+
+  it('shows "Auth pending" + scope hint + Configure-in-Xero link when configured but not connected', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><IntegrationsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText('Auth pending')).toBeInTheDocument();
+    expect(screen.getByText(/Enable scopes/)).toBeInTheDocument();
+    expect(screen.getByText(/accounting\.\* \+ finance\.statements\.read/)).toBeInTheDocument();
+    const cfg = screen.getByRole('link', { name: /Configure in Xero/i });
+    expect(cfg).toHaveAttribute('href', 'https://developer.xero.com/app/manage');
   });
 });
