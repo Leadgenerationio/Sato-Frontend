@@ -50,7 +50,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const BUCKET_TABS = ['all', 'uncategorized', 'fixed', 'one_off'] as const;
+const BUCKET_TABS = ['all', 'uncategorized', 'fixed', 'one_off', 'advertising'] as const;
 type BucketTab = (typeof BUCKET_TABS)[number];
 
 const bucketLabels: Record<BucketTab, string> = {
@@ -58,6 +58,7 @@ const bucketLabels: Record<BucketTab, string> = {
   uncategorized: 'Uncategorised',
   fixed: 'Fixed costs',
   one_off: 'One-off',
+  advertising: 'Advertising',
 };
 
 export function BankFeedPage() {
@@ -68,7 +69,8 @@ export function BankFeedPage() {
 
   const { data, isLoading, error } = useBankTransactions({
     uncategorized: bucket === 'uncategorized' ? true : undefined,
-    bucket: bucket === 'fixed' || bucket === 'one_off' ? bucket : undefined,
+    bucket:
+      bucket === 'fixed' || bucket === 'one_off' || bucket === 'advertising' ? bucket : undefined,
     search: debouncedSearch || undefined,
     page,
     limit: 25,
@@ -246,7 +248,9 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
             >
               <option value="">— Uncategorised —</option>
               {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.bucket === 'fixed' ? 'fixed' : 'one-off'})</option>
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.bucket === 'fixed' ? 'fixed' : c.bucket === 'one_off' ? 'one-off' : 'advertising'})
+                </option>
               ))}
             </select>
             {tx.isAutoCategorized && (
@@ -307,7 +311,7 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
 function CategoryDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
-  const [bucket, setBucket] = useState<'fixed' | 'one_off'>('fixed');
+  const [bucket, setBucket] = useState<'fixed' | 'one_off' | 'advertising'>('fixed');
   const create = useCreateCategory();
 
   async function handleSubmit() {
@@ -356,15 +360,17 @@ function CategoryDialog() {
               value={bucket}
               onChange={(e) => {
                 const v = e.target.value;
-                if (v === 'fixed' || v === 'one_off') setBucket(v);
+                if (v === 'fixed' || v === 'one_off' || v === 'advertising') setBucket(v);
               }}
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
             >
               <option value="fixed">Fixed cost (recurring)</option>
               <option value="one_off">One-off</option>
+              <option value="advertising">Advertising (Facebook, Google, etc.)</option>
             </select>
             <p className="text-xs text-muted-foreground">
               Fixed = recurring (rent, salaries, software). One-off = ad-hoc (flights, equipment).
+              Advertising = ad-platform spend (kept separate from fixed/one-off for clean P&amp;L).
             </p>
           </div>
         </div>

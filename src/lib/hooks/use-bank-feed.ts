@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 
+export type CostBucket = 'fixed' | 'one_off' | 'advertising';
+
 export interface BankTransaction {
   id: string;
   xeroBankTransactionId: string;
@@ -12,14 +14,14 @@ export interface BankTransaction {
   vendorName: string | null;
   categoryId: string | null;
   categoryName: string | null;
-  categoryBucket: 'fixed' | 'one_off' | null;
+  categoryBucket: CostBucket | null;
   isAutoCategorized: boolean;
 }
 
 export interface CostCategory {
   id: string;
   name: string;
-  bucket: 'fixed' | 'one_off';
+  bucket: CostBucket;
   color: string | null;
 }
 
@@ -49,7 +51,7 @@ export interface BankSyncResult {
 export function useBankTransactions(filters?: {
   uncategorized?: boolean;
   categoryId?: string;
-  bucket?: 'fixed' | 'one_off';
+  bucket?: CostBucket;
   search?: string;
   page?: number;
   limit?: number;
@@ -84,7 +86,7 @@ export function useCostCategories() {
 export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { name: string; bucket: 'fixed' | 'one_off'; color?: string }) => {
+    mutationFn: async (data: { name: string; bucket: CostBucket; color?: string }) => {
       const res = await api.post<{ category: CostCategory }>('/api/v1/finance/bank-feed/categories', data);
       return unwrap(res).category;
     },
