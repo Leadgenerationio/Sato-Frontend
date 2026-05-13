@@ -66,13 +66,26 @@ export interface PaginatedInvoices {
   pageSize: number;
 }
 
-export function useInvoices(filters?: { status?: string; client?: string; search?: string; page?: number; limit?: number }) {
+export type InvoiceSortBy = 'createdAt' | 'dueDate' | 'total' | 'status' | 'invoiceNumber';
+export type SortDir = 'asc' | 'desc';
+
+export function useInvoices(filters?: {
+  status?: string;
+  client?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: InvoiceSortBy;
+  sortDir?: SortDir;
+}) {
   const params = new URLSearchParams();
   if (filters?.status && filters.status !== 'all') params.set('status', filters.status);
   if (filters?.client) params.set('client', filters.client);
   if (filters?.search) params.set('search', filters.search);
   if (filters?.page) params.set('page', String(filters.page));
   if (filters?.limit) params.set('limit', String(filters.limit));
+  if (filters?.sortBy) params.set('sortBy', filters.sortBy);
+  if (filters?.sortDir) params.set('sortDir', filters.sortDir);
   const qs = params.toString();
 
   return useQuery({
