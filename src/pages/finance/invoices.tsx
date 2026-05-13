@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +9,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Plus, Download, FileText } from 'lucide-react';
-import { useInvoices, toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { Search, ExternalLink, Plus, Download, FileText, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { useInvoices, toMoney, type InvoiceSummary, type InvoiceSortBy, type SortDir } from '@/lib/hooks/use-invoices';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -48,16 +48,88 @@ function exportCsv(invoices: InvoiceSummary[]) {
   URL.revokeObjectURL(url);
 }
 
+function SortableHead({
+  id, label, align = 'left', sortBy, sortDir, onToggle,
+}: {
+  id: InvoiceSortBy;
+  label: string;
+  align?: 'left' | 'right';
+  sortBy: InvoiceSortBy | undefined;
+  sortDir: SortDir;
+  onToggle: (id: InvoiceSortBy) => void;
+}) {
+  const active = sortBy === id;
+  const Icon = active ? (sortDir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <TableHead className={align === 'right' ? 'text-right' : ''}>
+      <button
+        type="button"
+        onClick={() => onToggle(id)}
+        className={`inline-flex items-center gap-1 transition-colors ${active ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+      >
+        {label}
+        <Icon className="size-3" />
+      </button>
+    </TableHead>
+  );
+}
+
 export function InvoiceListPage() {
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 300);
-  const [page, setPage] = useState(1);
-  const { data, isLoading, error, refetch } = useInvoices({ status: statusFilter, search: debouncedSearch, page, limit: 10 });
+  // URL-sync filter state so refresh / share-link preserves the view (Sam #7).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = searchParams.get('status') ?? 'all';
+  const search = searchParams.get('search') ?? '';
+  const sortBy = (searchParams.get('sortBy') as InvoiceSortBy | null) ?? 'createdAt';
+  const sortDir = (searchParams.get('sortDir') as SortDir | null) ?? 'desc';
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
+
+  const [searchDraft, setSearchDraft] = useState(search);
+  const debouncedSearch = useDebounce(searchDraft, 300);
+
+  // Push debounced search into the URL when it changes. setSearchParams must
+  // run inside an effect (not directly in render) to avoid the React "update
+  // during render" warning.
+  useEffect(() => {
+    if (debouncedSearch === search) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (debouncedSearch) next.set('search', debouncedSearch);
+      else next.delete('search');
+      next.delete('page');
+      return next;
+    }, { replace: true });
+  }, [debouncedSearch, search, setSearchParams]);
+
+  function patchSearch(updates: Record<string, string | null>) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [k, v] of Object.entries(updates)) {
+        if (v === null) next.delete(k);
+        else next.set(k, v);
+      }
+      return next;
+    });
+  }
+
+  const { data, isLoading, error, refetch } = useInvoices({
+    status: statusFilter,
+    search: debouncedSearch,
+    page,
+    limit: 10,
+    sortBy,
+    sortDir,
+  });
   const invoices = data?.invoices;
 
-  const handleStatusChange = (s: string) => { setStatusFilter(s); setPage(1); };
-  const handleSearchChange = (val: string) => { setSearch(val); setPage(1); };
+  const handleStatusChange = (s: string) => patchSearch({ status: s === 'all' ? null : s, page: null });
+  const handlePageChange = (p: number) => patchSearch({ page: String(p) });
+  const handleSort = (col: InvoiceSortBy) => {
+    if (sortBy === col) {
+      patchSearch({ sortDir: sortDir === 'asc' ? 'desc' : 'asc' });
+    } else {
+      patchSearch({ sortBy: col, sortDir: 'desc' });
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,8 +169,8 @@ export function InvoiceListPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             placeholder="Search invoices..."
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
             className="pl-9"
           />
         </div>
@@ -128,27 +200,27 @@ export function InvoiceListPage() {
           ) : !invoices?.length ? (
             <EmptyState
               icon={FileText}
-              title={search || statusFilter !== 'all' ? 'No matching invoices' : 'No invoices yet'}
+              title={debouncedSearch || statusFilter !== 'all' ? 'No matching invoices' : 'No invoices yet'}
               description={
-                search || statusFilter !== 'all'
+                debouncedSearch || statusFilter !== 'all'
                   ? 'Try a different search or status filter.'
                   : 'Create your first invoice to bill clients and push it through to Xero.'
               }
-              link={search || statusFilter !== 'all' ? undefined : { label: 'New invoice', to: '/finance/invoices/create', icon: Plus }}
+              link={debouncedSearch || statusFilter !== 'all' ? undefined : { label: 'New invoice', to: '/finance/invoices/create', icon: Plus }}
             />
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Invoice</TableHead>
+                    <SortableHead id="invoiceNumber" label="Invoice" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
                     <TableHead>Client</TableHead>
-                    <TableHead>Status</TableHead>
+                    <SortableHead id="status" label="Status" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
                     <TableHead className="text-right">Subtotal</TableHead>
                     <TableHead className="text-right">VAT</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Created</TableHead>
+                    <SortableHead id="total" label="Total" align="right" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
+                    <SortableHead id="dueDate" label="Due Date" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
+                    <SortableHead id="createdAt" label="Created" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -192,7 +264,7 @@ export function InvoiceListPage() {
             page={data.page}
             pageSize={data.pageSize}
             total={data.total}
-            onPageChange={setPage}
+            onPageChange={handlePageChange}
           />
         )}
       </Card>
