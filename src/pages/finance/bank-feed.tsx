@@ -117,7 +117,9 @@ export function BankFeedPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3">
+        {/* Row 1: bucket tabs — own row so they're never squeezed by the
+            filter + search controls (Sam screenshot 2026-05-14). */}
         <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
           {BUCKET_TABS.map((tab) => (
             <button
@@ -133,7 +135,8 @@ export function BankFeedPage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        {/* Row 2: category filter + search */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <div className="flex items-center gap-2">
             <Label htmlFor="category-filter" className="whitespace-nowrap text-xs font-medium text-muted-foreground">
               Filter by category
