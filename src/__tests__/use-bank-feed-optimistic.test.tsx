@@ -77,6 +77,23 @@ describe('useCategorizeTransaction — optimistic cache update', () => {
     expect(after?.transactions[0]?.categoryId).toBe('cat-ads');
   });
 
+  it('removes the tx from a list filtered to categoryId=X when the tx is moved to a different category', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const filters = { categoryId: 'cat-software' };
+    const txInSoftware: BankTransaction = { ...tx, categoryId: 'cat-software' };
+    const initial: PaginatedTransactions = { transactions: [txInSoftware], total: 1, page: 1, pageSize: 25 };
+    qc.setQueryData(['bank-feed', 'transactions', filters], initial);
+
+    const { result } = renderHook(() => useCategorizeTransaction(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      await result.current.mutateAsync({ transactionId: 'tx-1', categoryId: 'cat-rent' });
+    });
+
+    const after = qc.getQueryData<PaginatedTransactions>(['bank-feed', 'transactions', filters]);
+    expect(after?.transactions).toHaveLength(0);
+  });
+
   it('rolls back the optimistic update if the mutation fails', async () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const filters = { uncategorized: true };

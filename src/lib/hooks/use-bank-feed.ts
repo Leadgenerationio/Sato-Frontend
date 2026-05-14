@@ -142,6 +142,7 @@ export function useCategorizeTransaction() {
         const filters = ((key as readonly unknown[])[2] ?? {}) as {
           uncategorized?: boolean;
           bucket?: CostBucket;
+          categoryId?: string;
         };
         const nowCategorized = variables.categoryId !== null;
         const nextRows: BankTransaction[] = [];
@@ -155,6 +156,9 @@ export function useCategorizeTransaction() {
           // Drop if list is bucket-filtered and new state is uncategorized
           // (uncategorized rows don't belong to any bucket).
           if (filters.bucket && !nowCategorized) continue;
+          // Drop if list is filtered to a specific category and we just
+          // moved this tx to a different category (or uncategorized).
+          if (filters.categoryId && filters.categoryId !== variables.categoryId) continue;
           // Otherwise update in place. categoryName / categoryBucket are
           // server-joined fields; clear them so the invalidate refetch
           // backfills with the correct cost_categories row.
@@ -175,8 +179,12 @@ export function useCategorizeTransaction() {
         qc.setQueryData(key, data);
       }
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['bank-feed'] });
+    // Await the refetch so mutateAsync only resolves once the cache holds
+    // server-truth data. Without the await the dialog closes mid-refetch
+    // and any transient re-render between optimistic-state and refetched
+    // state reads as "row came back" (Sam 2026-05-14).
+    onSettled: async () => {
+      await qc.invalidateQueries({ queryKey: ['bank-feed'] });
     },
   });
 }
