@@ -63,14 +63,22 @@ const bucketLabels: Record<BucketTab, string> = {
 
 export function BankFeedPage() {
   const [bucket, setBucket] = useState<BucketTab>('uncategorized');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useBankTransactions({
-    uncategorized: bucket === 'uncategorized' ? true : undefined,
-    bucket:
-      bucket === 'fixed' || bucket === 'one_off' || bucket === 'advertising' ? bucket : undefined,
+    // A per-category filter is more specific than the bucket tabs, so when
+    // it's set we ignore both `uncategorized` and `bucket` (otherwise picking
+    // a category from a different bucket would yield an empty list).
+    uncategorized: categoryFilter ? undefined : bucket === 'uncategorized' ? true : undefined,
+    bucket: categoryFilter
+      ? undefined
+      : bucket === 'fixed' || bucket === 'one_off' || bucket === 'advertising'
+        ? bucket
+        : undefined,
+    categoryId: categoryFilter || undefined,
     search: debouncedSearch || undefined,
     page,
     limit: 25,
@@ -114,9 +122,9 @@ export function BankFeedPage() {
           {BUCKET_TABS.map((tab) => (
             <button
               key={tab}
-              onClick={() => { setBucket(tab); setPage(1); }}
+              onClick={() => { setBucket(tab); setCategoryFilter(''); setPage(1); }}
               className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                bucket === tab
+                bucket === tab && !categoryFilter
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
@@ -125,14 +133,42 @@ export function BankFeedPage() {
             </button>
           ))}
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search vendor or description..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="pl-9"
-          />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="category-filter" className="whitespace-nowrap text-xs font-medium text-muted-foreground">
+              Filter by category
+            </Label>
+            <select
+              id="category-filter"
+              aria-label="Filter by category"
+              value={categoryFilter}
+              onChange={(e) => {
+                // A specific category overrides the bucket tabs — reset bucket
+                // back to "all" so users don't see an empty list from a
+                // bucket+category mismatch.
+                setCategoryFilter(e.target.value);
+                if (e.target.value) setBucket('all');
+                setPage(1);
+              }}
+              className="h-9 w-full sm:w-56 rounded-md border border-input bg-background px-2 text-sm shadow-sm"
+            >
+              <option value="">All categories</option>
+              {(categories ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.bucket === 'fixed' ? 'fixed' : c.bucket === 'one_off' ? 'one-off' : 'advertising'})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search vendor or description..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-9"
+            />
+          </div>
         </div>
       </div>
 
