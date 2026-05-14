@@ -126,7 +126,56 @@ export function useCategorizeTransaction() {
       );
       return unwrap(res);
     },
-    onSuccess: () => {
+    // Optimistic cache update so the row disappears (or updates) immediately
+    // when the user picks a category from the dropdown — without it the
+    // user sees the stale row for the duration of the network round-trip
+    // and reads it as "didn't update, need to refresh" (Sam 2026-05-14).
+    onMutate: async (variables) => {
+      await qc.cancelQueries({ queryKey: ['bank-feed', 'transactions'] });
+      const snapshots = qc.getQueriesData<PaginatedTransactions>({
+        queryKey: ['bank-feed', 'transactions'],
+      });
+      // setQueriesData (v5) doesn't pass the query to the updater, so iterate
+      // each matched key explicitly to read its filters.
+      for (const [key, old] of snapshots) {
+        if (!old) continue;
+        const filters = ((key as readonly unknown[])[2] ?? {}) as {
+          uncategorized?: boolean;
+          bucket?: CostBucket;
+        };
+        const nowCategorized = variables.categoryId !== null;
+        const nextRows: BankTransaction[] = [];
+        for (const t of old.transactions) {
+          if (t.id !== variables.transactionId) {
+            nextRows.push(t);
+            continue;
+          }
+          // Drop if list is "uncategorized only" and we just categorized.
+          if (filters.uncategorized && nowCategorized) continue;
+          // Drop if list is bucket-filtered and new state is uncategorized
+          // (uncategorized rows don't belong to any bucket).
+          if (filters.bucket && !nowCategorized) continue;
+          // Otherwise update in place. categoryName / categoryBucket are
+          // server-joined fields; clear them so the invalidate refetch
+          // backfills with the correct cost_categories row.
+          nextRows.push({
+            ...t,
+            categoryId: variables.categoryId,
+            categoryName: null,
+            categoryBucket: null,
+          });
+        }
+        qc.setQueryData(key, { ...old, transactions: nextRows });
+      }
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (!context?.snapshots) return;
+      for (const [key, data] of context.snapshots) {
+        qc.setQueryData(key, data);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['bank-feed'] });
     },
   });
