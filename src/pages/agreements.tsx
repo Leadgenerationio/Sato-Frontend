@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,12 +82,17 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { data: clientsData } = useClients({ limit: 100 });
   const send = useSendAgreement();
-  // When prefill carries a clientId, fetch its full record so we can show
-  // staff the company info as read-only context — fewer "wrong client"
-  // mistakes per Sam's "make it error free" ask.
-  const { data: prefilledClient } = useClient(prefill?.clientId ?? '');
+  // Fetch the currently-selected client so we can both (a) show its company
+  // info as read-only context when lockClient is set, and (b) auto-fill the
+  // signer name/email from the client's primary contact (Sam 2026-05-14).
+  const { data: selectedClient } = useClient(clientId);
 
   const clients = useMemo(() => clientsData?.clients ?? [], [clientsData]);
+
+  // Tracks which clientId we've already auto-filled signer fields from, so
+  // re-renders don't keep clobbering user edits. Cleared each time the dialog
+  // re-opens.
+  const lastAutoFilledFromRef = useRef<string | null>(null);
 
   // Re-sync state from prefill when the dialog opens — handles the case where
   // prefill arrives async (e.g. client data loads after parent renders).
@@ -101,7 +106,23 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
     setSelectedTemplateId(null);
     setEffectiveDate(new Date().toISOString().slice(0, 10));
     setPreviewUrl(null);
+    // If prefill brought explicit signer values, treat those as the auto-fill
+    // for this client so we don't immediately overwrite them with the
+    // client record's contact details.
+    lastAutoFilledFromRef.current =
+      (prefill?.signerName || prefill?.signerEmail) ? (prefill?.clientId ?? null) : null;
   }, [open, prefill?.clientId, prefill?.signerEmail, prefill?.signerName]);
+
+  // Auto-fill signer name + email from the selected client's primary contact.
+  // Fires once per client selection — preserves manual edits made between
+  // selections, but overwrites when the user switches to a different client.
+  useEffect(() => {
+    if (!clientId || !selectedClient || selectedClient.id !== clientId) return;
+    if (lastAutoFilledFromRef.current === clientId) return;
+    if (selectedClient.contactName) setSignerName(selectedClient.contactName);
+    if (selectedClient.contactEmail) setSignerEmail(selectedClient.contactEmail);
+    lastAutoFilledFromRef.current = clientId;
+  }, [clientId, selectedClient]);
 
   const reset = () => {
     setClientId(prefill?.clientId ?? '');
@@ -187,16 +208,16 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
               A SignNow envelope will be created and emailed to the signer. Status will update here once they sign.
             </DialogDescription>
           </DialogHeader>
-          {prefilledClient && lockClient && (
+          {selectedClient && lockClient && (
             <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs">
-              <p className="font-medium text-foreground">{prefilledClient.companyName}</p>
+              <p className="font-medium text-foreground">{selectedClient.companyName}</p>
               <p className="text-muted-foreground">
-                {prefilledClient.companyNumber ? `Co. ${prefilledClient.companyNumber} · ` : ''}
-                {prefilledClient.address || 'No address on file'}
+                {selectedClient.companyNumber ? `Co. ${selectedClient.companyNumber} · ` : ''}
+                {selectedClient.address || 'No address on file'}
               </p>
-              {typeof prefilledClient.creditScore === 'number' && (
+              {typeof selectedClient.creditScore === 'number' && (
                 <p className="mt-1 text-muted-foreground">
-                  Credit score: <span className="font-medium text-foreground">{prefilledClient.creditScore}</span>
+                  Credit score: <span className="font-medium text-foreground">{selectedClient.creditScore}</span>
                 </p>
               )}
             </div>
