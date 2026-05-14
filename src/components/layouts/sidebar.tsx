@@ -61,6 +61,7 @@ const navItems: NavEntry[] = [
     children: [
       { href: '/finance/invoices', label: 'Invoices', icon: FileText, roles: ['owner', 'finance_admin'] },
       { href: '/finance/bank-feed', label: 'Bank Feed', icon: Receipt, roles: ['owner', 'finance_admin'] },
+      { href: '/finance/auto-invoice', label: 'Auto-invoice', icon: Receipt, roles: ['owner', 'finance_admin'] },
     ],
   },
   { href: '/clients', label: 'Clients', icon: Users, roles: ['owner', 'finance_admin', 'ops_manager'] },
