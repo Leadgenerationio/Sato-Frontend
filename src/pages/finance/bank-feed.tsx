@@ -242,7 +242,18 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
           <div className="flex items-center gap-2">
             <select
               value={tx.categoryId ?? ''}
-              onChange={(e) => setPendingCategoryId(e.target.value || null)}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (next === '') {
+                  // Uncategorise: skip the confirm dialog (no rule-learning
+                  // decision needed) — the old code routed this through the
+                  // dialog which never opened because its open prop was
+                  // pendingCategoryId !== null, silently dropping the action.
+                  void applyCategory(null, false, false);
+                  return;
+                }
+                setPendingCategoryId(next);
+              }}
               disabled={categorize.isPending}
               className="flex h-8 w-full max-w-[200px] rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
             >
