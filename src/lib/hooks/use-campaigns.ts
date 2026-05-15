@@ -163,6 +163,35 @@ export function useTrafficSources(campaignId: string) {
   });
 }
 
+export interface CatchrAccountOption {
+  id: string;
+  name: string;
+  platform: string;
+  sourceName: string;
+}
+
+/**
+ * Picker data for the traffic-source dialog. Sam wants Facebook / Google /
+ * Taboola etc. to surface their connected ad accounts as a dropdown, not
+ * a free-form URL paste. Backend caches this for 5 min so the dialog is
+ * snappy after the first open.
+ */
+export function useCatchrAccounts(platform?: string) {
+  return useQuery({
+    queryKey: ['catchr', 'accounts', platform ?? 'all'],
+    queryFn: async () => {
+      const qs = platform ? `?platform=${encodeURIComponent(platform)}` : '';
+      const res = await api.get<{ configured: boolean; accounts: CatchrAccountOption[]; error?: string }>(
+        `/api/v1/integrations/catchr/accounts${qs}`,
+      );
+      return unwrap(res);
+    },
+    // Cache aggressively client-side too — the dropdown shouldn't refetch
+    // every time the user opens the dialog mid-session.
+    staleTime: 5 * 60_000,
+  });
+}
+
 export interface CreateTrafficSourceInput {
   name: string;
   platform?: string;

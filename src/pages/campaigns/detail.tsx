@@ -18,6 +18,7 @@ import {
 import {
   useCampaign, useTrafficSources, useUpdateCampaign,
   useCreateTrafficSource, useUpdateTrafficSource, useDeleteTrafficSource,
+  useCatchrAccounts,
 } from '@/lib/hooks/use-campaigns';
 import { useCreatives, useCreateCreative, useDeleteCreative } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
@@ -333,6 +334,79 @@ const SUPPLIER_OPTIONS = [
   { value: 'other', label: 'Other' },
 ] as const;
 
+/**
+ * Replaces the old "paste a Catchr NCP URL" text input with a real dropdown
+ * of the user's connected ad accounts for the chosen platform (Sam's
+ * 2026-05-15 Loom — he demoed how leadreports.io picks accounts by name
+ * from a list, vs. our previous setup which forced a hand-pasted URL).
+ *
+ * - When platform is one of the supported ones AND Catchr returns accounts,
+ *   render a <select>.
+ * - When Catchr isn't configured, the platform is "other", or the list is
+ *   empty (no accounts connected on Catchr for this platform), fall back
+ *   to a free-form text field so nobody is blocked.
+ * - The value stored is the Catchr account id (goes into traffic_sources.
+ *   account_id); the human label is shown in the dropdown.
+ */
+function CatchrAccountPicker({
+  platform,
+  accountId,
+  manualUrl,
+  onChangeAccount,
+  onChangeManualUrl,
+}: {
+  platform: string;
+  accountId: string;
+  manualUrl: string;
+  onChangeAccount: (id: string, label: string) => void;
+  onChangeManualUrl: (url: string) => void;
+}) {
+  const isKnownPlatform = platform && platform !== 'other';
+  const { data, isLoading } = useCatchrAccounts(isKnownPlatform ? platform : undefined);
+  const accounts = data?.accounts ?? [];
+  const configured = data?.configured ?? false;
+
+  // Fallbacks: when Catchr isn't connected, platform is "other", or the
+  // user's Catchr workspace has no accounts for this platform, surface the
+  // legacy text input so users can still capture the source manually.
+  const fallbackToManual = !isKnownPlatform || !configured || (!isLoading && accounts.length === 0);
+
+  if (fallbackToManual) {
+    return (
+      <Input
+        value={manualUrl}
+        onChange={(e) => onChangeManualUrl(e.target.value)}
+        placeholder={
+          !configured
+            ? 'Catchr not configured — paste NCP URL'
+            : platform === 'other'
+              ? 'Paste a reference URL (optional)'
+              : `No ${platform} accounts found in Catchr — paste NCP URL`
+        }
+      />
+    );
+  }
+
+  return (
+    <select
+      value={accountId}
+      onChange={(e) => {
+        const picked = accounts.find((a) => a.id === e.target.value);
+        onChangeAccount(e.target.value, picked?.name ?? '');
+      }}
+      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+      disabled={isLoading}
+    >
+      <option value="">
+        {isLoading ? 'Loading accounts…' : `Select a ${platform} account…`}
+      </option>
+      {accounts.map((a) => (
+        <option key={a.id} value={a.id}>{a.name}</option>
+      ))}
+    </select>
+  );
+}
+
 function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
   const { data: sources, isLoading } = useTrafficSources(campaignId);
   const createSource = useCreateTrafficSource(campaignId);
@@ -485,11 +559,12 @@ function AddSourceRow({
   pending, onSubmit, onCancel,
 }: {
   pending: boolean;
-  onSubmit: (input: { name: string; platform?: string; catchrUrl?: string }) => Promise<void>;
+  onSubmit: (input: { name: string; platform?: string; accountId?: string; catchrUrl?: string }) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState('');
   const [platform, setPlatform] = useState<string>('facebook');
+  const [accountId, setAccountId] = useState('');
   const [catchrUrl, setCatchrUrl] = useState('');
 
   const handleSave = async () => {
@@ -497,7 +572,12 @@ function AddSourceRow({
       toast.error('Name is required');
       return;
     }
-    await onSubmit({ name: name.trim(), platform, catchrUrl: catchrUrl.trim() || undefined });
+    await onSubmit({
+      name: name.trim(),
+      platform,
+      accountId: accountId.trim() || undefined,
+      catchrUrl: catchrUrl.trim() || undefined,
+    });
   };
 
   return (
@@ -506,12 +586,31 @@ function AddSourceRow({
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Facebook · Solar UK" autoFocus />
       </TableCell>
       <TableCell>
-        <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+        <select
+          value={platform}
+          onChange={(e) => {
+            setPlatform(e.target.value);
+            // Switching platform invalidates the previously-picked account.
+            setAccountId('');
+          }}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        >
           {SUPPLIER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </TableCell>
       <TableCell colSpan={5}>
-        <Input value={catchrUrl} onChange={(e) => setCatchrUrl(e.target.value)} placeholder="https://catchr.io/ncp/..." />
+        <CatchrAccountPicker
+          platform={platform}
+          accountId={accountId}
+          manualUrl={catchrUrl}
+          onChangeAccount={(id, label) => {
+            setAccountId(id);
+            // If the row name is still empty, auto-fill from the account
+            // label so Sam doesn't have to retype "Facebook · Solar UK".
+            if (!name.trim() && label) setName(label);
+          }}
+          onChangeManualUrl={setCatchrUrl}
+        />
       </TableCell>
       <TableCell colSpan={2} className="text-right">
         <div className="flex justify-end gap-1">
@@ -529,12 +628,13 @@ function EditSourceRow({
   campaignId, source, onDone,
 }: {
   campaignId: string;
-  source: { id: string; name: string; platform: string; catchrUrl: string | null; totalSpend: number; totalLeads: number };
+  source: { id: string; name: string; platform: string; accountId?: string; catchrUrl: string | null; totalSpend: number; totalLeads: number };
   onDone: () => void;
 }) {
   const update = useUpdateTrafficSource(campaignId);
   const [name, setName] = useState(source.name);
   const [platform, setPlatform] = useState(source.platform || 'facebook');
+  const [accountId, setAccountId] = useState(source.accountId ?? '');
   const [catchrUrl, setCatchrUrl] = useState(source.catchrUrl ?? '');
   const [spend, setSpend] = useState(String(source.totalSpend));
   const [leads, setLeads] = useState(String(source.totalLeads));
@@ -555,6 +655,7 @@ function EditSourceRow({
         sourceId: source.id,
         name: name.trim(),
         platform,
+        accountId: accountId.trim(),
         catchrUrl: catchrUrl.trim() === '' ? null : catchrUrl.trim(),
         totalSpend: spendNum,
         totalLeads: Math.floor(leadsNum),
@@ -572,12 +673,27 @@ function EditSourceRow({
         <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
       </TableCell>
       <TableCell>
-        <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+        <select
+          value={platform}
+          onChange={(e) => {
+            setPlatform(e.target.value);
+            // Different platform = different account list; the old selection
+            // no longer means anything.
+            setAccountId('');
+          }}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        >
           {SUPPLIER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </TableCell>
       <TableCell>
-        <Input value={catchrUrl} onChange={(e) => setCatchrUrl(e.target.value)} placeholder="https://catchr.io/ncp/..." />
+        <CatchrAccountPicker
+          platform={platform}
+          accountId={accountId}
+          manualUrl={catchrUrl}
+          onChangeAccount={(id) => setAccountId(id)}
+          onChangeManualUrl={setCatchrUrl}
+        />
       </TableCell>
       <TableCell>
         <Input type="number" min={0} step="0.01" value={spend} onChange={(e) => setSpend(e.target.value)} className="text-right tabular-nums" />
