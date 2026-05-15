@@ -205,13 +205,17 @@ export function ClientDetailPage() {
         </div>
       )}
 
+      <OnboardingProgress
+        onboardingStatus={client.onboardingStatus}
+        agreementSigned={client.agreementSigned}
+      />
+
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="credit">Credit</TabsTrigger>
-          <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="emails">Emails</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
@@ -424,43 +428,6 @@ export function ClientDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* Onboarding Tab */}
-        <TabsContent value="onboarding" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Onboarding Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {['pending', 'documents_received', 'agreement_signed', 'active'].map((step, i) => {
-                  const steps = ['pending', 'documents_received', 'agreement_signed', 'active'];
-                  const currentIdx = steps.indexOf(client.onboardingStatus);
-                  const isDone = i <= currentIdx;
-                  const isCurrent = i === currentIdx;
-                  return (
-                    <div key={step} className="flex items-center gap-4">
-                      <div className={`flex size-8 items-center justify-center rounded-full text-sm font-medium ${
-                        isDone ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'
-                      } ${isCurrent ? 'ring-2 ring-emerald-500 ring-offset-2' : ''}`}>
-                        {i + 1}
-                      </div>
-                      <div>
-                        <p className={`text-sm font-medium capitalize ${isDone ? '' : 'text-muted-foreground'}`}>{step.replace(/_/g, ' ')}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-                <Separator />
-                <div className="flex items-center gap-2 text-sm">
-                  <ClipboardCheck className="size-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Agreement:</span>
-                  <span className="font-medium">{client.agreementSigned ? 'Signed' : 'Not signed'}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Documents Tab */}
         <TabsContent value="documents" className="mt-6">
           <DocumentsTab clientId={id!} />
@@ -477,6 +444,103 @@ export function ClientDetailPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ─── Onboarding progress strip ─────────────────────────────────────────────
+//
+// Was previously a full Onboarding tab that hid the lifecycle state behind a
+// tab click and confused Sam (2026-05-15 Loom: "I don't understand this
+// section. What does it do? ... rather than having a tab, wasting a tab on
+// it"). Now rendered inline above the tabs as a 4-step horizontal progress
+// bar so Sam can read the client's onboarding state at a glance without
+// hunting for it. Stages mirror the backend's enum (pending →
+// documents_received → agreement_signed → active).
+
+interface OnboardingStep {
+  key: 'pending' | 'documents_received' | 'agreement_signed' | 'active';
+  label: string;
+  hint: string;
+}
+
+const ONBOARDING_STEPS: OnboardingStep[] = [
+  { key: 'pending', label: 'Pending', hint: 'Client created · awaiting next step' },
+  { key: 'documents_received', label: 'Documents', hint: 'Onboarding documents received' },
+  { key: 'agreement_signed', label: 'Agreement', hint: 'Service agreement signed via SignNow' },
+  { key: 'active', label: 'Active', hint: 'Live client · campaigns can run' },
+];
+
+export function OnboardingProgress({
+  onboardingStatus,
+  agreementSigned,
+}: {
+  onboardingStatus: string;
+  agreementSigned: boolean;
+}) {
+  const currentIdx = Math.max(
+    0,
+    ONBOARDING_STEPS.findIndex((s) => s.key === onboardingStatus),
+  );
+
+  return (
+    <Card>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Onboarding
+            </p>
+            <p className="text-sm font-medium">
+              Stage {currentIdx + 1} of {ONBOARDING_STEPS.length} · {ONBOARDING_STEPS[currentIdx]?.label ?? 'Unknown'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <ClipboardCheck className={`size-4 ${agreementSigned ? 'text-emerald-600' : 'text-muted-foreground'}`} />
+            <span className="text-muted-foreground">Agreement:</span>
+            <span className={`font-medium ${agreementSigned ? 'text-emerald-600' : ''}`}>
+              {agreementSigned ? 'Signed' : 'Not signed'}
+            </span>
+          </div>
+        </div>
+
+        <ol className="mt-4 flex items-start gap-1 overflow-x-auto pb-1">
+          {ONBOARDING_STEPS.map((step, i) => {
+            const isDone = i < currentIdx;
+            const isCurrent = i === currentIdx;
+            const isLast = i === ONBOARDING_STEPS.length - 1;
+            return (
+              <li key={step.key} className="flex flex-1 items-start gap-1 min-w-[120px]">
+                <div className="flex flex-1 flex-col items-center gap-1.5">
+                  <div className="flex w-full items-center gap-1">
+                    {/* Trailing line before the dot — invisible on the first step so the
+                        row aligns left without a phantom segment. */}
+                    <div className={`h-0.5 flex-1 ${i === 0 ? 'invisible' : isDone || isCurrent ? 'bg-emerald-500' : 'bg-muted'}`} />
+                    <div
+                      className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                        isDone
+                          ? 'bg-emerald-500 text-white'
+                          : isCurrent
+                            ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
+                            : 'border border-muted-foreground/30 bg-muted text-muted-foreground'
+                      }`}
+                      title={step.hint}
+                    >
+                      {isDone ? '✓' : i + 1}
+                    </div>
+                    {/* Trailing line after the dot — invisible on the last step. */}
+                    <div className={`h-0.5 flex-1 ${isLast ? 'invisible' : isDone ? 'bg-emerald-500' : 'bg-muted'}`} />
+                  </div>
+                  <div className="text-center">
+                    <p className={`text-xs font-medium ${isDone || isCurrent ? '' : 'text-muted-foreground'}`}>{step.label}</p>
+                    <p className="text-[10px] leading-tight text-muted-foreground">{step.hint}</p>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </CardContent>
+    </Card>
   );
 }
 
