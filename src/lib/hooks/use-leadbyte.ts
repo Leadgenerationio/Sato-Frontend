@@ -16,6 +16,13 @@ export interface LbBuyer {
   postcode?: string;
 }
 
+export interface LbDeliveryCaps {
+  day?: number;
+  week?: number;
+  month?: number;
+  total?: number;
+}
+
 export interface LbDelivery {
   id: string | number;
   reference?: string;
@@ -23,6 +30,7 @@ export interface LbDelivery {
   campaign?: { id: string | number; name: string };
   deliver_to?: 'Store Lead' | 'Email' | 'SMS' | 'Direct Post';
   buyer?: { id: string | number; name: string; bid?: string };
+  caps?: LbDeliveryCaps;
 }
 
 export interface LbResponder {
