@@ -12,7 +12,7 @@ const { overviewFixture } = vi.hoisted(() => ({
   overviewFixture: {
     xero: { configured: true, connected: true, tenantName: 'Clinical Marketing Solutions Ltd', lastError: null as string | null },
     leadbyte: { configured: true, lastSyncAt: '2026-05-07T08:00:00Z', leadsThisMonth: 3210 },
-    catchr: { configured: true, lastSyncAt: '2026-05-07T08:05:00Z', adSpendLast30Days: 103450, currency: 'GBP' },
+    catchr: { configured: true, connected: true, platformsConnected: 5, lastError: null as string | null, lastSyncAt: '2026-05-07T08:05:00Z', adSpendLast30Days: 103450, currency: 'GBP' },
     signnow: { configured: true, sandbox: false, agreementCount: 4 },
     r2: { configured: true, bucket: 'stato-production', fileCount: 27 },
     resend: { configured: true, fromEmail: 'onboarding@resend.dev' },

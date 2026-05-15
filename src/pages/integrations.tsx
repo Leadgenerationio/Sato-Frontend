@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 interface IntegrationsOverview {
   xero: { configured: boolean; connected: boolean; tenantName: string | null; lastError: string | null };
   leadbyte: { configured: boolean; lastSyncAt: string | null; leadsThisMonth: number };
-  catchr: { configured: boolean; lastSyncAt: string | null; adSpendLast30Days: number; currency: string };
+  catchr: { configured: boolean; connected: boolean; platformsConnected: number; lastError: string | null; lastSyncAt: string | null; adSpendLast30Days: number; currency: string };
   signnow: { configured: boolean; sandbox: boolean; agreementCount: number };
   r2: { configured: boolean; bucket: string | null; fileCount: number };
   resend: { configured: boolean; fromEmail: string | null };
@@ -236,11 +236,24 @@ export function IntegrationsPage() {
       description: 'Multi-platform ad-spend aggregation',
       icon: Megaphone,
       iconColor: '#0ea5e9',
-      status: statusFor(data.catchr.configured, data.catchr.configured),
+      // Card flips to "Mock" the moment the Catchr probe fails (expired
+      // token, transient outage, zero connected platforms). The detail
+      // line surfaces the actual error code so the operator doesn't have
+      // to grep Railway logs — same self-diagnostic pattern as Xero.
+      status: statusFor(data.catchr.configured, data.catchr.connected),
       metricLabel: 'Ad spend · last 30 days',
       metricValue: formatCurrency(data.catchr.adSpendLast30Days, data.catchr.currency),
+      detail: data.catchr.configured && !data.catchr.connected
+        ? data.catchr.lastError
+          ? `Catchr API: ${data.catchr.lastError}`
+          : 'Token present but Catchr returned no connected platforms — check app.catchr.io/logs/connections.'
+        : data.catchr.connected
+          ? `${data.catchr.platformsConnected} platform${data.catchr.platformsConnected === 1 ? '' : 's'} connected`
+          : undefined,
       lastSyncAt: data.catchr.lastSyncAt,
-      secondaryAction: { label: 'View Reports', href: '/reports/unified' },
+      secondaryAction: data.catchr.configured && !data.catchr.connected
+        ? { label: 'Open Catchr connections', href: 'https://app.catchr.io/logs/connections' }
+        : { label: 'View Reports', href: '/reports/unified' },
     },
     {
       key: 'signnow',
