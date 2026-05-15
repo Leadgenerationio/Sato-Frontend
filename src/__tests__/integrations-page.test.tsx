@@ -10,7 +10,7 @@ vi.mock('@/components/providers/auth-provider', () => ({
 
 const { overviewFixture } = vi.hoisted(() => ({
   overviewFixture: {
-    xero: { configured: true, connected: true, tenantName: 'Clinical Marketing Solutions Ltd' },
+    xero: { configured: true, connected: true, tenantName: 'Clinical Marketing Solutions Ltd', lastError: null as string | null },
     leadbyte: { configured: true, lastSyncAt: '2026-05-07T08:00:00Z', leadsThisMonth: 3210 },
     catchr: { configured: true, lastSyncAt: '2026-05-07T08:05:00Z', adSpendLast30Days: 103450, currency: 'GBP' },
     signnow: { configured: true, sandbox: false, agreementCount: 4 },
@@ -88,7 +88,7 @@ describe('IntegrationsPage — Xero auth pending', () => {
   beforeEach(() => {
     // Cast to bypass the literal-inferred type on overviewFixture (which had
     // tenantName: string — non-nullable — based on the live fixture).
-    overviewFixture.xero = { configured: true, connected: false, tenantName: null as unknown as string };
+    overviewFixture.xero = { configured: true, connected: false, tenantName: null as unknown as string, lastError: null };
   });
   afterEach(() => {
     overviewFixture.xero = liveXero;
@@ -106,6 +106,45 @@ describe('IntegrationsPage — Xero auth pending', () => {
     expect(screen.getByText(/Enable scopes/)).toBeInTheDocument();
     expect(screen.getByText(/accounting\.\* \+ finance\.statements\.read/)).toBeInTheDocument();
     const cfg = screen.getByRole('link', { name: /Configure in Xero/i });
-    expect(cfg).toHaveAttribute('href', 'https://developer.xero.com/app/manage');
+    // Deep-links to the specific app so the operator lands on the exact
+    // scope-config screen, not the generic apps list.
+    expect(cfg).toHaveAttribute(
+      'href',
+      'https://developer.xero.com/app/manage/app/843a4b14-559d-45ee-a193-f13b9ff35667',
+    );
+  });
+
+  it('translates invalid_scope into a human-actionable hint', async () => {
+    overviewFixture.xero = {
+      configured: true,
+      connected: false,
+      tenantName: null as unknown as string,
+      lastError: 'invalid_scope: Client credentials scope validation failed',
+    };
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><IntegrationsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText(/Scope rejected by Xero/)).toBeInTheDocument();
+  });
+
+  it('translates invalid_client into an env-var hint', async () => {
+    overviewFixture.xero = {
+      configured: true,
+      connected: false,
+      tenantName: null as unknown as string,
+      lastError: 'invalid_client',
+    };
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><IntegrationsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText(/Client ID\/Secret rejected/)).toBeInTheDocument();
   });
 });

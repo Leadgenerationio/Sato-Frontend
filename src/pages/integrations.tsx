@@ -13,7 +13,7 @@ import {
 import { toast } from 'sonner';
 
 interface IntegrationsOverview {
-  xero: { configured: boolean; connected: boolean; tenantName: string | null };
+  xero: { configured: boolean; connected: boolean; tenantName: string | null; lastError: string | null };
   leadbyte: { configured: boolean; lastSyncAt: string | null; leadsThisMonth: number };
   catchr: { configured: boolean; lastSyncAt: string | null; adSpendLast30Days: number; currency: string };
   signnow: { configured: boolean; sandbox: boolean; agreementCount: number };
@@ -186,6 +186,23 @@ export function IntegrationsPage() {
     // scopes. We route there + show a hint listing the scopes.
     (() => {
       const xeroAuthPending = data.xero.configured && !data.xero.connected;
+      // Translate the OAuth error code from Xero into an action the operator
+      // can take without leaving this page. Unknown codes fall through to the
+      // raw message so we never hide useful detail.
+      function explainError(code: string | null | undefined): string {
+        if (!code) return 'Enable scopes: accounting.* + finance.statements.read';
+        const c = code.toLowerCase();
+        if (c.includes('invalid_scope')) {
+          return 'Scope rejected by Xero — tick accounting.* + finance.statements.read in the developer portal, then re-save.';
+        }
+        if (c.includes('invalid_client') || c.includes('unauthorized_client')) {
+          return 'Client ID/Secret rejected — verify XERO_CLIENT_ID and XERO_CLIENT_SECRET on Railway match the values in the Xero portal.';
+        }
+        if (c.includes('invalid_grant')) {
+          return 'Connection revoked in Xero — re-authorise the Custom Connection in the developer portal.';
+        }
+        return `Xero rejected the connection: ${code}`;
+      }
       return {
         key: 'xero',
         title: 'Xero',
@@ -195,11 +212,9 @@ export function IntegrationsPage() {
         status: statusFor(data.xero.configured, data.xero.connected),
         metricLabel: 'Organisation',
         metricValue: data.xero.tenantName ?? (data.xero.configured ? 'Auth pending' : '—'),
-        detail: xeroAuthPending
-          ? 'Enable scopes: accounting.* + finance.statements.read'
-          : undefined,
+        detail: xeroAuthPending ? explainError(data.xero.lastError) : undefined,
         secondaryAction: xeroAuthPending
-          ? { label: 'Configure in Xero', href: 'https://developer.xero.com/app/manage' }
+          ? { label: 'Configure in Xero', href: 'https://developer.xero.com/app/manage/app/843a4b14-559d-45ee-a193-f13b9ff35667' }
           : { label: 'Open Xero', href: 'https://go.xero.com' },
       };
     })(),
