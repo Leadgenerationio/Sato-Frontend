@@ -163,6 +163,30 @@ export function useTrafficSources(campaignId: string) {
   });
 }
 
+export interface CatchrPlatformOption {
+  id: string;
+  name: string;
+  connected: boolean;
+}
+
+/**
+ * Catchr platforms the user has connected — drives the supplier dropdown
+ * in the Traffic Sources UI. Replaces the previous hardcoded list so the
+ * picker always matches Sam's actual Catchr workspace.
+ */
+export function useCatchrPlatforms() {
+  return useQuery({
+    queryKey: ['catchr', 'platforms'],
+    queryFn: async () => {
+      const res = await api.get<{ configured: boolean; platforms: CatchrPlatformOption[]; error?: string }>(
+        '/api/v1/integrations/catchr/platforms',
+      );
+      return unwrap(res);
+    },
+    staleTime: 10 * 60_000, // 10 min — platforms list almost never changes
+  });
+}
+
 export interface CatchrAccountOption {
   id: string;
   name: string;

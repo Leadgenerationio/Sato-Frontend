@@ -18,7 +18,7 @@ import {
 import {
   useCampaign, useTrafficSources, useUpdateCampaign,
   useCreateTrafficSource, useUpdateTrafficSource, useDeleteTrafficSource,
-  useCatchrAccounts,
+  useCatchrAccounts, useCatchrPlatforms,
 } from '@/lib/hooks/use-campaigns';
 import { useCreatives, useCreateCreative, useDeleteCreative } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
@@ -324,15 +324,27 @@ export function CampaignDetailPage() {
 // supplier (Facebook/Google/Bing/TikTok/Taboola/Outbrain) → Catchr NCP URL
 // and surfaces spend (Catchr), leads (LeadByte), CPL, revenue, net profit.
 
-const SUPPLIER_OPTIONS = [
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'google', label: 'Google' },
-  { value: 'bing', label: 'Bing' },
-  { value: 'tiktok', label: 'TikTok' },
-  { value: 'taboola', label: 'Taboola' },
-  { value: 'outbrain', label: 'Outbrain' },
-  { value: 'other', label: 'Other' },
-] as const;
+/**
+ * The "Other" sentinel kept as an always-present fallback so manual URL
+ * entry stays available even when Catchr lists every platform the user
+ * has connected. Sam's 2026-05-15 Loom: prior hardcoded list missed
+ * everything Catchr supports beyond the 6 we'd guessed, and used short
+ * slugs that didn't match Catchr's filter values. We now read the live
+ * platform list from Catchr; this constant is just the trailing escape
+ * hatch.
+ */
+const OTHER_OPTION = { id: 'other', name: 'Other' } as const;
+
+function useSupplierOptions(): Array<{ id: string; name: string }> {
+  const { data } = useCatchrPlatforms();
+  const platforms = data?.platforms ?? [];
+  // Connected platforms first (sorted by display name), then the manual
+  // "Other" escape hatch.
+  const connected = platforms
+    .filter((p) => p.connected)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...connected, OTHER_OPTION];
+}
 
 /**
  * Replaces the old "paste a Catchr NCP URL" text input with a real dropdown
@@ -562,8 +574,11 @@ function AddSourceRow({
   onSubmit: (input: { name: string; platform?: string; accountId?: string; catchrUrl?: string }) => Promise<void>;
   onCancel: () => void;
 }) {
+  const supplierOptions = useSupplierOptions();
   const [name, setName] = useState('');
-  const [platform, setPlatform] = useState<string>('facebook');
+  // Default to the first connected Catchr platform if any are loaded yet,
+  // else 'other' so the manual-URL fallback shows immediately.
+  const [platform, setPlatform] = useState<string>(() => supplierOptions[0]?.id ?? 'other');
   const [accountId, setAccountId] = useState('');
   const [catchrUrl, setCatchrUrl] = useState('');
 
@@ -595,7 +610,7 @@ function AddSourceRow({
           }}
           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
         >
-          {SUPPLIER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {supplierOptions.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </TableCell>
       <TableCell colSpan={5}>
@@ -631,9 +646,14 @@ function EditSourceRow({
   source: { id: string; name: string; platform: string; accountId?: string; catchrUrl: string | null; totalSpend: number; totalLeads: number };
   onDone: () => void;
 }) {
+  const supplierOptions = useSupplierOptions();
   const update = useUpdateTrafficSource(campaignId);
   const [name, setName] = useState(source.name);
-  const [platform, setPlatform] = useState(source.platform || 'facebook');
+  // Existing rows may carry a legacy short slug ('facebook') that's no
+  // longer in the Catchr-driven options list. Fall back to 'other' so the
+  // dropdown renders sensibly while still preserving the underlying value
+  // unless the user changes it.
+  const [platform, setPlatform] = useState(source.platform || 'other');
   const [accountId, setAccountId] = useState(source.accountId ?? '');
   const [catchrUrl, setCatchrUrl] = useState(source.catchrUrl ?? '');
   const [spend, setSpend] = useState(String(source.totalSpend));
@@ -683,7 +703,7 @@ function EditSourceRow({
           }}
           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
         >
-          {SUPPLIER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {supplierOptions.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </TableCell>
       <TableCell>
