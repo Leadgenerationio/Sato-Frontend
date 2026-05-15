@@ -210,6 +210,29 @@ export function useUpdateTask(taskId: string) {
   });
 }
 
+/**
+ * Hard-delete a task. Sam (2026-05-15 Loom): "there's no delete button" —
+ * the row was previously editable but unremovable, so stale test tasks
+ * piled up. Backend cascades subtasks / attachments / comments / activity
+ * and nulls parent_task_id on children. Caller passes the id at call time
+ * so a single hook covers the tasks list AND the detail page.
+ */
+export function useDeleteTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      await api.delete(`/api/v1/tasks/${taskId}`);
+      return taskId;
+    },
+    onSuccess: (taskId) => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      qc.invalidateQueries({ queryKey: ['task-stats'] });
+      qc.removeQueries({ queryKey: ['task', taskId] });
+      qc.removeQueries({ queryKey: ['task-children', taskId] });
+    },
+  });
+}
+
 // #91 AI new-task button — calls /tasks/ai-generate with a sentence,
 // returns a structured suggestion the user reviews + edits before save.
 export interface AiTaskSuggestion {

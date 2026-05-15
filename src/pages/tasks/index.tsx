@@ -11,10 +11,11 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/ui/pagination';
 import {
-  Search, Plus, CheckSquare, Clock, AlertTriangle, ListTodo, LayoutGrid, List, Timer,
+  Search, Plus, CheckSquare, Clock, AlertTriangle, ListTodo, LayoutGrid, List, Timer, Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
-  useTasks, useTaskStats,
+  useTasks, useTaskStats, useDeleteTask,
   type TaskSummary,
 } from '@/lib/hooks/use-tasks';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -155,6 +156,19 @@ export function TasksPage() {
     limit: 10,
   });
   const { data: stats } = useTaskStats();
+  const deleteTask = useDeleteTask();
+
+  const handleDelete = async (taskId: string, title: string) => {
+    if (!window.confirm(`Delete "${title}"? This permanently removes the task and its subtasks/attachments.`)) {
+      return;
+    }
+    try {
+      await deleteTask.mutateAsync(taskId);
+      toast.success(`Deleted "${title}"`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
   const tasks = data?.tasks;
 
   const handleStatusChange = (s: string) => { setStatusFilter(s); setPage(1); };
@@ -374,6 +388,7 @@ export function TasksPage() {
                     <TableHead>Due Date</TableHead>
                     <TableHead>Time</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead className="w-12 text-right" aria-label="Actions" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -407,6 +422,19 @@ export function TasksPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="text-xs">{t.category}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        {/* Row-click navigates to detail; the delete button has to
+                            stopPropagation or it'd open the task and delete simultaneously. */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Delete ${t.title}`}
+                          onClick={() => handleDelete(t.id, t.title)}
+                          disabled={deleteTask.isPending}
+                        >
+                          <Trash2 className="size-4 text-red-600" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

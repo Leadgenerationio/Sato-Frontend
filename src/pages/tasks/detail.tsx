@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  useTask, useUpdateTaskStatus, useAddComment, useUpdateTask, useTaskChildren, useTasks,
+  useTask, useUpdateTaskStatus, useAddComment, useUpdateTask, useDeleteTask, useTaskChildren, useTasks,
   useCreateSubtask, useUpdateSubtask, useDeleteSubtask,
   useAddTaskAttachment, useRemoveTaskAttachment,
   type TaskComment, type TaskSubtask, type TaskAttachment, type TaskActivityEvent,
@@ -143,11 +143,27 @@ function describeActivity(ev: TaskActivityEvent): string {
 }
 
 export function TaskDetailPage() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { data: task, isLoading, error } = useTask(id!);
   const updateStatus = useUpdateTaskStatus();
   const addComment = useAddComment();
+  const deleteTask = useDeleteTask();
   const [commentText, setCommentText] = useState('');
+
+  async function handleDeleteTask() {
+    if (!task) return;
+    if (!window.confirm(`Delete "${task.title}"? This permanently removes the task and its subtasks/attachments.`)) {
+      return;
+    }
+    try {
+      await deleteTask.mutateAsync(task.id);
+      toast.success(`Deleted "${task.title}"`);
+      navigate('/tasks');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
+    }
+  }
 
   async function handleStatusChange(nextStatus: string) {
     try {
@@ -212,6 +228,16 @@ export function TaskDetailPage() {
             <Badge className={`capitalize ${statusColors[task.status] || ''}`}>
               {statusLabels[task.status] || task.status}
             </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDeleteTask}
+              disabled={deleteTask.isPending}
+              className="ml-auto"
+            >
+              <Trash2 className="size-4 mr-1.5 text-red-600" />
+              Delete
+            </Button>
           </PageHeader>
         </div>
       </div>

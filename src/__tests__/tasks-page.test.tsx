@@ -26,6 +26,7 @@ vi.mock('@/lib/hooks/use-tasks', () => ({
     isLoading: false,
     error: null,
   }),
+  useDeleteTask: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 function renderPage() {
