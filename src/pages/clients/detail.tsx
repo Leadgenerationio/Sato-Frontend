@@ -182,6 +182,29 @@ export function ClientDetailPage() {
         </div>
       </div>
 
+      {/*
+        Newly-created clients don't have a Xero contact until something binds
+        one (agreement-signature webhook auto-creates it via
+        createXeroContactForClient(); name-match fallback fires when the user
+        opens the Invoices tab). Without that binding, the Invoices tab is
+        empty and the Revenue / Amount Owed totals stay at zero — which is
+        confusing on first encounter. Surface a one-line, dismissible-feeling
+        banner so the next step is obvious instead of inferred.
+      */}
+      {!client.xeroContactId && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+          <Link2 className="size-4 mt-0.5 shrink-0 text-amber-600" />
+          <div className="flex-1">
+            <p className="font-medium text-amber-900">Not linked to Xero yet</p>
+            <p className="text-amber-800/90">
+              Invoices, revenue and Amount Owed will populate once a Xero contact is bound.
+              Click <strong>Create Agreement</strong> above to auto-link on signature,
+              or open <strong>Edit</strong> to paste a Xero Contact ID manually.
+            </p>
+          </div>
+        </div>
+      )}
+
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
