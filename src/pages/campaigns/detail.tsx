@@ -420,6 +420,44 @@ function CatchrAccountPicker({
   );
 }
 
+/**
+ * Renders the Catchr NCP cell on the sources table. After saving, sources
+ * have only an `accountId` (opaque Catchr id) — look up the human name via
+ * the live Catchr accounts list. Falls back to the legacy `catchrUrl` for
+ * any older rows still using the paste-URL flow, or "Not set" when neither
+ * exists.
+ */
+function CatchrNcpCell({
+  platform,
+  accountId,
+  catchrUrl,
+}: {
+  platform: string;
+  accountId: string;
+  catchrUrl: string | null;
+}) {
+  const { data } = useCatchrAccounts(platform && platform !== 'other' ? platform : undefined);
+  const accountName = data?.accounts?.find((a) => a.id === accountId)?.name;
+
+  if (accountName) {
+    return <span className="text-xs">{accountName}</span>;
+  }
+  if (accountId) {
+    // Account picked but Catchr list hasn't loaded yet or the account was
+    // removed upstream — show the opaque id so the source isn't blank.
+    return <span className="text-xs font-mono">{accountId}</span>;
+  }
+  if (catchrUrl) {
+    return (
+      <a href={catchrUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline truncate">
+        <ExternalLink className="size-3 shrink-0" />
+        <span className="truncate">{catchrUrl}</span>
+      </a>
+    );
+  }
+  return <span className="text-xs">Not set</span>;
+}
+
 function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
   const { data: sources, isLoading } = useTrafficSources(campaignId);
   const createSource = useCreateTrafficSource(campaignId);
@@ -531,14 +569,7 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
                       <Badge variant="secondary" className="text-xs capitalize">{s.platform || '—'}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground max-w-[240px]">
-                      {s.catchrUrl ? (
-                        <a href={s.catchrUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline truncate">
-                          <ExternalLink className="size-3 shrink-0" />
-                          <span className="truncate">{s.catchrUrl}</span>
-                        </a>
-                      ) : (
-                        <span className="text-xs">Not set</span>
-                      )}
+                      <CatchrNcpCell platform={s.platform} accountId={s.accountId} catchrUrl={s.catchrUrl} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(s.totalSpend)}</TableCell>
                     <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
@@ -954,8 +985,9 @@ function LinkedClientsCard({
       <CardContent>
         {linkedClients.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Link buyers to this campaign via <code className="rounded bg-muted px-1 text-xs">POST /api/v1/campaigns/:id/clients</code>.
-            UI for adding buyers ships in a later Slice 2 day.
+            No clients are buying leads on this campaign yet. Open a client
+            from the <Link to="/clients" className="font-medium underline underline-offset-2">Clients</Link> page
+            and use the <span className="font-medium">Add campaign</span> button to link them here.
           </p>
         ) : (
           <div className="space-y-2">
