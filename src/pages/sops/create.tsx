@@ -20,6 +20,7 @@ import { TagInput } from '@/components/shared/tag-input';
 import { FileUpload } from '@/components/shared/file-upload';
 import { useAuth } from '@/components/providers/auth-provider';
 
+import { logError } from '../../lib/log';
 const CATEGORIES = ['Operations', 'Finance', 'Onboarding', 'Compliance', 'Campaigns'] as const;
 
 export function SopCreatePage() {
@@ -76,7 +77,7 @@ export function SopCreatePage() {
       toast.success(`SOP "${sop.title}" created`);
       navigate(`/sops/${sop.id}`);
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to create SOP');
     }
   }

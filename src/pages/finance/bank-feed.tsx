@@ -29,6 +29,7 @@ import {
 } from '@/lib/hooks/use-bank-feed';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 
+import { logError } from '../../lib/log';
 function formatRelativeTime(iso: string | null): string {
   if (!iso) return 'never';
   const d = new Date(iso);
@@ -93,7 +94,7 @@ export function BankFeedPage() {
       const result = await sync.mutateAsync({});
       toast.success(`Sync complete — ${result.inserted} new, ${result.autoCategorized} auto-categorised`);
     } catch (err) {
-      console.error('Bank-feed sync failed', err);
+      logError('Bank-feed sync failed', err);
       toast.error(err instanceof Error ? err.message : 'Sync failed — is Xero connected?');
     }
   }
@@ -257,7 +258,7 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
       toast.success('Category updated');
       setPendingCategoryId(null);
     } catch (err) {
-      console.error('Categorise failed', err);
+      logError('Categorise failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to update category');
     }
   }
@@ -376,7 +377,7 @@ function CategoryDialog() {
       setBucket('fixed');
       setOpen(false);
     } catch (err) {
-      console.error('Create category failed', err);
+      logError('Create category failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to add category');
     }
   }

@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { useCreateClient, type ClientContactInput, type ContactType } from '@/lib/hooks/use-clients';
 import { useLbBuyers } from '@/lib/hooks/use-leadbyte';
 
+import { logError } from '../../lib/log';
 export function ClientCreatePage() {
   const navigate = useNavigate();
   const createClient = useCreateClient();
@@ -83,7 +84,7 @@ export function ClientCreatePage() {
         : `/clients/${client.id}`;
       navigate(nextUrl);
     } catch (err) {
-      console.error('Create client failed', err);
+      logError('Create client failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to create client');
     }
   }
@@ -270,8 +271,8 @@ export function ClientCreatePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Endole Company ID</Label>
-                <Input value={form.endoleCompanyId} onChange={(e) => update('endoleCompanyId', e.target.value)} placeholder="Populated after first credit check" />
+                <Label>Companies House number</Label>
+                <Input value={form.endoleCompanyId} onChange={(e) => update('endoleCompanyId', e.target.value)} placeholder="UK Companies House number used for credit checks" />
               </div>
               <div className="space-y-2">
                 <Label>Xero Contact ID</Label>

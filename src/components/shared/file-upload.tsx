@@ -4,6 +4,7 @@ import { Upload, Loader2, FileText, CheckCircle2, XCircle } from 'lucide-react';
 import { useFileUpload, type UploadFolder, type PresignedUpload } from '@/lib/hooks/use-uploads';
 import { toast } from 'sonner';
 
+import { logError } from '../../lib/log';
 interface Props {
   folder: UploadFolder;
   accept?: string;
@@ -41,7 +42,7 @@ export function FileUpload({
       try {
         onUploaded?.(result, file);
       } catch (cbErr) {
-        console.error('onUploaded callback threw', cbErr);
+        logError('onUploaded callback threw', cbErr);
         toast.error('Upload succeeded but post-upload action failed');
       }
       if (!result.configured) {

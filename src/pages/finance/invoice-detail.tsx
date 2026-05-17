@@ -22,6 +22,7 @@ import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
 
+import { logError } from '../../lib/log';
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
   sent: 'bg-blue-500/10 text-blue-600 border-blue-200',
@@ -327,7 +328,7 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
       });
       toast.success(`Attached ${file.name}`);
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to attach');
     }
   };
@@ -337,7 +338,7 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to generate download link');
     }
   };
@@ -347,7 +348,7 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
       await remove.mutateAsync(key);
       toast.info('Attachment removed');
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to remove');
     }
   };

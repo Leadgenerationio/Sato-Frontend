@@ -28,6 +28,7 @@ import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
 
+import { logError } from '../../lib/log';
 // ─── Helpers ───
 
 function formatDate(dateStr: string) {
@@ -136,7 +137,7 @@ function AddStaffDialog() {
       setForm({ name: '', email: '', role: '', department: 'Operations' });
       setOpen(false);
     } catch (err) {
-      console.error('Add staff failed', err);
+      logError('Add staff failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to add staff');
     }
   }
@@ -186,7 +187,7 @@ function EditStaffDialog({ member }: { member: StaffMember }) {
       toast.success(`${form.name} updated`);
       setOpen(false);
     } catch (err) {
-      console.error('Update staff failed', err);
+      logError('Update staff failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to update');
     }
   }
@@ -249,7 +250,7 @@ function CreateJobDialog() {
       toast.success(`${form.title} posted`);
       setForm({ title: '', department: 'Operations' });
       setOpen(false);
-    } catch (err) { console.error('Operation failed', err); toast.error('Failed to create job'); }
+    } catch (err) { logError('Operation failed', err); toast.error('Failed to create job'); }
   }
 
   return (
@@ -287,7 +288,7 @@ function RequestHolidayDialog() {
       toast.success('Holiday request submitted');
       setForm({ staffId: '', staffName: '', type: 'annual', startDate: '', endDate: '' });
       setOpen(false);
-    } catch (err) { console.error('Operation failed', err); toast.error('Failed to submit'); }
+    } catch (err) { logError('Operation failed', err); toast.error('Failed to submit'); }
   }
 
   return (
@@ -698,21 +699,21 @@ function StaffDocumentsTab({ staffId }: { staffId: string }) {
     try {
       await add.mutateAsync({ key: result.key, name: file.name, size: result.sizeBytes, contentType: result.contentType });
       toast.success(`Uploaded ${file.name}`);
-    } catch (err) { console.error('Operation failed', err); toast.error('Failed to upload'); }
+    } catch (err) { logError('Operation failed', err); toast.error('Failed to upload'); }
   };
 
   const handleDownload = async (key: string) => {
     try {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (err) { console.error('Operation failed', err); toast.error('Failed to generate link'); }
+    } catch (err) { logError('Operation failed', err); toast.error('Failed to generate link'); }
   };
 
   const handleRemove = async (key: string) => {
     try {
       await remove.mutateAsync(key);
       toast.info('Removed');
-    } catch (err) { console.error('Operation failed', err); toast.error('Failed to remove'); }
+    } catch (err) { logError('Operation failed', err); toast.error('Failed to remove'); }
   };
 
   return (

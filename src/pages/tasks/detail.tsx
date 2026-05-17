@@ -22,6 +22,7 @@ import { useSops } from '@/lib/hooks/use-sops';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload, type UploadFolder } from '@/lib/hooks/use-uploads';
 
+import { logError } from '../../lib/log';
 const TIME_BLOCKS: { label: string; minutes: number | null }[] = [
   { label: 'No estimate', minutes: null },
   { label: '15 min', minutes: 15 },
@@ -170,7 +171,7 @@ export function TaskDetailPage() {
       await updateStatus.mutateAsync({ id: id!, status: nextStatus });
       toast.success(`Task moved to ${statusLabels[nextStatus] || nextStatus}`);
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to update task status');
     }
   }
@@ -183,7 +184,7 @@ export function TaskDetailPage() {
       setCommentText('');
       toast.success('Comment added');
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to add comment');
     }
   }

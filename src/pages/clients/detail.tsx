@@ -46,6 +46,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { SendAgreementDialog } from '@/pages/agreements';
 import { EditClientButton } from '@/components/clients/edit-client-dialog';
 
+import { logError } from '../../lib/log';
 const contactTypeColors: Record<string, string> = {
   primary: 'bg-blue-500/10 text-blue-600 border-blue-200',
   billing: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
@@ -149,7 +150,7 @@ export function ClientDetailPage() {
       const result = await runCheck.mutateAsync(id!);
       toast.success(`Credit check complete — score: ${result.creditScore}`);
     } catch (err) {
-      console.error('Credit check failed', err);
+      logError('Credit check failed', err);
       toast.error(err instanceof Error ? err.message : 'Credit check failed');
     }
   }
@@ -261,7 +262,7 @@ export function ClientDetailPage() {
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="text-base">External System IDs</CardTitle>
-                <CardDescription>How this client maps to LeadByte, Endole, and Xero</CardDescription>
+                <CardDescription>How this client maps to LeadByte, the credit provider, and Xero</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1">
                 {client.leadbyteClientId && (
@@ -270,7 +271,7 @@ export function ClientDetailPage() {
                     <Separator />
                   </>
                 )}
-                <InfoRow icon={Link2} label="Endole Company ID" value={client.endoleCompanyId || 'Not linked'} />
+                <InfoRow icon={Link2} label="Companies House number" value={client.endoleCompanyId || 'Not linked'} />
                 <Separator />
                 <InfoRow icon={Link2} label="Xero Contact ID" value={client.xeroContactId || 'Not linked'} />
               </CardContent>
@@ -927,7 +928,7 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
         sizeBytes: result.sizeBytes,
       });
     } catch (err) {
-      console.error('Save document metadata failed', err);
+      logError('Save document metadata failed', err);
       toast.error('Uploaded to storage, but failed to save document record');
     }
   };
@@ -938,7 +939,7 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
       const url = await fetchFreshDownloadUrl(doc.folder as UploadFolder, doc.r2Key);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to generate download link');
     } finally {
       setDownloadingId(null);
@@ -950,7 +951,7 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
       await removeDoc.mutateAsync(doc.id);
       toast.success('Document removed');
     } catch (err) {
-      console.error('Remove failed', err);
+      logError('Remove failed', err);
       toast.error('Failed to remove document');
     }
   };

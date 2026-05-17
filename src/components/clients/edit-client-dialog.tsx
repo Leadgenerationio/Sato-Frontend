@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { logError } from '../../lib/log';
 import {
   Dialog,
   DialogContent,
@@ -71,7 +72,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
       toast.success(`${form.companyName} updated`);
       onOpenChange(false);
     } catch (err) {
-      console.error('Update client failed', err);
+      logError('Update client failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to update client');
     }
   }

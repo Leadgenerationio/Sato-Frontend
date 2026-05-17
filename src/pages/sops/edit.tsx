@@ -14,6 +14,7 @@ import { TagInput } from '@/components/shared/tag-input';
 import { FileUpload } from '@/components/shared/file-upload';
 import { useAuth } from '@/components/providers/auth-provider';
 
+import { logError } from '../../lib/log';
 const CATEGORIES = ['Operations', 'Finance', 'Onboarding', 'Compliance', 'Campaigns'] as const;
 
 export function SopEditPage() {
@@ -64,7 +65,7 @@ export function SopEditPage() {
       toast.success(`SOP "${updated.title}" updated`);
       navigate(`/sops/${updated.id}`);
     } catch (err) {
-      console.error('Update SOP failed', err);
+      logError('Update SOP failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to update SOP');
     }
   }

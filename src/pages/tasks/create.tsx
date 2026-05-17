@@ -17,6 +17,7 @@ import {
 import { useSops } from '@/lib/hooks/use-sops';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { logError } from '../../lib/log';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -176,7 +177,7 @@ export function TaskCreatePage() {
             api.post(`/api/v1/tasks/${task.id}/subtasks`, { title: subtaskTitle }),
           ));
         } catch (err) {
-          console.error('Subtask creation failed', err);
+          logError('Subtask creation failed', err);
           toast.warning('Task created but some subtasks failed — add them on the detail page');
         }
       }
@@ -184,7 +185,7 @@ export function TaskCreatePage() {
       toast.success(`Task "${task.title}" created`);
       navigate(`/tasks/${task.id}`);
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to create task');
     }
   }

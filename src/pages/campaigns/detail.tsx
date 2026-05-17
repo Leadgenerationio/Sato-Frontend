@@ -27,6 +27,7 @@ import { Image as ImageIcon, Video, FileText, Download, Trash2, Save, Loader2, P
 import type { CampaignLinkedClient } from '@/lib/hooks/use-campaigns';
 import { toast } from 'sonner';
 
+import { logError } from '../../lib/log';
 type DeliveryWindow = 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'ytd';
 
 const WINDOW_OPTIONS: { value: DeliveryWindow; label: string }[] = [
@@ -759,7 +760,7 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
       });
       toast.success(`Uploaded ${file.name}`);
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to upload creative');
     }
   };
@@ -770,7 +771,7 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
       const url = await fetchFreshDownloadUrl('misc', key);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to generate link');
     }
   };
@@ -780,7 +781,7 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
       await remove.mutateAsync(id);
       toast.info('Removed (file kept in storage)');
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to remove');
     }
   };

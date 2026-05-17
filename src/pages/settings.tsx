@@ -17,6 +17,7 @@ import { User, Mail, Shield, Building, Calendar, LogOut, Loader2, CheckCircle2, 
 import { toast } from 'sonner';
 import { UsersManagement } from '@/pages/users';
 
+import { logError, logWarn } from '../lib/log';
 function ProfileField({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
     <div className="flex items-center gap-4 py-3">
@@ -48,7 +49,7 @@ function XeroIntegration() {
       const res = await api.get<XeroStatus>('/api/v1/integrations/xero/status');
       setStatus(res.data ?? null);
     } catch (err) {
-      console.warn('xero status fetch failed', err);
+      logWarn('xero status fetch failed', err);
       setStatus({ connected: false, configured: false });
     } finally {
       setLoading(false);
@@ -142,7 +143,7 @@ function LeadByteIntegration() {
       const res = await api.get<LeadByteStatus>('/api/v1/integrations/leadbyte/status');
       setStatus(res.data ?? null);
     } catch (err) {
-      console.warn('leadbyte status fetch failed', err);
+      logWarn('leadbyte status fetch failed', err);
       setStatus({ configured: false, lastSyncAt: null });
     } finally {
       setLoading(false);
@@ -160,7 +161,7 @@ function LeadByteIntegration() {
       toast.success('LeadByte sync enqueued — runs in a moment');
       setTimeout(fetchStatus, 2000);
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to enqueue sync');
     } finally {
       setSyncing(false);
@@ -253,7 +254,7 @@ function CreditCheckIntegration() {
         const res = await api.get<CreditCheckStatus>('/api/v1/integrations/credit-check/status');
         setStatus(res.data ?? null);
       } catch (err) {
-        console.warn('credit-check status fetch failed', err);
+        logWarn('credit-check status fetch failed', err);
         setStatus({ provider: 'mock', configured: false, checksRun: 0 });
       } finally {
         setLoading(false);
@@ -349,7 +350,7 @@ function SimpleIntegrationCard<T extends { configured: boolean }>({
         const res = await api.get<T>(endpoint);
         setData((res.data as T) ?? null);
       } catch (err) {
-        console.warn('integration status fetch failed', err);
+        logWarn('integration status fetch failed', err);
         setData({ configured: false } as T);
       } finally {
         setLoading(false);

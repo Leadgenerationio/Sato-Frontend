@@ -20,6 +20,7 @@ import { API_URL } from '@/lib/env';
 import type { UserRole, ApiResponse } from '@/types';
 import { toast } from 'sonner';
 
+import { logError, logWarn } from '../lib/log';
 interface PermissionEntry {
   permission: string;
   access: Record<UserRole, boolean>;
@@ -96,7 +97,7 @@ export function UsersManagement() {
       const data: ApiResponse<{ permissions: PermissionEntry[] }> = await res.json();
       if (data.status === 'success' && data.data) setPermissions(data.data.permissions);
     } catch (err) {
-      console.warn('fetchPermissions failed', err);
+      logWarn('fetchPermissions failed', err);
     }
   }, [token]);
 
@@ -106,7 +107,7 @@ export function UsersManagement() {
       const data: ApiResponse<{ users: UserItem[] }> = await res.json();
       if (data.status === 'success' && data.data) setUsers(data.data.users);
     } catch (err) {
-      console.warn('fetchUsers failed', err);
+      logWarn('fetchUsers failed', err);
     } finally { setLoading(false); }
   }, [token]);
 
@@ -142,7 +143,7 @@ export function UsersManagement() {
         toast.error('Failed to create user', { description: data.message });
       }
     } catch (err) {
-      console.error('Add user failed', err);
+      logError('Add user failed', err);
       setAddError('Network error');
       toast.error('Network error');
     } finally { setAddLoading(false); }
@@ -176,7 +177,7 @@ export function UsersManagement() {
         toast.error('Failed to update user', { description: data.message });
       }
     } catch (err) {
-      console.error('Edit user failed', err);
+      logError('Edit user failed', err);
       setEditError('Network error');
       toast.error('Network error');
     } finally { setEditLoading(false); }
@@ -222,7 +223,7 @@ export function UsersManagement() {
         }
       }
     } catch (err) {
-      console.error('Confirm action failed', err);
+      logError('Confirm action failed', err);
       toast.error('Action failed');
     } finally { setUpdating(null); setConfirmAction(null); }
   }
@@ -255,7 +256,7 @@ export function UsersManagement() {
         });
       }
     } catch (err) {
-      console.error('Permission update failed', err);
+      logError('Permission update failed', err);
       toast.error('Failed to update permission');
     } finally { setPermUpdating(false); setPendingPerm(null); }
   }

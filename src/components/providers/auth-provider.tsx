@@ -4,6 +4,7 @@ import { API_URL } from '@/lib/env';
 import { queryClient } from '@/components/providers/query-provider';
 import type { User, AuthTokens, ApiResponse } from '@/types';
 
+import { logWarn } from '../../lib/log';
 // Set the api singleton's token from localStorage at module-evaluation time so
 // that any synchronous render which reaches a child hook (which immediately
 // fires a request) already carries the Authorization header. Without this,
@@ -106,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return false;
     } catch (err) {
-      console.warn('fetchMe failed', err);
+      logWarn('fetchMe failed', err);
       return false;
     }
   }
@@ -126,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return null;
     } catch (err) {
-      console.warn('refreshSession failed', err);
+      logWarn('refreshSession failed', err);
       return null;
     }
   }

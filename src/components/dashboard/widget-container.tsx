@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+import { logError } from '../../lib/log';
 // ─── Skeleton fallback for widgets ───
 export function WidgetSkeleton({ className, height = 'h-[300px]' }: { className?: string; height?: string }) {
   return (
@@ -57,7 +58,7 @@ class WidgetErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Widget error:', error, info);
+    logError('Widget error:', error, info);
   }
 
   render() {

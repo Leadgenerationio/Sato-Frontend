@@ -9,6 +9,7 @@ import { ArrowLeft, Plus, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateWorkflow } from '@/lib/hooks/use-workflows';
 
+import { logError } from '../../lib/log';
 const STEP_TYPES = ['data_fetch', 'calculation', 'approval', 'action', 'notification', 'wait', 'api_call', 'query'];
 
 interface StepDraft {
@@ -75,7 +76,7 @@ export function WorkflowCreatePage() {
       toast.success(`Workflow "${wf.name}" created`);
       navigate(`/workflows/${wf.id}`);
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to create workflow');
     }
   }

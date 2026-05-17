@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { logError } from '../lib/log';
 interface IntegrationsOverview {
   xero: { configured: boolean; connected: boolean; tenantName: string | null; lastError: string | null };
   leadbyte: { configured: boolean; lastSyncAt: string | null; leadsThisMonth: number };
@@ -158,7 +159,7 @@ export function IntegrationsPage() {
       toast.success('LeadByte sync enqueued');
       setTimeout(() => refetch(), 2000);
     } catch (err) {
-      console.error('Operation failed', err);
+      logError('Operation failed', err);
       toast.error('Failed to enqueue sync');
     }
   }

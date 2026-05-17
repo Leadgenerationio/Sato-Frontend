@@ -17,6 +17,7 @@ import {
 } from '@/lib/hooks/use-auto-invoice';
 import { EmptyState } from '@/components/shared/empty-state';
 
+import { logError } from '../../lib/log';
 function formatMoney(value: string | number, currency = 'GBP') {
   const n = typeof value === 'number' ? value : parseFloat(value);
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(Number.isFinite(n) ? n : 0);
@@ -65,7 +66,7 @@ export function AutoInvoicePage() {
         toast.error('Auto-invoice run finished with errors. Check the run detail below.');
       }
     } catch (err) {
-      console.error('Auto-invoice manual run failed', err);
+      logError('Auto-invoice manual run failed', err);
       toast.error(err instanceof Error ? err.message : 'Run failed');
     }
   }

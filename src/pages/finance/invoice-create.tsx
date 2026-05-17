@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoiceClients, useCreateInvoice, type LineItem, type InvoiceClient } from '@/lib/hooks/use-invoices';
 
+import { logError } from '../../lib/log';
 // Local row type — adds a stable id so we can key by id rather than array index.
 // The id is stripped before submission; only the LineItem-shaped fields are sent.
 type EditableLine = LineItem & { id: string };
@@ -117,7 +118,7 @@ export function InvoiceCreatePage() {
       toast.success(`Invoice ${invoice.invoiceNumber} created`);
       navigate(`/finance/invoices/${invoice.id}`);
     } catch (err) {
-      console.error('Create invoice failed', err);
+      logError('Create invoice failed', err);
       toast.error(err instanceof Error ? err.message : 'Failed to create invoice');
     }
   }
