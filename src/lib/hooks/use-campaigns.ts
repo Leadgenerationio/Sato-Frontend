@@ -150,6 +150,39 @@ export interface TrafficSource {
   createdAt: string;
 }
 
+/**
+ * Per-buyer delivery rules + caps for a campaign (Sam Loom 2026-05-15).
+ * Read-only — LeadByte UI remains the write surface.
+ */
+export interface CampaignDelivery {
+  id: string;
+  reference: string | null;
+  status: string | null;
+  buyer: { id: string | null; name: string } | null;
+  caps: {
+    day: number | null;
+    week: number | null;
+    month: number | null;
+    total: number | null;
+  };
+}
+
+export function useCampaignDeliveries(campaignId: string | undefined) {
+  return useQuery({
+    queryKey: ['campaign', campaignId, 'deliveries'],
+    queryFn: async () => {
+      const res = await api.get<{ deliveries: CampaignDelivery[] }>(
+        `/api/v1/campaigns/${campaignId}/deliveries`,
+      );
+      return unwrap(res).deliveries;
+    },
+    enabled: !!campaignId,
+    // Caps don't change minute-to-minute; let it sit for a few minutes
+    // before refetching to keep the detail page snappy.
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useTrafficSources(campaignId: string) {
   return useQuery({
     queryKey: ['campaign', campaignId, 'sources'],

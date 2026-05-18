@@ -19,6 +19,7 @@ import {
   useCampaign, useTrafficSources, useUpdateCampaign,
   useCreateTrafficSource, useUpdateTrafficSource, useDeleteTrafficSource,
   useCatchrAccounts, useCatchrPlatforms,
+  useCampaignDeliveries,
 } from '@/lib/hooks/use-campaigns';
 import { useCreatives, useCreateCreative, useDeleteCreative } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
@@ -121,6 +122,7 @@ function StatCard({ label, value, icon: Icon, trend }: {
 export function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: campaign, isLoading, error } = useCampaign(id!);
+  const { data: deliveries, isLoading: deliveriesLoading } = useCampaignDeliveries(id);
   const [window, setWindow] = useState<DeliveryWindow>('this_month');
 
   if (isLoading) {
@@ -266,6 +268,64 @@ export function CampaignDetailPage() {
               </ResponsiveContainer>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Buyer caps & delivery rules — Sam Loom 2026-05-15 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Buyer caps &amp; delivery rules</CardTitle>
+          <CardDescription>
+            Per-buyer lead-flow ceilings configured in LeadByte. Read-only here — edit in LeadByte.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {deliveriesLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : !deliveries || deliveries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No delivery rules configured for this campaign in LeadByte.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Buyer</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Day</TableHead>
+                  <TableHead className="text-right">Week</TableHead>
+                  <TableHead className="text-right">Month</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {deliveries.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium">
+                      {d.buyer?.name ?? d.reference ?? '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={d.status === 'Active' ? 'default' : 'secondary'}>
+                        {d.status ?? 'Unknown'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {d.caps.day != null ? d.caps.day.toLocaleString() : '—'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {d.caps.week != null ? d.caps.week.toLocaleString() : '—'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {d.caps.month != null ? d.caps.month.toLocaleString() : '—'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {d.caps.total != null ? d.caps.total.toLocaleString() : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
