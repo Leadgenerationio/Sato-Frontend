@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { OnboardingProgress, resolveActualStage } from '../pages/clients/detail';
+import { OnboardingProgress, resolveActualStage, resolveDisplayedStatus } from '../pages/clients/detail';
 
 // Sam (2026-05-15 Loom) asked for the onboarding lifecycle to be visible
 // inline instead of hidden in a tab. These tests pin the rendering of the
@@ -82,5 +82,25 @@ describe('resolveActualStage', () => {
     expect(resolveActualStage('active', true, 5)).toBe(3);
     expect(resolveActualStage('agreement_signed', true, 5)).toBe(2);
     expect(resolveActualStage('documents_received', true, 5)).toBe(1);
+  });
+});
+
+describe('resolveDisplayedStatus', () => {
+  it('downgrades active → onboarding when no documents', () => {
+    expect(resolveDisplayedStatus('active', true, 0)).toBe('onboarding');
+  });
+
+  it('downgrades active → onboarding when agreement unsigned', () => {
+    expect(resolveDisplayedStatus('active', false, 3)).toBe('onboarding');
+  });
+
+  it('keeps active when both docs + signed agreement exist', () => {
+    expect(resolveDisplayedStatus('active', true, 1)).toBe('active');
+  });
+
+  it('passes through non-active statuses unchanged', () => {
+    expect(resolveDisplayedStatus('churned', true, 0)).toBe('churned');
+    expect(resolveDisplayedStatus('onboarding', false, 0)).toBe('onboarding');
+    expect(resolveDisplayedStatus('prospect', false, 0)).toBe('prospect');
   });
 });

@@ -66,6 +66,27 @@ const statusColors: Record<string, string> = {
   paused:     'bg-amber-500/10 text-amber-600 border-amber-200',
 };
 
+/**
+ * Display the "Active Client" badge only when reality backs it up — same
+ * principle as the onboarding stage indicator (see resolveActualStage). If
+ * status='active' was set by an operator but the client has no documents
+ * uploaded or hasn't signed the agreement, the badge downgrades to
+ * 'onboarding' so it doesn't disagree with the stage strip below it.
+ *
+ * Non-active statuses (churned, etc.) pass through unchanged — they're
+ * intentional end states, not onboarding progress.
+ */
+export function resolveDisplayedStatus(
+  status: string,
+  agreementSigned: boolean,
+  documentsCount: number,
+): string {
+  if (status === 'active' && (documentsCount === 0 || !agreementSigned)) {
+    return 'onboarding';
+  }
+  return status;
+}
+
 const statusLabels: Record<string, string> = {
   onboarding: 'Onboarding',
   active: 'Active Client',
@@ -166,7 +187,12 @@ export function ClientDetailPage() {
         <div className="flex-1">
           <PageHeader title={client.companyName} description={`${client.contactName} · ${client.companyNumber}`}>
             <div className="flex items-center gap-3">
-              <Badge className={statusColors[client.status] || ''}>{statusLabels[client.status] ?? client.status}</Badge>
+              {(() => {
+                const displayed = resolveDisplayedStatus(client.status, client.agreementSigned, docsForStage?.length ?? 0);
+                return (
+                  <Badge className={statusColors[displayed] || ''}>{statusLabels[displayed] ?? displayed}</Badge>
+                );
+              })()}
               <EditClientButton client={client} />
               <Button size="sm" variant="default" onClick={() => setAgreementDialogOpen(true)}>
                 <FileSignature className="size-4 mr-1.5" />
