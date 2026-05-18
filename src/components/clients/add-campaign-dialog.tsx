@@ -25,7 +25,12 @@ interface AddCampaignDialogProps {
 }
 
 export function AddCampaignDialog({ clientId, open, onOpenChange }: AddCampaignDialogProps) {
-  const { data: allCampaignsData } = useCampaigns({ status: 'active', limit: 200 });
+  // limit hits the backend's shared paginationQuerySchema which caps at 100.
+  // 2026-05-18 bug: previous value 200 silently 400'd, returning no campaigns
+  // and Sam saw "No active campaigns available to link" for all 28 campaigns
+  // that actually exist. 100 covers practical loads; if we ever exceed it
+  // the dialog needs proper pagination rather than a bigger blanket limit.
+  const { data: allCampaignsData } = useCampaigns({ status: 'active', limit: 100 });
   const { data: linkedCampaigns } = useClientCampaigns(clientId);
   const linkCampaign = useLinkClientCampaign();
 
