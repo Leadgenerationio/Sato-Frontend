@@ -836,6 +836,12 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
   const create = useCreateCreative(campaignId);
   const remove = useDeleteCreative(campaignId);
 
+  // Buyer-review section picker (Sam #9/#11). Defaults to 'media' since that's
+  // the common case (image + video). Switch to 'copy_lp' before uploading
+  // ad copy or a landing-page URL — the buyer review tab renders the two
+  // sections as separate cards.
+  const [uploadSection, setUploadSection] = useState<'media' | 'copy_lp'>('media');
+
   const guessTypeFromContentType = (ct: string): 'image' | 'video' | 'text' => {
     if (ct.startsWith('image/')) return 'image';
     if (ct.startsWith('video/')) return 'video';
@@ -851,8 +857,9 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
         fileUrl: result.downloadUrl, // Initial signed URL, refreshed via fetchFreshDownloadUrl on view.
         sizeBytes: result.sizeBytes,
         contentType: result.contentType,
+        section: uploadSection,
       });
-      toast.success(`Uploaded ${file.name}`);
+      toast.success(`Uploaded ${file.name} (${uploadSection === 'media' ? 'Media' : 'Copy / LP'})`);
     } catch (err) {
       logError('Operation failed', err);
       toast.error('Failed to upload creative');
@@ -888,16 +895,40 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-base">Creatives</CardTitle>
-          <CardDescription>
-            Assets live on the <span className="font-medium">campaign</span> (this vertical) and are
-            shared across every linked buyer. Each buyer approves their own copy via the Compliance
-            tab on their portal — IP + timestamp captured per decision for audit.
-          </CardDescription>
+      <CardHeader className="flex flex-col gap-3">
+        <div className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Creatives</CardTitle>
+            <CardDescription>
+              Assets live on the <span className="font-medium">campaign</span> (this vertical) and are
+              shared across every linked buyer. Each buyer approves their own copy on the
+              <span className="font-medium"> Creatives</span> tab in their portal — IP + timestamp
+              captured per decision for audit.
+            </CardDescription>
+          </div>
+          <FileUpload folder="misc" maxSizeMB={50} label="Upload creative" onUploaded={handleUploaded} />
         </div>
-        <FileUpload folder="misc" maxSizeMB={50} label="Upload creative" onUploaded={handleUploaded} />
+        {/* Sam #9/#11 buyer-review section picker. Drives which card the
+            upload appears under on the buyer's review tab. */}
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Upload to section:</span>
+          <div className="inline-flex rounded-md border bg-background p-0.5">
+            <button
+              type="button"
+              onClick={() => setUploadSection('media')}
+              className={`rounded px-2.5 py-1 transition-colors ${uploadSection === 'media' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Media (image / video)
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadSection('copy_lp')}
+              className={`rounded px-2.5 py-1 transition-colors ${uploadSection === 'copy_lp' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Copy &amp; landing page
+            </button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -930,6 +961,9 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
                       <p className="truncate text-sm font-medium" title={c.name}>{c.name}</p>
                       <p className="text-xs text-muted-foreground">
                         <Badge variant="secondary" className="text-xs capitalize mr-1.5">{c.type}</Badge>
+                        <Badge variant="outline" className="text-xs mr-1.5">
+                          {c.section === 'copy_lp' ? 'Copy / LP' : 'Media'}
+                        </Badge>
                         v{c.version} · {c.sizeBytes ? `${(c.sizeBytes / 1024).toFixed(0)} KB · ` : ''}
                         {new Date(c.uploadedAt).toLocaleDateString()}
                       </p>

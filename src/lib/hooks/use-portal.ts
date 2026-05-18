@@ -48,7 +48,7 @@ export interface PortalInvoice {
   daysOverdue: number;
 }
 
-export type CreativeApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type CreativeApprovalStatus = 'pending' | 'approved' | 'rejected' | 'changes_requested';
 
 export interface CreativeApprovalState {
   status: CreativeApprovalStatus;
@@ -154,7 +154,10 @@ export function useApproveCreative() {
     mutationFn: async ({ creativeId }: { creativeId: string }) => {
       await api.post(`/api/v1/portal/creatives/${creativeId}/approve`, {});
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-compliance'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal-compliance'] });
+      qc.invalidateQueries({ queryKey: ['portal-creatives'] });
+    },
   });
 }
 
@@ -164,7 +167,54 @@ export function useRejectCreative() {
     mutationFn: async ({ creativeId, feedback }: { creativeId: string; feedback: string }) => {
       await api.post(`/api/v1/portal/creatives/${creativeId}/reject`, { feedback });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-compliance'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal-compliance'] });
+      qc.invalidateQueries({ queryKey: ['portal-creatives'] });
+    },
+  });
+}
+
+export function useRequestChangesCreative() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ creativeId, feedback }: { creativeId: string; feedback: string }) => {
+      await api.post(`/api/v1/portal/creatives/${creativeId}/request-changes`, { feedback });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal-compliance'] });
+      qc.invalidateQueries({ queryKey: ['portal-creatives'] });
+    },
+  });
+}
+
+// ─── Creative review v2 (Sam #9/#11 — 2026-05-17) ─────────────────────────
+// Buyer-facing review tab at /portal/creatives. Returns assets split into
+// 2 cards (media vs copy_lp). Buyer signs off each card independently.
+
+export interface PortalReviewCreative {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  name: string;
+  type: string;
+  fileUrl: string;
+  uploadedAt: string;
+  section: 'media' | 'copy_lp';
+  approval: CreativeApprovalState;
+}
+
+export interface PortalCreativesBySection {
+  media: PortalReviewCreative[];
+  copyLp: PortalReviewCreative[];
+}
+
+export function usePortalCreatives() {
+  return useQuery({
+    queryKey: ['portal-creatives'],
+    queryFn: async () => {
+      const res = await api.get<PortalCreativesBySection>('/api/v1/portal/creatives');
+      return unwrap(res);
+    },
   });
 }
 

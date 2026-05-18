@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 
+export type CreativeSection = 'media' | 'copy_lp';
+
 export interface Creative {
   id: string;
   campaignId: string;
@@ -12,6 +14,10 @@ export interface Creative {
   contentType: string | null;
   version: number;
   uploadedAt: string;
+  // v2 buyer-review (Sam #9/#11). 'media' = image/video, 'copy_lp' = copy +
+  // landing-page URLs. Optional only for back-compat with API responses
+  // that pre-date the v2 deploy — treated as 'media' on the FE.
+  section?: CreativeSection;
 }
 
 export function useCreatives(campaignId: string) {
@@ -35,6 +41,7 @@ export function useCreateCreative(campaignId: string) {
       fileUrl: string;
       sizeBytes: number;
       contentType: string;
+      section?: CreativeSection;
     }) => {
       const res = await api.post<{ creative: Creative }>('/api/v1/creatives', { ...input, campaignId });
       return unwrap(res).creative;

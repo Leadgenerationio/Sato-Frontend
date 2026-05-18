@@ -6,7 +6,7 @@ import { SosButton } from '@/components/shared/sos-button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog,
+  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone,
 } from 'lucide-react';
 
 const navItems = [
@@ -14,6 +14,10 @@ const navItems = [
   { href: '/portal/leads', label: 'Leads', icon: FileBarChart },
   { href: '/portal/invoices', label: 'Invoices', icon: FileText },
   { href: '/portal/compliance', label: 'Compliance', icon: Shield },
+  // Creative review v2 (Sam #9/#11). Sits between Compliance and Agreement
+  // so the buyer's natural left-to-right reading order is:
+  // overview → compliance state → assets to approve → sign agreement.
+  { href: '/portal/creatives', label: 'Creatives', icon: Megaphone },
   { href: '/portal/agreement', label: 'Agreement', icon: ScrollText },
   { href: '/portal/account', label: 'Account', icon: UserCog },
 ];
