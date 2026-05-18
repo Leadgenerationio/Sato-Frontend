@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,9 +11,17 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
 }
 
-function StatCard({ label, value, icon: Icon, badge }: { label: string; value: string; icon: React.ElementType; badge?: { text: string; variant: 'default' | 'destructive' | 'secondary' } }) {
-  return (
-    <Card className="gap-3 py-5">
+function StatCard({
+  label, value, icon: Icon, badge, href,
+}: {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  badge?: { text: string; variant: 'default' | 'destructive' | 'secondary' };
+  href?: string;
+}) {
+  const card = (
+    <Card className={`gap-3 py-5 ${href ? 'transition-colors hover:bg-accent/40 cursor-pointer' : ''}`}>
       <CardContent>
         <div className="flex items-center justify-between gap-2">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -26,6 +35,12 @@ function StatCard({ label, value, icon: Icon, badge }: { label: string; value: s
         </div>
       </CardContent>
     </Card>
+  );
+  if (!href) return card;
+  return (
+    <Link to={href} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg" aria-label={`${label} — view details`}>
+      {card}
+    </Link>
   );
 }
 
@@ -62,19 +77,21 @@ export function PortalDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Active Campaigns" value={String(data.activeCampaigns)} icon={Megaphone} />
-        <StatCard label="Leads This Month" value={data.totalLeadsThisMonth.toLocaleString()} icon={Users} />
+        <StatCard label="Active Campaigns" value={String(data.activeCampaigns)} icon={Megaphone} href="/portal/leads" />
+        <StatCard label="Leads This Month" value={data.totalLeadsThisMonth.toLocaleString()} icon={Users} href="/portal/leads" />
         <StatCard
           label="Outstanding"
           value={formatCurrency(data.totalOutstanding)}
           icon={FileText}
           badge={data.overdueInvoices > 0 ? { text: `${data.overdueInvoices} overdue`, variant: 'destructive' } : undefined}
+          href="/portal/invoices"
         />
         <StatCard
           label="Agreement"
           value={data.agreementSigned ? 'Signed' : 'Pending'}
           icon={data.agreementSigned ? CheckCircle2 : AlertTriangle}
           badge={{ text: data.agreementSigned ? 'Active' : 'Action needed', variant: data.agreementSigned ? 'secondary' : 'destructive' }}
+          href="/portal/agreement"
         />
       </div>
 

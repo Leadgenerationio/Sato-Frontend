@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, FileText } from 'lucide-react';
+import { FileText, Printer } from 'lucide-react';
 import { usePortalInvoices, type PortalInvoice } from '@/lib/hooks/use-portal';
 import { toMoney } from '@/lib/hooks/use-invoices';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -26,7 +26,11 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function handleDownloadInvoice(inv: PortalInvoice) {
+// Opens the invoice in a new tab with print styling + auto-print. Was
+// previously labelled "Download" which misled buyers — nothing actually
+// downloads, the new window simply renders the invoice and triggers the
+// browser's print dialog.
+function handleViewInvoice(inv: PortalInvoice) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
 
@@ -113,7 +117,7 @@ export function PortalInvoicesPage() {
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Paid Date</TableHead>
-                    <TableHead className="text-right">Download</TableHead>
+                    <TableHead className="text-right">View</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -133,10 +137,11 @@ export function PortalInvoicesPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7"
-                          onClick={() => handleDownloadInvoice(inv)}
+                          onClick={() => handleViewInvoice(inv)}
+                          title="Open in new tab and print"
                         >
-                          <Download className="size-3.5 mr-1" />
-                          Download
+                          <Printer className="size-3.5 mr-1" />
+                          View / Print
                         </Button>
                       </TableCell>
                     </TableRow>

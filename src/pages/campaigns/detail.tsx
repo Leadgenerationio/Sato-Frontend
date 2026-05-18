@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useUnlinkClientCampaign } from '@/lib/hooks/use-client-campaigns';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -243,7 +246,7 @@ export function CampaignDetailPage() {
       {/* Sam #41 cost-per-lead editor + Slice 2 Day 1 buyer list */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CostPerLeadCard campaignId={campaign.id} value={campaign.costPerLead} computedCpl={campaign.cpl} currency={campaign.currency} />
-        <LinkedClientsCard linkedClients={campaign.linkedClients} currency={campaign.currency} />
+        <LinkedClientsCard campaignId={campaign.id} linkedClients={campaign.linkedClients} currency={campaign.currency} />
       </div>
 
       {/* Lead Volume Chart */}
@@ -1024,11 +1027,31 @@ function CostPerLeadCard({
 
 // ─── Linked clients (Slice 2 Day 1 join table — Sam #40) ───────────────────
 function LinkedClientsCard({
-  linkedClients, currency,
+  campaignId, linkedClients, currency,
 }: {
+  campaignId: string;
   linkedClients: CampaignLinkedClient[];
   currency: string;
 }) {
+  const unlink = useUnlinkClientCampaign();
+  const qc = useQueryClient();
+  const [confirmUnlinkId, setConfirmUnlinkId] = useState<string | null>(null);
+
+  const handleUnlink = async (clientId: string, clientName: string) => {
+    try {
+      await unlink.mutateAsync({ campaignId, clientId });
+      // The campaign detail page reads from useCampaign(campaignId) — invalidate so
+      // the buyer row disappears without a hard reload.
+      qc.invalidateQueries({ queryKey: ['campaign', campaignId] });
+      toast.success(`Removed ${clientName} from this campaign`);
+    } catch (err) {
+      logError('Unlink failed', err);
+      toast.error('Could not remove buyer. They may still have open invoices on this campaign.');
+    } finally {
+      setConfirmUnlinkId(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -1052,8 +1075,8 @@ function LinkedClientsCard({
         ) : (
           <div className="space-y-2">
             {linkedClients.map((c) => (
-              <div key={c.clientId} className="flex items-center justify-between rounded-lg border p-2.5">
-                <div className="min-w-0">
+              <div key={c.clientId} className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+                <div className="min-w-0 flex-1">
                   <Link to={`/clients/${c.clientId}`} className="text-sm font-medium underline-offset-2 hover:underline">
                     {c.clientName}
                   </Link>
@@ -1062,11 +1085,58 @@ function LinkedClientsCard({
                 <p className="text-sm font-medium tabular-nums">
                   {c.leadPrice != null ? formatCurrency(c.leadPrice, c.currency || currency) : <span className="text-muted-foreground font-normal">—</span>}
                 </p>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button asChild variant="ghost" size="icon" className="size-7" title="Edit client">
+                    <Link to={`/clients/${c.clientId}`} aria-label={`Edit ${c.clientName}`}>
+                      <Pencil className="size-3.5" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    title="Remove from campaign"
+                    onClick={() => setConfirmUnlinkId(c.clientId)}
+                    disabled={unlink.isPending}
+                    aria-label={`Remove ${c.clientName} from campaign`}
+                  >
+                    <Trash2 className="size-3.5 text-red-600" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </CardContent>
+      {/* Confirmation — buyer-unlink is reversible (re-link from /clients/:id) but
+          still warrants an explicit confirm because deliveries + revenue
+          attribution will stop for this buyer on this vertical going forward. */}
+      <Dialog open={!!confirmUnlinkId} onOpenChange={(open) => { if (!open) setConfirmUnlinkId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove buyer from campaign?</DialogTitle>
+            <DialogDescription>
+              This unlinks the buyer from this campaign. Lead deliveries + revenue
+              attribution will stop counting for them on this vertical. The client
+              record itself is not deleted — you can re-link from the client page.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmUnlinkId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                const c = linkedClients.find((lc) => lc.clientId === confirmUnlinkId);
+                if (c) handleUnlink(c.clientId, c.clientName);
+              }}
+              disabled={unlink.isPending}
+            >
+              {unlink.isPending ? <Loader2 className="size-4 mr-1 animate-spin" /> : null}
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
