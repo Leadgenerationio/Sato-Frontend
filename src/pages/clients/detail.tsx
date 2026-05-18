@@ -116,6 +116,10 @@ export function ClientDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: client, isLoading, error } = useClient(id!);
   const { data: creditHistory, isLoading: creditLoading } = useCreditHistory(id!);
+  // Documents count drives the onboarding stage indicator — see
+  // OnboardingProgress derivation below. react-query dedupes this with the
+  // copy inside DocumentsTab so we're not double-fetching.
+  const { data: docsForStage } = useClientDocuments(id!);
   const runCheck = useRunCreditCheck();
 
   // Auto-open the Send Agreement dialog when arriving from /clients/create
@@ -209,6 +213,7 @@ export function ClientDetailPage() {
       <OnboardingProgress
         onboardingStatus={client.onboardingStatus}
         agreementSigned={client.agreementSigned}
+        documentsCount={docsForStage?.length ?? 0}
       />
 
       <Tabs defaultValue="overview">
@@ -471,17 +476,43 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   { key: 'active', label: 'Active', hint: 'Live client · campaigns can run' },
 ];
 
-export function OnboardingProgress({
-  onboardingStatus,
-  agreementSigned,
-}: {
-  onboardingStatus: string;
-  agreementSigned: boolean;
-}) {
-  const currentIdx = Math.max(
+/**
+ * Resolve the *real* onboarding stage from underlying data, not just the
+ * onboarding_status enum. The enum is operator-set and drifts out of sync —
+ * a client can be marked 'active' while having zero uploaded documents and
+ * an unsigned agreement, which then shows green ticks for stages that
+ * haven't actually been completed.
+ *
+ * The displayed stage is capped by what the data actually supports:
+ *   - No documents uploaded → cap at 'pending' (stage 0)
+ *   - Documents uploaded but agreement unsigned → cap at 'documents_received' (stage 1)
+ *   - Documents uploaded AND agreement signed → trust the enum (stage 2 or 3)
+ */
+export function resolveActualStage(
+  onboardingStatus: string,
+  agreementSigned: boolean,
+  documentsCount: number,
+): number {
+  const enumIdx = Math.max(
     0,
     ONBOARDING_STEPS.findIndex((s) => s.key === onboardingStatus),
   );
+  const hasDocs = documentsCount > 0;
+  if (!hasDocs) return 0;
+  if (!agreementSigned) return Math.min(enumIdx, 1);
+  return enumIdx;
+}
+
+export function OnboardingProgress({
+  onboardingStatus,
+  agreementSigned,
+  documentsCount,
+}: {
+  onboardingStatus: string;
+  agreementSigned: boolean;
+  documentsCount: number;
+}) {
+  const currentIdx = resolveActualStage(onboardingStatus, agreementSigned, documentsCount);
 
   return (
     <Card>
