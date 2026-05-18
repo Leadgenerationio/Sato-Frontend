@@ -6,7 +6,7 @@ import { SosButton } from '@/components/shared/sos-button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut,
+  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog,
 } from 'lucide-react';
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/portal/invoices', label: 'Invoices', icon: FileText },
   { href: '/portal/compliance', label: 'Compliance', icon: Shield },
   { href: '/portal/agreement', label: 'Agreement', icon: ScrollText },
+  { href: '/portal/account', label: 'Account', icon: UserCog },
 ];
 
 export function PortalLayout() {

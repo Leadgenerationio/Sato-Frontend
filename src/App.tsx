@@ -49,6 +49,7 @@ const PortalLeadsPage = lazy(() => import('@/pages/portal/leads').then((m) => ({
 const PortalInvoicesPage = lazy(() => import('@/pages/portal/invoices').then((m) => ({ default: m.PortalInvoicesPage })));
 const PortalCompliancePage = lazy(() => import('@/pages/portal/compliance').then((m) => ({ default: m.PortalCompliancePage })));
 const PortalAgreementPage = lazy(() => import('@/pages/portal/agreement').then((m) => ({ default: m.PortalAgreementPage })));
+const PortalAccountPage = lazy(() => import('@/pages/portal/account').then((m) => ({ default: m.PortalAccountPage })));
 const NotificationsPage = lazy(() => import('@/pages/notifications').then((m) => ({ default: m.NotificationsPage })));
 const SopsPage = lazy(() => import('@/pages/sops/index').then((m) => ({ default: m.SopsPage })));
 const SopDetailPage = lazy(() => import('@/pages/sops/detail').then((m) => ({ default: m.SopDetailPage })));
@@ -383,6 +384,7 @@ export default function App() {
             <Route path="/portal/invoices" element={<PortalInvoicesPage />} />
             <Route path="/portal/compliance" element={<PortalCompliancePage />} />
             <Route path="/portal/agreement" element={<PortalAgreementPage />} />
+            <Route path="/portal/account" element={<PortalAccountPage />} />
           </Route>
 
           {/* 404 catch-all */}
