@@ -50,6 +50,7 @@ const clientA: ClientDetail = {
   totalRevenue: 0,
   createdAt: '2026-01-01T00:00:00Z',
   contacts: [],
+  documentsCount: 0,
 };
 
 const clientB: ClientDetail = {
@@ -71,6 +72,8 @@ const clientSummary = (c: ClientDetail): ClientSummary => ({
   activeCampaigns: c.activeCampaigns,
   totalRevenue: c.totalRevenue,
   createdAt: c.createdAt,
+  agreementSigned: c.agreementSigned,
+  documentsCount: c.documentsCount,
 });
 
 vi.mock('@/lib/hooks/use-clients', () => ({

@@ -11,6 +11,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, ExternalLink, Plus, Users, AlertTriangle, Download } from 'lucide-react';
 import { useClients, type ClientSummary } from '@/lib/hooks/use-clients';
+import { resolveDisplayedStatus } from './detail';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -144,7 +145,15 @@ export function ClientsPage() {
                         <div className="text-xs text-muted-foreground">{c.contactEmail}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`text-xs ${statusColors[c.status] || ''}`}>{statusLabels[c.status] ?? c.status}</Badge>
+                        {(() => {
+                          // Apply the same reality-check the detail-page badge does:
+                          // "Active Client" only renders when docs + signed agreement
+                          // are both real — otherwise downgrade to "Onboarding".
+                          const displayed = resolveDisplayedStatus(c.status, c.agreementSigned, c.documentsCount);
+                          return (
+                            <Badge className={`text-xs ${statusColors[displayed] || ''}`}>{statusLabels[displayed] ?? displayed}</Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-center">{creditBadge(c.creditScore)}</TableCell>
                       <TableCell className="text-right tabular-nums">{c.activeCampaigns}</TableCell>

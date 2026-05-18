@@ -13,6 +13,11 @@ export interface ClientSummary {
   activeCampaigns: number;
   totalRevenue: number;
   createdAt: string;
+  // Reality-check fields so the clients list applies the same badge logic
+  // as the detail page (status='active' only displays as "Active Client"
+  // when docs + signed agreement are both present).
+  agreementSigned: boolean;
+  documentsCount: number;
 }
 
 export type ContactType = 'primary' | 'billing' | 'compliance' | 'other';

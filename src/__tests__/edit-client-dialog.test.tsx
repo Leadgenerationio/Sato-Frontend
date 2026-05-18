@@ -65,6 +65,7 @@ const baseClient: ClientDetail = {
   activeCampaigns: 0,
   totalRevenue: 0,
   createdAt: '2026-01-01T00:00:00Z',
+  documentsCount: 1,
   contacts: [
     { id: 'c1', contactType: 'primary', name: 'Jamie Roberts', email: 'jamie@acme.co.uk', phone: '+44 20 1234 5678', role: 'Director' },
   ],
