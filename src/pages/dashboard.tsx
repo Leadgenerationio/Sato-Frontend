@@ -10,7 +10,6 @@ import { PnlWidget } from '@/components/dashboard/pnl-widget';
 import { CreditAlertWidget } from '@/components/dashboard/credit-alert-widget';
 import { NotificationFeed } from '@/components/dashboard/notification-feed';
 import { TaskSummaryWidget } from '@/components/dashboard/task-summary-widget';
-import { PerformanceBySourceWidget } from '@/components/dashboard/performance-by-source-widget';
 import { useDashboardStats, useFinancialOverview, useLeadsByDay, useRecentActivity } from '@/lib/hooks/use-dashboard';
 import { useCampaigns } from '@/lib/hooks/use-campaigns';
 import { toMoney } from '@/lib/hooks/use-invoices';
@@ -187,12 +186,6 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Dashboard" description={`Welcome back, ${user.name}`} />
-
-      {/* Master roll-up at the top — Sam Loom 2026-05-15 #10. Per-platform
-          profit/margin from Catchr × LeadByte, the leadreports.io hero metric. */}
-      <WidgetContainer fallback={<WidgetSkeleton height="h-[220px]" />}>
-        <PerformanceBySourceWidget />
-      </WidgetContainer>
 
       {/* Stats — derived from actual API data */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
