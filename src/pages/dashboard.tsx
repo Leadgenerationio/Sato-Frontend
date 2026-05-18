@@ -206,7 +206,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <WidgetContainer fallback={<WidgetSkeleton className="lg:col-span-2" />}>
         <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Revenue Overview</CardTitle><CardDescription>Monthly revenue vs expenses (2025)</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Revenue Overview</CardTitle><CardDescription>Monthly revenue vs expenses — last 12 months</CardDescription></CardHeader>
           <CardContent>
             <div className="h-[220px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
