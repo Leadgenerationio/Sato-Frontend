@@ -11,7 +11,10 @@ import { PnlWidget } from '@/components/dashboard/pnl-widget';
 import { CreditAlertWidget } from '@/components/dashboard/credit-alert-widget';
 import { NotificationFeed } from '@/components/dashboard/notification-feed';
 import { TaskSummaryWidget } from '@/components/dashboard/task-summary-widget';
-import { useDashboardStats, useFinancialOverview, useLeadsByDay, useRecentActivity } from '@/lib/hooks/use-dashboard';
+import {
+  useDashboardStats, useFinancialOverview, useLeadsByDay, useRecentActivity,
+  DASHBOARD_WINDOW_OPTIONS, type DashboardWindow,
+} from '@/lib/hooks/use-dashboard';
 import { useCampaigns } from '@/lib/hooks/use-campaigns';
 import { toMoney } from '@/lib/hooks/use-invoices';
 import {
@@ -129,7 +132,13 @@ const tooltipStyle = {
 
 export function DashboardPage() {
   const { user } = useAuth();
-  const { data: stats, isLoading, isError, error, refetch } = useDashboardStats();
+  // Top-of-dashboard window filter. Drives the Leads tile + its trend chip
+  // server-side (BE swaps the date range based on this key). Other tiles
+  // (Total Revenue, Net Profit, Margin, Campaigns, Bank/VAT/etc widgets)
+  // intentionally keep their own windows — see the comments on those tiles
+  // for the rationale.
+  const [leadsWindow, setLeadsWindow] = useState<DashboardWindow>('this_month');
+  const { data: stats, isLoading, isError, error, refetch } = useDashboardStats({ window: leadsWindow });
   const { data: financialOverview } = useFinancialOverview();
   const { data: campaignsData } = useCampaigns({ limit: 100 });
   const { data: leadsByDay } = useLeadsByDay(7);
@@ -237,7 +246,26 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Dashboard" description={`Welcome back, ${user.name}`} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <PageHeader title="Dashboard" description={`Welcome back, ${user.name}`} />
+        {/* Window filter — only affects the Leads tile + its trend chip.
+            Other tiles (revenue, profit, margin, bank, VAT, etc.) keep
+            their own native windows because they each represent different
+            concepts (lifetime billing, rolling profit cycle, current
+            balance, accruing tax quarter, …). */}
+        <label className="flex items-center gap-2 text-xs text-neutral-500">
+          <span className="hidden sm:inline">Leads window:</span>
+          <select
+            value={leadsWindow}
+            onChange={(e) => setLeadsWindow(e.target.value as DashboardWindow)}
+            className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs font-medium text-neutral-700 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-300"
+          >
+            {DASHBOARD_WINDOW_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       {/* Stats — derived from actual API data */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -257,7 +285,17 @@ export function DashboardPage() {
           trend="up"
           icon={TrendingUp}
         />
-        <StatCard title="Leads This Month" value={stats.totalLeadsThisMonth.toLocaleString()} change={stats.leadsChange !== null ? `${stats.leadsChange >= 0 ? '+' : ''}${stats.leadsChange}% vs last month` : null} trend={(stats.leadsChange ?? 0) >= 0 ? 'up' : 'down'} icon={Activity} />
+        <StatCard
+          title={`Leads — ${stats.leadsWindowLabel ?? 'This month'}`}
+          value={stats.totalLeadsThisMonth.toLocaleString()}
+          change={
+            stats.leadsChange !== null
+              ? `${stats.leadsChange >= 0 ? '+' : ''}${stats.leadsChange}% vs prior period`
+              : null
+          }
+          trend={(stats.leadsChange ?? 0) >= 0 ? 'up' : 'down'}
+          icon={Activity}
+        />
       </div>
 
       {/* Secondary financial KPIs.

@@ -9,6 +9,17 @@ vi.mock('@/components/providers/auth-provider', () => ({
 }));
 
 vi.mock('@/lib/hooks/use-dashboard', () => ({
+  // Window filter dropdown options + type — re-exported by the real hook
+  // module. Tests don't exercise the actual filter, just need the constant
+  // to exist so the dashboard page can `import` it without crashing.
+  DASHBOARD_WINDOW_OPTIONS: [
+    { value: 'this_week', label: 'Last 7 days' },
+    { value: 'this_month', label: 'This month' },
+    { value: 'last_month', label: 'Last month' },
+    { value: 'last_90d', label: 'Last 90 days' },
+    { value: 'last_6m', label: 'Last 6 months' },
+    { value: 'last_year', label: 'Last 12 months' },
+  ],
   useDashboardStats: () => ({
     data: {
       totalRevenue: 125000,
@@ -16,8 +27,10 @@ vi.mock('@/lib/hooks/use-dashboard', () => ({
       activeClients: 18,
       clientChange: 2,
       activeCampaigns: 7,
+      linkedCampaigns: 5,
       campaignChange: 1,
       totalLeadsThisMonth: 3200,
+      leadsWindowLabel: 'This month',
       leadsChange: 8.2,
       recentInvoices: [
         { id: 'inv-1', invoiceNumber: 'INV-1050', clientName: 'Apex Media', status: 'paid', total: 631.80, currency: 'GBP', daysOverdue: 0, createdAt: '2026-04-10' },
@@ -144,8 +157,10 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Campaigns (linked / active)')).toBeInTheDocument();
   });
 
-  it('renders Leads This Month stat card', () => {
+  it('renders Leads stat card with window label', () => {
     renderPage();
-    expect(screen.getByText('Leads This Month')).toBeInTheDocument();
+    // Title is "Leads — <window-label>" so the dashboard window-filter
+    // dropdown can pivot the tile without renaming the React component.
+    expect(screen.getByText(/Leads — /)).toBeInTheDocument();
   });
 });

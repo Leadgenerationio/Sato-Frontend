@@ -86,12 +86,36 @@ export interface DashboardStats {
   linkedCampaigns: number | null;
   campaignChange: number | null;
   totalLeadsThisMonth: number;
+  /** Echo from BE — used by the FE to label the Leads tile + tooltip. */
+  leadsWindowLabel: string;
   leadsChange: number | null;
   totalCost: number;
   netProfit: number;
   profitMargin: number;
   recentInvoices: InvoiceSummary[];
 }
+
+/**
+ * Time-window keys accepted by the dashboard stats endpoint. Mirrors the
+ * BE DashboardWindow type. Default is 'this_month' on the BE side, so
+ * omitting the param falls back to the existing behaviour exactly.
+ */
+export type DashboardWindow =
+  | 'this_week'
+  | 'this_month'
+  | 'last_month'
+  | 'last_90d'
+  | 'last_6m'
+  | 'last_year';
+
+export const DASHBOARD_WINDOW_OPTIONS: Array<{ value: DashboardWindow; label: string }> = [
+  { value: 'this_week', label: 'Last 7 days' },
+  { value: 'this_month', label: 'This month' },
+  { value: 'last_month', label: 'Last month' },
+  { value: 'last_90d', label: 'Last 90 days' },
+  { value: 'last_6m', label: 'Last 6 months' },
+  { value: 'last_year', label: 'Last 12 months' },
+];
 
 interface BackendStats {
   totalRevenue: number;
@@ -108,6 +132,10 @@ interface BackendStats {
    */
   linkedCampaigns?: number;
   leadsThisMonth: number;
+  /** Echo of the window the BE used to compute leadsThisMonth + leadsChange. */
+  leadsWindow?: DashboardWindow;
+  /** Human-readable label for the lead window (e.g. "Last 90 days"). */
+  leadsWindowLabel?: string;
   /** Period-over-period revenue change as a percentage. Null when last month had zero baseline. */
   revenueChange?: number | null;
   /** Period-over-period leads change as a percentage. Null when last month had zero baseline. */
@@ -115,9 +143,12 @@ interface BackendStats {
   asOf: string;
 }
 
-export function useDashboardStats() {
+export function useDashboardStats(opts: { window?: DashboardWindow } = {}) {
+  const { window } = opts;
   return useQuery({
-    queryKey: ['dashboard-stats'],
+    // Include the window in the cache key so each filter selection has its
+    // own cached response — switching back to a previous window is instant.
+    queryKey: ['dashboard-stats', window ?? 'default'],
     queryFn: async () => {
       // The new /api/v1/dashboard/stats aggregate endpoint computes
       // revenue / cost / profit / leadsThisMonth / activeClients / activeCampaigns
@@ -128,8 +159,11 @@ export function useDashboardStats() {
       // Recent invoices still come from /invoices?limit=20 — they need full
       // row data for the dashboard table, not just an aggregate. The 100→20
       // limit drop here also makes the request faster.
+      const statsUrl = window
+        ? `/api/v1/dashboard/stats?window=${encodeURIComponent(window)}`
+        : '/api/v1/dashboard/stats';
       const [statsRes, invoiceRes] = await Promise.all([
-        api.get<BackendStats>('/api/v1/dashboard/stats'),
+        api.get<BackendStats>(statsUrl),
         api.get<{ invoices: InvoiceSummary[]; total: number }>('/api/v1/invoices?limit=20'),
       ]);
 
@@ -154,6 +188,9 @@ export function useDashboardStats() {
         linkedCampaigns: stats.linkedCampaigns ?? null,
         campaignChange: null,
         totalLeadsThisMonth: stats.leadsThisMonth,
+        // Falls back to "This month" so older BE snapshots without the
+        // leadsWindowLabel field still produce a sensible label.
+        leadsWindowLabel: stats.leadsWindowLabel ?? 'This month',
         leadsChange: stats.leadsChange ?? null,
         totalCost: stats.totalCost,
         netProfit: stats.netProfit,
