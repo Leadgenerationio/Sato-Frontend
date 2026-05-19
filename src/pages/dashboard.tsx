@@ -205,8 +205,12 @@ export function DashboardPage() {
       }))
     : FALLBACK_REVENUE;
 
+  // Invoice Status chart uses the same financialOverview series — no extra
+  // BE call — so it inherits the window automatically (3 / 6 / 12 bars).
+  // The previous `.slice(-6)` cap is gone; for Last 12 months the chart
+  // now shows 12 stacked bars, for Last 6 it shows 6, for short windows 3.
   const invoiceData = financialOverview && financialOverview.length > 0
-    ? financialOverview.slice(-6).map((r) => ({
+    ? financialOverview.map((r) => ({
         month: r.month.split(' ')[0],
         paid: r.invoicesPaid,
         overdue: r.invoicesOverdue,
@@ -444,7 +448,9 @@ export function DashboardPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <CardTitle>Invoice Status</CardTitle>
-                <CardDescription>Monthly breakdown by payment status — click a chip to filter</CardDescription>
+                <CardDescription>
+                  Monthly breakdown by payment status — {stats.leadsWindowLabel ?? 'Last 12 months'}. Click a chip to filter.
+                </CardDescription>
               </div>
               {/* Status filter chips. Tap to toggle each bar segment.
                   At least one stays on (guarded in toggleStatus). */}
