@@ -208,14 +208,15 @@ export function DashboardPage() {
         <StatCard title="Leads This Month" value={stats.totalLeadsThisMonth.toLocaleString()} change={stats.leadsChange !== null ? `${stats.leadsChange >= 0 ? '+' : ''}${stats.leadsChange}% vs last month` : null} trend={(stats.leadsChange ?? 0) >= 0 ? 'up' : 'down'} icon={Activity} />
       </div>
 
-      {/* Secondary financial KPIs — period-coherent (this month) so the
-          Net Profit / Margin math compares like-for-like with Ad Spend.
-          Previously these were lifetime-vs-2-months and produced misleading
-          negative margins. */}
+      {/* Secondary financial KPIs — trailing 90 days so the natural ad-spend
+          → invoice → paid lag (~30-60 days) doesn't make a single heavy
+          acquisition month dominate the margin. Revenue and Cost both
+          summed over the same 90-day window so Net Profit / Margin
+          compares like-for-like. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="Ad Spend (this month)" value={formatCurrency(stats.totalCost)} change="Catchr — Google + FB + TikTok" trend="down" icon={CreditCard} />
-        <StatCard title="Net Profit (this month)" value={formatCurrency(stats.netProfit)} change={`${stats.profitMargin}% margin`} trend={stats.netProfit >= 0 ? 'up' : 'down'} icon={TrendingUp} />
-        <StatCard title="Margin (this month)" value={`${stats.profitMargin}%`} change={stats.profitMargin >= 30 ? 'healthy' : 'review'} trend={stats.profitMargin >= 30 ? 'up' : 'down'} icon={Activity} />
+        <StatCard title="Ad Spend (90d)" value={formatCurrency(stats.totalCost)} change="Catchr — Google + FB + TikTok" trend="down" icon={CreditCard} />
+        <StatCard title="Net Profit (90d)" value={formatCurrency(stats.netProfit)} change={`${stats.profitMargin}% margin`} trend={stats.netProfit >= 0 ? 'up' : 'down'} icon={TrendingUp} />
+        <StatCard title="Margin (90d)" value={`${stats.profitMargin}%`} change={stats.profitMargin >= 30 ? 'healthy' : 'review'} trend={stats.profitMargin >= 30 ? 'up' : 'down'} icon={Activity} />
       </div>
 
       {/* Charts Row 1 */}
