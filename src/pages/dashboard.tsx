@@ -217,7 +217,7 @@ export function DashboardPage() {
             clear. Subtext on each tile makes the period explicit. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard title="Ad Spend (90d)" value={formatCurrency(stats.totalCost)} change="Catchr — Google + FB + TikTok" trend="down" icon={CreditCard} />
-        <StatCard title="Net Profit (rolling)" value={formatCurrency(stats.netProfit)} change="180d revenue − 90d spend" trend={stats.netProfit >= 0 ? 'up' : 'down'} icon={TrendingUp} />
+        <StatCard title="Net Profit (rolling)" value={formatCurrency(stats.netProfit)} change="365d revenue − 90d spend" trend={stats.netProfit >= 0 ? 'up' : 'down'} icon={TrendingUp} />
         <StatCard title="Margin (rolling)" value={`${stats.profitMargin}%`} change={stats.profitMargin >= 30 ? 'healthy' : 'review'} trend={stats.profitMargin >= 30 ? 'up' : 'down'} icon={Activity} />
       </div>
 
