@@ -116,7 +116,7 @@ export function PortalLeadsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Lead Deliveries</h1>
-        <p className="text-muted-foreground">Daily lead delivery breakdown for the selected date range</p>
+        <p className="text-muted-foreground">Lead breakdown by campaign for the selected date range</p>
       </div>
 
       <Card>
@@ -195,17 +195,17 @@ export function PortalLeadsPage() {
             </CardContent>
           </Card>
 
-          <Tabs defaultValue="by-delivery" className="space-y-4">
+          <Tabs defaultValue="by-campaign" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="by-delivery">By Delivery</TabsTrigger>
+              <TabsTrigger value="by-campaign">By Campaign</TabsTrigger>
               <TabsTrigger value="daily">Daily</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="by-delivery">
+            <TabsContent value="by-campaign">
               <Card>
                 <CardHeader>
-                  <CardTitle>By Delivery</CardTitle>
-                  <CardDescription>Lead counts grouped per campaign delivery — click a row to see the daily breakdown</CardDescription>
+                  <CardTitle>By Campaign</CardTitle>
+                  <CardDescription>Lead counts grouped per campaign — click a row to see the daily breakdown</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="max-h-[500px] overflow-y-auto">
@@ -214,7 +214,7 @@ export function PortalLeadsPage() {
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-8" />
-                            <TableHead>Delivery</TableHead>
+                            <TableHead>Campaign</TableHead>
                             <TableHead>Date Range</TableHead>
                             <TableHead className="text-right">Days</TableHead>
                             <TableHead className="text-right">Leads</TableHead>
@@ -307,7 +307,7 @@ export function PortalLeadsPage() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Date</TableHead>
-                            <TableHead>Delivery</TableHead>
+                            <TableHead>Campaign</TableHead>
                             <TableHead className="text-right">Leads</TableHead>
                           </TableRow>
                         </TableHeader>

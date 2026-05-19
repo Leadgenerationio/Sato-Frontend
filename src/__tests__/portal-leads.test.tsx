@@ -47,8 +47,8 @@ function renderPage() {
   );
 }
 
-describe('PortalLeadsPage — By Delivery', () => {
-  it('groups leads by campaign and shows total per delivery', () => {
+describe('PortalLeadsPage — By Campaign', () => {
+  it('groups leads by campaign and shows total per campaign', () => {
     renderPage();
     // Dublin = 12 + 9 = 21
     const dublinRow = screen.getByText('Audiology - Dublin').closest('tr')!;
@@ -61,18 +61,18 @@ describe('PortalLeadsPage — By Delivery', () => {
     expect(within(clareRow).getByText('3')).toBeInTheDocument();
   });
 
-  it('sorts deliveries by lead count descending', () => {
+  it('sorts campaigns by lead count descending', () => {
     renderPage();
     const rows = screen.getAllByRole('row');
-    const deliveryNames = rows
+    const campaignNames = rows
       .map((r) => r.textContent ?? '')
       .filter((t) => t.includes('Audiology -'));
-    expect(deliveryNames[0]).toContain('Dublin');
-    expect(deliveryNames[1]).toContain('Cork');
-    expect(deliveryNames[2]).toContain('Clare');
+    expect(campaignNames[0]).toContain('Dublin');
+    expect(campaignNames[1]).toContain('Cork');
+    expect(campaignNames[2]).toContain('Clare');
   });
 
-  it('expands a delivery to show its daily breakdown', () => {
+  it('expands a campaign to show its daily breakdown', () => {
     renderPage();
     const dublinRow = screen.getByText('Audiology - Dublin').closest('tr')!;
     fireEvent.click(dublinRow);

@@ -77,8 +77,14 @@ function handleViewInvoice(inv: PortalInvoice) {
   printWindow.document.close();
 }
 
+// Defensive client-side filter — backend already strips these in
+// portal.service.ts, but if it ever ships a draft/voided row by mistake
+// we must not render it or include it in the Outstanding tile.
+const PORTAL_HIDDEN_INVOICE_STATUSES = new Set(['draft', 'voided', 'deleted']);
+
 export function PortalInvoicesPage() {
-  const { data: invoices, isLoading } = usePortalInvoices();
+  const { data: rawInvoices, isLoading } = usePortalInvoices();
+  const invoices = rawInvoices?.filter((i) => !PORTAL_HIDDEN_INVOICE_STATUSES.has((i.status ?? '').toLowerCase()));
 
   const totalOutstanding = invoices?.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + toMoney(i.total), 0) ?? 0;
   const totalPaid = invoices?.filter((i) => i.status === 'paid').reduce((sum, i) => sum + toMoney(i.total), 0) ?? 0;
