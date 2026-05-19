@@ -16,6 +16,12 @@ export interface CampaignSummary {
   leadsToday: number;
   leadsThisWeek: number;
   leadsThisMonth: number;
+  /**
+   * Leads in the previous calendar month. Optional — older BE snapshots
+   * without this field treat it as 0 client-side so the dashboard pie
+   * chart still renders something useful (it falls back to leadsThisMonth).
+   */
+  leadsLastMonth?: number;
   totalRevenue: number;
   totalCost: number;
   cpl: number;

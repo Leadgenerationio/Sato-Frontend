@@ -15,7 +15,7 @@ import {
   useDashboardStats, useFinancialOverview, useLeadsByDay, useRecentActivity,
   DASHBOARD_WINDOW_OPTIONS, type DashboardWindow,
 } from '@/lib/hooks/use-dashboard';
-import { useCampaigns } from '@/lib/hooks/use-campaigns';
+import { useCampaigns, type CampaignSummary } from '@/lib/hooks/use-campaigns';
 import { toMoney } from '@/lib/hooks/use-invoices';
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
@@ -213,10 +213,31 @@ export function DashboardPage() {
     : FALLBACK_INVOICES;
 
   // Real campaign-source pie chart — group active campaigns by vertical
-  // (Solar, Insurance, Finance, etc.) and show share of leads-this-month.
+  // (Solar, Hearing Aids, Insulation, etc.) and show share of leads in
+  // the currently-selected dashboard window.
+  //
+  // The BE caches /reports/campaign for today/this_week/this_month/
+  // last_month/ytd already, so leadsThisWeek / leadsThisMonth /
+  // leadsLastMonth ride along on every CampaignSummary. For windows
+  // LeadByte doesn't preset (last_90d, last_6m, last_year) we fall back
+  // to totalLeads (the campaign's best-available cumulative count) so
+  // the chart never goes blank when a long window is selected.
+  const pieFieldForWindow = (c: CampaignSummary): number => {
+    switch (leadsWindow) {
+      case 'this_week': return c.leadsThisWeek ?? 0;
+      case 'this_month': return c.leadsThisMonth ?? 0;
+      case 'last_month': return c.leadsLastMonth ?? 0;
+      case 'last_90d':
+      case 'last_6m':
+      case 'last_year':
+      default:
+        return c.totalLeads ?? 0;
+    }
+  };
+  const pieWindowLabel = stats.leadsWindowLabel ?? 'This month';
   const campaignsByVertical = (campaignsData?.campaigns ?? []).reduce<Record<string, number>>((acc, c) => {
     const v = c.vertical || 'Other';
-    acc[v] = (acc[v] ?? 0) + (c.leadsThisMonth ?? 0);
+    acc[v] = (acc[v] ?? 0) + pieFieldForWindow(c);
     return acc;
   }, {});
   const totalLeadsByVertical = Object.values(campaignsByVertical).reduce((s, n) => s + n, 0);
@@ -363,7 +384,10 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <WidgetContainer>
         <Card>
-          <CardHeader><CardTitle>Campaign Sources</CardTitle><CardDescription>Lead distribution by channel</CardDescription></CardHeader>
+          <CardHeader>
+            <CardTitle>Campaign Sources</CardTitle>
+            <CardDescription>Lead distribution by channel — {pieWindowLabel}</CardDescription>
+          </CardHeader>
           <CardContent>
             <div className="h-[180px] sm:h-[240px]">
               <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={campaignData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" stroke="none">{campaignData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip {...tooltipStyle} formatter={(value: any) => [`${value}%`, '']} /></PieChart></ResponsiveContainer>
