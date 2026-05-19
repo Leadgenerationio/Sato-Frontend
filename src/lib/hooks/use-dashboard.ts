@@ -5,13 +5,24 @@ import type { InvoiceSummary } from './use-invoices';
 export interface FinancialOverviewRow {
   month: string;
   revenue: number;
-  expenses: number;
+  /**
+   * Sum of ad_spend.spend for the month, or `null` for months that predate
+   * the Catchr connection. Chart should render gaps (not flat zero) on
+   * null months. Older BE snapshots emitted 0; tolerate either.
+   */
+  expenses: number | null;
   profit: number;
   invoicesPaid: number;
   invoicesOverdue: number;
   /** Optional — older BE snapshots without this field treat it as 0 client-side. */
   invoicesPending?: number;
   vatCollected: number;
+  /**
+   * True for the current calendar month (partial — month-to-date totals only).
+   * Optional for back-compat. Chart should visually de-emphasize partial
+   * rows so users don't read them as completed-month figures.
+   */
+  isPartial?: boolean;
 }
 
 export function useFinancialOverview() {

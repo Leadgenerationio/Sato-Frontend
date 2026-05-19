@@ -34,7 +34,11 @@ import {
 // been generated). Zero-filled so the chart renders flat-and-honest instead
 // of pretending there's revenue. Real data comes from /reports/financial-overview.
 const EMPTY_MONTHS_6 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-const FALLBACK_REVENUE = EMPTY_MONTHS_6.map((month) => ({ month, revenue: 0, expenses: 0 }));
+// Same shape as the real series (expenses: number | null, isPartial: boolean)
+// so the ternary at use-site doesn't broaden the union and break Recharts'
+// generic ChartData<T>.
+const FALLBACK_REVENUE: Array<{ month: string; revenue: number; expenses: number | null; isPartial: boolean }> =
+  EMPTY_MONTHS_6.map((month) => ({ month, revenue: 0, expenses: 0, isPartial: false }));
 const FALLBACK_INVOICES = EMPTY_MONTHS_6.map((month) => ({ month, paid: 0, overdue: 0, pending: 0 }));
 
 const PIE_PALETTE = ['#171717', '#525252', '#a3a3a3', '#d4d4d4', '#737373', '#404040'];
@@ -140,8 +144,19 @@ export function DashboardPage() {
   // Real financial data → revenue/expenses chart + invoice status chart.
   // Falls back to demo data if the user lacks permission (ops_manager/readonly)
   // or the API is empty.
+  //
+  // r.expenses is `null` for months pre-Catchr-connection — pass it through
+  // (Recharts AreaChart skips nulls so the line draws a gap rather than a
+  // misleading flat-zero floor). r.isPartial marks the current incomplete
+  // month so the consumer can dash-stroke / fade it; for now we leave the
+  // visual treatment to the eye + tooltip "(partial)" suffix below.
   const revenueData = financialOverview && financialOverview.length > 0
-    ? financialOverview.map((r) => ({ month: r.month.split(' ')[0], revenue: r.revenue, expenses: r.expenses }))
+    ? financialOverview.map((r) => ({
+        month: r.month.split(' ')[0],
+        revenue: r.revenue,
+        expenses: r.expenses ?? null,
+        isPartial: r.isPartial ?? false,
+      }))
     : FALLBACK_REVENUE;
 
   const invoiceData = financialOverview && financialOverview.length > 0
@@ -225,7 +240,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <WidgetContainer fallback={<WidgetSkeleton className="lg:col-span-2" />}>
         <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Revenue Overview</CardTitle><CardDescription>Monthly revenue vs expenses — last 12 months</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Revenue Overview</CardTitle><CardDescription>Monthly revenue (Xero) vs ad spend (Catchr) — last 12 months. Spend line starts when Catchr was connected.</CardDescription></CardHeader>
           <CardContent>
             <div className="h-[220px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -235,9 +250,22 @@ export function DashboardPage() {
                     <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a3a3a3" stopOpacity={0.1} /><stop offset="100%" stopColor="#a3a3a3" stopOpacity={0} /></linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" interval="preserveStartEnd" minTickGap={16} /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip {...tooltipStyle} formatter={(value: any) => [`£${Number(value).toLocaleString()}`, '']} /><Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
+                  <Tooltip
+                    {...tooltipStyle}
+                    formatter={(value: unknown, name: unknown) => {
+                      if (value === null || value === undefined) return ['—', String(name)];
+                      return [`£${Number(value).toLocaleString()}`, String(name)];
+                    }}
+                    labelFormatter={(label, payload) => {
+                      const partial = Array.isArray(payload) && payload[0]?.payload?.isPartial;
+                      return partial ? `${label} (month-to-date)` : String(label);
+                    }}
+                  />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
+                  {/* connectNulls=false → expenses line breaks for pre-Catchr months
+                      (rather than drawing a misleading flat-zero floor). */}
                   <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#171717" strokeWidth={2} fill="url(#revenueGrad)" />
-                  <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#a3a3a3" strokeWidth={2} fill="url(#expenseGrad)" />
+                  <Area type="monotone" dataKey="expenses" name="Ad Spend" stroke="#a3a3a3" strokeWidth={2} fill="url(#expenseGrad)" connectNulls={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
