@@ -189,17 +189,33 @@ export function DashboardPage() {
 
       {/* Stats — derived from actual API data */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change={stats.revenueChange !== null ? `+${stats.revenueChange}%` : null} trend="up" icon={DollarSign} />
+        <StatCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change={stats.revenueChange !== null ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange}% vs last month` : null} trend={(stats.revenueChange ?? 0) >= 0 ? 'up' : 'down'} icon={DollarSign} />
         <StatCard title="Active Clients" value={String(stats.activeClients)} change={stats.clientChange !== null ? `+${stats.clientChange}` : null} trend="up" icon={Users} />
-        <StatCard title="Active Campaigns" value={String(stats.activeCampaigns)} change={stats.campaignChange !== null ? `+${stats.campaignChange}` : null} trend="up" icon={TrendingUp} />
-        <StatCard title="Leads This Month" value={stats.totalLeadsThisMonth.toLocaleString()} change={stats.leadsChange !== null ? `+${stats.leadsChange}%` : null} trend="up" icon={Activity} />
+        {/*
+          Campaigns: show "linked / total" so Sam sees both — how many
+          campaigns are running on LeadByte (total active) AND how many
+          contribute to Stato's per-client P&L (linked). Two-thirds of
+          his LeadByte campaigns are unmapped to clients right now, so
+          showing only the total made the dashboard look inflated.
+        */}
+        <StatCard
+          title="Campaigns (linked / active)"
+          value={`${stats.linkedCampaigns ?? '–'} / ${stats.activeCampaigns}`}
+          change={stats.campaignChange !== null ? `+${stats.campaignChange}` : null}
+          trend="up"
+          icon={TrendingUp}
+        />
+        <StatCard title="Leads This Month" value={stats.totalLeadsThisMonth.toLocaleString()} change={stats.leadsChange !== null ? `${stats.leadsChange >= 0 ? '+' : ''}${stats.leadsChange}% vs last month` : null} trend={(stats.leadsChange ?? 0) >= 0 ? 'up' : 'down'} icon={Activity} />
       </div>
 
-      {/* Secondary financial KPIs — matches Leadreports.io top strip */}
+      {/* Secondary financial KPIs — period-coherent (this month) so the
+          Net Profit / Margin math compares like-for-like with Ad Spend.
+          Previously these were lifetime-vs-2-months and produced misleading
+          negative margins. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="Total Cost" value={formatCurrency(stats.totalCost)} change="supplier payouts" trend="down" icon={CreditCard} />
-        <StatCard title="Net Profit" value={formatCurrency(stats.netProfit)} change={`${stats.profitMargin}% margin`} trend={stats.netProfit >= 0 ? 'up' : 'down'} icon={TrendingUp} />
-        <StatCard title="Profit Margin" value={`${stats.profitMargin}%`} change={stats.profitMargin >= 30 ? 'healthy' : 'review'} trend={stats.profitMargin >= 30 ? 'up' : 'down'} icon={Activity} />
+        <StatCard title="Ad Spend (this month)" value={formatCurrency(stats.totalCost)} change="Catchr — Google + FB + TikTok" trend="down" icon={CreditCard} />
+        <StatCard title="Net Profit (this month)" value={formatCurrency(stats.netProfit)} change={`${stats.profitMargin}% margin`} trend={stats.netProfit >= 0 ? 'up' : 'down'} icon={TrendingUp} />
+        <StatCard title="Margin (this month)" value={`${stats.profitMargin}%`} change={stats.profitMargin >= 30 ? 'healthy' : 'review'} trend={stats.profitMargin >= 30 ? 'up' : 'down'} icon={Activity} />
       </div>
 
       {/* Charts Row 1 */}

@@ -71,6 +71,8 @@ export interface DashboardStats {
   activeClients: number;
   clientChange: number | null;
   activeCampaigns: number;
+  /** Subset of activeCampaigns that are linked to at least one client. */
+  linkedCampaigns: number | null;
   campaignChange: number | null;
   totalLeadsThisMonth: number;
   leadsChange: number | null;
@@ -87,6 +89,13 @@ interface BackendStats {
   profitMargin: number;
   activeClients: number;
   activeCampaigns: number;
+  /**
+   * Campaigns with status='active' AND >=1 client_campaigns link.
+   * `activeCampaigns` includes orphan LeadByte imports; `linkedCampaigns`
+   * is the subset whose leads actually flow into Stato per-client P&L.
+   * Optional for back-compat with older BE deployments.
+   */
+  linkedCampaigns?: number;
   leadsThisMonth: number;
   /** Period-over-period revenue change as a percentage. Null when last month had zero baseline. */
   revenueChange?: number | null;
@@ -131,6 +140,7 @@ export function useDashboardStats() {
         // historical headcount snapshots. Null hides the chip.
         clientChange: null,
         activeCampaigns: stats.activeCampaigns,
+        linkedCampaigns: stats.linkedCampaigns ?? null,
         campaignChange: null,
         totalLeadsThisMonth: stats.leadsThisMonth,
         leadsChange: stats.leadsChange ?? null,

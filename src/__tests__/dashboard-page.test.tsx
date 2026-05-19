@@ -136,9 +136,12 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Active Clients')).toBeInTheDocument();
   });
 
-  it('renders Active Campaigns stat card', () => {
+  it('renders Campaigns stat card (linked / active label)', () => {
     renderPage();
-    expect(screen.getByText('Active Campaigns')).toBeInTheDocument();
+    // The card now shows "Campaigns (linked / active)" with a "X / Y" value
+    // so users see both how many campaigns are linked to a Sato client
+    // (driving per-client P&L) and how many are running on LeadByte total.
+    expect(screen.getByText('Campaigns (linked / active)')).toBeInTheDocument();
   });
 
   it('renders Leads This Month stat card', () => {
