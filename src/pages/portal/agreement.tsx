@@ -16,7 +16,11 @@ export function PortalAgreementPage() {
     return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
   }
 
-  const isSigned = agreement.status === 'signed';
+  // Backend canonicalizes a fully-signed agreement as status='completed' and
+  // sets signedAt at the same moment. The earlier check on status==='signed'
+  // never fired because the backend never writes that string — the portal
+  // showed "Pending" indefinitely even after the buyer had signed.
+  const isSigned = agreement.status === 'completed' || !!agreement.signedAt;
 
   return (
     <div className="space-y-6">
