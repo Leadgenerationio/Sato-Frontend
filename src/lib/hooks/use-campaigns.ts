@@ -143,7 +143,13 @@ export interface TrafficSource {
   campaignId: string;
   name: string;
   platform: string;
+  /** Legacy primary Catchr account id — kept for back-compat with older
+   *  rows. Prefer `accountIds` (the full union) on the FE going forward. */
   accountId: string;
+  /** Every Catchr account id whose spend rolls up under this source row.
+   *  Includes the legacy `accountId` when set, plus any additional ones
+   *  picked via the multi-select. Optional for back-compat with older BE. */
+  accountIds?: string[];
   catchrUrl: string | null;
   isActive: boolean;
   totalSpend: number;
@@ -258,7 +264,12 @@ export function useCatchrAccounts(platform?: string) {
 export interface CreateTrafficSourceInput {
   name: string;
   platform?: string;
+  /** Legacy primary account id. Either set this OR pass everything via
+   *  `accountIds`. Both are accepted and BE de-dupes. */
   accountId?: string;
+  /** Additional Catchr account ids — lets one row roll up spend from
+   *  multiple ad accounts on the same platform. */
+  accountIds?: string[];
   catchrUrl?: string;
   isActive?: boolean;
 }
@@ -267,6 +278,7 @@ export interface UpdateTrafficSourceInput {
   name?: string;
   platform?: string;
   accountId?: string;
+  accountIds?: string[];
   catchrUrl?: string | null;
   isActive?: boolean;
   totalSpend?: number;

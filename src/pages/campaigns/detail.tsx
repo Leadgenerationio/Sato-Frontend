@@ -424,29 +424,37 @@ function useSupplierOptions(): Array<{ id: string; name: string }> {
  * - The value stored is the Catchr account id (goes into traffic_sources.
  *   account_id); the human label is shown in the dropdown.
  */
-function CatchrAccountPicker({
+/**
+ * Multi-select Catchr account picker — lets one traffic_source row roll up
+ * spend from several Catchr accounts on the same platform. Renders a
+ * search-filtered checkbox list. Falls through to the same manual-URL
+ * input as the single-select picker when Catchr isn't configured or the
+ * platform doesn't expose accounts.
+ *
+ * Selected IDs are stored as a string[] in `accountIds`. The first
+ * picked account also drives the legacy `accountId` field on the row so
+ * older code paths that read just `accountId` keep working.
+ */
+function CatchrMultiAccountPicker({
   platform,
-  accountId,
+  accountIds,
   manualUrl,
-  onChangeAccount,
+  onChangeAccounts,
   onChangeManualUrl,
 }: {
   platform: string;
-  accountId: string;
+  accountIds: string[];
   manualUrl: string;
-  onChangeAccount: (id: string, label: string) => void;
+  onChangeAccounts: (ids: string[], primaryLabel: string) => void;
   onChangeManualUrl: (url: string) => void;
 }) {
   const isKnownPlatform = platform && platform !== 'other';
   const { data, isLoading } = useCatchrAccounts(isKnownPlatform ? platform : undefined);
   const accounts = data?.accounts ?? [];
   const configured = data?.configured ?? false;
+  const [search, setSearch] = useState('');
 
-  // Fallbacks: when Catchr isn't connected, platform is "other", or the
-  // user's Catchr workspace has no accounts for this platform, surface the
-  // legacy text input so users can still capture the source manually.
   const fallbackToManual = !isKnownPlatform || !configured || (!isLoading && accounts.length === 0);
-
   if (fallbackToManual) {
     return (
       <Input
@@ -463,23 +471,62 @@ function CatchrAccountPicker({
     );
   }
 
+  const selectedSet = new Set(accountIds);
+  const filtered = search.trim()
+    ? accounts.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
+    : accounts;
+
+  const toggle = (id: string, name: string) => {
+    const next = new Set(selectedSet);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    const arr = Array.from(next);
+    // Primary label is the first selected account's name — used to auto-
+    // fill the row Name field when Sam hasn't typed one. Falls back to
+    // the just-toggled name when the array is now empty.
+    const primary = arr.length > 0 ? accounts.find((a) => a.id === arr[0])?.name ?? name : '';
+    onChangeAccounts(arr, primary);
+  };
+
   return (
-    <select
-      value={accountId}
-      onChange={(e) => {
-        const picked = accounts.find((a) => a.id === e.target.value);
-        onChangeAccount(e.target.value, picked?.name ?? '');
-      }}
-      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-      disabled={isLoading}
-    >
-      <option value="">
-        {isLoading ? 'Loading accounts…' : `Select a ${platform} account…`}
-      </option>
-      {accounts.map((a) => (
-        <option key={a.id} value={a.id}>{a.name}</option>
-      ))}
-    </select>
+    <div className="rounded-md border border-input bg-transparent text-sm shadow-sm">
+      <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-b">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={`Search ${accounts.length} ${platform} accounts…`}
+          className="h-7 text-xs border-0 shadow-none focus-visible:ring-0 px-1"
+        />
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {accountIds.length} selected
+        </span>
+      </div>
+      <div className="max-h-48 overflow-y-auto">
+        {isLoading && <div className="px-2 py-3 text-xs text-muted-foreground">Loading accounts…</div>}
+        {!isLoading && filtered.length === 0 && (
+          <div className="px-2 py-3 text-xs text-muted-foreground">
+            {search ? 'No accounts match this search.' : 'No accounts available.'}
+          </div>
+        )}
+        {filtered.map((a) => {
+          const checked = selectedSet.has(a.id);
+          return (
+            <label
+              key={a.id}
+              className={`flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer hover:bg-muted/40 ${checked ? 'bg-muted/30' : ''}`}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggle(a.id, a.name)}
+                className="size-3.5"
+              />
+              <span className="flex-1 truncate">{a.name}</span>
+              <span className="font-mono text-[10px] text-muted-foreground">{a.id}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -493,22 +540,38 @@ function CatchrAccountPicker({
 function CatchrNcpCell({
   platform,
   accountId,
+  accountIds,
   catchrUrl,
 }: {
   platform: string;
   accountId: string;
+  accountIds?: string[];
   catchrUrl: string | null;
 }) {
   const { data } = useCatchrAccounts(platform && platform !== 'other' ? platform : undefined);
-  const accountName = data?.accounts?.find((a) => a.id === accountId)?.name;
+  // Union legacy single accountId + new accountIds[] from the BE so the
+  // cell shows every Catchr account this source rolls up. Falls back to
+  // an empty set if neither is populated — handled below.
+  const ids = Array.from(new Set([
+    ...(accountIds ?? []),
+    ...(accountId ? [accountId] : []),
+  ].filter(Boolean)));
 
-  if (accountName) {
-    return <span className="text-xs">{accountName}</span>;
-  }
-  if (accountId) {
-    // Account picked but Catchr list hasn't loaded yet or the account was
-    // removed upstream — show the opaque id so the source isn't blank.
-    return <span className="text-xs font-mono">{accountId}</span>;
+  if (ids.length > 0) {
+    const names = ids.map((id) => data?.accounts?.find((a) => a.id === id)?.name ?? id);
+    return (
+      <div className="flex flex-wrap gap-1 text-xs">
+        {names.map((n, i) => (
+          <span
+            key={ids[i]}
+            className="inline-flex items-center rounded bg-muted px-1.5 py-0.5"
+            title={ids[i]}
+          >
+            {n}
+          </span>
+        ))}
+      </div>
+    );
   }
   if (catchrUrl) {
     return (
@@ -632,7 +695,12 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
                       <Badge variant="secondary" className="text-xs capitalize">{s.platform || '—'}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground max-w-[240px]">
-                      <CatchrNcpCell platform={s.platform} accountId={s.accountId} catchrUrl={s.catchrUrl} />
+                      <CatchrNcpCell
+                        platform={s.platform}
+                        accountId={s.accountId}
+                        accountIds={s.accountIds}
+                        catchrUrl={s.catchrUrl}
+                      />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(s.totalSpend)}</TableCell>
                     <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
@@ -666,7 +734,7 @@ function AddSourceRow({
   pending, onSubmit, onCancel,
 }: {
   pending: boolean;
-  onSubmit: (input: { name: string; platform?: string; accountId?: string; catchrUrl?: string }) => Promise<void>;
+  onSubmit: (input: { name: string; platform?: string; accountId?: string; accountIds?: string[]; catchrUrl?: string }) => Promise<void>;
   onCancel: () => void;
 }) {
   const supplierOptions = useSupplierOptions();
@@ -674,7 +742,8 @@ function AddSourceRow({
   // Default to the first connected Catchr platform if any are loaded yet,
   // else 'other' so the manual-URL fallback shows immediately.
   const [platform, setPlatform] = useState<string>(() => supplierOptions[0]?.id ?? 'other');
-  const [accountId, setAccountId] = useState('');
+  // Now an array — one source can roll up multiple Catchr accounts.
+  const [accountIds, setAccountIds] = useState<string[]>([]);
   const [catchrUrl, setCatchrUrl] = useState('');
 
   const handleSave = async () => {
@@ -685,7 +754,10 @@ function AddSourceRow({
     await onSubmit({
       name: name.trim(),
       platform,
-      accountId: accountId.trim() || undefined,
+      // Primary `accountId` mirrors the first selected — BE de-dupes so
+      // passing both is safe and keeps legacy readers working.
+      accountId: accountIds[0] || undefined,
+      accountIds: accountIds.length > 0 ? accountIds : undefined,
       catchrUrl: catchrUrl.trim() || undefined,
     });
   };
@@ -700,8 +772,8 @@ function AddSourceRow({
           value={platform}
           onChange={(e) => {
             setPlatform(e.target.value);
-            // Switching platform invalidates the previously-picked account.
-            setAccountId('');
+            // Switching platform invalidates the previously-picked accounts.
+            setAccountIds([]);
           }}
           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
         >
@@ -709,15 +781,15 @@ function AddSourceRow({
         </select>
       </TableCell>
       <TableCell colSpan={5}>
-        <CatchrAccountPicker
+        <CatchrMultiAccountPicker
           platform={platform}
-          accountId={accountId}
+          accountIds={accountIds}
           manualUrl={catchrUrl}
-          onChangeAccount={(id, label) => {
-            setAccountId(id);
-            // If the row name is still empty, auto-fill from the account
-            // label so Sam doesn't have to retype "Facebook · Solar UK".
-            if (!name.trim() && label) setName(label);
+          onChangeAccounts={(ids, primaryLabel) => {
+            setAccountIds(ids);
+            // If the row name is still empty, auto-fill from the first
+            // selected account so Sam doesn't have to retype the supplier name.
+            if (!name.trim() && primaryLabel) setName(primaryLabel);
           }}
           onChangeManualUrl={setCatchrUrl}
         />
@@ -738,7 +810,16 @@ function EditSourceRow({
   campaignId, source, onDone,
 }: {
   campaignId: string;
-  source: { id: string; name: string; platform: string; accountId?: string; catchrUrl: string | null; totalSpend: number; totalLeads: number };
+  source: {
+    id: string;
+    name: string;
+    platform: string;
+    accountId?: string;
+    accountIds?: string[];
+    catchrUrl: string | null;
+    totalSpend: number;
+    totalLeads: number;
+  };
   onDone: () => void;
 }) {
   const supplierOptions = useSupplierOptions();
@@ -749,7 +830,13 @@ function EditSourceRow({
   // dropdown renders sensibly while still preserving the underlying value
   // unless the user changes it.
   const [platform, setPlatform] = useState(source.platform || 'other');
-  const [accountId, setAccountId] = useState(source.accountId ?? '');
+  // Seed multi-select with the union of the legacy single accountId + new
+  // accountIds[] so editing an old row doesn't lose its selection.
+  const [accountIds, setAccountIds] = useState<string[]>(() => {
+    const ids = new Set<string>(source.accountIds ?? []);
+    if (source.accountId) ids.add(source.accountId);
+    return Array.from(ids);
+  });
   const [catchrUrl, setCatchrUrl] = useState(source.catchrUrl ?? '');
   const [spend, setSpend] = useState(String(source.totalSpend));
   const [leads, setLeads] = useState(String(source.totalLeads));
@@ -770,7 +857,8 @@ function EditSourceRow({
         sourceId: source.id,
         name: name.trim(),
         platform,
-        accountId: accountId.trim(),
+        accountId: accountIds[0] ?? '',
+        accountIds,
         catchrUrl: catchrUrl.trim() === '' ? null : catchrUrl.trim(),
         totalSpend: spendNum,
         totalLeads: Math.floor(leadsNum),
@@ -792,9 +880,9 @@ function EditSourceRow({
           value={platform}
           onChange={(e) => {
             setPlatform(e.target.value);
-            // Different platform = different account list; the old selection
-            // no longer means anything.
-            setAccountId('');
+            // Different platform = different account list; previous picks are
+            // for the wrong platform's accounts now.
+            setAccountIds([]);
           }}
           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
         >
@@ -802,11 +890,11 @@ function EditSourceRow({
         </select>
       </TableCell>
       <TableCell>
-        <CatchrAccountPicker
+        <CatchrMultiAccountPicker
           platform={platform}
-          accountId={accountId}
+          accountIds={accountIds}
           manualUrl={catchrUrl}
-          onChangeAccount={(id) => setAccountId(id)}
+          onChangeAccounts={(ids) => setAccountIds(ids)}
           onChangeManualUrl={setCatchrUrl}
         />
       </TableCell>
