@@ -25,11 +25,15 @@ export interface FinancialOverviewRow {
   isPartial?: boolean;
 }
 
-export function useFinancialOverview() {
+export function useFinancialOverview(opts: { window?: DashboardWindow } = {}) {
+  const { window } = opts;
   return useQuery({
-    queryKey: ['reports-financial-overview'],
+    queryKey: ['reports-financial-overview', window ?? 'default'],
     queryFn: async () => {
-      const res = await api.get<{ report: FinancialOverviewRow[] }>('/api/v1/reports/financial-overview');
+      const url = window
+        ? `/api/v1/reports/financial-overview?window=${encodeURIComponent(window)}`
+        : '/api/v1/reports/financial-overview';
+      const res = await api.get<{ report: FinancialOverviewRow[] }>(url);
       return unwrap(res).report;
     },
     retry: (failureCount, error) => {

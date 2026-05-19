@@ -143,7 +143,9 @@ export function DashboardPage() {
   // chart to that range.
   const [leadsWindow, setLeadsWindow] = useState<DashboardWindow>('last_year');
   const { data: stats, isLoading, isError, error, refetch } = useDashboardStats({ window: leadsWindow });
-  const { data: financialOverview } = useFinancialOverview();
+  // Revenue Overview chart now respects the same window — the BE returns
+  // 3 / 6 / 12 monthly buckets depending on which option is selected.
+  const { data: financialOverview } = useFinancialOverview({ window: leadsWindow });
   const { data: campaignsData } = useCampaigns({ limit: 100 });
   const { data: leadsByDay } = useLeadsByDay(7);
   const { data: activityFeed } = useRecentActivity(5);
@@ -370,7 +372,13 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <WidgetContainer fallback={<WidgetSkeleton className="lg:col-span-2" />}>
         <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Revenue Overview</CardTitle><CardDescription>Monthly revenue (Xero) vs ad spend (Catchr) — last 12 months. Spend line starts when Catchr was connected.</CardDescription></CardHeader>
+          <CardHeader>
+            <CardTitle>Revenue Overview</CardTitle>
+            <CardDescription>
+              Monthly revenue (Xero) vs ad spend (Catchr) — {stats.leadsWindowLabel ?? 'Last 12 months'}.
+              Spend line starts when Catchr was connected.
+            </CardDescription>
+          </CardHeader>
           <CardContent>
             <div className="h-[220px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
