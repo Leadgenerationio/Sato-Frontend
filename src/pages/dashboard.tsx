@@ -45,7 +45,14 @@ const FALLBACK_REVENUE: Array<{ month: string; revenue: number; expenses: number
 const FALLBACK_INVOICES: Array<{ month: string; paid: number; overdue: number; pending: number; isPartial: boolean }> =
   EMPTY_MONTHS_6.map((month) => ({ month, paid: 0, overdue: 0, pending: 0, isPartial: false }));
 
-const PIE_PALETTE = ['#171717', '#525252', '#a3a3a3', '#d4d4d4', '#737373', '#404040'];
+// 12-colour palette so 10+ vertical slices stay visually distinct. Greys
+// (matching the rest of the dashboard) take the lead colours; muted accents
+// fill in the long tail so a 14-slice pie doesn't have two adjacent
+// identical-looking wedges.
+const PIE_PALETTE = [
+  '#171717', '#404040', '#525252', '#737373', '#a3a3a3', '#d4d4d4',
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4',
+];
 
 const FALLBACK_LEADS_BY_DAY = [
   { day: 'Mon', leads: 0 }, { day: 'Tue', leads: 0 }, { day: 'Wed', leads: 0 },
@@ -204,13 +211,18 @@ export function DashboardPage() {
     return acc;
   }, {});
   const totalLeadsByVertical = Object.values(campaignsByVertical).reduce((s, n) => s + n, 0);
+  // Show every vertical that has at least one lead this month. Was capped at
+  // top 6 which hid Sam's smaller categories (Will Writing, PMI, PCP Claims,
+  // etc.) — with 14 verticals running, the cap collapsed the long tail into
+  // an invisible bucket. value carries 1 decimal so a 0.4%-of-total slice
+  // doesn't round to 0% in the legend.
   const campaignData = totalLeadsByVertical > 0
     ? Object.entries(campaignsByVertical)
+        .filter(([, leads]) => leads > 0)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 6)
         .map(([name, leads], i) => ({
           name,
-          value: Math.round((leads / totalLeadsByVertical) * 100),
+          value: Math.round((leads / totalLeadsByVertical) * 1000) / 10,
           color: PIE_PALETTE[i % PIE_PALETTE.length],
         }))
     : [
