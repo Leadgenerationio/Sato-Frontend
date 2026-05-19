@@ -137,7 +137,11 @@ export function DashboardPage() {
   // (Total Revenue, Net Profit, Margin, Campaigns, Bank/VAT/etc widgets)
   // intentionally keep their own windows — see the comments on those tiles
   // for the rationale.
-  const [leadsWindow, setLeadsWindow] = useState<DashboardWindow>('this_month');
+  // Default 'last_year' preserves the dashboard's prior first-paint numbers
+  // (~£734k revenue, -4.1% margin) given Catchr/Xero histories. Users pick
+  // shorter windows from the dropdown to scope every value tile + the pie
+  // chart to that range.
+  const [leadsWindow, setLeadsWindow] = useState<DashboardWindow>('last_year');
   const { data: stats, isLoading, isError, error, refetch } = useDashboardStats({ window: leadsWindow });
   const { data: financialOverview } = useFinancialOverview();
   const { data: campaignsData } = useCampaigns({ limit: 100 });
@@ -269,13 +273,16 @@ export function DashboardPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader title="Dashboard" description={`Welcome back, ${user.name}`} />
-        {/* Window filter — only affects the Leads tile + its trend chip.
-            Other tiles (revenue, profit, margin, bank, VAT, etc.) keep
-            their own native windows because they each represent different
-            concepts (lifetime billing, rolling profit cycle, current
-            balance, accruing tax quarter, …). */}
+        {/* Time-range filter — drives every value tile on this page
+            (Revenue, Ad Spend, Net Profit, Margin, Leads) plus the
+            Campaign Sources pie chart's data window. Counts (Active
+            Clients, Campaigns) and the long-running charts (Revenue
+            Overview, Invoice Status) keep their own scopes because
+            they're context views rather than period KPIs.
+            Default 'last_year' keeps first-paint numbers close to the
+            prior dashboard (~£734k revenue / -4.1% margin). */}
         <label className="flex items-center gap-2 text-xs text-neutral-500">
-          <span className="hidden sm:inline">Leads window:</span>
+          <span className="hidden sm:inline">Time range:</span>
           <select
             value={leadsWindow}
             onChange={(e) => setLeadsWindow(e.target.value as DashboardWindow)}
@@ -290,7 +297,17 @@ export function DashboardPage() {
 
       {/* Stats — derived from actual API data */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change={stats.revenueChange !== null ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange}% vs last month` : null} trend={(stats.revenueChange ?? 0) >= 0 ? 'up' : 'down'} icon={DollarSign} />
+        <StatCard
+          title={`Revenue — ${stats.leadsWindowLabel ?? 'Last 12 months'}`}
+          value={formatCurrency(stats.totalRevenue)}
+          change={
+            stats.revenueChange !== null
+              ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange}% vs prior period`
+              : null
+          }
+          trend={(stats.revenueChange ?? 0) >= 0 ? 'up' : 'down'}
+          icon={DollarSign}
+        />
         <StatCard title="Active Clients" value={String(stats.activeClients)} change={stats.clientChange !== null ? `+${stats.clientChange}` : null} trend="up" icon={Users} />
         {/*
           Campaigns: show "linked / total" so Sam sees both — how many
@@ -319,17 +336,34 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* Secondary financial KPIs.
-          - Ad Spend: trailing 90 days from Catchr (~all available history).
-          - Net Profit + Margin: revenue (180d) − ad spend (90d). The
-            wider revenue window absorbs the natural lead-to-paid lag so
-            a heavy single-month acquisition push doesn't dominate the
-            margin before the resulting invoices have a chance to bill +
-            clear. Subtext on each tile makes the period explicit. */}
+      {/* Secondary financial KPIs — all scoped to the same window as the
+          tiles above. For 'last_year' (default) the numbers match the
+          prior dashboard. Shorter windows show period-specific values;
+          the ad-spend → lead → invoice → paid cycle (~30-60 days) means
+          short windows often look heavily negative on margin — that's
+          accurate, not a bug. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="Ad Spend (90d)" value={formatCurrency(stats.totalCost)} change="Catchr — Google + FB + TikTok" trend="down" icon={CreditCard} />
-        <StatCard title="Net Profit (rolling)" value={formatCurrency(stats.netProfit)} change="365d revenue − 90d spend" trend={stats.netProfit >= 0 ? 'up' : 'down'} icon={TrendingUp} />
-        <StatCard title="Margin (rolling)" value={`${stats.profitMargin}%`} change={stats.profitMargin >= 30 ? 'healthy' : 'review'} trend={stats.profitMargin >= 30 ? 'up' : 'down'} icon={Activity} />
+        <StatCard
+          title={`Ad Spend — ${stats.leadsWindowLabel ?? 'Last 12 months'}`}
+          value={formatCurrency(stats.totalCost)}
+          change="Catchr — Google + FB + TikTok"
+          trend="down"
+          icon={CreditCard}
+        />
+        <StatCard
+          title={`Net Profit — ${stats.leadsWindowLabel ?? 'Last 12 months'}`}
+          value={formatCurrency(stats.netProfit)}
+          change={`${stats.profitMargin}% margin`}
+          trend={stats.netProfit >= 0 ? 'up' : 'down'}
+          icon={TrendingUp}
+        />
+        <StatCard
+          title={`Margin — ${stats.leadsWindowLabel ?? 'Last 12 months'}`}
+          value={`${stats.profitMargin}%`}
+          change={stats.profitMargin >= 30 ? 'healthy' : 'review'}
+          trend={stats.profitMargin >= 30 ? 'up' : 'down'}
+          icon={Activity}
+        />
       </div>
 
       {/* Charts Row 1 */}

@@ -139,9 +139,11 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
   });
 
-  it('renders Total Revenue stat card', () => {
+  it('renders Revenue stat card with window label', () => {
     renderPage();
-    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+    // Title is "Revenue — <window-label>" so the dashboard window-filter
+    // dropdown can pivot every value tile with the same period name.
+    expect(screen.getByText(/Revenue — /)).toBeInTheDocument();
   });
 
   it('renders Active Clients stat card', () => {
