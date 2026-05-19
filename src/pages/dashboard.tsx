@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/layouts/page-header';
 import { DashboardSkeleton } from '@/components/shared/loading-skeleton';
@@ -39,7 +40,10 @@ const EMPTY_MONTHS_6 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 // generic ChartData<T>.
 const FALLBACK_REVENUE: Array<{ month: string; revenue: number; expenses: number | null; isPartial: boolean }> =
   EMPTY_MONTHS_6.map((month) => ({ month, revenue: 0, expenses: 0, isPartial: false }));
-const FALLBACK_INVOICES = EMPTY_MONTHS_6.map((month) => ({ month, paid: 0, overdue: 0, pending: 0 }));
+// Same shape as the real series (isPartial: boolean) so the ternary at the
+// use-site doesn't broaden the union and break the Bar/Tooltip generics.
+const FALLBACK_INVOICES: Array<{ month: string; paid: number; overdue: number; pending: number; isPartial: boolean }> =
+  EMPTY_MONTHS_6.map((month) => ({ month, paid: 0, overdue: 0, pending: 0, isPartial: false }));
 
 const PIE_PALETTE = ['#171717', '#525252', '#a3a3a3', '#d4d4d4', '#737373', '#404040'];
 
@@ -124,6 +128,26 @@ export function DashboardPage() {
   const { data: leadsByDay } = useLeadsByDay(7);
   const { data: activityFeed } = useRecentActivity(5);
 
+  // Invoice Status chart filter — toggle each status independently. Defaults
+  // to all-on so the chart renders the full picture on first paint; clicking
+  // a chip hides that bar segment so users can focus on a single status
+  // (e.g. just Overdue) without re-rendering the whole chart.
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<{ paid: boolean; pending: boolean; overdue: boolean }>({
+    paid: true,
+    pending: true,
+    overdue: true,
+  });
+  const toggleStatus = (key: 'paid' | 'pending' | 'overdue') => {
+    setInvoiceStatusFilter((s) => {
+      const next = { ...s, [key]: !s[key] };
+      // Never let the user disable every series — leave at least one on so
+      // the chart isn't a blank rectangle. If they tried to toggle off the
+      // last visible one, no-op.
+      if (!next.paid && !next.pending && !next.overdue) return s;
+      return next;
+    });
+  };
+
   if (!user) return null;
   if (isLoading) return <DashboardSkeleton />;
   if (isError || !stats) {
@@ -168,6 +192,7 @@ export function DashboardPage() {
         // (drafts, sent, due-but-not-late). Older snapshots may omit it, so
         // fall back to 0 for safety.
         pending: r.invoicesPending ?? 0,
+        isPartial: r.isPartial ?? false,
       }))
     : FALLBACK_INVOICES;
 
@@ -299,10 +324,61 @@ export function DashboardPage() {
         </WidgetContainer>
         <WidgetContainer fallback={<WidgetSkeleton className="lg:col-span-2" />}>
         <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Invoice Status</CardTitle><CardDescription>Monthly breakdown by payment status</CardDescription></CardHeader>
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>Invoice Status</CardTitle>
+                <CardDescription>Monthly breakdown by payment status — click a chip to filter</CardDescription>
+              </div>
+              {/* Status filter chips. Tap to toggle each bar segment.
+                  At least one stays on (guarded in toggleStatus). */}
+              <div className="flex flex-wrap items-center gap-2">
+                {([
+                  { key: 'paid', label: 'Paid', dot: '#171717' },
+                  { key: 'pending', label: 'Pending', dot: '#a3a3a3' },
+                  { key: 'overdue', label: 'Overdue', dot: '#ef4444' },
+                ] as const).map(({ key, label, dot }) => {
+                  const on = invoiceStatusFilter[key];
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleStatus(key)}
+                      aria-pressed={on}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                        on
+                          ? 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800'
+                          : 'border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50'
+                      }`}
+                    >
+                      <span className="size-2 rounded-full" style={{ backgroundColor: dot, opacity: on ? 1 : 0.4 }} />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </CardHeader>
           <CardContent>
             <div className="h-[200px] sm:h-[280px]">
-              <ResponsiveContainer width="100%" height="100%"><BarChart data={invoiceData}><CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" interval="preserveStartEnd" minTickGap={16} /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" /><Tooltip {...tooltipStyle} /><Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} /><Bar dataKey="paid" name="Paid" stackId="a" fill="#171717" /><Bar dataKey="pending" name="Pending" stackId="a" fill="#a3a3a3" /><Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={invoiceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" interval="preserveStartEnd" minTickGap={16} />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
+                  <Tooltip
+                    {...tooltipStyle}
+                    labelFormatter={(label, payload) => {
+                      const partial = Array.isArray(payload) && payload[0]?.payload?.isPartial;
+                      return partial ? `${label} (month-to-date)` : String(label);
+                    }}
+                  />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
+                  {invoiceStatusFilter.paid && <Bar dataKey="paid" name="Paid" stackId="a" fill="#171717" />}
+                  {invoiceStatusFilter.pending && <Bar dataKey="pending" name="Pending" stackId="a" fill="#a3a3a3" />}
+                  {invoiceStatusFilter.overdue && <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />}
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
