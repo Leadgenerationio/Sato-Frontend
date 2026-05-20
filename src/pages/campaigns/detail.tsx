@@ -399,15 +399,33 @@ export function CampaignDetailPage() {
  */
 const OTHER_OPTION = { id: 'other', name: 'Other' } as const;
 
+// Baseline supplier list, used when Catchr's connected-platforms response
+// is empty (loading, timeout, transient probe failure, or a stale
+// React-Query cache from before any platform was connected). Slugs match
+// Catchr's canonical IDs so picking one here still drives the accounts
+// fetch correctly the moment Catchr comes back. Sam, 2026-05-20: supplier
+// dropdown showed only "Other" on the demo while /catchr/platforms was
+// returning tik-tok connected:true; this fallback removes that dead-end.
+const BASELINE_SUPPLIERS: Array<{ id: string; name: string }> = [
+  { id: 'facebook-ads', name: 'Facebook Ads' },
+  { id: 'google-ads', name: 'Google Ads' },
+  { id: 'tik-tok', name: 'Tik Tok Ads' },
+  { id: 'bing-ads', name: 'Bing Ads' },
+  { id: 'taboola', name: 'Taboola' },
+  { id: 'outbrain', name: 'Outbrain' },
+];
+
 function useSupplierOptions(): Array<{ id: string; name: string }> {
   const { data } = useCatchrPlatforms();
   const platforms = data?.platforms ?? [];
-  // Connected platforms first (sorted by display name), then the manual
-  // "Other" escape hatch.
+  // Connected platforms first (sorted by display name), then any baseline
+  // platforms Catchr didn't surface, then the manual "Other" escape hatch.
   const connected = platforms
     .filter((p) => p.connected)
     .sort((a, b) => a.name.localeCompare(b.name));
-  return [...connected, OTHER_OPTION];
+  const connectedIds = new Set(connected.map((p) => p.id));
+  const baselineExtras = BASELINE_SUPPLIERS.filter((p) => !connectedIds.has(p.id));
+  return [...connected, ...baselineExtras, OTHER_OPTION];
 }
 
 /**
@@ -451,7 +469,11 @@ function CatchrMultiAccountPicker({
   const isKnownPlatform = platform && platform !== 'other';
   const { data, isLoading } = useCatchrAccounts(isKnownPlatform ? platform : undefined);
   const accounts = data?.accounts ?? [];
-  const configured = data?.configured ?? false;
+  // Optimistic during loading — `configured` defaulting to false made the
+  // picker briefly flash "Catchr not configured" on the first open even
+  // when Catchr was healthy. Only treat as not-configured once the
+  // response explicitly says so.
+  const configured = isLoading ? true : (data?.configured ?? false);
   const [search, setSearch] = useState('');
 
   const fallbackToManual = !isKnownPlatform || !configured || (!isLoading && accounts.length === 0);
@@ -461,11 +483,13 @@ function CatchrMultiAccountPicker({
         value={manualUrl}
         onChange={(e) => onChangeManualUrl(e.target.value)}
         placeholder={
-          !configured
-            ? 'Catchr not configured — paste NCP URL'
-            : platform === 'other'
-              ? 'Paste a reference URL (optional)'
-              : `No ${platform} accounts found in Catchr — paste NCP URL`
+          isLoading
+            ? 'Loading accounts…'
+            : !configured
+              ? 'Catchr not configured — paste NCP URL'
+              : platform === 'other'
+                ? 'Paste a reference URL (optional)'
+                : `No ${platform} accounts found in Catchr — paste NCP URL`
         }
       />
     );
