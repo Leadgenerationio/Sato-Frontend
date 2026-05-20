@@ -65,9 +65,14 @@ function StatusPill({ status }: { status: CardStatus }) {
     );
   }
   if (status === 'mock') {
+    // "Mock" was the original copy when the only failure mode was "no creds
+    // → return canned demo data". Today's failures are mostly transient
+    // probe / API errors with the integration otherwise healthy, so the
+    // word "Mock" misleads (Sam read it as "we faked the data"). Renamed
+    // to "Degraded" — same amber pill, accurate copy.
     return (
       <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
-        <AlertCircle className="size-3 mr-1" /> Mock
+        <AlertCircle className="size-3 mr-1" /> Degraded
       </Badge>
     );
   }
@@ -348,7 +353,7 @@ export function IntegrationsPage() {
           <CardContent className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold tabular-nums">{mockCount}</p>
-              <p className="text-xs text-muted-foreground">Mock / partial</p>
+              <p className="text-xs text-muted-foreground">Degraded / probe failed</p>
             </div>
             <AlertCircle className="size-6 text-amber-500" />
           </CardContent>

@@ -62,13 +62,16 @@ describe('IntegrationsPage', () => {
     expect(await screen.findByText(/Pending GoDaddy DNS/)).toBeInTheDocument();
   });
 
-  it('renders status summary cards (Live / Mock / Not configured)', async () => {
+  it('renders status summary cards (Live / Degraded / Not configured)', async () => {
     renderPage();
     // Wait for cards to render. The "Live" label appears multiple times — once
     // per live integration pill plus the summary card — so getAllByText.
+    // The old "Mock / partial" copy was renamed to "Degraded / probe failed"
+    // (2026-05-20) because Sam read "Mock" as "we faked the data" when the
+    // probe transiently failed against a healthy integration.
     await screen.findByText('Xero');
     expect(screen.getAllByText('Live').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Mock \/ partial/)).toBeInTheDocument();
+    expect(screen.getByText(/Degraded \/ probe failed/)).toBeInTheDocument();
     expect(screen.getByText('Not configured')).toBeInTheDocument();
   });
 });
