@@ -132,40 +132,41 @@ function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
           </p>
         )}
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
+      {/* T3 (Sam, 2026-05-20): action buttons stack + go full-width below sm
+          so all three (Approve / Changes / Reject) are reachable from the
+          phone thumb-grip without horizontal overflow. Above sm they
+          revert to the compact inline trio. */}
+      <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center sm:gap-1.5 sm:shrink-0">
         {isDecided ? (
           // Re-decide path — once a decision is made the buyer can still change
           // their mind. New rows append to the audit log; old ones are kept.
-          <span className="text-xs text-muted-foreground italic mr-2">
+          <span className="text-xs text-muted-foreground italic sm:mr-2">
             Decided {creative.approval.decidedAt ? formatDate(creative.approval.decidedAt) : ''}
           </span>
         ) : null}
         <Button
-          size="sm"
           variant={status === 'approved' ? 'default' : 'outline'}
           onClick={handleApprove}
           disabled={busy}
-          className="gap-1.5"
+          className="gap-1.5 h-11 w-full sm:h-9 sm:w-auto"
         >
           {approve.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
           Approve
         </Button>
         <Button
-          size="sm"
           variant="outline"
           onClick={() => { setDialog('changes'); setComment(creative.approval.feedback ?? ''); }}
           disabled={busy}
-          className="gap-1.5"
+          className="gap-1.5 h-11 w-full sm:h-9 sm:w-auto"
         >
           <RefreshCcw className="size-3.5" />
           Changes
         </Button>
         <Button
-          size="sm"
           variant="outline"
           onClick={() => { setDialog('reject'); setComment(creative.approval.feedback ?? ''); }}
           disabled={busy}
-          className="gap-1.5 text-red-600 hover:text-red-700"
+          className="gap-1.5 h-11 w-full sm:h-9 sm:w-auto text-red-600 hover:text-red-700"
         >
           <X className="size-3.5" />
           Reject
@@ -189,14 +190,20 @@ function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
             placeholder="e.g. The headline needs to mention the 30-day guarantee."
             autoFocus
           />
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => { setDialog(null); setComment(''); }} disabled={busy}>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="ghost"
+              onClick={() => { setDialog(null); setComment(''); }}
+              disabled={busy}
+              className="h-11 w-full sm:h-9 sm:w-auto"
+            >
               Cancel
             </Button>
             <Button
               variant={dialog === 'reject' ? 'destructive' : 'default'}
               onClick={() => dialog && submitDecision(dialog)}
               disabled={busy || comment.trim().length === 0}
+              className="h-11 w-full sm:h-9 sm:w-auto"
             >
               {busy ? <Loader2 className="size-4 mr-1 animate-spin" /> : null}
               {dialog === 'reject' ? 'Send rejection' : 'Request changes'}

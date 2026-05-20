@@ -114,47 +114,87 @@ export function PortalInvoicesPage() {
               description="When an invoice is issued, it will appear here for download."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Paid Date</TableHead>
-                    <TableHead className="text-right">View</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices?.map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
-                          {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
-                      <TableCell className="text-muted-foreground">{inv.paidDate ? formatDate(inv.paidDate) : '—'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7"
-                          onClick={() => handleViewInvoice(inv)}
-                          title="Open in new tab and print"
-                        >
-                          <Printer className="size-3.5 mr-1" />
-                          View / Print
-                        </Button>
-                      </TableCell>
+            <>
+              {/* T3 (Sam, 2026-05-20): on mobile the 6-column invoice table
+                  overflowed horizontally beyond a thumb's reach. Below md
+                  we render the same data as a stacked card list so every
+                  row's must-see fields (number, status, amount, due) are
+                  visible without scrolling sideways. Above md the original
+                  table comes back. */}
+              <div className="md:hidden divide-y">
+                {invoices?.map((inv) => (
+                  <div key={inv.id} className="space-y-2 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{inv.invoiceNumber}</p>
+                        <p className="text-xs text-muted-foreground">Due {formatDate(inv.dueDate)}</p>
+                      </div>
+                      <Badge className={`text-xs capitalize shrink-0 ${statusColors[inv.status] || ''}`}>
+                        {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
+                      </Badge>
+                    </div>
+                    <div className="flex items-end justify-between gap-2">
+                      <div>
+                        <p className="text-lg font-semibold tabular-nums">{formatCurrency(toMoney(inv.total), inv.currency)}</p>
+                        {inv.paidDate && (
+                          <p className="text-xs text-muted-foreground">Paid {formatDate(inv.paidDate)}</p>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleViewInvoice(inv)}
+                        className="h-11 px-4"
+                        title="Open in new tab and print"
+                      >
+                        <Printer className="size-4 mr-1.5" />
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Paid Date</TableHead>
+                      <TableHead className="text-right">View</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices?.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                        <TableCell>
+                          <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
+                            {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
+                        <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
+                        <TableCell className="text-muted-foreground">{inv.paidDate ? formatDate(inv.paidDate) : '—'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7"
+                            onClick={() => handleViewInvoice(inv)}
+                            title="Open in new tab and print"
+                          >
+                            <Printer className="size-3.5 mr-1" />
+                            View / Print
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

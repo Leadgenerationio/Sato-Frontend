@@ -107,14 +107,25 @@ function CreativeRow({ creative, onReject }: { creative: PortalCreative; onRejec
         </div>
       )}
 
-      {/* Action buttons (pending only) */}
+      {/* Action buttons (pending only). T3 (Sam, 2026-05-20): on mobile
+          the buttons stack full-width + use the default 44pt height so
+          they're thumb-reachable from the bottom of the viewport; on
+          sm+ they revert to side-by-side small buttons. */}
       {isPending && (
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleApprove} disabled={approve.isPending}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button
+            onClick={handleApprove}
+            disabled={approve.isPending}
+            className="h-11 w-full sm:h-9 sm:w-auto"
+          >
             <Check className="size-4" />
             Approve
           </Button>
-          <Button size="sm" variant="outline" onClick={() => onReject(creative)}>
+          <Button
+            variant="outline"
+            onClick={() => onReject(creative)}
+            className="h-11 w-full sm:h-9 sm:w-auto"
+          >
             <X className="size-4" />
             Reject
           </Button>
@@ -290,14 +301,19 @@ export function PortalCompliancePage() {
             onChange={(e) => setRejectState((s) => ({ ...s, feedback: e.target.value }))}
             autoFocus
           />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectState({ creative: null, feedback: '' })}>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setRejectState({ creative: null, feedback: '' })}
+              className="h-11 w-full sm:h-9 sm:w-auto"
+            >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={submitReject}
               disabled={reject.isPending || rejectState.feedback.trim().length === 0}
+              className="h-11 w-full sm:h-9 sm:w-auto"
             >
               Submit rejection
             </Button>
