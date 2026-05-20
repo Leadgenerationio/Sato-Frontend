@@ -52,9 +52,22 @@ const FALLBACK_INVOICES: Array<{ month: string; paid: number; overdue: number; p
 // (matching the rest of the dashboard) take the lead colours; muted accents
 // fill in the long tail so a 14-slice pie doesn't have two adjacent
 // identical-looking wedges.
+// Categorical palette — chosen so adjacent slices in the sort-by-value
+// order always have strong hue contrast. Previously the first 6 entries
+// were neutral greys, which made 8+ slice pies unreadable.
 const PIE_PALETTE = [
-  '#171717', '#404040', '#525252', '#737373', '#a3a3a3', '#d4d4d4',
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4',
+  '#3b82f6', // blue-500
+  '#10b981', // emerald-500
+  '#f59e0b', // amber-500
+  '#a855f7', // purple-500
+  '#ef4444', // red-500
+  '#06b6d4', // cyan-500
+  '#ec4899', // pink-500
+  '#84cc16', // lime-500
+  '#6366f1', // indigo-500
+  '#f97316', // orange-500
+  '#14b8a6', // teal-500
+  '#eab308', // yellow-500
 ];
 
 const FALLBACK_LEADS_BY_DAY = [
@@ -163,6 +176,10 @@ export function DashboardPage() {
     pending: true,
     overdue: true,
   });
+
+  // Index of the legend item the user is hovering — used to dim other pie
+  // slices so the matching slice pops out. null = no hover, full opacity.
+  const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
   const toggleStatus = (key: 'paid' | 'pending' | 'overdue') => {
     setInvoiceStatusFilter((s) => {
       const next = { ...s, [key]: !s[key] };
@@ -266,11 +283,12 @@ export function DashboardPage() {
         .sort(([, a], [, b]) => b - a)
         .map(([name, leads], i) => ({
           name,
+          leads,
           value: Math.round((leads / totalLeadsByVertical) * 1000) / 10,
           color: PIE_PALETTE[i % PIE_PALETTE.length],
         }))
     : [
-        { name: 'No data', value: 100, color: '#e5e5e5' },
+        { name: 'No data', leads: 0, value: 100, color: '#e5e5e5' },
       ];
 
   // Daily leads chart — real data from /api/v1/dashboard/leads-by-day.
@@ -454,9 +472,54 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[180px] sm:h-[240px]">
-              <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={campaignData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" stroke="none">{campaignData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip {...tooltipStyle} formatter={(value: any) => [`${value}%`, '']} /></PieChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={campaignData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="55%"
+                    outerRadius="80%"
+                    dataKey="value"
+                    nameKey="name"
+                    stroke="none"
+                    isAnimationActive={false}
+                  >
+                    {campaignData.map((entry, i) => (
+                      <Cell
+                        key={entry.name}
+                        fill={entry.color}
+                        fillOpacity={activePieIndex === null || activePieIndex === i ? 1 : 0.3}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    {...tooltipStyle}
+                    formatter={(value, _name, item) => {
+                      const payload = (item as { payload?: { name?: string; leads?: number } } | undefined)?.payload;
+                      return [
+                        `${value}% · ${(payload?.leads ?? 0).toLocaleString()} leads`,
+                        payload?.name ?? '',
+                      ];
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="grid grid-cols-1 gap-3 mt-2 sm:grid-cols-2">{campaignData.map((item) => (<div key={item.name} className="flex items-center gap-2"><div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} /><span className="truncate text-xs text-neutral-600">{item.name}</span><span className="ml-auto text-xs font-medium tabular-nums text-neutral-900">{item.value}%</span></div>))}</div>
+            <div className="grid grid-cols-1 gap-1.5 mt-2">
+              {campaignData.map((item, i) => (
+                <div
+                  key={item.name}
+                  className="flex items-center gap-2 rounded px-1.5 py-1 transition-colors hover:bg-muted/40"
+                  onMouseEnter={() => setActivePieIndex(i)}
+                  onMouseLeave={() => setActivePieIndex(null)}
+                >
+                  <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className="truncate text-xs text-neutral-600" title={item.name}>{item.name}</span>
+                  <span className="ml-auto text-xs font-medium tabular-nums text-neutral-900 whitespace-nowrap">{item.value}%</span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
         </WidgetContainer>
