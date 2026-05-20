@@ -27,7 +27,8 @@ function formatCurrency(value: number, currency = 'GBP') {
 
 // Tile-friendly currency: integer pounds below 1M, compact ("£4.2M") at/above.
 // The full precise value goes into the tooltip on the tile so nothing is lost.
-function formatTileCurrency(value: number, currency = 'GBP') {
+// Exported for unit tests — the 1M threshold is a magic number worth locking in.
+export function formatTileCurrency(value: number, currency = 'GBP') {
   if (Math.abs(value) >= 1_000_000) {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1,
@@ -38,7 +39,7 @@ function formatTileCurrency(value: number, currency = 'GBP') {
   }).format(value);
 }
 
-function formatTileNumber(value: number) {
+export function formatTileNumber(value: number) {
   if (Math.abs(value) >= 1_000_000) {
     return new Intl.NumberFormat('en-GB', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
   }
