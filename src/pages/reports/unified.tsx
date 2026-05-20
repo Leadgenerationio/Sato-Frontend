@@ -25,6 +25,26 @@ function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
 
+// Tile-friendly currency: integer pounds below 1M, compact ("£4.2M") at/above.
+// The full precise value goes into the tooltip on the tile so nothing is lost.
+function formatTileCurrency(value: number, currency = 'GBP') {
+  if (Math.abs(value) >= 1_000_000) {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1,
+    }).format(value);
+  }
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency', currency, maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatTileNumber(value: number) {
+  if (Math.abs(value) >= 1_000_000) {
+    return new Intl.NumberFormat('en-GB', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+  }
+  return value.toLocaleString();
+}
+
 export function UnifiedReportPage() {
   const [window, setWindow] = useState<DeliveryWindow>('this_month');
   const [supplierInput, setSupplierInput] = useState('');
@@ -100,12 +120,25 @@ export function UnifiedReportPage() {
       {/* Totals strip */}
       {totals && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <TotalCard label="Leads" value={totals.leads.toLocaleString()} />
-          <TotalCard label="Spend" value={formatCurrency(totals.spend)} />
-          <TotalCard label="Revenue" value={formatCurrency(totals.revenue)} />
+          <TotalCard
+            label="Leads"
+            value={formatTileNumber(totals.leads)}
+            fullValue={totals.leads.toLocaleString()}
+          />
+          <TotalCard
+            label="Spend"
+            value={formatTileCurrency(totals.spend)}
+            fullValue={formatCurrency(totals.spend)}
+          />
+          <TotalCard
+            label="Revenue"
+            value={formatTileCurrency(totals.revenue)}
+            fullValue={formatCurrency(totals.revenue)}
+          />
           <TotalCard
             label="Profit"
-            value={formatCurrency(totals.profit)}
+            value={formatTileCurrency(totals.profit)}
+            fullValue={formatCurrency(totals.profit)}
             valueClassName={totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}
           />
           <TotalCard
@@ -309,17 +342,23 @@ export function UnifiedReportPage() {
 }
 
 function TotalCard({
-  label, value, valueClassName,
+  label, value, fullValue, valueClassName,
 }: {
   label: string;
   value: string;
+  fullValue?: string;
   valueClassName?: string;
 }) {
   return (
     <Card className="gap-3 py-4">
       <CardContent>
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`mt-1 text-xl font-bold tabular-nums ${valueClassName ?? ''}`}>{value}</p>
+        <p
+          className={`mt-1 text-xl font-bold tabular-nums whitespace-nowrap ${valueClassName ?? ''}`}
+          title={fullValue ?? value}
+        >
+          {value}
+        </p>
       </CardContent>
     </Card>
   );
