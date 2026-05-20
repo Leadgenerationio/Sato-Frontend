@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/layouts/page-header';
 import { DashboardSkeleton } from '@/components/shared/loading-skeleton';
@@ -180,6 +180,16 @@ export function DashboardPage() {
   // Index of the legend item the user is hovering — used to dim other pie
   // slices so the matching slice pops out. null = no hover, full opacity.
   const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
+
+  // Animate the pie on first paint only. Recharts re-runs the slice-grow
+  // animation whenever it re-renders with isAnimationActive=true, which
+  // means every legend hover would re-trigger the entrance animation and
+  // stutter the dim. Freeze it after the default 1500ms entrance window.
+  const [pieAnimationActive, setPieAnimationActive] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setPieAnimationActive(false), 1500);
+    return () => clearTimeout(t);
+  }, []);
   const toggleStatus = (key: 'paid' | 'pending' | 'overdue') => {
     setInvoiceStatusFilter((s) => {
       const next = { ...s, [key]: !s[key] };
@@ -483,7 +493,7 @@ export function DashboardPage() {
                     dataKey="value"
                     nameKey="name"
                     stroke="none"
-                    isAnimationActive={false}
+                    isAnimationActive={pieAnimationActive}
                   >
                     {campaignData.map((entry, i) => (
                       <Cell
