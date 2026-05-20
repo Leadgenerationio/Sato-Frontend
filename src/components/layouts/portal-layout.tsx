@@ -55,7 +55,12 @@ export function PortalLayout() {
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:inline">{user?.name}</span>
+            <span
+              className="hidden sm:inline-block max-w-[12rem] truncate text-sm text-muted-foreground"
+              title={user?.name}
+            >
+              {user?.name}
+            </span>
             <Button
               variant="ghost"
               size="icon"
