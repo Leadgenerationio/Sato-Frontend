@@ -183,7 +183,11 @@ export function CampaignsPage() {
             <VerticalGroupedView campaigns={campaigns} />
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              {/* T3.6 (Sam, 2026-05-20): 11-column flat table — pin the
+                  Campaign column so the row label stays visible while
+                  the metric columns scroll horizontally on narrow
+                  viewports. */}
+              <Table className="[&_th:first-child]:sticky [&_th:first-child]:left-0 [&_th:first-child]:bg-card [&_th:first-child]:z-20 [&_th:first-child]:border-r [&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:bg-card [&_td:first-child]:z-10 [&_td:first-child]:border-r">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Campaign</TableHead>

@@ -124,7 +124,13 @@ export function ClientsPage() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              {/* T3.6 (Sam, 2026-05-20): Company column stays in view while
+                  the rest scrolls horizontally on tablet / mobile. The
+                  sticky-first-column pattern matches the AC#3 spec
+                  ("horizontally scrollable region with a sticky first
+                  column") for tables that have too many columns to fit
+                  on a narrow viewport. */}
+              <Table className="[&_th:first-child]:sticky [&_th:first-child]:left-0 [&_th:first-child]:bg-card [&_th:first-child]:z-20 [&_th:first-child]:border-r [&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:bg-card [&_td:first-child]:z-10 [&_td:first-child]:border-r">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Company</TableHead>
