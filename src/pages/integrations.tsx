@@ -34,6 +34,9 @@ interface CardSpec {
   status: CardStatus;
   metricLabel: string;
   metricValue: string;
+  // Override the default `text-3xl font-bold tabular-nums` styling — used by
+  // cards whose metric is text rather than a big number (e.g. Resend sender).
+  metricValueClassName?: string;
   detail?: string;
   lastSyncAt?: string | null;
   primaryAction?: { label: string; onClick: () => void; icon?: React.ElementType };
@@ -100,8 +103,13 @@ function IntegrationCard({ spec }: { spec: CardSpec }) {
           <StatusPill status={spec.status} />
         </div>
 
-        <div>
-          <p className="text-3xl font-bold tabular-nums leading-none">{spec.metricValue}</p>
+        <div className="min-w-0">
+          <p
+            className={`leading-none truncate ${spec.metricValueClassName ?? 'text-3xl font-bold tabular-nums'}`}
+            title={spec.metricValue}
+          >
+            {spec.metricValue}
+          </p>
           <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{spec.metricLabel}</p>
         </div>
 
@@ -301,6 +309,9 @@ export function IntegrationsPage() {
       status: statusFor(data.resend.configured, data.resend.configured),
       metricLabel: 'Sender',
       metricValue: data.resend.fromEmail ?? '—',
+      // Email addresses don't fit the at-a-glance big-number treatment; demote
+      // below the integration title so the hierarchy reads name → status → addr.
+      metricValueClassName: 'text-sm font-medium',
       detail: data.resend.fromEmail?.includes('resend.dev')
         ? 'Pending GoDaddy DNS to switch to verified domain'
         : 'Domain verified',
