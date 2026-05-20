@@ -83,7 +83,10 @@ function formatRelativeTime(iso: string): string {
 
 // ─── Components ───
 
-function StatCard({ title, value, change, trend, icon: Icon }: { title: string; value: string; change: string | null; trend: 'up' | 'down'; icon: React.ElementType }) {
+function StatCard({ title, value, change, trend, icon: Icon }: { title: string; value: string; change: string | null; trend: 'up' | 'down' | 'neutral'; icon: React.ElementType }) {
+  // Neutral trend → the `change` string is a label (e.g. data source) not a
+  // delta; render grey with no arrow so the user doesn't read it as up/down.
+  const colorClass = trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-red-500' : 'text-neutral-500';
   return (
     <Card className="gap-3 py-5">
       <CardContent>
@@ -92,8 +95,9 @@ function StatCard({ title, value, change, trend, icon: Icon }: { title: string; 
             <Icon className="size-5 text-neutral-700" />
           </div>
           {change !== null && (
-            <div className={`flex min-w-0 items-center gap-1 text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
-              {trend === 'up' ? <ArrowUpRight className="size-3 shrink-0" /> : <ArrowDownRight className="size-3 shrink-0" />}
+            <div className={`flex min-w-0 items-center gap-1 text-xs font-medium ${colorClass}`}>
+              {trend === 'up' && <ArrowUpRight className="size-3 shrink-0" />}
+              {trend === 'down' && <ArrowDownRight className="size-3 shrink-0" />}
               <span className="truncate">{change}</span>
             </div>
           )}
@@ -314,7 +318,17 @@ export function DashboardPage() {
           trend={(stats.revenueChange ?? 0) >= 0 ? 'up' : 'down'}
           icon={DollarSign}
         />
-        <StatCard title="Active Clients" value={String(stats.activeClients)} change={stats.clientChange !== null ? `+${stats.clientChange}` : null} trend="up" icon={Users} />
+        <StatCard
+          title="Active Clients"
+          value={String(stats.activeClients)}
+          change={
+            stats.clientChange !== null
+              ? `${stats.clientChange >= 0 ? '+' : ''}${stats.clientChange} vs prior period`
+              : null
+          }
+          trend={stats.clientChange === null ? 'neutral' : stats.clientChange >= 0 ? 'up' : 'down'}
+          icon={Users}
+        />
         {/*
           Campaigns: show "linked / total" so Sam sees both — how many
           campaigns are running on LeadByte (total active) AND how many
@@ -325,8 +339,12 @@ export function DashboardPage() {
         <StatCard
           title="Campaigns (linked / active)"
           value={`${stats.linkedCampaigns ?? '–'} / ${stats.activeCampaigns}`}
-          change={stats.campaignChange !== null ? `+${stats.campaignChange}` : null}
-          trend="up"
+          change={
+            stats.campaignChange !== null
+              ? `${stats.campaignChange >= 0 ? '+' : ''}${stats.campaignChange} vs prior period`
+              : null
+          }
+          trend={stats.campaignChange === null ? 'neutral' : stats.campaignChange >= 0 ? 'up' : 'down'}
           icon={TrendingUp}
         />
         <StatCard
@@ -353,21 +371,21 @@ export function DashboardPage() {
           title={`Ad Spend — ${stats.leadsWindowLabel ?? 'Last 12 months'}`}
           value={formatCurrency(stats.totalCost)}
           change="Catchr — Google + FB + TikTok"
-          trend="down"
+          trend="neutral"
           icon={CreditCard}
         />
         <StatCard
-          title={`Net Profit — ${stats.leadsWindowLabel ?? 'Last 12 months'}`}
+          title="Net Profit — rolling 12mo / 90d"
           value={formatCurrency(stats.netProfit)}
-          change={`${stats.profitMargin}% margin`}
+          change={`${stats.profitMargin}% margin · period-coherent`}
           trend={stats.netProfit >= 0 ? 'up' : 'down'}
           icon={TrendingUp}
         />
         <StatCard
-          title={`Margin — ${stats.leadsWindowLabel ?? 'Last 12 months'}`}
+          title="Margin — rolling 12mo / 90d"
           value={`${stats.profitMargin}%`}
-          change={stats.profitMargin >= 30 ? 'healthy' : 'review'}
-          trend={stats.profitMargin >= 30 ? 'up' : 'down'}
+          change={stats.profitMargin >= 30 ? 'healthy' : stats.profitMargin >= 0 ? 'review' : 'loss-making'}
+          trend={stats.profitMargin >= 30 ? 'up' : stats.profitMargin >= 0 ? 'neutral' : 'down'}
           icon={Activity}
         />
       </div>

@@ -96,6 +96,14 @@ export interface DashboardStats {
   totalCost: number;
   netProfit: number;
   profitMargin: number;
+  /**
+   * Period-coherent inputs for Profit / Margin — always rolling-365d
+   * revenue and rolling-90d cost regardless of the selected window. Used
+   * by the FE tooltip on the Profit/Margin tiles so the user sees what
+   * the calc was based on.
+   */
+  rollingRevenue365d?: number;
+  rollingCost90d?: number;
   recentInvoices: InvoiceSummary[];
 }
 
@@ -126,6 +134,8 @@ interface BackendStats {
   totalCost: number;
   netProfit: number;
   profitMargin: number;
+  rollingRevenue365d?: number;
+  rollingCost90d?: number;
   activeClients: number;
   activeCampaigns: number;
   /**
@@ -199,6 +209,8 @@ export function useDashboardStats(opts: { window?: DashboardWindow } = {}) {
         totalCost: stats.totalCost,
         netProfit: stats.netProfit,
         profitMargin: stats.profitMargin,
+        rollingRevenue365d: stats.rollingRevenue365d,
+        rollingCost90d: stats.rollingCost90d,
         recentInvoices,
       } as DashboardStats;
     },
