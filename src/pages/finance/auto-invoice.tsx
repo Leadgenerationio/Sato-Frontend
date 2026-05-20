@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Calendar, ExternalLink, Loader2, PlayCircle, CheckCircle2, XCircle, SkipForward } from 'lucide-react';
+import { Calendar, ExternalLink, Loader2, PlayCircle, CheckCircle2, XCircle, SkipForward, Pause, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useAutoInvoiceRuns,
@@ -15,6 +15,7 @@ import {
   useRunAutoInvoiceNow,
   type AutoInvoiceRun,
 } from '@/lib/hooks/use-auto-invoice';
+import { useWorkflows, usePauseWorkflow, useResumeWorkflow } from '@/lib/hooks/use-workflows';
 import { EmptyState } from '@/components/shared/empty-state';
 
 import { logError } from '../../lib/log';
@@ -55,6 +56,31 @@ export function AutoInvoicePage() {
   const { data: nextWindow } = useNextAutoInvoiceWindow();
   const runNow = useRunAutoInvoiceNow();
 
+  // T4 (Sam, 2026-05-20): locate this automation's workflow row by handler
+  // key so the pause/resume buttons can target it. List call is cached by
+  // useWorkflows so this is essentially free.
+  const { data: workflows } = useWorkflows();
+  const autoInvoiceWorkflow = workflows?.find((w) => w.handlerKey === 'auto-invoice');
+  const pauseWorkflow = usePauseWorkflow();
+  const resumeWorkflow = useResumeWorkflow();
+  const isPaused = autoInvoiceWorkflow?.status === 'paused';
+  const isTogglePending = pauseWorkflow.isPending || resumeWorkflow.isPending;
+
+  async function handleTogglePaused() {
+    if (!autoInvoiceWorkflow) return;
+    try {
+      if (isPaused) {
+        await resumeWorkflow.mutateAsync(autoInvoiceWorkflow.id);
+        toast.success('Auto-invoice resumed — next run will fire on schedule');
+      } else {
+        await pauseWorkflow.mutateAsync(autoInvoiceWorkflow.id);
+        toast.success('Auto-invoice paused — the cron will keep ticking but the handler will skip');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update workflow state');
+    }
+  }
+
   async function handleRunNow() {
     try {
       const result = await runNow.mutateAsync();
@@ -77,11 +103,32 @@ export function AutoInvoicePage() {
         title="Auto-invoice"
         description="Weekly cron — bills each client for the previous Mon-Sun's lead deliveries"
       >
-        <Button size="sm" onClick={handleRunNow} disabled={runNow.isPending}>
-          {runNow.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <PlayCircle className="size-4 mr-1.5" />}
-          Run now
-        </Button>
+        <div className="flex items-center gap-2">
+          {autoInvoiceWorkflow && (
+            <Button
+              size="sm"
+              variant={isPaused ? 'default' : 'outline'}
+              onClick={handleTogglePaused}
+              disabled={isTogglePending}
+              title={isPaused ? 'Resume — handler will run again on the next cron tick' : 'Pause — cron keeps firing but the handler short-circuits'}
+            >
+              {isTogglePending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : isPaused ? <Play className="size-4 mr-1.5" /> : <Pause className="size-4 mr-1.5" />}
+              {isPaused ? 'Resume' : 'Pause'}
+            </Button>
+          )}
+          <Button size="sm" onClick={handleRunNow} disabled={runNow.isPending || isPaused}>
+            {runNow.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <PlayCircle className="size-4 mr-1.5" />}
+            Run now
+          </Button>
+        </div>
       </PageHeader>
+
+      {isPaused && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <Pause className="size-4" />
+          <span>Auto-invoice is paused. The Monday 09:00 UTC cron will continue to fire, but the handler skips until you click Resume.</span>
+        </div>
+      )}
 
       <Card>
         <CardHeader className="pb-3">

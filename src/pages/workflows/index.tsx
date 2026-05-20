@@ -4,9 +4,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Clock, CheckCircle2, Pause, Workflow, Plus } from 'lucide-react';
-import { useWorkflows } from '@/lib/hooks/use-workflows';
+import { ExternalLink, Clock, CheckCircle2, Pause, Play, Workflow, Plus, Loader2 } from 'lucide-react';
+import { useWorkflows, usePauseWorkflow, useResumeWorkflow, type WorkflowSummary } from '@/lib/hooks/use-workflows';
 import { EmptyState } from '@/components/shared/empty-state';
+import { toast } from 'sonner';
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
@@ -22,6 +23,49 @@ const statusIcons: Record<string, React.ElementType> = {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// T4 (Sam, 2026-05-20) — inline pause/resume button on every row, so
+// any workflow (auto-invoice or otherwise) can be stopped from the same
+// generic admin surface without engineer help.
+function PauseResumeButton({ workflow }: { workflow: WorkflowSummary }) {
+  const pause = usePauseWorkflow();
+  const resume = useResumeWorkflow();
+  const isPaused = workflow.status === 'paused';
+  const isPending = pause.isPending || resume.isPending;
+
+  async function handleClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      if (isPaused) {
+        await resume.mutateAsync(workflow.id);
+        toast.success(`Resumed "${workflow.name}"`);
+      } else {
+        await pause.mutateAsync(workflow.id);
+        toast.success(`Paused "${workflow.name}"`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed');
+    }
+  }
+
+  // Draft workflows have no live cron behind them yet — show nothing so
+  // staff don't accidentally "pause" a workflow that isn't scheduled.
+  if (workflow.status === 'draft') return null;
+
+  return (
+    <Button
+      variant={isPaused ? 'default' : 'outline'}
+      size="sm"
+      onClick={handleClick}
+      disabled={isPending}
+      title={isPaused ? 'Resume — cron will fire the handler again' : 'Pause — cron keeps ticking but handler short-circuits'}
+    >
+      {isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : isPaused ? <Play className="size-4 mr-1.5" /> : <Pause className="size-4 mr-1.5" />}
+      {isPaused ? 'Resume' : 'Pause'}
+    </Button>
+  );
 }
 
 export function WorkflowsPage() {
@@ -78,12 +122,15 @@ export function WorkflowsPage() {
                         {wf.nextRunAt && <span>Next: {formatDate(wf.nextRunAt)}</span>}
                       </div>
                     </div>
-                    <Link to={`/workflows/${wf.id}`}>
-                      <Button variant="outline" size="sm">
-                        <ExternalLink className="size-4 mr-1.5" />
-                        View
-                      </Button>
-                    </Link>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <PauseResumeButton workflow={wf} />
+                      <Link to={`/workflows/${wf.id}`}>
+                        <Button variant="outline" size="sm">
+                          <ExternalLink className="size-4 mr-1.5" />
+                          View
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

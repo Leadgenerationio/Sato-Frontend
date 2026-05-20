@@ -8,6 +8,10 @@ export interface WorkflowSummary {
   type: string;
   schedule: string | null;
   status: string;
+  /** Set on the 3 bound automations (chase-overdue, auto-invoice,
+   *  monthly-validated). T4: the auto-invoice page uses this to locate
+   *  its own workflow row for the pause/resume toggle. */
+  handlerKey?: string | null;
   lastRunAt: string | null;
   nextRunAt: string | null;
   totalRuns: number;
@@ -75,6 +79,37 @@ export function useToggleWorkflowStatus() {
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await api.post<{ workflow: WorkflowDetail }>(`/api/v1/workflows/${id}/toggle-status`);
+      return unwrap(res).workflow;
+    },
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['workflows'] });
+      qc.invalidateQueries({ queryKey: ['workflow', id] });
+    },
+  });
+}
+
+// T4 (Sam, 2026-05-20) — explicit pause/resume so the button is idempotent
+// against rapid clicks or stale state. Toggle still works for back-compat
+// with the existing /workflows page.
+export function usePauseWorkflow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.post<{ workflow: WorkflowDetail }>(`/api/v1/workflows/${id}/pause`);
+      return unwrap(res).workflow;
+    },
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['workflows'] });
+      qc.invalidateQueries({ queryKey: ['workflow', id] });
+    },
+  });
+}
+
+export function useResumeWorkflow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.post<{ workflow: WorkflowDetail }>(`/api/v1/workflows/${id}/resume`);
       return unwrap(res).workflow;
     },
     onSuccess: (_, id) => {

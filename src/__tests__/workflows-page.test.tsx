@@ -18,6 +18,10 @@ vi.mock('@/lib/hooks/use-workflows', () => ({
     isLoading: false,
     error: null,
   }),
+  // T4: inline pause/resume button calls these — mock as no-op for the
+  // page-level tests; behavior is covered by backend integration tests.
+  usePauseWorkflow: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useResumeWorkflow: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 function renderPage() {
