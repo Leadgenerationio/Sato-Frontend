@@ -24,7 +24,7 @@ import {
   useCatchrAccounts, useCatchrPlatforms,
   useCampaignDeliveries,
 } from '@/lib/hooks/use-campaigns';
-import { useCreatives, useCreateCreative, useDeleteCreative } from '@/lib/hooks/use-creatives';
+import { useCreatives, useCreateCreative, useDeleteCreative, useSubmitCreative, type CreativeStatus } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
 import { Image as ImageIcon, Video, FileText, Download, Trash2, Save, Loader2, Pencil, Users as UsersIcon, Plus } from 'lucide-react';
@@ -943,10 +943,40 @@ function EditSourceRow({
   );
 }
 
+// T2 (Sam, 2026-05-20) — creative lifecycle pills + submit affordance.
+// Colours match other lifecycle pills in the app (status badges on
+// /campaigns, /clients) so the visual language stays consistent. Legacy
+// rows without a status arrive as undefined → treated as already-submitted
+// (the migration backfill default).
+const STATUS_PILL: Record<CreativeStatus, { label: string; className: string }> = {
+  draft: { label: 'Draft', className: 'bg-neutral-200/60 text-neutral-700 border-neutral-300' },
+  sent_for_approval: { label: 'Sent', className: 'bg-sky-500/10 text-sky-600 border-sky-200' },
+  approved: { label: 'Approved', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },
+  rejected: { label: 'Rejected', className: 'bg-red-500/10 text-red-600 border-red-200' },
+  changes_requested: { label: 'Changes requested', className: 'bg-amber-500/10 text-amber-600 border-amber-200' },
+};
+
+function statusPill(status: CreativeStatus | undefined) {
+  return STATUS_PILL[status ?? 'sent_for_approval'];
+}
+
 function CreativesCard({ campaignId }: { campaignId: string }) {
   const { data: creatives = [], isLoading } = useCreatives(campaignId);
   const create = useCreateCreative(campaignId);
   const remove = useDeleteCreative(campaignId);
+  const submit = useSubmitCreative(campaignId);
+
+  const handleSubmit = async (id: string, name: string) => {
+    try {
+      await submit.mutateAsync(id);
+      toast.success(`Sent "${name}" to the buyer for approval`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to submit';
+      // 409 = already submitted / wrong state — show it as an info, not an error.
+      if (/409|state/i.test(message)) toast.info(message);
+      else toast.error(message);
+    }
+  };
 
   // Buyer-review section picker (Sam #9/#11). Defaults to 'media' since that's
   // the common case (image + video). Switch to 'copy_lp' before uploading
@@ -1063,6 +1093,9 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
           <div className="space-y-2">
             {creatives.map((c) => {
               const Icon = iconFor(c.type);
+              const pill = statusPill(c.status);
+              const isDraft = c.status === 'draft';
+              const canResubmit = c.status === 'changes_requested';
               return (
                 <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -1072,6 +1105,7 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium" title={c.name}>{c.name}</p>
                       <p className="text-xs text-muted-foreground">
+                        <Badge className={`text-xs mr-1.5 ${pill.className}`} variant="outline">{pill.label}</Badge>
                         <Badge variant="secondary" className="text-xs capitalize mr-1.5">{c.type}</Badge>
                         <Badge variant="outline" className="text-xs mr-1.5">
                           {c.section === 'copy_lp' ? 'Copy / LP' : 'Media'}
@@ -1082,6 +1116,16 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    {(isDraft || canResubmit) && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleSubmit(c.id, c.name)}
+                        disabled={submit.isPending}
+                      >
+                        {canResubmit ? 'Re-submit' : 'Submit for approval'}
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => handleView(c.r2Key)} aria-label="View" disabled={!c.r2Key}>
                       <Download className="size-4" />
                     </Button>

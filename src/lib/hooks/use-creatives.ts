@@ -3,6 +3,17 @@ import { api, unwrap } from '@/lib/api';
 
 export type CreativeSection = 'media' | 'copy_lp';
 
+// T2 (Sam, 2026-05-20) — lifecycle states.
+// - draft: just uploaded, only visible to staff
+// - sent_for_approval: staff hit Submit; buyer can now see + decide
+// - approved / rejected / changes_requested: buyer's most recent decision
+export type CreativeStatus =
+  | 'draft'
+  | 'sent_for_approval'
+  | 'approved'
+  | 'rejected'
+  | 'changes_requested';
+
 export interface Creative {
   id: string;
   campaignId: string;
@@ -18,6 +29,11 @@ export interface Creative {
   // landing-page URLs. Optional only for back-compat with API responses
   // that pre-date the v2 deploy — treated as 'media' on the FE.
   section?: CreativeSection;
+  // T2: optional for back-compat with API responses that pre-date T2.
+  // Missing values are treated as 'sent_for_approval' (the backfill default
+  // for pre-T2 rows) so the FE never shows a draft pill for legacy data.
+  status?: CreativeStatus;
+  submittedAt?: string | null;
 }
 
 export function useCreatives(campaignId: string) {
@@ -55,6 +71,25 @@ export function useDeleteCreative(campaignId: string) {
   return useMutation({
     mutationFn: async (id: string) => {
       await api.delete(`/api/v1/creatives/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['creatives', campaignId] }),
+  });
+}
+
+// T2 (Sam, 2026-05-20) — staff submit-for-approval. Mutation invalidates
+// the creatives list so the status pill flips immediately on success.
+// Backend returns 409 when the source state isn't draft / changes_requested
+// — the caller's catch should show that as a non-error toast since it's
+// usually "I clicked twice".
+export function useSubmitCreative(campaignId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.post<{ event: { id: string; createdAt: string } }>(
+        `/api/v1/creatives/${id}/submit-for-approval`,
+        {},
+      );
+      return unwrap(res).event;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['creatives', campaignId] }),
   });
