@@ -620,8 +620,8 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Traffic Sources</CardTitle>
-          <CardDescription>Ad spend per source (pulled from Catchr)</CardDescription>
+          <CardTitle>Ad Account Links</CardTitle>
+          <CardDescription>Linked Catchr ad accounts driving this campaign's cost</CardDescription>
         </CardHeader>
         <CardContent><Skeleton className="h-40" /></CardContent>
       </Card>
@@ -653,10 +653,10 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle>Traffic Sources</CardTitle>
+            <CardTitle>Ad Account Links</CardTitle>
             <CardDescription>
               {rows.length === 0
-                ? 'Map suppliers (Facebook/Google/etc) to their Catchr NCP. Spend syncs from Catchr; leads from LeadByte.'
+                ? 'Link Catchr ad accounts (Facebook / Google / etc) to this campaign. Only spend from linked accounts counts toward this campaign — unlinked accounts appear in the diagnostic on /campaigns.'
                 : `${rows.length} source${rows.length === 1 ? '' : 's'} · spend ${formatCurrency(totals.spend)} · revenue ${formatCurrency(totals.revenue)} · profit ${formatCurrency(totals.profit)}`}
             </CardDescription>
           </div>
