@@ -3,11 +3,9 @@ import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, ExternalLink, Sparkles, TrendingUp } from 'lucide-react';
-import { useDebounce } from '@/lib/hooks/use-debounce';
+import { ChevronDown, ExternalLink, Sparkles, TrendingUp } from 'lucide-react';
 import {
   useUnifiedReport,
   WINDOW_OPTIONS,
@@ -19,7 +17,12 @@ import { ErrorState } from '@/components/shared/error-state';
 
 // Sam Loom #72-85 — the unified leadreports.io-style report. One row per
 // (campaign × supplier). Sum of row revenue = campaign revenue. Filters:
-// date window + supplier (substring) + campaign (substring).
+// date window + supplier (dropdown) + campaign (dropdown). Sam, 2026-05-20
+// asked for explicit dropdowns instead of free-text inputs so the picker
+// always shows the exact values the report contains. We fetch the window
+// unfiltered, derive option lists from the rows, and apply supplier +
+// campaign filters client-side so the totals strip stays consistent with
+// the visible table.
 
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
@@ -48,15 +51,58 @@ export function formatTileNumber(value: number) {
 
 export function UnifiedReportPage() {
   const [window, setWindow] = useState<DeliveryWindow>('this_month');
-  const [supplierInput, setSupplierInput] = useState('');
-  const [campaignInput, setCampaignInput] = useState('');
-  const supplier = useDebounce(supplierInput, 250);
-  const campaign = useDebounce(campaignInput, 250);
+  const [supplier, setSupplier] = useState('');
+  const [campaign, setCampaign] = useState('');
 
-  const { data, isLoading, error, refetch } = useUnifiedReport({ window, supplier, campaign });
+  // Fetch unfiltered for the window — supplier + campaign filters now apply
+  // client-side so the option lists below stay stable as you pick (otherwise
+  // selecting "facebook" would collapse the supplier dropdown to just
+  // "facebook" on the next render).
+  const { data, isLoading, error, refetch } = useUnifiedReport({ window });
 
-  const rows = data?.rows ?? [];
-  const totals = data?.totals;
+  const allRows = data?.rows ?? [];
+
+  // Option lists drawn from the full window — sorted alphabetically so the
+  // dropdown order doesn't shuffle as data refreshes. Suppliers de-duped
+  // case-insensitively because LeadByte returns inconsistent casing.
+  const supplierOptions = useMemo(() => {
+    const seen = new Map<string, string>(); // lowercased → display
+    for (const r of allRows) {
+      if (!r.supplier) continue;
+      const key = r.supplier.toLowerCase();
+      if (!seen.has(key)) seen.set(key, r.supplier);
+    }
+    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+  }, [allRows]);
+
+  const campaignOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const r of allRows) if (r.campaignName) seen.add(r.campaignName);
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [allRows]);
+
+  const rows = useMemo(() => {
+    if (!supplier && !campaign) return allRows;
+    const sLower = supplier.toLowerCase();
+    return allRows.filter((r) => {
+      if (supplier && r.supplier.toLowerCase() !== sLower) return false;
+      if (campaign && r.campaignName !== campaign) return false;
+      return true;
+    });
+  }, [allRows, supplier, campaign]);
+
+  // Recompute totals from the filtered rows so the totals strip always
+  // matches the visible table. When no filter is applied this matches the
+  // server totals exactly (same row set).
+  const totals = useMemo(() => {
+    if (rows.length === 0) return undefined;
+    const leads = rows.reduce((s, r) => s + r.leads, 0);
+    const spend = rows.reduce((s, r) => s + r.spend, 0);
+    const revenue = rows.reduce((s, r) => s + r.revenue, 0);
+    const profit = revenue - spend;
+    const margin = revenue > 0 ? Math.round(((revenue - spend) / revenue) * 1000) / 10 : 0;
+    return { leads, spend, revenue, profit, margin };
+  }, [rows]);
 
   // Group rows by campaign for the breakdown view at the bottom — Sam's
   // mental model is "Solar Panels with 3 suppliers, here are the per-supplier
@@ -96,26 +142,23 @@ export function UnifiedReportPage() {
         </TabsList>
       </Tabs>
 
-      {/* Filters */}
+      {/* Filters — dropdowns drawn from the unfiltered window so the option
+          lists stay stable while picking. Both default to "All". */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            value={supplierInput}
-            onChange={(e) => setSupplierInput(e.target.value)}
-            placeholder="Filter by supplier (e.g. facebook, google)"
-            className="pl-9"
-          />
-        </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            value={campaignInput}
-            onChange={(e) => setCampaignInput(e.target.value)}
-            placeholder="Filter by campaign / vertical"
-            className="pl-9"
-          />
-        </div>
+        <FilterSelect
+          value={supplier}
+          onChange={setSupplier}
+          allLabel={`All suppliers${supplierOptions.length ? ` (${supplierOptions.length})` : ''}`}
+          options={supplierOptions}
+          disabled={isLoading || supplierOptions.length === 0}
+        />
+        <FilterSelect
+          value={campaign}
+          onChange={setCampaign}
+          allLabel={`All campaigns${campaignOptions.length ? ` (${campaignOptions.length})` : ''}`}
+          options={campaignOptions}
+          disabled={isLoading || campaignOptions.length === 0}
+        />
       </div>
 
       {/* Totals strip */}
@@ -338,6 +381,33 @@ export function UnifiedReportPage() {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function FilterSelect({
+  value, onChange, allLabel, options, disabled,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  allLabel: string;
+  options: string[];
+  disabled?: boolean;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="flex h-9 w-full appearance-none rounded-md border border-input bg-transparent pl-3 pr-9 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <option value="">{allLabel}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
     </div>
   );
 }
