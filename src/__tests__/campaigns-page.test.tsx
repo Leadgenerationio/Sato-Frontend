@@ -21,6 +21,14 @@ vi.mock('@/lib/hooks/use-campaigns', () => ({
     isLoading: false,
     error: null,
   }),
+  // T1 — diagnostic card pulled in by the page; default to "nothing to show"
+  // so the existing assertions don't have to account for the card. A separate
+  // test could re-mock with rows to assert the card renders.
+  useUnlinkedSpend: () => ({
+    data: { windowDays: 30, total: 0, rows: [] },
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 function renderPage() {

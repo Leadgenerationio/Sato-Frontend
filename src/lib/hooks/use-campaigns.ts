@@ -117,6 +117,40 @@ export function useCampaign(id: string) {
   });
 }
 
+// T1 (Sam, 2026-05-20) — diagnostic showing Catchr spend not attributed to
+// any campaign via traffic_sources. By design this total is NEVER folded
+// into any campaign cost; it exists only so Sam can spot accounts that
+// need linking before the per-campaign numbers reconcile with Catchr.
+export interface UnlinkedSpendRow {
+  platform: string;
+  accountId: string;
+  accountName: string | null;
+  spend: number;
+  daysActive: number;
+}
+
+export interface UnlinkedSpendSummary {
+  windowDays: number;
+  total: number;
+  rows: UnlinkedSpendRow[];
+}
+
+export function useUnlinkedSpend(windowDays = 30) {
+  return useQuery({
+    queryKey: ['campaigns', 'unlinked-spend', windowDays],
+    queryFn: async () => {
+      const res = await api.get<UnlinkedSpendSummary>(
+        `/api/v1/campaigns/unlinked-spend?windowDays=${windowDays}`,
+      );
+      return unwrap(res);
+    },
+    // Mapping changes (traffic_sources create/delete) need to be reflected
+    // here within seconds; otherwise a freshly-linked account would still
+    // show as "unlinked". The mutations invalidate this key explicitly.
+    staleTime: 30_000,
+  });
+}
+
 export interface UpdateCampaignInput {
   costPerLead?: number | null;
 }
