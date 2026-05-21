@@ -34,21 +34,6 @@ function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
 
-// Headline-friendly currency: integer pounds below £1M, compact ("£6.0M")
-// at/above £1M. The headline is rendered at text-3xl in a 1/3-width
-// dashboard column, where £6,049,199.52 (13 chars) overflows the card.
-// The full precise value still appears on hover via the `title` attribute.
-function formatHeadlineCurrency(value: number, currency = 'GBP') {
-  if (Math.abs(value) >= 1_000_000) {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1,
-    }).format(value);
-  }
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency', currency, maximumFractionDigits: 0,
-  }).format(value);
-}
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
@@ -124,16 +109,16 @@ export function PnlWidget() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Net profit headline. Uses formatHeadlineCurrency so a 7+ digit
-            net profit (£6,049,199.52) doesn't overflow the 1/3-width
-            dashboard column; full precision is on hover via `title`.
-            whitespace-nowrap keeps the minus sign attached for negatives. */}
-        <div className="text-center">
+        {/* Net profit headline. Container-query fluid font size: full value
+            (£6,049,199.52) stays visible at the cost of font size — scales
+            smoothly between text-base and text-3xl based on card width. At
+            extreme narrow widths the number is free to wrap to a second
+            line (no whitespace-nowrap) as the last-resort fallback. */}
+        <div className="@container/pnl text-center">
           <p
-            className={`text-3xl font-bold tabular-nums whitespace-nowrap ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}
-            title={formatCurrency(netProfit, data.currency)}
+            className={`font-bold tabular-nums text-[clamp(1rem,10cqi,1.875rem)] ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}
           >
-            {formatHeadlineCurrency(netProfit, data.currency)}
+            {formatCurrency(netProfit, data.currency)}
           </p>
           <p className="mt-1 flex items-center justify-center gap-1 text-xs text-muted-foreground">
             {isPositive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
