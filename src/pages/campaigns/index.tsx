@@ -36,6 +36,21 @@ const campaignTypeLabels: Record<string, string> = {
   internal: 'Internal',
 };
 
+// OCT-41: render multi-buyer rows as "Multiple (N)" with the full buyer
+// list as a native tooltip. Single-buyer rows render the name directly;
+// no-buyer rows render whatever clientName carries (typically the
+// "Pending client mapping" string).
+function BuyerCell({ names, fallback }: { names?: string[]; fallback: string }) {
+  const list = names && names.length > 0 ? names : (fallback ? [fallback] : []);
+  if (list.length === 0) return <span className="text-muted-foreground">—</span>;
+  if (list.length === 1) return <span>{list[0]}</span>;
+  return (
+    <span title={list.join('\n')} className="cursor-help">
+      Multiple ({list.length})
+    </span>
+  );
+}
+
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
@@ -210,7 +225,9 @@ export function CampaignsPage() {
                         <div className="truncate font-medium">{c.name}</div>
                         <div className="truncate text-xs text-muted-foreground">LeadByte ID: {c.id.replace(/^lb-/, '')}</div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{c.clientName}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <BuyerCell names={c.clientNames} fallback={c.clientName} />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Badge variant="secondary" className="text-xs">{c.vertical}</Badge>
@@ -353,7 +370,9 @@ function VerticalGroup({
                 <TableCell className="pl-12 max-w-[220px]">
                   <div className="truncate font-medium">{c.name}</div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{c.clientName}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  <BuyerCell names={c.clientNames} fallback={c.clientName} />
+                </TableCell>
                 <TableCell>
                   <Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>{c.status}</Badge>
                 </TableCell>

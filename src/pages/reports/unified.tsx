@@ -254,7 +254,18 @@ export function UnifiedReportPage() {
                         <Badge variant="secondary" className="text-xs">{r.vertical}</Badge>
                       </td>
                       <td className="py-3 px-3 text-muted-foreground max-w-[160px]">
-                        <div className="truncate" title={r.clientName}>{r.clientName}</div>
+                        {/* OCT-42: render multi-buyer rows as "Multiple (N)" with all names in the tooltip. */}
+                        {(() => {
+                          const names = r.clientNames && r.clientNames.length > 0 ? r.clientNames : [r.clientName];
+                          if (names.length <= 1) {
+                            return <div className="truncate" title={names[0]}>{names[0]}</div>;
+                          }
+                          return (
+                            <div className="truncate cursor-help" title={names.join('\n')}>
+                              Multiple ({names.length})
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="py-3 px-3">
                         <span className="text-sm">{r.supplier}</span>

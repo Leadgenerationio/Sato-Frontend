@@ -35,6 +35,13 @@ export interface UnifiedReportRow {
   campaignId: string;
   campaignName: string;
   clientName: string;
+  /**
+   * OCT-42 (2026-05-21): full list of buyers linked to this campaign via
+   * `client_campaigns`. Render "Multiple (N)" with tooltip when length > 1.
+   * Optional for back-compat with older BE snapshots — fall back to
+   * `[clientName]` when missing.
+   */
+  clientNames?: string[];
   vertical: string;
   supplier: string;
   supplierPlatform: string;

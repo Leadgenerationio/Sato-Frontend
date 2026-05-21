@@ -6,7 +6,15 @@ export type CampaignType = 'pay_per_lead' | 'managed' | 'internal';
 export interface CampaignSummary {
   id: string;
   name: string;
+  /** Display-only convenience — first linked buyer, else LeadByte's field. */
   clientName: string;
+  /**
+   * OCT-41 (2026-05-21): all buyers linked to this campaign via
+   * `client_campaigns`. Render "Multiple (N)" with tooltip when length > 1.
+   * Optional for back-compat with older BE snapshots — fall back to
+   * `[clientName]` when missing.
+   */
+  clientNames?: string[];
   vertical: string;
   status: string;
   campaignType: CampaignType;
