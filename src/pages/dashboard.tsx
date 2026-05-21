@@ -575,9 +575,22 @@ export function DashboardPage() {
           <CardContent>
             <div className="h-[200px] sm:h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={invoiceData}>
+                <BarChart data={invoiceData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" interval="preserveStartEnd" minTickGap={16} />
+                  {/* Rotate month labels -90° + interval=0 so every month renders.
+                      Previously interval="preserveStartEnd"+minTickGap=16 culled
+                      JUN/AUG at the dashboard's typical chart width. textAnchor=end
+                      anchors each label at the tick line; the extra `height=45` on
+                      the axis reserves vertical room for the rotated strings. */}
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11 }}
+                    stroke="#a3a3a3"
+                    interval={0}
+                    angle={-90}
+                    textAnchor="end"
+                    height={45}
+                  />
                   <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
                   <Tooltip
                     {...tooltipStyle}
