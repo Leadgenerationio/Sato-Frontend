@@ -109,9 +109,15 @@ export function PnlWidget() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Net profit headline */}
-        <div className="text-center">
-          <p className={`text-3xl font-bold tabular-nums ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+        {/* Net profit headline. Container-query fluid font size: full value
+            (£6,049,199.52) stays visible at the cost of font size — scales
+            smoothly between text-base and text-3xl based on card width. At
+            extreme narrow widths the number is free to wrap to a second
+            line (no whitespace-nowrap) as the last-resort fallback. */}
+        <div className="@container/pnl text-center">
+          <p
+            className={`font-bold tabular-nums text-[clamp(1rem,10cqi,1.875rem)] ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}
+          >
             {formatCurrency(netProfit, data.currency)}
           </p>
           <p className="mt-1 flex items-center justify-center gap-1 text-xs text-muted-foreground">
