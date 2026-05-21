@@ -432,12 +432,25 @@ export function DashboardPage() {
           <CardContent>
             <div className="h-[220px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
+                {/* Axis style matches the Invoice Status chart: every month rendered
+                    via interval=0 + diagonal -45° labels, so JUN/AUG don't get
+                    culled by minTickGap on narrow widths. */}
+                <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#171717" stopOpacity={0.15} /><stop offset="100%" stopColor="#171717" stopOpacity={0} /></linearGradient>
                     <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a3a3a3" stopOpacity={0.1} /><stop offset="100%" stopColor="#a3a3a3" stopOpacity={0} /></linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" interval="preserveStartEnd" minTickGap={16} /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11 }}
+                    stroke="#a3a3a3"
+                    interval={0}
+                    angle={-45}
+                    textAnchor="end"
+                    height={55}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} />
                   <Tooltip
                     {...tooltipStyle}
                     formatter={(value: unknown, name: unknown) => {
@@ -465,7 +478,27 @@ export function DashboardPage() {
           <CardHeader><CardTitle>Leads This Week</CardTitle><CardDescription>Daily lead volume</CardDescription></CardHeader>
           <CardContent>
             <div className="h-[220px] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%"><BarChart data={leadsData}><CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" /><XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#a3a3a3" /><YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" /><Tooltip {...tooltipStyle} /><Bar dataKey="leads" name="Leads" fill="#171717" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
+              {/* Axis style matches Invoice Status / Revenue Overview:
+                  diagonal -45° day labels for full visual consistency
+                  across the dashboard chart row, even though 7 ticks
+                  would fit horizontally. */}
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={leadsData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 11 }}
+                    stroke="#a3a3a3"
+                    interval={0}
+                    angle={-45}
+                    textAnchor="end"
+                    height={55}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
+                  <Tooltip {...tooltipStyle} />
+                  <Bar dataKey="leads" name="Leads" fill="#171717" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
