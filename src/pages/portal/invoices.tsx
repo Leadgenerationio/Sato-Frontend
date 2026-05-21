@@ -11,9 +11,23 @@ import { EmptyState } from '@/components/shared/empty-state';
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500',
   sent: 'bg-blue-500/10 text-blue-600',
+  authorised: 'bg-blue-500/10 text-blue-600',
   paid: 'bg-emerald-500/10 text-emerald-600',
   overdue: 'bg-red-500/10 text-red-600',
 };
+
+// Sam T8 (2026-05-20): client-facing label map. Xero's raw "authorised"
+// reads as legalese to a buyer — surface it as "Pending Payment". Backend
+// flips past-due rows to status='overdue' (T7), so this map covers only
+// the current statuses the portal renders.
+const STATUS_LABEL: Record<string, string> = {
+  draft: 'Draft',
+  sent: 'Pending Payment',
+  authorised: 'Pending Payment',
+  paid: 'Paid',
+  overdue: 'Overdue',
+};
+const statusLabel = (s: string) => STATUS_LABEL[s.toLowerCase()] ?? s;
 
 // Escape any user-provided string before interpolating into the print-window HTML.
 const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -129,8 +143,8 @@ export function PortalInvoicesPage() {
                         <p className="font-medium truncate">{inv.invoiceNumber}</p>
                         <p className="text-xs text-muted-foreground">Due {formatDate(inv.dueDate)}</p>
                       </div>
-                      <Badge className={`text-xs capitalize shrink-0 ${statusColors[inv.status] || ''}`}>
-                        {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
+                      <Badge className={`text-xs shrink-0 ${statusColors[inv.status] || ''}`}>
+                        {statusLabel(inv.status)}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
                       </Badge>
                     </div>
                     <div className="flex items-end justify-between gap-2">
@@ -170,8 +184,8 @@ export function PortalInvoicesPage() {
                       <TableRow key={inv.id}>
                         <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                         <TableCell>
-                          <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
-                            {inv.status}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
+                          <Badge className={`text-xs ${statusColors[inv.status] || ''}`}>
+                            {statusLabel(inv.status)}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
