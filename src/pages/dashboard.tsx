@@ -577,19 +577,21 @@ export function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={invoiceData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-                  {/* Rotate month labels -90° + interval=0 so every month renders.
+                  {/* Diagonal labels (-45°) + interval=0 so every month renders.
                       Previously interval="preserveStartEnd"+minTickGap=16 culled
-                      JUN/AUG at the dashboard's typical chart width. textAnchor=end
-                      anchors each label at the tick line; the extra `height=45` on
-                      the axis reserves vertical room for the rotated strings. */}
+                      JUN/AUG at the dashboard's typical chart width. -45° (rather
+                      than full vertical -90°) is what Recharts aligns to the tick
+                      line cleanly by default — full vertical leaves the label
+                      visibly offset from its tick. height=55 reserves vertical
+                      room for the angled 3-char month abbreviations. */}
                   <XAxis
                     dataKey="month"
                     tick={{ fontSize: 11 }}
                     stroke="#a3a3a3"
                     interval={0}
-                    angle={-90}
+                    angle={-45}
                     textAnchor="end"
-                    height={45}
+                    height={55}
                   />
                   <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
                   <Tooltip
