@@ -91,16 +91,16 @@ export function PnlWidget() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
+        <div className="flex items-center justify-between">
+          <div>
             <CardTitle className="text-base">P&amp;L Summary</CardTitle>
             <CardDescription>
               {formatDate(data.fromDate)} – {formatDate(data.toDate)}
             </CardDescription>
           </div>
           {data.uncategorisedCount > 0 && (
-            <Link to="/finance/bank-feed?uncategorized=true" className="shrink-0">
-              <Badge variant="outline" className="whitespace-nowrap text-xs">
+            <Link to="/finance/bank-feed?uncategorized=true">
+              <Badge variant="outline" className="text-xs">
                 <AlertCircle className="size-3" />
                 {data.uncategorisedCount} uncategorised
               </Badge>
@@ -128,43 +128,39 @@ export function PnlWidget() {
 
         <Separator />
 
-        {/* Revenue.
-            Rows use flex-wrap + ml-auto rather than justify-between so that
-            when the card is too narrow to fit label and value on one line,
-            the value drops onto its own line — right-aligned via ml-auto —
-            instead of the minus sign breaking away from its number. */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
+        {/* Revenue */}
+        <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Revenue (paid invoices)</span>
-          <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-emerald-600">
+          <span className="font-medium tabular-nums text-emerald-600">
             +{formatCurrency(revenue, data.currency)}
           </span>
         </div>
 
         {/* Three cost buckets */}
         <div className="space-y-1.5 rounded-md border border-border/50 bg-muted/30 p-3 text-sm">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Fixed costs</span>
-            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
+            <span className="font-medium tabular-nums text-red-600">
               -{formatCurrency(fixed, data.currency)}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          <div className="flex items-center justify-between">
             <span className="text-muted-foreground">One-off costs</span>
-            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
+            <span className="font-medium tabular-nums text-red-600">
               -{formatCurrency(oneOff, data.currency)}
             </span>
           </div>
           {advertising > 0 && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+            <div className="flex items-center justify-between">
               <span className="text-muted-foreground" title="Bank-fed advertising rows (Facebook/Google bills you categorised as 'advertising')">Advertising (bank)</span>
-              <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
+              <span className="font-medium tabular-nums text-red-600">
                 -{formatCurrency(advertising, data.currency)}
               </span>
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          <div className="flex items-center justify-between">
             <span className="text-muted-foreground" title="Ad spend pulled from Catchr (Facebook/Google ad-account APIs)">Ad spend (Catchr)</span>
-            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
+            <span className="font-medium tabular-nums text-red-600">
               -{formatCurrency(adSpend, data.currency)}
             </span>
           </div>
@@ -177,18 +173,18 @@ export function PnlWidget() {
             </div>
           ) : null}
           <Separator />
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 font-medium">
+          <div className="flex items-center justify-between font-medium">
             <span>Total costs</span>
-            <span className="ml-auto whitespace-nowrap tabular-nums">-{formatCurrency(totalCosts, data.currency)}</span>
+            <span className="tabular-nums">-{formatCurrency(totalCosts, data.currency)}</span>
           </div>
         </div>
 
         {/* Margin bar */}
         {revenue > 0 && (
           <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <div className="flex justify-between text-xs text-muted-foreground">
               <span>Margin</span>
-              <span className="ml-auto whitespace-nowrap tabular-nums">{(margin * 100).toFixed(1)}%</span>
+              <span>{(margin * 100).toFixed(1)}%</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div

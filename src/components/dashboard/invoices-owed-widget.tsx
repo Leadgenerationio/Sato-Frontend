@@ -30,10 +30,10 @@ function severityColor(days: number) {
   return 'bg-blue-500/10 text-blue-600 border-blue-200';
 }
 
-const BUCKETS: { id: Bucket; label: string; buttonLabel: string; viewAllPath: string }[] = [
-  { id: 'all', label: 'All', buttonLabel: 'View all', viewAllPath: '/finance/invoices' },
-  { id: 'due', label: 'Due', buttonLabel: 'View all due', viewAllPath: '/finance/invoices?status=sent' },
-  { id: 'overdue', label: 'Overdue', buttonLabel: 'View all overdue', viewAllPath: '/finance/invoices?status=overdue' },
+const BUCKETS: { id: Bucket; label: string; viewAllPath: string }[] = [
+  { id: 'all', label: 'All', viewAllPath: '/finance/invoices' },
+  { id: 'due', label: 'Due', viewAllPath: '/finance/invoices?status=sent' },
+  { id: 'overdue', label: 'Overdue', viewAllPath: '/finance/invoices?status=overdue' },
 ];
 
 export function InvoicesOwedWidget() {
@@ -107,15 +107,13 @@ export function InvoicesOwedWidget() {
         {!isLoading && invoices.length > 0 && (
           <div className="space-y-2">
             {top.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between gap-2 rounded-lg border p-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate" title={inv.invoiceNumber || 'No number'}>
-                    {inv.invoiceNumber || 'No number'}
-                  </p>
+              <div key={inv.id} className="flex items-center justify-between rounded-lg border p-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{inv.invoiceNumber || 'No number'}</p>
                   <p className="text-xs text-muted-foreground truncate">{inv.clientName}</p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Badge className={`text-xs whitespace-nowrap ${severityColor(inv.daysOverdue)}`}>
+                <div className="flex items-center gap-2 ml-2">
+                  <Badge className={`text-xs ${severityColor(inv.daysOverdue)}`}>
                     {inv.daysOverdue > 0 ? `${inv.daysOverdue}d late` : inv.status === 'sent' ? 'Due' : inv.status}
                   </Badge>
                   <span className="text-sm font-medium tabular-nums whitespace-nowrap">
@@ -130,7 +128,7 @@ export function InvoicesOwedWidget() {
         <Link to={currentBucket.viewAllPath}>
           <Button variant="outline" size="sm" className="w-full mt-2">
             <ExternalLink className="size-4 mr-1.5" />
-            {currentBucket.buttonLabel}
+            View all {currentBucket.label.toLowerCase()}
           </Button>
         </Link>
       </CardContent>
