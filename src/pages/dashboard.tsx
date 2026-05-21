@@ -52,22 +52,9 @@ const FALLBACK_INVOICES: Array<{ month: string; paid: number; overdue: number; p
 // (matching the rest of the dashboard) take the lead colours; muted accents
 // fill in the long tail so a 14-slice pie doesn't have two adjacent
 // identical-looking wedges.
-// Categorical palette — chosen so adjacent slices in the sort-by-value
-// order always have strong hue contrast. Previously the first 6 entries
-// were neutral greys, which made 8+ slice pies unreadable.
 const PIE_PALETTE = [
-  '#3b82f6', // blue-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#a855f7', // purple-500
-  '#ef4444', // red-500
-  '#06b6d4', // cyan-500
-  '#ec4899', // pink-500
-  '#84cc16', // lime-500
-  '#6366f1', // indigo-500
-  '#f97316', // orange-500
-  '#14b8a6', // teal-500
-  '#eab308', // yellow-500
+  '#171717', '#404040', '#525252', '#737373', '#a3a3a3', '#d4d4d4',
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4',
 ];
 
 const FALLBACK_LEADS_BY_DAY = [
