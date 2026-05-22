@@ -21,6 +21,7 @@ import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -150,7 +151,7 @@ export function DashboardPage() {
   // Revenue Overview chart now respects the same window — the BE returns
   // 3 / 6 / 12 monthly buckets depending on which option is selected.
   const { data: financialOverview } = useFinancialOverview({ window: leadsWindow });
-  const { data: campaignsData } = useCampaigns({ limit: 100 });
+  const { data: campaignsData, isLoading: campaignsLoading } = useCampaigns({ limit: 100 });
   const { data: leadsByDay } = useLeadsByDay(7);
   const { data: activityFeed } = useRecentActivity(5);
 
@@ -501,55 +502,79 @@ export function DashboardPage() {
             <CardDescription>Lead distribution by channel — {pieWindowLabel}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[180px] sm:h-[240px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={campaignData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="55%"
-                    outerRadius="80%"
-                    dataKey="value"
-                    nameKey="name"
-                    stroke="none"
-                    isAnimationActive={pieAnimationActive}
-                  >
-                    {campaignData.map((entry, i) => (
-                      <Cell
-                        key={entry.name}
-                        fill={entry.color}
-                        fillOpacity={activePieIndex === null || activePieIndex === i ? 1 : 0.3}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    {...tooltipStyle}
-                    formatter={(value, _name, item) => {
-                      const payload = (item as { payload?: { name?: string; leads?: number } } | undefined)?.payload;
-                      return [
-                        `${value}% · ${(payload?.leads ?? 0).toLocaleString()} leads`,
-                        payload?.name ?? '',
-                      ];
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-1 gap-1.5 mt-2">
-              {campaignData.map((item, i) => (
-                <div
-                  key={item.name}
-                  className="flex items-center gap-2 rounded px-1.5 py-1 transition-colors hover:bg-muted/40"
-                  onMouseEnter={() => setActivePieIndex(i)}
-                  onMouseLeave={() => setActivePieIndex(null)}
-                >
-                  <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="truncate text-xs text-neutral-600" title={item.name}>{item.name}</span>
-                  <span className="ml-auto text-xs font-medium tabular-nums text-neutral-900 whitespace-nowrap">{item.value}%</span>
+            {campaignsLoading ? (
+              // Skeleton while React Query fetches /campaigns. Without this
+              // the chart momentarily renders the "No data 100%" fallback on
+              // first paint (campaignsData === undefined → empty reduce →
+              // totalLeadsByVertical === 0). Match the rest of the dashboard's
+              // loading shells so the page doesn't flash a misleading state.
+              <>
+                <div className="h-[180px] sm:h-[240px] flex items-center justify-center">
+                  <Skeleton className="size-32 sm:size-40 rounded-full" />
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 gap-1.5 mt-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-2 px-1.5 py-1">
+                      <Skeleton className="size-2.5 rounded-full" />
+                      <Skeleton className="h-3 flex-1" />
+                      <Skeleton className="h-3 w-8" />
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="h-[180px] sm:h-[240px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={campaignData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius="55%"
+                        outerRadius="80%"
+                        dataKey="value"
+                        nameKey="name"
+                        stroke="none"
+                        isAnimationActive={pieAnimationActive}
+                      >
+                        {campaignData.map((entry, i) => (
+                          <Cell
+                            key={entry.name}
+                            fill={entry.color}
+                            fillOpacity={activePieIndex === null || activePieIndex === i ? 1 : 0.3}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        {...tooltipStyle}
+                        formatter={(value, _name, item) => {
+                          const payload = (item as { payload?: { name?: string; leads?: number } } | undefined)?.payload;
+                          return [
+                            `${value}% · ${(payload?.leads ?? 0).toLocaleString()} leads`,
+                            payload?.name ?? '',
+                          ];
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5 mt-2">
+                  {campaignData.map((item, i) => (
+                    <div
+                      key={item.name}
+                      className="flex items-center gap-2 rounded px-1.5 py-1 transition-colors hover:bg-muted/40"
+                      onMouseEnter={() => setActivePieIndex(i)}
+                      onMouseLeave={() => setActivePieIndex(null)}
+                    >
+                      <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="truncate text-xs text-neutral-600" title={item.name}>{item.name}</span>
+                      <span className="ml-auto text-xs font-medium tabular-nums text-neutral-900 whitespace-nowrap">{item.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
         </WidgetContainer>
