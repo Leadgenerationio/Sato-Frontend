@@ -5,7 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronDown, ExternalLink, Sparkles, TrendingUp } from 'lucide-react';
+import { ChevronDown, ExternalLink, Info, Sparkles, TrendingUp } from 'lucide-react';
+
+// Shared explanation for the cost-concept column tooltips. "Spend" on this
+// report is Catchr ad-spend (what Sam pays Meta / Google / TikTok / Taboola
+// for the media buy). It is NOT the LeadByte supplier payout (what Sam pays
+// third-party lead-sellers — that's £0 on most rows because the campaigns
+// are direct-traffic). LeadReports.io exposes the LB-payout view, which is
+// why its Cost/Margin numbers are smaller than Stato's. Both are correct
+// for what they measure; this tooltip is the disambiguation.
+const SPEND_HINT =
+  'Catchr ad spend — what you pay Meta / Google / TikTok / Taboola for the media buy. Does NOT include LeadByte supplier payouts (different cost concept).';
+const MARGIN_HINT =
+  'Margin = (Revenue − Spend) / Revenue. Spend uses Catchr ad spend only — so the % reflects ad-cost efficiency, not LeadByte supplier payouts.';
 import {
   useUnifiedReport,
   WINDOW_OPTIONS,
@@ -126,7 +138,7 @@ export function UnifiedReportPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Reports"
-        description="One unified view — revenue from LeadByte, cost from Catchr, profit + margin per supplier."
+        description="One unified view — revenue from LeadByte, cost from Catchr ad spend (NOT LeadByte supplier payout), profit + margin per supplier."
       >
         <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
           <Sparkles className="size-3 mr-1" />New
@@ -173,6 +185,7 @@ export function UnifiedReportPage() {
             label="Spend"
             value={formatTileCurrency(totals.spend)}
             fullValue={formatCurrency(totals.spend)}
+            hint={SPEND_HINT}
           />
           <TotalCard
             label="Revenue"
@@ -184,6 +197,7 @@ export function UnifiedReportPage() {
             value={formatTileCurrency(totals.profit)}
             fullValue={formatCurrency(totals.profit)}
             valueClassName={totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}
+            hint={MARGIN_HINT}
           />
           <TotalCard
             label="Margin"
@@ -192,6 +206,7 @@ export function UnifiedReportPage() {
               totals.margin >= 50 ? 'text-emerald-600' :
               totals.margin >= 30 ? 'text-amber-600' : 'text-red-600'
             }
+            hint={MARGIN_HINT}
           />
         </div>
       )}
@@ -237,11 +252,25 @@ export function UnifiedReportPage() {
                     <th className="py-2.5 px-3 font-medium">Supplier</th>
                     <th className="py-2.5 px-3 font-medium">Catchr NCP</th>
                     <th className="py-2.5 px-3 font-medium text-right">Leads</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Spend</th>
+                    <th className="py-2.5 px-3 font-medium text-right">
+                      <span className="inline-flex items-center justify-end gap-1">
+                        Spend
+                        <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </span>
+                    </th>
                     <th className="py-2.5 px-3 font-medium text-right">CPL</th>
                     <th className="py-2.5 px-3 font-medium text-right">Revenue</th>
                     <th className="py-2.5 px-3 font-medium text-right">Profit</th>
-                    <th className="py-2.5 pl-3 pr-4 font-medium text-right">Margin</th>
+                    <th className="py-2.5 pl-3 pr-4 font-medium text-right">
+                      <span className="inline-flex items-center justify-end gap-1">
+                        Margin
+                        <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -349,10 +378,24 @@ export function UnifiedReportPage() {
                     <th className="py-2.5 px-3 font-medium">Vertical</th>
                     <th className="py-2.5 px-3 font-medium text-right">Suppliers</th>
                     <th className="py-2.5 px-3 font-medium text-right">Leads</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Spend</th>
+                    <th className="py-2.5 px-3 font-medium text-right">
+                      <span className="inline-flex items-center justify-end gap-1">
+                        Spend
+                        <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </span>
+                    </th>
                     <th className="py-2.5 px-3 font-medium text-right">Revenue</th>
                     <th className="py-2.5 px-3 font-medium text-right">Profit</th>
-                    <th className="py-2.5 pl-3 pr-4 font-medium text-right">Margin</th>
+                    <th className="py-2.5 pl-3 pr-4 font-medium text-right">
+                      <span className="inline-flex items-center justify-end gap-1">
+                        Margin
+                        <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -424,17 +467,26 @@ function FilterSelect({
 }
 
 function TotalCard({
-  label, value, fullValue, valueClassName,
+  label, value, fullValue, valueClassName, hint,
 }: {
   label: string;
   value: string;
   fullValue?: string;
   valueClassName?: string;
+  /** Optional clarification shown as a native tooltip on a small Info icon next to the label. */
+  hint?: string;
 }) {
   return (
     <Card className="gap-3 py-4">
       <CardContent>
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          {label}
+          {hint && (
+            <span title={hint} aria-label={hint} className="cursor-help">
+              <Info className="h-3 w-3" />
+            </span>
+          )}
+        </p>
         <p
           className={`mt-1 text-xl font-bold tabular-nums whitespace-nowrap ${valueClassName ?? ''}`}
           title={fullValue ?? value}
