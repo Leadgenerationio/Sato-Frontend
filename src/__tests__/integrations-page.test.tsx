@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { IntegrationsPage } from '../pages/integrations';
@@ -149,5 +149,56 @@ describe('IntegrationsPage — Xero auth pending', () => {
     );
 
     expect(await screen.findByText(/Client ID\/Secret rejected/)).toBeInTheDocument();
+  });
+});
+
+// LeadByte multi-buyer skip surfacing. The hourly sync skips campaigns
+// linked to more than one buyer because LeadByte's API has no per-buyer
+// daily granularity — without this panel, operators have no visibility
+// into which campaigns are silently missing from revenue attribution.
+describe('IntegrationsPage — LeadByte multi-buyer skipped campaigns', () => {
+  const liveLeadbyte = { ...overviewFixture.leadbyte };
+  afterEach(() => {
+    overviewFixture.leadbyte = liveLeadbyte;
+  });
+
+  it('hides the section entirely when skippedCampaigns is empty', async () => {
+    overviewFixture.leadbyte = { ...liveLeadbyte, skippedCampaigns: [] };
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><IntegrationsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByText('LeadByte'); // page rendered
+    expect(screen.queryByTestId('leadbyte-skipped-section')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Multi-buyer campaigns skipped/)).not.toBeInTheDocument();
+  });
+
+  it('renders the section with row count + constraint explanation when non-empty', async () => {
+    overviewFixture.leadbyte = {
+      ...liveLeadbyte,
+      skippedCampaigns: [
+        { campaignId: '101', campaignName: 'INSULATION', buyerCount: 2, at: new Date(Date.now() - 5 * 60_000).toISOString() },
+        { campaignId: '102', campaignName: 'SOLAR', buyerCount: 3, at: new Date(Date.now() - 10 * 60_000).toISOString() },
+      ],
+    };
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><IntegrationsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    // Header reflects the count.
+    expect(await screen.findByText(/Multi-buyer campaigns skipped \(2\)/)).toBeInTheDocument();
+    // Help text explains the LeadByte constraint.
+    expect(
+      screen.getByText(/LeadByte's API does not provide per-buyer daily granularity/),
+    ).toBeInTheDocument();
+    // Rows appear once the user expands the collapsible.
+    expect(screen.queryByText('INSULATION')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Multi-buyer campaigns skipped \(2\)/));
+    expect(screen.getByText('INSULATION')).toBeInTheDocument();
+    expect(screen.getByText('SOLAR')).toBeInTheDocument();
   });
 });

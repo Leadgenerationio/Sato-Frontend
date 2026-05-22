@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api, unwrap } from '@/lib/api';
@@ -7,15 +8,27 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
   CheckCircle2, XCircle, AlertCircle, RefreshCw, ExternalLink,
   Building2, Database, Megaphone, FileSignature, HardDrive, Mail, ShieldCheck,
+  ChevronDown, ChevronUp, Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { logError } from '../lib/log';
+
+interface SkippedCampaign {
+  campaignId: string;
+  campaignName: string | null;
+  buyerCount: number;
+  at: string;
+}
+
 interface IntegrationsOverview {
   xero: { configured: boolean; connected: boolean; tenantName: string | null; lastError: string | null };
-  leadbyte: { configured: boolean; lastSyncAt: string | null; leadsThisMonth: number };
+  leadbyte: { configured: boolean; lastSyncAt: string | null; leadsThisMonth: number; skippedCampaigns?: SkippedCampaign[] };
   catchr: { configured: boolean; connected: boolean; platformsConnected: number; lastError: string | null; lastSyncAt: string | null; adSpendLast30Days: number; currency: string };
   signnow: { configured: boolean; sandbox: boolean; agreementCount: number };
   r2: { configured: boolean; bucket: string | null; fileCount: number };
@@ -154,6 +167,77 @@ function statusFor(configured: boolean, live: boolean): CardStatus {
   if (live) return 'live';
   if (configured) return 'mock';
   return 'not_configured';
+}
+
+/**
+ * Multi-buyer campaigns the LeadByte sync skipped during the last run(s).
+ * LeadByte's /reports/* endpoints don't expose per-buyer daily granularity,
+ * so we can't safely attribute campaign-level daily totals across multiple
+ * linked clients. The sync logs each skip into an in-memory FIFO buffer
+ * (last 100 events) — this panel surfaces them so operators can see
+ * attribution gaps without grepping Railway logs.
+ *
+ * Hidden entirely when the array is empty: the whole point is an
+ * exception view; no skips = nothing to show.
+ */
+function LeadByteSkippedCampaigns({ skipped }: { skipped: SkippedCampaign[] }) {
+  const [open, setOpen] = useState(false);
+  if (skipped.length === 0) return null;
+  return (
+    <Card data-testid="leadbyte-skipped-section">
+      <CardContent className="p-4 space-y-3">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 text-left"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle className="size-4 text-amber-600" />
+            <span className="text-sm font-medium">
+              LeadByte — Multi-buyer campaigns skipped ({skipped.length})
+            </span>
+          </div>
+          {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+        </button>
+        <p
+          className="flex items-start gap-1.5 text-xs text-muted-foreground"
+          title="LeadByte's API does not provide per-buyer daily granularity for multi-buyer campaigns. Revenue attribution is paused until LeadByte adds this capability."
+        >
+          <Info className="mt-0.5 size-3 shrink-0" />
+          <span>
+            LeadByte's API does not provide per-buyer daily granularity for
+            multi-buyer campaigns. Revenue attribution is paused until
+            LeadByte adds this capability.
+          </span>
+        </p>
+        {open && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campaign</TableHead>
+                <TableHead className="text-right">Buyers</TableHead>
+                <TableHead className="text-right">Last skipped</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {skipped.map((s) => (
+                <TableRow key={`${s.campaignId}-${s.at}`}>
+                  <TableCell className="font-mono text-xs">
+                    {s.campaignName ?? s.campaignId}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{s.buyerCount}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {formatRelative(s.at)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export function IntegrationsPage() {
@@ -381,6 +465,8 @@ export function IntegrationsPage() {
           </button>
         ))}
       </div>
+
+      <LeadByteSkippedCampaigns skipped={data.leadbyte.skippedCampaigns ?? []} />
     </div>
   );
 }

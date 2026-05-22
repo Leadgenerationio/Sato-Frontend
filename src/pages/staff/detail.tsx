@@ -13,6 +13,7 @@ import {
   ArrowLeft, User, Mail, Briefcase, Building, CalendarDays, Shield, TreePalm, ExternalLink,
 } from 'lucide-react';
 import { useStaffMember, useHolidayRequests } from '@/lib/hooks/use-staff';
+import { StaffDocumentsTab } from './index';
 
 // ─── Helpers ───
 
@@ -117,6 +118,7 @@ export function StaffDetailPage() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="holidays">Holidays</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -170,6 +172,13 @@ export function StaffDetailPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Documents Tab — per-staff documents (contracts, NDAs, payslips).
+            Reuses the same StaffDocumentsTab as the global Staff page so the
+            FileUpload + add/remove mutation hooks stay in one place. */}
+        <TabsContent value="documents" className="mt-6">
+          <StaffDocumentsTab staffId={id!} />
         </TabsContent>
 
         {/* Holidays Tab */}

@@ -690,7 +690,7 @@ export function StaffPage() {
   );
 }
 
-function StaffDocumentsTab({ staffId }: { staffId: string }) {
+export function StaffDocumentsTab({ staffId }: { staffId: string }) {
   const { data: documents = [], isLoading } = useStaffDocuments(staffId);
   const add = useAddStaffDocument(staffId);
   const remove = useRemoveStaffDocument(staffId);
