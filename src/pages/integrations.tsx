@@ -284,6 +284,12 @@ export function IntegrationsPage() {
     // scopes. We route there + show a hint listing the scopes.
     (() => {
       const xeroAuthPending = data.xero.configured && !data.xero.connected;
+      // Auth succeeded but a data-endpoint probe (e.g. /Accounts) is failing.
+      // Most common cause is a 429 rate-limit — the auth-token cache says
+      // "connected" but bank/invoice fetches throw. Surface this so the
+      // Integrations card matches what the Bank widget will actually show.
+      const xeroDataDegraded =
+        data.xero.configured && data.xero.connected && !!data.xero.lastError;
       // Translate the OAuth error code from Xero into an action the operator
       // can take without leaving this page. Unknown codes fall through to the
       // raw message so we never hide useful detail.
@@ -299,18 +305,29 @@ export function IntegrationsPage() {
         if (c.includes('invalid_grant')) {
           return 'Connection revoked in Xero — re-authorise the Custom Connection in the developer portal.';
         }
+        if (c.includes('429') || c.toLowerCase().includes('rate')) {
+          return 'Xero rate-limited (HTTP 429) — bank balances + invoices temporarily unavailable. Xero resets the limit within ~60s; no action needed unless this persists for 10+ minutes.';
+        }
         return `Xero rejected the connection: ${code}`;
       }
+      // Status: Auth-pending OR data-degraded both flip the card off "Live".
+      // statusFor(true, false) returns "Degraded".
+      const status = statusFor(
+        data.xero.configured,
+        data.xero.connected && !xeroDataDegraded,
+      );
       return {
         key: 'xero',
         title: 'Xero',
         description: 'Accounting · invoices · bank balances',
         icon: Building2,
         iconColor: '#13B5EA',
-        status: statusFor(data.xero.configured, data.xero.connected),
+        status,
         metricLabel: 'Organisation',
         metricValue: data.xero.tenantName ?? (data.xero.configured ? 'Auth pending' : '—'),
-        detail: xeroAuthPending ? explainError(data.xero.lastError) : undefined,
+        detail: xeroAuthPending || xeroDataDegraded
+          ? explainError(data.xero.lastError)
+          : undefined,
         secondaryAction: xeroAuthPending
           ? { label: 'Configure in Xero', href: 'https://developer.xero.com/app/manage/app/843a4b14-559d-45ee-a193-f13b9ff35667' }
           : { label: 'Open Xero', href: 'https://go.xero.com' },
