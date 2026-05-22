@@ -616,12 +616,17 @@ export function SettingsPage() {
       <PageHeader title="Settings" description="Manage your account and preferences" />
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="account">Account</TabsTrigger>
-          {isOwner && <TabsTrigger value="integrations">Integrations</TabsTrigger>}
-          {isOwner && <TabsTrigger value="users">User Management</TabsTrigger>}
-        </TabsList>
+        {/* T3 slice 3 (OCT-37): owner sees 4 tabs, "User Management" alone
+            is ~135px wide — overflows 375px viewports. Wrap in a scroll
+            shell so the tab bar stays usable without changing desktop. */}
+        <div className="-mx-1 overflow-x-auto px-1">
+          <TabsList className="max-w-full">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="account">Account</TabsTrigger>
+            {isOwner && <TabsTrigger value="integrations">Integrations</TabsTrigger>}
+            {isOwner && <TabsTrigger value="users">User Management</TabsTrigger>}
+          </TabsList>
+        </div>
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="mt-6 space-y-6">
