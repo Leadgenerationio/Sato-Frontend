@@ -134,6 +134,44 @@ export function UnifiedReportPage() {
     });
   }, [rows]);
 
+  // Sam (2026-05-15 meeting #10) — "By source · profitability". Roll the
+  // per-(campaign × supplier) rows up to one row per platform (Facebook,
+  // Google Ads, TikTok, Taboola, Direct, Bing, etc) — same shape Sam sees on
+  // LeadReports.io. We aggregate CLIENT-SIDE off the already-filtered `rows`
+  // so the table tracks the supplier + campaign dropdowns above; backend
+  // sends a `byPlatform` array too but we ignore it here so a filter never
+  // produces a roll-up that disagrees with the visible main-table totals.
+  const bySource = useMemo(() => {
+    const map = new Map<string, { platform: string; catchrUrl: string | null; leads: number; spend: number; revenue: number }>();
+    for (const r of rows) {
+      const key = r.supplierPlatform || 'Unknown';
+      const existing = map.get(key);
+      if (existing) {
+        existing.leads += r.leads;
+        existing.spend += r.spend;
+        existing.revenue += r.revenue;
+        // First-write-wins on the Catchr URL — matches the BE convention.
+        if (!existing.catchrUrl && r.catchrUrl) existing.catchrUrl = r.catchrUrl;
+      } else {
+        map.set(key, {
+          platform: key,
+          catchrUrl: r.catchrUrl,
+          leads: r.leads,
+          spend: r.spend,
+          revenue: r.revenue,
+        });
+      }
+    }
+    return Array.from(map.values())
+      .map((b) => {
+        const profit = b.revenue - b.spend;
+        const margin = b.revenue > 0 ? Math.round(((b.revenue - b.spend) / b.revenue) * 1000) / 10 : 0;
+        const cpl = b.leads > 0 ? Math.round((b.spend / b.leads) * 100) / 100 : 0;
+        return { ...b, profit, margin, cpl };
+      })
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [rows]);
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -362,7 +400,7 @@ export function UnifiedReportPage() {
 
       {/* By-campaign roll-up (mental-model affordance for Sam) */}
       {byCampaign.length > 1 && (
-        <Card>
+        <Card data-testid="by-campaign-rollup">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">By campaign · roll-up</CardTitle>
             <CardDescription>
@@ -430,6 +468,111 @@ export function UnifiedReportPage() {
                     );
                   })}
                 </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* By-source roll-up — Sam (2026-05-15 meeting #10): "Facebook spend →
+          Facebook profit / margin" — same rows summed across campaigns so the
+          per-platform performance is one scan away. Match the per-(campaign ×
+          supplier) tooltips above so the cost-concept disambiguation is
+          identical everywhere. */}
+      {bySource.length > 0 && (
+        <Card data-testid="by-source-rollup">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">By source · profitability</CardTitle>
+            <CardDescription>
+              Aggregated per platform — same numbers, summed across campaigns so you can
+              scan source-level performance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b text-left text-xs text-muted-foreground">
+                  <tr>
+                    <th className="py-2.5 pl-4 pr-3 font-medium">Platform</th>
+                    <th className="py-2.5 px-3 font-medium">Catchr NCP</th>
+                    <th className="py-2.5 px-3 font-medium text-right">Leads</th>
+                    <th className="py-2.5 px-3 font-medium text-right">
+                      <span className="inline-flex items-center justify-end gap-1">
+                        Spend
+                        <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </span>
+                    </th>
+                    <th className="py-2.5 px-3 font-medium text-right">CPL</th>
+                    <th className="py-2.5 px-3 font-medium text-right">Revenue</th>
+                    <th className="py-2.5 px-3 font-medium text-right">Profit</th>
+                    <th className="py-2.5 pl-3 pr-4 font-medium text-right">
+                      <span className="inline-flex items-center justify-end gap-1">
+                        Margin
+                        <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bySource.map((p) => (
+                    <tr key={p.platform} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="py-3 pl-4 pr-3 font-medium capitalize">{p.platform}</td>
+                      <td className="py-3 px-3">
+                        {p.catchrUrl ? (
+                          <a
+                            href={p.catchrUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline"
+                            title={p.catchrUrl}
+                          >
+                            <ExternalLink className="size-3 shrink-0" />
+                            <span>Linked</span>
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Not linked</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right tabular-nums">{p.leads.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.spend)}</td>
+                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.cpl)}</td>
+                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.revenue)}</td>
+                      <td className={`py-3 px-3 text-right tabular-nums font-medium ${p.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {formatCurrency(p.profit)}
+                      </td>
+                      <td className={`py-3 pl-3 pr-4 text-right tabular-nums font-medium ${
+                        p.margin >= 50 ? 'text-emerald-600' :
+                        p.margin >= 30 ? 'text-amber-600' : 'text-red-600'
+                      }`}>
+                        {p.margin}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {totals && (
+                  <tfoot className="border-t bg-muted/30 text-sm font-semibold">
+                    <tr>
+                      <td colSpan={2} className="py-3 pl-4 pr-3">Totals · {window.replace('_', ' ')}</td>
+                      <td className="py-3 px-3 text-right tabular-nums">{totals.leads.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.spend)}</td>
+                      <td className="py-3 px-3"></td>
+                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
+                      <td className={`py-3 px-3 text-right tabular-nums ${totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {formatCurrency(totals.profit)}
+                      </td>
+                      <td className={`py-3 pl-3 pr-4 text-right tabular-nums ${
+                        totals.margin >= 50 ? 'text-emerald-600' :
+                        totals.margin >= 30 ? 'text-amber-600' : 'text-red-600'
+                      }`}>
+                        {totals.margin}%
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </CardContent>

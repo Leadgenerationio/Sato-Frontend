@@ -62,12 +62,30 @@ export interface UnifiedReportTotals {
   margin: number;
 }
 
+/**
+ * Sam (2026-05-15 meeting #10) — per-platform roll-up. Backend aggregates the
+ * per-(campaign × supplier) rows by `supplierPlatform` so Σ(byPlatform) ===
+ * totals. Optional on the response for back-compat with older backend builds
+ * that pre-date the 2026-05-22 ship.
+ */
+export interface UnifiedReportPlatformRow {
+  platform: string;
+  catchrUrl: string | null;
+  leads: number;
+  spend: number;
+  revenue: number;
+  profit: number;
+  cpl: number;
+  margin: number;
+}
+
 export interface UnifiedReportResponse {
   window: DeliveryWindow;
   supplier: string | null;
   campaign: string | null;
   rows: UnifiedReportRow[];
   totals: UnifiedReportTotals;
+  byPlatform?: UnifiedReportPlatformRow[];
 }
 
 export interface UnifiedReportFilters {

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   ArrowLeft, Send, Loader2, Plus, Trash2, CheckSquare, Square, Paperclip,
   Download, Activity as ActivityIcon, Repeat, Clock, FileText,
@@ -151,15 +152,17 @@ export function TaskDetailPage() {
   const addComment = useAddComment();
   const deleteTask = useDeleteTask();
   const [commentText, setCommentText] = useState('');
+  // Confirm-before-delete: replaces the old window.confirm so the prompt
+  // sits inside the page surface (testable, keyboard-friendly) rather than
+  // a native browser dialog that vitest can't drive.
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  async function handleDeleteTask() {
+  async function handleConfirmDelete() {
     if (!task) return;
-    if (!window.confirm(`Delete "${task.title}"? This permanently removes the task and its subtasks/attachments.`)) {
-      return;
-    }
     try {
       await deleteTask.mutateAsync(task.id);
       toast.success(`Deleted "${task.title}"`);
+      setConfirmDeleteOpen(false);
       navigate('/tasks');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Delete failed');
@@ -230,18 +233,47 @@ export function TaskDetailPage() {
               {statusLabels[task.status] || task.status}
             </Badge>
             <Button
-              variant="outline"
+              variant="destructive"
               size="sm"
-              onClick={handleDeleteTask}
+              onClick={() => setConfirmDeleteOpen(true)}
               disabled={deleteTask.isPending}
               className="ml-auto"
             >
-              <Trash2 className="size-4 mr-1.5 text-red-600" />
+              <Trash2 className="size-4 mr-1.5" />
               Delete
             </Button>
           </PageHeader>
         </div>
       </div>
+
+      {/* Confirm-before-delete dialog (replaces window.confirm). Matches the
+          buyer-unlink pattern in campaigns/detail.tsx LinkedClientsCard so the
+          confirm UX is consistent across the app. */}
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete task?</DialogTitle>
+            <DialogDescription>
+              Permanently delete <span className="font-medium">{task.title}</span>?
+              This also removes its subtasks, attachments, comments, and activity log.
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmDeleteOpen(false)} disabled={deleteTask.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteTask.isPending}
+            >
+              {deleteTask.isPending ? <Loader2 className="size-4 mr-1.5 animate-spin" /> : <Trash2 className="size-4 mr-1.5" />}
+              Delete task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
