@@ -28,7 +28,7 @@ interface SkippedCampaign {
 
 interface IntegrationsOverview {
   xero: { configured: boolean; connected: boolean; tenantName: string | null; lastError: string | null };
-  leadbyte: { configured: boolean; lastSyncAt: string | null; leadsThisMonth: number; skippedCampaigns?: SkippedCampaign[] };
+  leadbyte: { configured: boolean; lastSyncAt: string | null; leadsThisMonth: number; leadsLast12Months?: number; skippedCampaigns?: SkippedCampaign[] };
   catchr: { configured: boolean; connected: boolean; platformsConnected: number; lastError: string | null; lastSyncAt: string | null; adSpendLast30Days: number; currency: string };
   signnow: { configured: boolean; sandbox: boolean; agreementCount: number };
   r2: { configured: boolean; bucket: string | null; fileCount: number };
