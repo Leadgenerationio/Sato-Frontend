@@ -633,15 +633,18 @@ export function DashboardPage() {
         </WidgetContainer>
       </div>
 
-      {/* Widgets Row 1: Bank, Overdue, VAT */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {/* Widgets Row 1: Bank, Overdue, VAT.
+          T3 slice 2 (Sam, 2026-05-20): add md:grid-cols-2 so tablet portrait
+          (768-1023px) shows a 2-up layout instead of one full-width widget
+          per row. Mobile stays 1-col; lg+ stays 3-col (desktop unchanged). */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <WidgetContainer><BankWidget /></WidgetContainer>
         <WidgetContainer><InvoicesOwedWidget /></WidgetContainer>
         <WidgetContainer><VatWidget /></WidgetContainer>
       </div>
 
       {/* Widgets Row 2: P&L, Credit Alerts, Notifications */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <WidgetContainer><PnlWidget /></WidgetContainer>
         <WidgetContainer><CreditAlertWidget /></WidgetContainer>
         <WidgetContainer><NotificationFeed /></WidgetContainer>

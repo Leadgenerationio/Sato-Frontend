@@ -330,16 +330,23 @@ function VerticalGroup({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
+        className="flex w-full flex-col gap-2 px-4 py-3 text-left hover:bg-muted/40 transition-colors sm:flex-row sm:items-center sm:gap-3"
         aria-expanded={open}
       >
-        {open ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
-        <Layers className="size-4 text-muted-foreground" />
-        <span className="font-semibold">{group.vertical}</span>
-        <Badge variant="secondary" className="text-xs">
-          {group.rows.length} buyer{group.rows.length === 1 ? '' : 's'}
-        </Badge>
-        <div className="ml-auto flex flex-wrap items-center gap-x-6 gap-y-1 text-xs tabular-nums">
+        {/* T3 slice 2 (Sam, 2026-05-20): on mobile, stack the title-row
+            above the metric chips so the vertical name + buyer count
+            stay readable at 375px and the £Revenue / Margin chips wrap
+            cleanly underneath. Above sm the original single-row layout
+            with ml-auto metrics returns. */}
+        <div className="flex items-center gap-3">
+          {open ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
+          <Layers className="size-4 text-muted-foreground" />
+          <span className="font-semibold">{group.vertical}</span>
+          <Badge variant="secondary" className="text-xs">
+            {group.rows.length} buyer{group.rows.length === 1 ? '' : 's'}
+          </Badge>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 pl-7 text-xs tabular-nums sm:ml-auto sm:pl-0">
           <span><span className="text-muted-foreground">Month:</span> <span className="font-medium">{group.totalLeadsMonth.toLocaleString()}</span></span>
           <span><span className="text-muted-foreground">Revenue:</span> <span className="font-medium">{formatCurrency(group.totalRevenue)}</span></span>
           <span>
@@ -351,50 +358,57 @@ function VerticalGroup({
         </div>
       </button>
       {open && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="pl-12">Campaign</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Month</TableHead>
-              <TableHead className="text-right">Revenue</TableHead>
-              <TableHead className="text-right">CPL</TableHead>
-              <TableHead className="text-right">Margin</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {group.rows.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="pl-12 max-w-[220px]">
-                  <div className="truncate font-medium">{c.name}</div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  <BuyerCell names={c.clientNames} fallback={c.clientName} />
-                </TableCell>
-                <TableCell>
-                  <Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>{c.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{c.leadsThisMonth}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatCurrency(c.totalRevenue)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatCurrency(c.cpl)}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  <span className={c.margin >= 50 ? 'text-emerald-600' : c.margin >= 30 ? 'text-amber-600' : 'text-destructive'}>
-                    {c.margin}%
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Link to={`/campaigns/${c.id}`}>
-                    <Button variant="ghost" size="icon" className="size-8">
-                      <ExternalLink className="size-4" />
-                    </Button>
-                  </Link>
-                </TableCell>
+        <div className="overflow-x-auto">
+          {/* T3 slice 2 (Sam, 2026-05-20): 8-column grouped table overflowed
+              at 375px because the outer card was already inside a
+              non-scrolling div. Wrap in overflow-x-auto so phones can pan
+              the inner columns (Month / Revenue / CPL / Margin) while the
+              vertical group header above stays fully visible. */}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-12">Campaign</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Month</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="text-right">CPL</TableHead>
+                <TableHead className="text-right">Margin</TableHead>
+                <TableHead />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {group.rows.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="pl-12 max-w-[220px]">
+                    <div className="truncate font-medium">{c.name}</div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <BuyerCell names={c.clientNames} fallback={c.clientName} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>{c.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{c.leadsThisMonth}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCurrency(c.totalRevenue)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCurrency(c.cpl)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    <span className={c.margin >= 50 ? 'text-emerald-600' : c.margin >= 30 ? 'text-amber-600' : 'text-destructive'}>
+                      {c.margin}%
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Link to={`/campaigns/${c.id}`}>
+                      <Button variant="ghost" size="icon" className="size-8">
+                        <ExternalLink className="size-4" />
+                      </Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );
