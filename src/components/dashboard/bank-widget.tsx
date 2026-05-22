@@ -49,7 +49,23 @@ export function BankWidget() {
 
   const accounts = data?.accounts ?? [];
   const configured = data?.configured ?? false;
+  const apiError = data?.error ?? null;
   const totalGBP = accounts.filter((a) => a.currency === 'GBP').reduce((sum, a) => sum + toMoney(a.balance), 0);
+
+  // Translate the upstream Xero error so Sam doesn't read "No active bank
+  // accounts" and think Stato lost his account — the actual reason the
+  // accounts list is empty is the API call itself failed (most commonly 429
+  // rate-limit). The /integrations card now flips to "Degraded" with the
+  // same message; we mirror it here so the dashboard widget agrees.
+  function explainApiError(err: string): string {
+    if (err.includes('429') || err.toLowerCase().includes('rate')) {
+      return 'Xero is rate-limited right now (HTTP 429). Bank balances refresh within ~60s — try again shortly. No action needed unless this persists for 10+ minutes.';
+    }
+    if (err.toLowerCase().includes('finance') || err.toLowerCase().includes('scope')) {
+      return "Xero rejected the request — check that the Custom Connection has finance.statements.read scope (Finance API must be enabled on the app).";
+    }
+    return `Xero returned an error: ${err}`;
+  }
 
   return (
     <Card>
@@ -77,7 +93,13 @@ export function BankWidget() {
           </div>
         )}
 
-        {!isLoading && configured && !isError && accounts.length === 0 && (
+        {!isLoading && configured && !isError && accounts.length === 0 && apiError && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 py-6 px-4 text-center text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-200">
+            {explainApiError(apiError)}
+          </div>
+        )}
+
+        {!isLoading && configured && !isError && accounts.length === 0 && !apiError && (
           <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
             No active bank accounts in Xero.
           </div>
