@@ -89,7 +89,7 @@ export function BankWidget() {
 
         {!isLoading && (isError || !configured) && (
           <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-            {!configured ? 'Xero not connected. Configure XERO_CLIENT_ID + XERO_CLIENT_SECRET to see live balances.' : "Couldn't load balances from Xero. Check that the Custom Connection has finance.statements.read scope (Finance API must be enabled on the app)."}
+            {!configured ? 'Xero is not connected. Once an administrator finishes the Xero Custom Connection setup, your live balances will appear here.' : "Couldn't load balances from Xero. Check that the Custom Connection has finance.statements.read scope (Finance API must be enabled on the app)."}
           </div>
         )}
 

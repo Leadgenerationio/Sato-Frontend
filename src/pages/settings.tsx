@@ -99,7 +99,7 @@ function XeroIntegration() {
       <CardContent className="space-y-4">
         {!status?.configured ? (
           <p className="text-sm text-muted-foreground">
-            Xero credentials are not configured on the server. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_ID</code> and <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_SECRET</code> in the backend environment.
+            Xero credentials are not configured on the server. Ask your administrator to add the Xero Custom Connection credentials to the backend configuration.
           </p>
         ) : status?.connected ? (
           <>
@@ -230,7 +230,7 @@ function LeadByteIntegration() {
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Running in mock mode with sample data. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">LEADBYTE_API_KEY</code> in the backend environment to connect to LeadByte and enable hourly lead sync.
+            Running in mock mode with sample data. Ask your administrator to add the LeadByte API key to the backend configuration to connect LeadByte and enable hourly lead sync.
           </p>
         )}
       </CardContent>

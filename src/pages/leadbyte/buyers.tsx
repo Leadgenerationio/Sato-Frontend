@@ -57,7 +57,7 @@ export function LeadByteBuyersPage() {
             <EmptyState
               icon={AlertTriangle}
               title="Couldn't load buyers"
-              description="LeadByte may be unreachable. Check that LEADBYTE_API_KEY is configured on the backend."
+              description="LeadByte may be unreachable. The LeadByte integration may not be fully configured on the backend — contact your administrator if this persists."
             />
           )}
           {buyers && buyers.length === 0 && (
