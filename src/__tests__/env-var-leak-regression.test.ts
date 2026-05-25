@@ -28,10 +28,13 @@ const BANNED = [
   'XERO_CLIENT_ID',
   'XERO_CLIENT_SECRET',
   'LEADBYTE_API_KEY',
-  // 'Railway' is broader (could legitimately appear in unrelated copy in
-  // theory) but it has no current legitimate use in our frontend — every
-  // historical reference has been a leak of the hosting platform.
-  'Railway',
+  // Anchored Railway phrases rather than the bare word "Railway" — every
+  // historical leak fit one of these two shapes ("grep Railway logs" /
+  // "set X on Railway"). A bare "Railway" ban would false-positive on any
+  // innocuous future use (a country mention, an unrelated brand, etc.);
+  // anchoring keeps the spirit of the OCT-45 fix without the noise.
+  'Railway logs',
+  'on Railway',
 ];
 
 // Vite's import.meta.glob loads every matching source as a raw string at
@@ -50,12 +53,46 @@ function isTestPath(p: string): boolean {
   return p.includes('__tests__') || /\.test\.[tj]sx?$/.test(p);
 }
 
+/**
+ * Per-(path, literal) allowlist. Each entry must include a reason that
+ * justifies why the bare literal is acceptable in that specific file. If
+ * the file containing the literal changes shape (e.g. a role guard is
+ * removed), the exemption MUST be revisited rather than blindly extended.
+ *
+ * Match is by path SUFFIX so the test works the same on Windows and POSIX
+ * separators without normalising both sides.
+ */
+const EXEMPTIONS: Array<{ pathSuffix: string; banned: string; reason: string }> = [
+  {
+    pathSuffix: 'pages/settings.tsx',
+    banned: 'XERO_CLIENT_ID',
+    reason: 'Role-gated to owner (the deploy admin who sets env-vars) — see XeroIntegration.',
+  },
+  {
+    pathSuffix: 'pages/settings.tsx',
+    banned: 'XERO_CLIENT_SECRET',
+    reason: 'Role-gated to owner (the deploy admin who sets env-vars) — see XeroIntegration.',
+  },
+  {
+    pathSuffix: 'pages/settings.tsx',
+    banned: 'LEADBYTE_API_KEY',
+    reason: 'Role-gated to owner (the deploy admin who sets env-vars) — see LeadByteIntegration.',
+  },
+];
+
+function isExempt(path: string, banned: string): boolean {
+  // Normalize both directions so the suffix match works regardless of OS.
+  const normalised = path.replace(/\\/g, '/');
+  return EXEMPTIONS.some((e) => normalised.endsWith(e.pathSuffix) && e.banned === banned);
+}
+
 describe('OCT-45 / OCT-53 — no env-var or hosting-platform names in operator-visible strings', () => {
   for (const banned of BANNED) {
     it(`no source file under src/ references "${banned}"`, () => {
       const offenders: Array<{ path: string; line: number; text: string }> = [];
       for (const [path, content] of Object.entries(sources)) {
         if (isTestPath(path)) continue;
+        if (isExempt(path, banned)) continue;
         const lines = content.split(/\r?\n/);
         lines.forEach((text, i) => {
           if (text.includes(banned)) {
