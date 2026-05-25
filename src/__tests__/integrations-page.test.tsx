@@ -134,7 +134,7 @@ describe('IntegrationsPage — Xero auth pending', () => {
     expect(await screen.findByText(/Scope rejected by Xero/)).toBeInTheDocument();
   });
 
-  it('translates invalid_client into an env-var hint', async () => {
+  it('translates invalid_client into a credential-mismatch hint (OCT-45: no env-var leak)', async () => {
     overviewFixture.xero = {
       configured: true,
       connected: false,
@@ -142,13 +142,21 @@ describe('IntegrationsPage — Xero auth pending', () => {
       lastError: 'invalid_client',
     };
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
+    const { container } = render(
       <QueryClientProvider client={qc}>
         <MemoryRouter><IntegrationsPage /></MemoryRouter>
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText(/Client ID\/Secret rejected/)).toBeInTheDocument();
+    // The actionable hint still surfaces — operator knows credentials are rejected.
+    expect(await screen.findByText(/Xero rejected the credentials/)).toBeInTheDocument();
+    expect(screen.getByText(/Custom Connection client ID and secret/)).toBeInTheDocument();
+    // OCT-45 regression guard — never leak the env-var names or "Railway"
+    // into the operator-facing card text.
+    const visibleText = container.textContent ?? '';
+    expect(visibleText).not.toMatch(/XERO_CLIENT_ID/);
+    expect(visibleText).not.toMatch(/XERO_CLIENT_SECRET/);
+    expect(visibleText).not.toMatch(/Railway/);
   });
 });
 

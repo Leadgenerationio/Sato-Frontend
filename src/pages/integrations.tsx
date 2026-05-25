@@ -175,7 +175,7 @@ function statusFor(configured: boolean, live: boolean): CardStatus {
  * so we can't safely attribute campaign-level daily totals across multiple
  * linked clients. The sync logs each skip into an in-memory FIFO buffer
  * (last 100 events) — this panel surfaces them so operators can see
- * attribution gaps without grepping Railway logs.
+ * attribution gaps without grepping server logs.
  *
  * Hidden entirely when the array is empty: the whole point is an
  * exception view; no skips = nothing to show.
@@ -300,7 +300,10 @@ export function IntegrationsPage() {
           return 'Scope rejected by Xero — tick accounting.* + finance.statements.read in the developer portal, then re-save.';
         }
         if (c.includes('invalid_client') || c.includes('unauthorized_client')) {
-          return 'Client ID/Secret rejected — verify XERO_CLIENT_ID and XERO_CLIENT_SECRET on Railway match the values in the Xero portal.';
+          // OCT-45: avoid surfacing exact env-var names or the hosting platform
+          // to operator UI — the implementation hint belongs in server logs,
+          // not in a screenshot-prone integrations card.
+          return 'Xero rejected the credentials — verify the Custom Connection client ID and secret in the Xero developer portal match the values in the server configuration.';
         }
         if (c.includes('invalid_grant')) {
           return 'Connection revoked in Xero — re-authorise the Custom Connection in the developer portal.';
@@ -354,7 +357,7 @@ export function IntegrationsPage() {
       // Card flips to "Mock" the moment the Catchr probe fails (expired
       // token, transient outage, zero connected platforms). The detail
       // line surfaces the actual error code so the operator doesn't have
-      // to grep Railway logs — same self-diagnostic pattern as Xero.
+      // to grep server logs — same self-diagnostic pattern as Xero.
       status: statusFor(data.catchr.configured, data.catchr.connected),
       metricLabel: 'Ad spend · last 30 days',
       metricValue: formatCurrency(data.catchr.adSpendLast30Days, data.catchr.currency),
