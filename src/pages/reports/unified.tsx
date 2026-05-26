@@ -62,7 +62,11 @@ export function formatTileNumber(value: number) {
 }
 
 export function UnifiedReportPage() {
-  const [window, setWindow] = useState<DeliveryWindow>('this_month');
+  // Renamed from `window` to avoid shadowing the DOM global. The prior
+  // name worked thanks to React function scoping, but `window.replace(...)`
+  // in JSX (lines below) reads ambiguously, lint-flags as a global shadow,
+  // and breaks under stricter no-shadow/no-redeclare configs (OCT-44).
+  const [reportWindow, setReportWindow] = useState<DeliveryWindow>('this_month');
   const [supplier, setSupplier] = useState('');
   const [campaign, setCampaign] = useState('');
 
@@ -70,7 +74,7 @@ export function UnifiedReportPage() {
   // client-side so the option lists below stay stable as you pick (otherwise
   // selecting "facebook" would collapse the supplier dropdown to just
   // "facebook" on the next render).
-  const { data, isLoading, error, refetch } = useUnifiedReport({ window });
+  const { data, isLoading, error, refetch } = useUnifiedReport({ window: reportWindow });
 
   const allRows = data?.rows ?? [];
 
@@ -184,7 +188,7 @@ export function UnifiedReportPage() {
       </PageHeader>
 
       {/* Window selector */}
-      <Tabs value={window} onValueChange={(v) => setWindow(v as DeliveryWindow)}>
+      <Tabs value={reportWindow} onValueChange={(v) => setReportWindow(v as DeliveryWindow)}>
         <TabsList className="flex-wrap gap-1">
           {WINDOW_OPTIONS.map((opt) => (
             <TabsTrigger key={opt.value} value={opt.value}>{opt.label}</TabsTrigger>
@@ -375,7 +379,7 @@ export function UnifiedReportPage() {
                 {totals && (
                   <tfoot className="border-t bg-muted/30 text-sm font-semibold">
                     <tr>
-                      <td colSpan={5} className="py-3 pl-4 pr-3">Totals · {window.replace('_', ' ')}</td>
+                      <td colSpan={5} className="py-3 pl-4 pr-3">Totals · {reportWindow.replace('_', ' ')}</td>
                       <td className="py-3 px-3 text-right tabular-nums">{totals.leads.toLocaleString()}</td>
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.spend)}</td>
                       <td className="py-3 px-3"></td>
@@ -556,7 +560,7 @@ export function UnifiedReportPage() {
                 {totals && (
                   <tfoot className="border-t bg-muted/30 text-sm font-semibold">
                     <tr>
-                      <td colSpan={2} className="py-3 pl-4 pr-3">Totals · {window.replace('_', ' ')}</td>
+                      <td colSpan={2} className="py-3 pl-4 pr-3">Totals · {reportWindow.replace('_', ' ')}</td>
                       <td className="py-3 px-3 text-right tabular-nums">{totals.leads.toLocaleString()}</td>
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.spend)}</td>
                       <td className="py-3 px-3"></td>
