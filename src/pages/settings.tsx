@@ -41,6 +41,15 @@ interface XeroStatus {
 }
 
 function XeroIntegration() {
+  // OCT-53: settings.tsx is the only surface in this codebase where the
+  // literal env-var names stay legal — but ONLY for the owner, who is
+  // typically the deploy admin and needs the exact key to set in their
+  // hosting environment. finance_admin / ops_manager see the opacified
+  // "ask your administrator" copy because they can't act on env-vars
+  // anyway. The regression test in env-var-leak-regression.test.ts
+  // allow-lists settings.tsx explicitly for this exact reason.
+  const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
   const [status, setStatus] = useState<XeroStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,9 +107,15 @@ function XeroIntegration() {
       </CardHeader>
       <CardContent className="space-y-4">
         {!status?.configured ? (
-          <p className="text-sm text-muted-foreground">
-            Xero credentials are not configured on the server. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_ID</code> and <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_SECRET</code> in the backend environment.
-          </p>
+          isOwner ? (
+            <p className="text-sm text-muted-foreground">
+              Xero credentials are not configured on the server. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_ID</code> and <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_SECRET</code> in the backend environment.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Xero credentials are not configured on the server. Ask your administrator to add the Xero Custom Connection credentials to the backend configuration.
+            </p>
+          )
         ) : status?.connected ? (
           <>
             {status.tenantName && (
@@ -134,6 +149,11 @@ interface LeadByteStatus {
 }
 
 function LeadByteIntegration() {
+  // OCT-53: same role-gating as XeroIntegration — owner sees the literal
+  // env-var name (they deploy and set it), other roles see the opacified
+  // hand-off copy.
+  const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
   const [status, setStatus] = useState<LeadByteStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -228,9 +248,13 @@ function LeadByteIntegration() {
               Refresh Now
             </Button>
           </>
-        ) : (
+        ) : isOwner ? (
           <p className="text-sm text-muted-foreground">
             Running in mock mode with sample data. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">LEADBYTE_API_KEY</code> in the backend environment to connect to LeadByte and enable hourly lead sync.
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Running in mock mode with sample data. Ask your administrator to add the LeadByte API key to the backend configuration to connect LeadByte and enable hourly lead sync.
           </p>
         )}
       </CardContent>

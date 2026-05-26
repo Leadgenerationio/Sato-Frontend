@@ -110,7 +110,7 @@ export function VatWidget() {
 
         {!isLoading && data && !data.configured && (
           <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-            Xero not connected. Configure XERO_CLIENT_ID + XERO_CLIENT_SECRET to see VAT owed.
+            Xero is not connected. Once an administrator finishes the Xero Custom Connection setup, your VAT figures will appear here.
           </div>
         )}
 
