@@ -21,14 +21,18 @@ import { EmptyState } from '@/components/shared/empty-state';
 const TASK_LINK_RE = /\/tasks?\/([\w-]+)/g;
 
 // Sam-Loom #11 — "I don't know what the action is here, what we can do".
-// If the message names a task, surface an explicit "Open task" CTA in the
-// action column alongside "Mark resolved" so the operator doesn't have to
-// hunt for the inline link inside the message body.
-function extractFirstTaskId(message: string | null | undefined): string | null {
-  if (!message) return null;
-  TASK_LINK_RE.lastIndex = 0;
-  const match = TASK_LINK_RE.exec(message);
-  return match ? match[1] : null;
+// If the SOS row points at a task — either explicitly in the message body
+// ("stuck on /tasks/abc") OR via the page-path field (the floating SOS
+// button captures wherever the user was when they hit it) — surface an
+// explicit "Open task" CTA so the operator can jump straight to context.
+function extractFirstTaskId(message: string | null | undefined, pagePath?: string | null): string | null {
+  for (const haystack of [message, pagePath]) {
+    if (!haystack) continue;
+    TASK_LINK_RE.lastIndex = 0;
+    const match = TASK_LINK_RE.exec(haystack);
+    if (match) return match[1];
+  }
+  return null;
 }
 
 function renderMessageWithTaskLinks(message: string): React.ReactNode {
@@ -215,8 +219,8 @@ export function SosAdminPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {extractFirstTaskId(r.message) && (
-                            <Link to={`/tasks/${extractFirstTaskId(r.message)}`}>
+                          {extractFirstTaskId(r.message, r.pagePath) && (
+                            <Link to={`/tasks/${extractFirstTaskId(r.message, r.pagePath)}`}>
                               <Button variant="outline" size="sm" aria-label="Open referenced task">
                                 <ExternalLink className="size-4 mr-1.5" />
                                 Open task
