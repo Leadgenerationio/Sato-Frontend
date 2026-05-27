@@ -3,12 +3,6 @@ import { api, unwrap } from '@/lib/api';
 
 export type PortalClientType = 'managed' | 'ppl';
 
-export interface PortalAdSpendPlatform {
-  platform: string;
-  spend: number;
-  currency: string;
-}
-
 export interface PortalDashboard {
   companyName: string;
   clientType: PortalClientType;
@@ -20,10 +14,6 @@ export interface PortalDashboard {
   totalOutstanding: number;
   agreementSigned: boolean;
   recentLeads: { date: string; leads: number }[];
-  // Per-platform ad spend (MTD), populated only for managed clients; empty
-  // array for PPL. Optional on the wire so a Vercel-first deploy (FE new, BE
-  // not yet redeployed) doesn't TypeError on the old response shape.
-  adSpendByPlatform?: PortalAdSpendPlatform[];
 }
 
 export interface PortalCampaign {
