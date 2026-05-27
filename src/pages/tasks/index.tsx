@@ -21,23 +21,23 @@ import {
 import { useAuth } from '@/components/providers/auth-provider';
 import { EmptyState } from '@/components/shared/empty-state';
 
-const STATUS_TABS = ['all', 'todo', 'in_progress', 'completed', 'blocked'] as const;
+const STATUS_TABS = ['all', 'todo', 'in_progress', 'on_hold', 'completed'] as const;
 
 const PRIORITY_OPTIONS = ['all', 'urgent', 'high', 'medium', 'low'] as const;
 
 const statusColors: Record<string, string> = {
   todo: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
   in_progress: 'bg-blue-500/10 text-blue-600 border-blue-200',
+  on_hold: 'bg-amber-500/10 text-amber-700 border-amber-200',
   completed: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  blocked: 'bg-red-500/10 text-red-600 border-red-200',
 };
 
 const statusLabels: Record<string, string> = {
   all: 'All',
   todo: 'To Do',
   in_progress: 'In Progress',
+  on_hold: 'On Hold',
   completed: 'Completed',
-  blocked: 'Blocked',
 };
 
 const priorityColors: Record<string, string> = {
@@ -62,11 +62,26 @@ function formatTimeBlock(minutes: number | null | undefined): string | null {
 const BOARD_COLUMNS = [
   { key: 'todo', label: 'To Do', color: 'bg-neutral-500', dotColor: 'bg-neutral-400' },
   { key: 'in_progress', label: 'In Progress', color: 'bg-blue-500', dotColor: 'bg-blue-500' },
+  { key: 'on_hold', label: 'On Hold', color: 'bg-amber-500', dotColor: 'bg-amber-500' },
   { key: 'completed', label: 'Completed', color: 'bg-emerald-500', dotColor: 'bg-emerald-500' },
-  { key: 'blocked', label: 'Blocked', color: 'bg-red-500', dotColor: 'bg-red-500' },
 ] as const;
 
-function KanbanBoard({ tasks, navigate }: { tasks: TaskSummary[]; navigate: (path: string) => void }) {
+// Sam-Loom feedback (jam-video #4): the list view had a delete affordance
+// per row but the board cards didn't — making Sam say "we can't delete
+// tasks" when on the Kanban view. Board cards now expose the same
+// trash-icon button. `onDelete` is wired from the parent so the confirm
+// dialog + toast handling stays in one place.
+function KanbanBoard({
+  tasks,
+  navigate,
+  onDelete,
+  deleting,
+}: {
+  tasks: TaskSummary[];
+  navigate: (path: string) => void;
+  onDelete: (taskId: string, title: string) => void;
+  deleting: boolean;
+}) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {BOARD_COLUMNS.map((col) => {
@@ -89,11 +104,23 @@ function KanbanBoard({ tasks, navigate }: { tasks: TaskSummary[]; navigate: (pat
                 columnTasks.map((t) => (
                   <Card
                     key={t.id}
-                    className="cursor-pointer transition-colors hover:bg-muted/50"
+                    className="cursor-pointer transition-colors hover:bg-muted/50 group"
                     onClick={() => navigate(`/tasks/${t.id}`)}
                   >
                     <CardContent className="p-3 space-y-2">
-                      <p className="text-sm font-medium leading-snug line-clamp-2">{t.title}</p>
+                      <div className="flex items-start gap-2">
+                        <p className="flex-1 text-sm font-medium leading-snug line-clamp-2">{t.title}</p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Delete ${t.title}`}
+                          className="size-6 -m-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                          onClick={(e) => { e.stopPropagation(); onDelete(t.id, t.title); }}
+                          disabled={deleting}
+                        >
+                          <Trash2 className="size-3.5 text-red-600" />
+                        </Button>
+                      </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge className={`text-[10px] capitalize ${priorityColors[t.priority] || ''}`}>
                           {t.priority}
@@ -373,7 +400,7 @@ export function TasksPage() {
           </CardContent>
         </Card>
       ) : viewMode === 'board' ? (
-        <KanbanBoard tasks={tasks} navigate={navigate} />
+        <KanbanBoard tasks={tasks} navigate={navigate} onDelete={handleDelete} deleting={deleteTask.isPending} />
       ) : (
         <Card>
           <CardContent className="p-0">

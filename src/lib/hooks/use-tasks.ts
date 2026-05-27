@@ -5,7 +5,7 @@ export interface TaskSummary {
   id: string;
   title: string;
   description: string;
-  status: 'todo' | 'in_progress' | 'completed' | 'blocked';
+  status: 'todo' | 'in_progress' | 'completed' | 'on_hold';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   assignee: string;
   category: string;
@@ -327,7 +327,26 @@ export function useUpdateSubtask(taskId: string) {
       );
       return unwrap(res).subtask;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['task', taskId] }),
+    // Sam-Loom feedback (jam-video #1): the checkbox lagged because we waited
+    // for the PATCH round-trip before reflecting the toggle. Flip the cached
+    // subtask immediately; on error roll back to the snapshot.
+    onMutate: async ({ subtaskId, ...input }) => {
+      await qc.cancelQueries({ queryKey: ['task', taskId] });
+      const previous = qc.getQueryData<TaskDetail>(['task', taskId]);
+      if (previous?.subtasks) {
+        qc.setQueryData<TaskDetail>(['task', taskId], {
+          ...previous,
+          subtasks: previous.subtasks.map((s) =>
+            s.id === subtaskId ? { ...s, ...input } : s,
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['task', taskId], ctx.previous);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['task', taskId] }),
   });
 }
 

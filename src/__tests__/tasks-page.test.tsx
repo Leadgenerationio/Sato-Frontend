@@ -57,7 +57,7 @@ describe('TasksPage', () => {
     expect(screen.getAllByText(/To Do/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/In Progress/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Completed/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Blocked/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/On Hold/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders New Task button', () => {

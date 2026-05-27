@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,39 @@ import {
 } from '@/components/ui/table';
 import { useListSos, useResolveSos, type SosHelpRequest } from '@/lib/hooks/use-sos';
 import { EmptyState } from '@/components/shared/empty-state';
+
+// Sam-Loom feedback (jam-video #3): the SOS message often contains
+// references like "stuck on /tasks/abc". Render those as clickable links
+// to the task detail page so the operator can jump straight to context.
+// Match `/tasks/<id>` where <id> is any non-whitespace, non-punctuation-ish
+// run — covers UUIDs, slugs, and the truncated forms Sam dictates aloud.
+const TASK_LINK_RE = /\/tasks?\/([\w-]+)/g;
+
+function renderMessageWithTaskLinks(message: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  TASK_LINK_RE.lastIndex = 0;
+  while ((match = TASK_LINK_RE.exec(message)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<Fragment key={`t-${lastIndex}`}>{message.slice(lastIndex, match.index)}</Fragment>);
+    }
+    parts.push(
+      <Link
+        key={`l-${match.index}`}
+        to={`/tasks/${match[1]}`}
+        className="text-blue-600 underline underline-offset-2 hover:text-blue-700"
+      >
+        {match[0]}
+      </Link>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < message.length) {
+    parts.push(<Fragment key={`t-${lastIndex}`}>{message.slice(lastIndex)}</Fragment>);
+  }
+  return parts.length > 0 ? parts : message;
+}
 
 // Slice 5 Day 7 (Sam Loom #100). Admin queue for SOS button presses.
 // Two tabs: Open vs Resolved. Owner / ops / finance can mark resolved.
@@ -152,7 +186,7 @@ export function SosAdminPage() {
                       </TableCell>
                       <TableCell className="max-w-[360px]">
                         {r.message ? (
-                          <p className="text-sm whitespace-pre-wrap">{r.message}</p>
+                          <p className="text-sm whitespace-pre-wrap">{renderMessageWithTaskLinks(r.message)}</p>
                         ) : (
                           <span className="text-xs text-muted-foreground italic">(no message)</span>
                         )}

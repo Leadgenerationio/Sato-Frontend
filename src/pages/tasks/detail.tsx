@@ -91,14 +91,14 @@ const priorityColors: Record<string, string> = {
 const STATUS_TRANSITIONS: Record<string, { label: string; next: string }[]> = {
   todo: [
     { label: 'Start', next: 'in_progress' },
-    { label: 'Block', next: 'blocked' },
+    { label: 'Hold', next: 'on_hold' },
   ],
   in_progress: [
     { label: 'Complete', next: 'completed' },
-    { label: 'Block', next: 'blocked' },
+    { label: 'Hold', next: 'on_hold' },
   ],
-  blocked: [
-    { label: 'Unblock', next: 'in_progress' },
+  on_hold: [
+    { label: 'Resume', next: 'in_progress' },
   ],
   completed: [
     { label: 'Reopen', next: 'todo' },
