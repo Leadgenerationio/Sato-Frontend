@@ -27,6 +27,20 @@ vi.mock('sonner', () => ({
   toast: { success: toastSuccessMock, error: toastErrorMock, info: vi.fn() },
 }));
 
+// Sam-Loom (jam-video #10) — TaskDetailPage now consults useAuth to decide
+// whether the requester is the creator (only-creator can delete). Mock a
+// user whose email matches the fixture's createdBy so the Delete button
+// renders for these tests.
+vi.mock('@/components/providers/auth-provider', () => ({
+  useAuth: () => ({
+    user: { id: '1', email: 'owner@stato.app', name: 'Owner', role: 'owner', isActive: true, businessId: null, clientId: null },
+    token: 'test',
+    loading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
+
 function makeTask(over: Partial<TaskDetail> = {}): TaskDetail {
   return {
     id: 'task-1',
@@ -37,7 +51,7 @@ function makeTask(over: Partial<TaskDetail> = {}): TaskDetail {
     assignee: 'Sam Owner',
     category: 'Finance',
     dueDate: '2026-05-30',
-    createdBy: 'Sam Owner',
+    createdBy: 'owner@stato.app',
     createdAt: '2026-05-01T09:00:00Z',
     comments: [],
     auditLog: [],

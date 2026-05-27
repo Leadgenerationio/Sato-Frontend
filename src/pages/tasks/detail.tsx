@@ -20,6 +20,7 @@ import {
   type TaskDetail, type TaskSummary,
 } from '@/lib/hooks/use-tasks';
 import { useSops } from '@/lib/hooks/use-sops';
+import { useAuth } from '@/components/providers/auth-provider';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload, type UploadFolder } from '@/lib/hooks/use-uploads';
 
@@ -151,6 +152,7 @@ export function TaskDetailPage() {
   const updateStatus = useUpdateTaskStatus();
   const addComment = useAddComment();
   const deleteTask = useDeleteTask();
+  const { user } = useAuth();
   const [commentText, setCommentText] = useState('');
   // Confirm-before-delete: replaces the old window.confirm so the prompt
   // sits inside the page surface (testable, keyboard-friendly) rather than
@@ -232,16 +234,20 @@ export function TaskDetailPage() {
             <Badge className={`capitalize ${statusColors[task.status] || ''}`}>
               {statusLabels[task.status] || task.status}
             </Badge>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setConfirmDeleteOpen(true)}
-              disabled={deleteTask.isPending}
-              className="ml-auto"
-            >
-              <Trash2 className="size-4 mr-1.5" />
-              Delete
-            </Button>
+            {/* Sam-Loom (jam-video #10) — only the task creator sees Delete;
+                the backend 403s anyone else and the icon would be a dead-end. */}
+            {task.createdBy === user?.email && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmDeleteOpen(true)}
+                disabled={deleteTask.isPending}
+                className="ml-auto"
+              >
+                <Trash2 className="size-4 mr-1.5" />
+                Delete
+              </Button>
+            )}
           </PageHeader>
         </div>
       </div>

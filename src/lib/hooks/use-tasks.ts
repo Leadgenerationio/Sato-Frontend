@@ -160,6 +160,20 @@ export function useTaskTemplates() {
   });
 }
 
+// Sam-Loom (jam-video #5) — "save categories as we make them so we've got
+// them for the future." Powers the <datalist> autocomplete on the create
+// form so users see the categories already in use and stop re-typing
+// variants like "Marketing" / "marketing" / "Mktg".
+export function useTaskCategories() {
+  return useQuery({
+    queryKey: ['task-categories'],
+    queryFn: async () => {
+      const res = await api.get<{ categories: string[] }>('/api/v1/tasks/categories');
+      return unwrap(res).categories;
+    },
+  });
+}
+
 // Slice 5 Day 5 — create/update payload accepts the new optional fields.
 // Sent only when the user explicitly fills them; backend treats missing
 // keys as "no change", null as "clear".
@@ -277,6 +291,13 @@ export function useTaskChildren(taskId: string) {
   });
 }
 
+// Sam-Loom (jam-video #1) — "when I untick it, it takes a while for it to
+// untick or it doesn't untick." Without optimistic UI the status badge
+// waited for the PATCH round-trip before flipping (a few hundred ms over
+// the prod hop), which reads as "didn't update". onMutate flips every
+// cached ['tasks', filters] list + ['task', id] detail immediately; on
+// failure we restore the snapshot. Mirrors the bank-feed optimistic
+// pattern (see use-bank-feed.ts).
 export function useUpdateTaskStatus() {
   const qc = useQueryClient();
   return useMutation({
@@ -284,10 +305,38 @@ export function useUpdateTaskStatus() {
       const res = await api.patch<{ task: TaskDetail }>(`/api/v1/tasks/${id}/status`, { status });
       return unwrap(res).task;
     },
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: ['tasks'] });
-      qc.invalidateQueries({ queryKey: ['task', id] });
-      qc.invalidateQueries({ queryKey: ['task-stats'] });
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] });
+      await qc.cancelQueries({ queryKey: ['task', id] });
+      const listSnapshots = qc.getQueriesData<PaginatedTasks>({ queryKey: ['tasks'] });
+      const detailSnapshot = qc.getQueryData<TaskDetail>(['task', id]);
+
+      const nextStatus = status as TaskSummary['status'];
+      for (const [key, old] of listSnapshots) {
+        if (!old) continue;
+        const nextRows = old.tasks.map((t) =>
+          t.id === id ? { ...t, status: nextStatus } : t,
+        );
+        qc.setQueryData(key, { ...old, tasks: nextRows });
+      }
+      if (detailSnapshot) {
+        qc.setQueryData(['task', id], { ...detailSnapshot, status: nextStatus });
+      }
+      return { listSnapshots, detailSnapshot };
+    },
+    onError: (_err, { id }, context) => {
+      if (!context) return;
+      for (const [key, data] of context.listSnapshots) {
+        qc.setQueryData(key, data);
+      }
+      if (context.detailSnapshot) {
+        qc.setQueryData(['task', id], context.detailSnapshot);
+      }
+    },
+    onSettled: async (_data, _err, { id }) => {
+      await qc.invalidateQueries({ queryKey: ['tasks'] });
+      await qc.invalidateQueries({ queryKey: ['task', id] });
+      await qc.invalidateQueries({ queryKey: ['task-stats'] });
     },
   });
 }

@@ -11,7 +11,7 @@ import { ArrowLeft, Loader2, FileText, Repeat, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useCreateTask, useTaskTemplates, useTasks,
-  useGenerateTaskFromPrompt,
+  useGenerateTaskFromPrompt, useTaskCategories,
   type TaskTemplate, type AiTaskSuggestion,
 } from '@/lib/hooks/use-tasks';
 import { useSops } from '@/lib/hooks/use-sops';
@@ -72,6 +72,8 @@ export function TaskCreatePage() {
   // assumption is already in scope from Day 4). Reasonable until we have
   // thousands of tasks.
   const { data: tasksPage } = useTasks({ limit: 100 });
+  // Sam-Loom (jam-video #5) — saved categories feed the <datalist> below.
+  const { data: savedCategories } = useTaskCategories();
 
   // Allow pre-seeding parent via `?parent=<taskId>` — "Create child task"
   // links on the detail page use this so we land here with the link set.
@@ -301,11 +303,22 @@ export function TaskCreatePage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Category</Label>
+                  {/* Sam-Loom (jam-video #5) — surface previously-used
+                      categories via a native <datalist> so the same
+                      Marketing/Finance/Compliance buckets stop drifting
+                      into typo variants. Still free-form so a brand-new
+                      category can be entered on first use. */}
                   <Input
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="e.g., Finance, Operations, Marketing"
+                    list="task-category-suggestions"
                   />
+                  <datalist id="task-category-suggestions">
+                    {(savedCategories ?? []).map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="space-y-2">
                   <Label>Due Date</Label>

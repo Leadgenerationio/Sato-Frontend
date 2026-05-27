@@ -139,12 +139,16 @@ function DraggableCard({
   navigate,
   onDelete,
   deleting,
+  canDelete,
 }: {
   task: TaskSummary;
   parentTitle?: string;
   navigate: (path: string) => void;
   onDelete: (taskId: string, title: string) => void;
   deleting: boolean;
+  // Sam-Loom (jam-video #10) — backend now 403s a non-creator's DELETE;
+  // hide the icon for non-creators so the affordance matches the rule.
+  canDelete: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
   const style = transform
@@ -171,16 +175,18 @@ function DraggableCard({
         <CardContent className="p-3 space-y-2">
           <div className="flex items-start gap-2">
             <p className="flex-1 text-sm font-medium leading-snug line-clamp-2">{task.title}</p>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={`Delete ${task.title}`}
-              className="size-6 -m-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-              onClick={(e) => { e.stopPropagation(); onDelete(task.id, task.title); }}
-              disabled={deleting}
-            >
-              <Trash2 className="size-3.5 text-red-600" />
-            </Button>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Delete ${task.title}`}
+                className="size-6 -m-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                onClick={(e) => { e.stopPropagation(); onDelete(task.id, task.title); }}
+                disabled={deleting}
+              >
+                <Trash2 className="size-3.5 text-red-600" />
+              </Button>
+            )}
           </div>
           {(parentTitle || task.parentTitle) && (
             // Sam-Loom #2 — surfaces the parent → child link on the card so
@@ -235,6 +241,7 @@ function KanbanBoard({
   onDelete,
   deleting,
   onMoveStatus,
+  currentUserEmail,
 }: {
   tasks: TaskSummary[];
   parentTitleById: Map<string, string>;
@@ -242,6 +249,7 @@ function KanbanBoard({
   onDelete: (taskId: string, title: string) => void;
   deleting: boolean;
   onMoveStatus: (taskId: string, status: string) => void;
+  currentUserEmail: string;
 }) {
   // Require a small pointer movement before a drag starts — otherwise every
   // click on a card would be interpreted as a drag and the navigate-on-click
@@ -288,6 +296,7 @@ function KanbanBoard({
                       navigate={navigate}
                       onDelete={onDelete}
                       deleting={deleting}
+                      canDelete={t.createdBy === currentUserEmail}
                     />
                   ))
                 )}
@@ -670,6 +679,7 @@ export function TasksPage() {
           onDelete={handleDelete}
           deleting={deleteTask.isPending}
           onMoveStatus={handleStatusInline}
+          currentUserEmail={user?.email ?? ''}
         />
       ) : (
         <Card>
@@ -756,16 +766,20 @@ export function TasksPage() {
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         {/* Row-click navigates to detail; the delete button has to
-                            stopPropagation or it'd open the task and delete simultaneously. */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Delete ${t.title}`}
-                          onClick={() => handleDelete(t.id, t.title)}
-                          disabled={deleteTask.isPending}
-                        >
-                          <Trash2 className="size-4 text-red-600" />
-                        </Button>
+                            stopPropagation or it'd open the task and delete simultaneously.
+                            Sam-Loom (jam-video #10) — only the creator sees the delete
+                            icon; the BE returns 403 for anyone else. */}
+                        {t.createdBy === user?.email && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Delete ${t.title}`}
+                            onClick={() => handleDelete(t.id, t.title)}
+                            disabled={deleteTask.isPending}
+                          >
+                            <Trash2 className="size-4 text-red-600" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
