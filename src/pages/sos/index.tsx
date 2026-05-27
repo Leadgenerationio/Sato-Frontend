@@ -193,8 +193,23 @@ export function SosAdminPage() {
                       </TableCell>
                       <TableCell className="font-medium">{userLabel(r)}</TableCell>
                       <TableCell>
+                        {/* Sam (27 May 2026): "Page should be a clickable
+                            link." Internal paths (starting with /) become
+                            react-router Link so the operator can jump
+                            straight to where the user was stuck. Anything
+                            else (absolute URLs, weird input) renders as
+                            plain code text to avoid broken navigation. */}
                         {r.pagePath ? (
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{r.pagePath}</code>
+                          r.pagePath.startsWith('/') ? (
+                            <Link
+                              to={r.pagePath}
+                              className="inline-block text-xs bg-muted px-1.5 py-0.5 rounded text-blue-600 underline underline-offset-2 hover:text-blue-700"
+                            >
+                              {r.pagePath}
+                            </Link>
+                          ) : (
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{r.pagePath}</code>
+                          )
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
