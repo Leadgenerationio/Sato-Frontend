@@ -18,6 +18,7 @@ import {
   useClient, useCreditHistory, useRunCreditCheck,
   useClientDocuments, useAddClientDocument, useRemoveClientDocument,
   useClientInvoices, useSyncClientInvoices,
+  useUpdateClient,
   type ClientDocument,
 } from '@/lib/hooks/use-clients';
 import {
@@ -143,6 +144,19 @@ export function ClientDetailPage() {
   // copy inside DocumentsTab so we're not double-fetching.
   const { data: docsForStage } = useClientDocuments(id!);
   const runCheck = useRunCreditCheck();
+  // Sam (27 May 2026 portal meeting): "this client is an existing client,
+  // we've already signed an agreement, just not within this platform" —
+  // admin override to flip agreementSigned without going through SignNow.
+  const updateClient = useUpdateClient();
+  const markAgreementSigned = async () => {
+    if (!client) return;
+    try {
+      await updateClient.mutateAsync({ id: client.id, agreementSigned: true });
+      toast.success('Agreement marked as signed — Pending banner will clear.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to mark agreement as signed');
+    }
+  };
 
   // Auto-open the Send Agreement dialog when arriving from /clients/create
   // with the "send agreement immediately" toggle on. Strip the query param
@@ -241,6 +255,8 @@ export function ClientDetailPage() {
         onboardingStatus={client.onboardingStatus}
         agreementSigned={client.agreementSigned}
         documentsCount={docsForStage?.length ?? 0}
+        onMarkAgreementSigned={markAgreementSigned}
+        markAgreementPending={updateClient.isPending}
       />
 
       <Tabs defaultValue="overview">
@@ -544,10 +560,17 @@ export function OnboardingProgress({
   onboardingStatus,
   agreementSigned,
   documentsCount,
+  onMarkAgreementSigned,
+  markAgreementPending,
 }: {
   onboardingStatus: string;
   agreementSigned: boolean;
   documentsCount: number;
+  // Sam (27 May 2026 portal meeting): admin override for clients who
+  // signed outside the platform. Both optional so existing callers
+  // (tests / other pages) still compile without them.
+  onMarkAgreementSigned?: () => void;
+  markAgreementPending?: boolean;
 }) {
   const currentIdx = resolveActualStage(onboardingStatus, agreementSigned, documentsCount);
 
@@ -563,12 +586,30 @@ export function OnboardingProgress({
               Stage {currentIdx + 1} of {ONBOARDING_STEPS.length} · {ONBOARDING_STEPS[currentIdx]?.label ?? 'Unknown'}
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <ClipboardCheck className={`size-4 ${agreementSigned ? 'text-emerald-600' : 'text-muted-foreground'}`} />
             <span className="text-muted-foreground">Agreement:</span>
             <span className={`font-medium ${agreementSigned ? 'text-emerald-600' : ''}`}>
               {agreementSigned ? 'Signed' : 'Not signed'}
             </span>
+            {/* Sam (27 May 2026): admin override for clients who signed
+                outside Stato — flips agreementSigned=true without going
+                through SignNow. Only renders when not signed + a handler
+                is provided. */}
+            {!agreementSigned && onMarkAgreementSigned && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={onMarkAgreementSigned}
+                disabled={markAgreementPending}
+              >
+                {markAgreementPending
+                  ? <Loader2 className="size-3 mr-1 animate-spin" />
+                  : <ClipboardCheck className="size-3 mr-1" />}
+                Mark as signed (external)
+              </Button>
+            )}
           </div>
         </div>
 
