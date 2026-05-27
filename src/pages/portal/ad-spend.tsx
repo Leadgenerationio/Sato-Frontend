@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet, Lock } from 'lucide-react';
 import { usePortalDashboard } from '@/lib/hooks/use-portal';
+import { platformLabel } from '@/lib/hooks/use-ad-spend';
 import { EmptyState } from '@/components/shared/empty-state';
 import { formatCurrency, totalsByCurrency } from '@/lib/currency';
 
@@ -65,7 +66,7 @@ export function PortalAdSpendPage() {
             <div className="divide-y">
               {rows.map((row) => (
                 <div key={`${row.platform}-${row.currency}`} className="flex items-center justify-between py-2.5">
-                  <span className="text-sm">{row.platform}</span>
+                  <span className="text-sm">{platformLabel(row.platform)}</span>
                   <span className="text-sm font-medium tabular-nums">{formatCurrency(row.spend, row.currency)}</span>
                 </div>
               ))}

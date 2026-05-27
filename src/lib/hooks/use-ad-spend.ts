@@ -112,6 +112,20 @@ export const AD_SPEND_PLATFORMS: { value: string; label: string }[] = [
   { value: 'taboola', label: 'Taboola' },
 ];
 
+const PLATFORM_LABELS: Record<string, string> = Object.fromEntries(
+  AD_SPEND_PLATFORMS.filter((p) => p.value !== 'all').map((p) => [p.value, p.label]),
+);
+
+/**
+ * Friendly display name for a raw `ad_spend.platform` value (Catchr writes
+ * 'facebook-ads', 'tik-tok', etc.). Falls back to the raw value for any
+ * platform we don't have a label for, so a new Catchr platform still renders
+ * something rather than blank.
+ */
+export function platformLabel(raw: string): string {
+  return PLATFORM_LABELS[raw] ?? raw;
+}
+
 export function defaultDateRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to.getTime() - 30 * 24 * 3600 * 1000);
