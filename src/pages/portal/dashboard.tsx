@@ -8,7 +8,22 @@ import { usePortalDashboard } from '@/lib/hooks/use-portal';
 import { EmptyState } from '@/components/shared/empty-state';
 
 function formatCurrency(value: number, currency = 'GBP') {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
+  // Defensive: Intl.NumberFormat throws RangeError on a malformed currency
+  // code (empty string, wrong length, non-letters). ad_spend.currency comes
+  // from Catchr and isn't guaranteed clean — an unguarded throw here crashed
+  // the whole managed-client dashboard in production (2026-05-27). Fall back
+  // to GBP formatting, then to a plain number, so a bad code can never take
+  // the page down. The backend also sanitises, but the UI must be crash-proof
+  // regardless of what it's handed.
+  try {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
+  } catch {
+    try {
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
+    } catch {
+      return value.toFixed(2);
+    }
+  }
 }
 
 // Sum ad-spend rows into one total per currency, preserving the (spend-desc)

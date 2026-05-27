@@ -151,4 +151,21 @@ describe('PortalDashboardPage', () => {
     expect(screen.getByText('Ad Spend')).toBeInTheDocument();
     expect(screen.getByText('No ad spend this month')).toBeInTheDocument();
   });
+
+  // Regression for the 2026-05-27 production crash: a malformed currency code
+  // (empty string here) must NOT throw out of Intl.NumberFormat and blank the
+  // dashboard. The render should complete and the row should still appear.
+  it('renders without crashing when a row has a malformed currency code', () => {
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Taboola', spend: 10, currency: '' },
+      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
+    ];
+    // Before the fix this threw a RangeError during render.
+    expect(() => renderPage()).not.toThrow();
+    expect(screen.getByText('Ad Spend')).toBeInTheDocument();
+    expect(screen.getByText('Taboola')).toBeInTheDocument();
+    // The valid row still formats correctly.
+    expect(screen.getAllByText('£300.00').length).toBeGreaterThan(0);
+  });
 });
