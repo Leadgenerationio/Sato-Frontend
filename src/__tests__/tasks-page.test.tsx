@@ -27,6 +27,8 @@ vi.mock('@/lib/hooks/use-tasks', () => ({
     error: null,
   }),
   useDeleteTask: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  // Sam-Loom #8 — inline status dropdown needs the status-update hook.
+  useUpdateTaskStatus: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 function renderPage() {

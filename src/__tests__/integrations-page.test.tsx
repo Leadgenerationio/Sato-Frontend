@@ -17,6 +17,7 @@ const { overviewFixture } = vi.hoisted(() => ({
     r2: { configured: true, bucket: 'stato-production', fileCount: 27 },
     resend: { configured: true, fromEmail: 'onboarding@resend.dev' },
     creditCheck: { configured: true, provider: 'endole' as const, checksRun: 6 },
+    anthropic: { configured: true },
   },
 }));
 
@@ -38,7 +39,7 @@ function renderPage() {
 }
 
 describe('IntegrationsPage', () => {
-  it('renders all 7 integration cards', async () => {
+  it('renders all 8 integration cards', async () => {
     renderPage();
     expect(await screen.findByText('Xero')).toBeInTheDocument();
     expect(screen.getByText('LeadByte')).toBeInTheDocument();
@@ -47,6 +48,10 @@ describe('IntegrationsPage', () => {
     expect(screen.getByText('Cloudflare R2')).toBeInTheDocument();
     expect(screen.getByText('Credit checks')).toBeInTheDocument();
     expect(screen.getByText('Resend')).toBeInTheDocument();
+    // Sam-Loom #10 — AI status card added so operators see whether the
+    // Anthropic key is wired without discovering the failure inside the
+    // new-task flow.
+    expect(screen.getByText('AI suggestions')).toBeInTheDocument();
   });
 
   it('shows live key metrics per card', async () => {

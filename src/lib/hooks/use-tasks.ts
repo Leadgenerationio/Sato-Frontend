@@ -14,6 +14,9 @@ export interface TaskSummary {
   createdAt: string;
   // Slice 5 Day 5 — surfaced on cards/rows so estimates are visible at a glance.
   timeBlockMinutes?: number | null;
+  // Sam-Loom (jam-video #2) — surfaced so the list view can indent children
+  // under their parent and the board card can show a "↪ Parent" hint.
+  parentTaskId?: string | null;
 }
 
 export interface TaskComment {
@@ -99,12 +102,15 @@ export interface PaginatedTasks {
   pageSize: number;
 }
 
-export function useTasks(filters?: { status?: string; priority?: string; search?: string; assignee?: string; page?: number; limit?: number }) {
+export function useTasks(filters?: { status?: string; priority?: string; search?: string; assignee?: string; archive?: 'today' | 'all' | 'archive'; page?: number; limit?: number }) {
   const params = new URLSearchParams();
   if (filters?.status && filters.status !== 'all') params.set('status', filters.status);
   if (filters?.priority && filters.priority !== 'all') params.set('priority', filters.priority);
   if (filters?.search) params.set('search', filters.search);
   if (filters?.assignee) params.set('assignee', filters.assignee);
+  // Sam-Loom #7 — pass through the archive split so the BE filters out
+  // older completed tasks from the default view.
+  if (filters?.archive) params.set('archive', filters.archive);
   if (filters?.page) params.set('page', String(filters.page));
   if (filters?.limit) params.set('limit', String(filters.limit));
   const qs = params.toString();

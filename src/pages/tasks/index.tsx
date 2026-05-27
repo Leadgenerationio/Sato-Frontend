@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,11 +11,22 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/ui/pagination';
 import {
-  Search, Plus, CheckSquare, Clock, AlertTriangle, ListTodo, LayoutGrid, List, Timer, Trash2,
+  Search, Plus, CheckSquare, Clock, AlertTriangle, ListTodo, LayoutGrid, List, Timer, Trash2, CornerDownRight, Archive,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  useTasks, useTaskStats, useDeleteTask,
+  DndContext,
+  closestCorners,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  useTasks, useTaskStats, useDeleteTask, useUpdateTaskStatus,
   type TaskSummary,
 } from '@/lib/hooks/use-tasks';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -24,6 +35,31 @@ import { EmptyState } from '@/components/shared/empty-state';
 const STATUS_TABS = ['all', 'todo', 'in_progress', 'on_hold', 'completed'] as const;
 
 const PRIORITY_OPTIONS = ['all', 'urgent', 'high', 'medium', 'low'] as const;
+
+// Sam-Loom (jam-video #6) — additional filters Sam asked for: "I want to
+// filter by tasks due today and time. So this one was a 30 minute task.
+// Say for example, it's half a day task". Both buckets are applied
+// client-side so the backend stays unchanged.
+const DUE_OPTIONS = ['all', 'today', 'this_week', 'overdue'] as const;
+const DUE_LABELS: Record<string, string> = {
+  all: 'Any due',
+  today: 'Due today',
+  this_week: 'Due this week',
+  overdue: 'Overdue',
+};
+
+const TIME_OPTIONS = ['all', 'quick', 'normal', 'long'] as const;
+const TIME_LABELS: Record<string, string> = {
+  all: 'Any duration',
+  quick: 'Quick (≤30m)',
+  normal: 'Normal (30m–2h)',
+  long: 'Long (>2h)',
+};
+
+// Sam-Loom #7 — three archive states. 'today' is the default for the active
+// board (hides completed work from prior days); 'all' shows everything; the
+// dedicated Archived tab maps to 'archive'.
+type ArchiveView = 'today' | 'archive' | 'all';
 
 const statusColors: Record<string, string> = {
   todo: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
@@ -59,6 +95,35 @@ function formatTimeBlock(minutes: number | null | undefined): string | null {
   return `${(minutes / 60).toFixed(1)}h`;
 }
 
+// Sam-Loom #6 — due-date predicates. "Today" is wall-clock today; "this
+// week" is the next 7 days; "overdue" is anything past due that isn't
+// completed (completed work doesn't count as overdue regardless of date).
+function matchesDueFilter(t: TaskSummary, due: string): boolean {
+  if (due === 'all' || !t.dueDate) return due === 'all';
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+  const sevenDaysOut = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const dueAt = new Date(t.dueDate);
+  if (due === 'today') return dueAt >= todayStart && dueAt < tomorrowStart;
+  if (due === 'this_week') return dueAt >= todayStart && dueAt < sevenDaysOut;
+  if (due === 'overdue') return dueAt < todayStart && t.status !== 'completed';
+  return true;
+}
+
+// Sam-Loom #6 — time-block buckets. Mirrors the AI-task picker enum
+// (15/30/60/120/240/480m): Quick covers up to half an hour, Normal up to
+// two hours (the common "do it today" range), Long is anything bigger.
+function matchesTimeFilter(t: TaskSummary, time: string): boolean {
+  if (time === 'all') return true;
+  const m = t.timeBlockMinutes;
+  if (m == null) return false;
+  if (time === 'quick') return m <= 30;
+  if (time === 'normal') return m > 30 && m <= 120;
+  if (time === 'long') return m > 120;
+  return true;
+}
+
 const BOARD_COLUMNS = [
   { key: 'todo', label: 'To Do', color: 'bg-neutral-500', dotColor: 'bg-neutral-400' },
   { key: 'in_progress', label: 'In Progress', color: 'bg-blue-500', dotColor: 'bg-blue-500' },
@@ -66,84 +131,170 @@ const BOARD_COLUMNS = [
   { key: 'completed', label: 'Completed', color: 'bg-emerald-500', dotColor: 'bg-emerald-500' },
 ] as const;
 
-// Sam-Loom feedback (jam-video #4): the list view had a delete affordance
-// per row but the board cards didn't — making Sam say "we can't delete
-// tasks" when on the Kanban view. Board cards now expose the same
-// trash-icon button. `onDelete` is wired from the parent so the confirm
-// dialog + toast handling stays in one place.
-function KanbanBoard({
-  tasks,
+// Sam-Loom (jam-video #5) — draggable card. dnd-kit handles the pointer/
+// keyboard interaction; we just expose the listeners + the visual state.
+function DraggableCard({
+  task,
+  parentTitle,
   navigate,
   onDelete,
   deleting,
 }: {
-  tasks: TaskSummary[];
+  task: TaskSummary;
+  parentTitle?: string;
   navigate: (path: string) => void;
   onDelete: (taskId: string, title: string) => void;
   deleting: boolean;
 }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 50 }
+    : undefined;
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {BOARD_COLUMNS.map((col) => {
-        const columnTasks = tasks.filter((t) => t.status === col.key);
-        return (
-          <div key={col.key} className="flex flex-col gap-3">
-            {/* Column header */}
-            <div className="flex items-center gap-2 px-1">
-              <div className={`size-2.5 rounded-full ${col.dotColor}`} />
-              <span className="text-sm font-semibold">{col.label}</span>
-              <span className="ml-auto text-xs text-muted-foreground tabular-nums">{columnTasks.length}</span>
-            </div>
-            {/* Cards */}
-            <div className="flex flex-col gap-2 min-h-[120px]">
-              {columnTasks.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-                  No tasks
-                </div>
-              ) : (
-                columnTasks.map((t) => (
-                  <Card
-                    key={t.id}
-                    className="cursor-pointer transition-colors hover:bg-muted/50 group"
-                    onClick={() => navigate(`/tasks/${t.id}`)}
-                  >
-                    <CardContent className="p-3 space-y-2">
-                      <div className="flex items-start gap-2">
-                        <p className="flex-1 text-sm font-medium leading-snug line-clamp-2">{t.title}</p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Delete ${t.title}`}
-                          className="size-6 -m-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                          onClick={(e) => { e.stopPropagation(); onDelete(t.id, t.title); }}
-                          disabled={deleting}
-                        >
-                          <Trash2 className="size-3.5 text-red-600" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className={`text-[10px] capitalize ${priorityColors[t.priority] || ''}`}>
-                          {t.priority}
-                        </Badge>
-                        {formatTimeBlock(t.timeBlockMinutes) && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground tabular-nums">
-                            <Timer className="size-3" />{formatTimeBlock(t.timeBlockMinutes)}
-                          </span>
-                        )}
-                        {t.dueDate && (
-                          <span className="text-[10px] text-muted-foreground tabular-nums">{formatDate(t.dueDate)}</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">{t.assignee}</p>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={isDragging ? 'opacity-50' : ''}
+    >
+      <Card
+        className="cursor-grab transition-colors hover:bg-muted/50 group active:cursor-grabbing"
+        onClick={(e) => {
+          // Treat as a click only if the pointer hasn't moved more than the
+          // dnd-kit activation distance. We rely on dnd-kit to swallow the
+          // event when a real drag starts; everything else is a click.
+          if (!isDragging) navigate(`/tasks/${task.id}`);
+          e.stopPropagation();
+        }}
+      >
+        <CardContent className="p-3 space-y-2">
+          <div className="flex items-start gap-2">
+            <p className="flex-1 text-sm font-medium leading-snug line-clamp-2">{task.title}</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Delete ${task.title}`}
+              className="size-6 -m-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+              onClick={(e) => { e.stopPropagation(); onDelete(task.id, task.title); }}
+              disabled={deleting}
+            >
+              <Trash2 className="size-3.5 text-red-600" />
+            </Button>
           </div>
-        );
-      })}
+          {parentTitle && (
+            // Sam-Loom #2 — surfaces the parent → child link on the card so
+            // "I wouldn't know these two are connected while looking at a
+            // screen" becomes "↪ Parent: Foo" with the arrow as a visual cue.
+            <p className="flex items-center gap-1 text-[10px] text-muted-foreground italic">
+              <CornerDownRight className="size-3" />
+              <span className="truncate">{parentTitle}</span>
+            </p>
+          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge className={`text-[10px] capitalize ${priorityColors[task.priority] || ''}`}>
+              {task.priority}
+            </Badge>
+            {formatTimeBlock(task.timeBlockMinutes) && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground tabular-nums">
+                <Timer className="size-3" />{formatTimeBlock(task.timeBlockMinutes)}
+              </span>
+            )}
+            {task.dueDate && (
+              <span className="text-[10px] text-muted-foreground tabular-nums">{formatDate(task.dueDate)}</span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground truncate">{task.assignee}</p>
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+// Sam-Loom #5 — column accepts drops and lights up while a card is over it.
+function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex flex-col gap-2 min-h-[120px] rounded-lg transition-colors ${
+        isOver ? 'bg-muted/50 ring-2 ring-primary/30' : ''
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function KanbanBoard({
+  tasks,
+  parentTitleById,
+  navigate,
+  onDelete,
+  deleting,
+  onMoveStatus,
+}: {
+  tasks: TaskSummary[];
+  parentTitleById: Map<string, string>;
+  navigate: (path: string) => void;
+  onDelete: (taskId: string, title: string) => void;
+  deleting: boolean;
+  onMoveStatus: (taskId: string, status: string) => void;
+}) {
+  // Require a small pointer movement before a drag starts — otherwise every
+  // click on a card would be interpreted as a drag and the navigate-on-click
+  // would never fire. 5px is the dnd-kit default for this pattern.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const taskId = String(active.id);
+    const targetStatus = String(over.id);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.status === targetStatus) return;
+    onMoveStatus(taskId, targetStatus);
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {BOARD_COLUMNS.map((col) => {
+          const columnTasks = tasks.filter((t) => t.status === col.key);
+          return (
+            <div key={col.key} className="flex flex-col gap-3">
+              {/* Column header */}
+              <div className="flex items-center gap-2 px-1">
+                <div className={`size-2.5 rounded-full ${col.dotColor}`} />
+                <span className="text-sm font-semibold">{col.label}</span>
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{columnTasks.length}</span>
+              </div>
+              <DroppableColumn id={col.key}>
+                {columnTasks.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
+                    No tasks
+                  </div>
+                ) : (
+                  columnTasks.map((t) => (
+                    <DraggableCard
+                      key={t.id}
+                      task={t}
+                      parentTitle={t.parentTaskId ? parentTitleById.get(t.parentTaskId) : undefined}
+                      navigate={navigate}
+                      onDelete={onDelete}
+                      deleting={deleting}
+                    />
+                  ))
+                )}
+              </DroppableColumn>
+            </div>
+          );
+        })}
+      </div>
+    </DndContext>
   );
 }
 
@@ -159,6 +310,11 @@ export function TasksPage() {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [dueFilter, setDueFilter] = useState<string>('all');
+  const [timeFilter, setTimeFilter] = useState<string>('all');
+  // Sam-Loom #7 — archive view. 'today' default (hide old completed),
+  // 'archive' shows ONLY older completed work, 'all' disables the filter.
+  const [archiveView, setArchiveView] = useState<ArchiveView>('today');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [scope, setScope] = useState<'all' | 'mine'>(() => {
@@ -179,11 +335,13 @@ export function TasksPage() {
     priority: priorityFilter,
     search,
     assignee: scope === 'mine' ? myAssignee : undefined,
+    archive: archiveView,
     page,
-    limit: 10,
+    limit: 50, // larger page so parent + children are likely co-resident
   });
   const { data: stats } = useTaskStats();
   const deleteTask = useDeleteTask();
+  const updateStatus = useUpdateTaskStatus();
 
   const handleDelete = async (taskId: string, title: string) => {
     if (!window.confirm(`Delete "${title}"? This permanently removes the task and its subtasks/attachments.`)) {
@@ -196,7 +354,60 @@ export function TasksPage() {
       toast.error(err instanceof Error ? err.message : 'Delete failed');
     }
   };
-  const tasks = data?.tasks;
+
+  // Sam-Loom #8 — inline status dropdown. Stops propagation so the row
+  // click doesn't fire too, and shows a toast on failure (success is
+  // visible via the badge updating).
+  const handleStatusInline = async (taskId: string, status: string) => {
+    try {
+      await updateStatus.mutateAsync({ id: taskId, status });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Status change failed');
+    }
+  };
+
+  const rawTasks = data?.tasks ?? [];
+
+  // Apply due + time filters client-side (BE doesn't know these buckets).
+  const filteredTasks = useMemo(() => {
+    return rawTasks.filter((t) => matchesDueFilter(t, dueFilter) && matchesTimeFilter(t, timeFilter));
+  }, [rawTasks, dueFilter, timeFilter]);
+
+  // Sam-Loom #2 — parent → title lookup for the board card hint. Built from
+  // whatever's currently loaded; an off-page parent silently degrades to no
+  // hint (cheaper than a separate fetch per orphan).
+  const parentTitleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of rawTasks) map.set(t.id, t.title);
+    return map;
+  }, [rawTasks]);
+
+  // Sam-Loom #2 — group rows so parents lead, then their children indented
+  // beneath. Orphans (parent off-page or null) stay top-level. Stable order:
+  // preserve the BE's createdAt-desc ordering within each group.
+  const groupedTasks = useMemo(() => {
+    const childrenByParent = new Map<string, TaskSummary[]>();
+    const topLevel: TaskSummary[] = [];
+    for (const t of filteredTasks) {
+      if (t.parentTaskId && parentTitleById.has(t.parentTaskId)) {
+        const list = childrenByParent.get(t.parentTaskId) ?? [];
+        list.push(t);
+        childrenByParent.set(t.parentTaskId, list);
+      } else {
+        topLevel.push(t);
+      }
+    }
+    const rows: Array<{ task: TaskSummary; depth: number }> = [];
+    for (const parent of topLevel) {
+      rows.push({ task: parent, depth: 0 });
+      const kids = childrenByParent.get(parent.id) ?? [];
+      for (const kid of kids) rows.push({ task: kid, depth: 1 });
+    }
+    return rows;
+  }, [filteredTasks, parentTitleById]);
+
+  const tasksToShow = filteredTasks; // board uses the flat filtered list
+  const showingArchived = archiveView === 'archive';
 
   const handleStatusChange = (s: string) => { setStatusFilter(s); setPage(1); };
   const handlePriorityChange = (p: string) => { setPriorityFilter(p); setPage(1); };
@@ -321,7 +532,7 @@ export function TasksPage() {
 
       {/* Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <div className="flex gap-1 rounded-lg bg-muted p-1 flex-wrap">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab}
@@ -335,15 +546,51 @@ export function TasksPage() {
               {statusLabels[tab] || tab}
             </button>
           ))}
+          {/* Sam-Loom #7 — Archived tab. Toggles the BE archive filter on/off.
+              Stays in the same tab strip so it reads as a sibling of the
+              status tabs rather than a separate gear. */}
+          <button
+            onClick={() => setArchiveView(showingArchived ? 'today' : 'archive')}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              showingArchived
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            aria-pressed={showingArchived}
+          >
+            <Archive className="size-3.5" />
+            Archived
+          </button>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <select
             value={priorityFilter}
             onChange={(e) => handlePriorityChange(e.target.value)}
             className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm capitalize"
+            aria-label="Filter by priority"
           >
             {PRIORITY_OPTIONS.map((p) => (
               <option key={p} value={p}>{p === 'all' ? 'All Priorities' : p}</option>
+            ))}
+          </select>
+          <select
+            value={dueFilter}
+            onChange={(e) => { setDueFilter(e.target.value); setPage(1); }}
+            className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            aria-label="Filter by due date"
+          >
+            {DUE_OPTIONS.map((d) => (
+              <option key={d} value={d}>{DUE_LABELS[d]}</option>
+            ))}
+          </select>
+          <select
+            value={timeFilter}
+            onChange={(e) => { setTimeFilter(e.target.value); setPage(1); }}
+            className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            aria-label="Filter by duration"
+          >
+            {TIME_OPTIONS.map((tm) => (
+              <option key={tm} value={tm}>{TIME_LABELS[tm]}</option>
             ))}
           </select>
           <div className="relative w-full sm:w-72">
@@ -384,23 +631,42 @@ export function TasksPage() {
             />
           </CardContent>
         </Card>
-      ) : !tasks?.length ? (
+      ) : !tasksToShow.length ? (
         <Card>
           <CardContent className="p-0">
             <EmptyState
-              icon={CheckSquare}
-              title={search || statusFilter !== 'all' || priorityFilter !== 'all' ? 'No matching tasks' : 'No tasks yet'}
-              description={
-                search || statusFilter !== 'all' || priorityFilter !== 'all'
-                  ? 'Try a different search or filter.'
-                  : 'Create a task to track work and assign it to a teammate.'
+              icon={showingArchived ? Archive : CheckSquare}
+              title={
+                showingArchived
+                  ? 'Archive is empty'
+                  : (search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
+                      ? 'No matching tasks'
+                      : 'No tasks yet')
               }
-              link={search || statusFilter !== 'all' || priorityFilter !== 'all' ? undefined : { label: 'New task', to: '/tasks/new', icon: Plus }}
+              description={
+                showingArchived
+                  ? 'Tasks land here automatically the day after they\'re marked completed.'
+                  : (search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
+                      ? 'Try a different search or filter.'
+                      : 'Create a task to track work and assign it to a teammate.')
+              }
+              link={
+                showingArchived || search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
+                  ? undefined
+                  : { label: 'New task', to: '/tasks/new', icon: Plus }
+              }
             />
           </CardContent>
         </Card>
       ) : viewMode === 'board' ? (
-        <KanbanBoard tasks={tasks} navigate={navigate} onDelete={handleDelete} deleting={deleteTask.isPending} />
+        <KanbanBoard
+          tasks={tasksToShow}
+          parentTitleById={parentTitleById}
+          navigate={navigate}
+          onDelete={handleDelete}
+          deleting={deleteTask.isPending}
+          onMoveStatus={handleStatusInline}
+        />
       ) : (
         <Card>
           <CardContent className="p-0">
@@ -419,23 +685,45 @@ export function TasksPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tasks.map((t: TaskSummary) => (
+                  {groupedTasks.map(({ task: t, depth }) => (
                     <TableRow
                       key={t.id}
                       className="cursor-pointer"
                       onClick={() => navigate(`/tasks/${t.id}`)}
                     >
-                      <TableCell className="max-w-[140px] truncate font-medium sm:max-w-[250px]">{t.title}</TableCell>
+                      <TableCell
+                        className="max-w-[140px] truncate font-medium sm:max-w-[250px]"
+                        style={{ paddingLeft: depth === 1 ? '2.25rem' : undefined }}
+                      >
+                        {/* Sam-Loom #2 — child rows indent + show a corner glyph so
+                            the parent/child relationship reads at a glance. */}
+                        <span className="inline-flex items-center gap-1.5">
+                          {depth === 1 && <CornerDownRight className="size-3.5 text-muted-foreground shrink-0" />}
+                          <span className="truncate">{t.title}</span>
+                        </span>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{t.assignee}</TableCell>
                       <TableCell>
                         <Badge className={`text-xs capitalize ${priorityColors[t.priority] || ''}`}>
                           {t.priority}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs capitalize ${statusColors[t.status] || ''}`}>
-                          {statusLabels[t.status] || t.status}
-                        </Badge>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {/* Sam-Loom #8 — inline status dropdown. Sam: "we just have a
+                            dropdown where we can select the status somewhere". Native
+                            <select> keeps the bundle small + the dropdown native to
+                            the platform (mobile, keyboard). */}
+                        <select
+                          value={t.status}
+                          onChange={(e) => handleStatusInline(t.id, e.target.value)}
+                          aria-label={`Change status for ${t.title}`}
+                          className={`h-7 rounded-md border border-input bg-transparent px-2 py-0 text-xs font-medium ${statusColors[t.status] || ''}`}
+                          disabled={updateStatus.isPending}
+                        >
+                          {BOARD_COLUMNS.map((col) => (
+                            <option key={col.key} value={col.key}>{col.label}</option>
+                          ))}
+                        </select>
                       </TableCell>
                       <TableCell className="text-muted-foreground tabular-nums">{formatDate(t.dueDate)}</TableCell>
                       <TableCell className="text-muted-foreground tabular-nums">

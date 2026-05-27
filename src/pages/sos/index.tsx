@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LifeBuoy, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
+import { LifeBuoy, CheckCircle2, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -19,6 +19,17 @@ import { EmptyState } from '@/components/shared/empty-state';
 // Match `/tasks/<id>` where <id> is any non-whitespace, non-punctuation-ish
 // run — covers UUIDs, slugs, and the truncated forms Sam dictates aloud.
 const TASK_LINK_RE = /\/tasks?\/([\w-]+)/g;
+
+// Sam-Loom #11 — "I don't know what the action is here, what we can do".
+// If the message names a task, surface an explicit "Open task" CTA in the
+// action column alongside "Mark resolved" so the operator doesn't have to
+// hunt for the inline link inside the message body.
+function extractFirstTaskId(message: string | null | undefined): string | null {
+  if (!message) return null;
+  TASK_LINK_RE.lastIndex = 0;
+  const match = TASK_LINK_RE.exec(message);
+  return match ? match[1] : null;
+}
 
 function renderMessageWithTaskLinks(message: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
@@ -203,21 +214,31 @@ export function SosAdminPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {!r.resolvedAt && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResolve(r.id)}
-                            disabled={resolve.isPending}
-                          >
-                            {resolve.isPending && resolve.variables === r.id ? (
-                              <Loader2 className="size-4 animate-spin mr-1.5" />
-                            ) : (
-                              <CheckCircle2 className="size-4 mr-1.5" />
-                            )}
-                            Mark resolved
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {extractFirstTaskId(r.message) && (
+                            <Link to={`/tasks/${extractFirstTaskId(r.message)}`}>
+                              <Button variant="outline" size="sm" aria-label="Open referenced task">
+                                <ExternalLink className="size-4 mr-1.5" />
+                                Open task
+                              </Button>
+                            </Link>
+                          )}
+                          {!r.resolvedAt && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResolve(r.id)}
+                              disabled={resolve.isPending}
+                            >
+                              {resolve.isPending && resolve.variables === r.id ? (
+                                <Loader2 className="size-4 animate-spin mr-1.5" />
+                              ) : (
+                                <CheckCircle2 className="size-4 mr-1.5" />
+                              )}
+                              Mark resolved
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

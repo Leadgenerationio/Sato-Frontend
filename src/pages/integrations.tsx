@@ -13,7 +13,7 @@ import {
 import {
   CheckCircle2, XCircle, AlertCircle, RefreshCw, ExternalLink,
   Building2, Database, Megaphone, FileSignature, HardDrive, Mail, ShieldCheck,
-  ChevronDown, ChevronUp, Info,
+  ChevronDown, ChevronUp, Info, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -34,6 +34,11 @@ interface IntegrationsOverview {
   r2: { configured: boolean; bucket: string | null; fileCount: number };
   resend: { configured: boolean; fromEmail: string | null };
   creditCheck: { configured: boolean; provider: 'creditsafe' | 'endole' | 'mock'; sandbox?: boolean; checksRun: number };
+  // Sam-Loom (jam-video #10) — surfaced so operators can see at a glance
+  // whether the AI-task suggestion key is wired in this env. `undefined` =
+  // older API response that doesn't carry this field; treat as unknown
+  // rather than as a hard "not configured".
+  anthropic?: { configured: boolean };
 }
 
 type CardStatus = 'live' | 'mock' | 'not_configured';
@@ -424,6 +429,24 @@ export function IntegrationsPage() {
       detail: data.resend.fromEmail?.includes('resend.dev')
         ? 'Pending GoDaddy DNS to switch to verified domain'
         : 'Domain verified',
+    },
+    // Sam-Loom (jam-video #10) — "AI suggestions, not configure for the
+    // environment". Until now this was a silent failure inside the new-task
+    // flow; promoting it to a card so the missing env key is obvious from
+    // the same place every other integration's health is read.
+    {
+      key: 'anthropic',
+      title: 'AI suggestions',
+      description: 'Powers the AI new-task button',
+      icon: Sparkles,
+      iconColor: '#d97706',
+      status: statusFor(data.anthropic?.configured ?? false, data.anthropic?.configured ?? false),
+      metricLabel: 'Status',
+      metricValue: data.anthropic?.configured ? 'Configured' : 'Not configured',
+      metricValueClassName: 'text-sm font-medium',
+      detail: data.anthropic?.configured
+        ? 'Anthropic API key wired up — task suggestions live.'
+        : 'Server is missing the Anthropic API key. Ask your administrator to add it to the backend configuration.',
     },
   ];
 
