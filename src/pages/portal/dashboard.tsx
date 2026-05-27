@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
+import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePortalDashboard } from '@/lib/hooks/use-portal';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -122,6 +122,42 @@ export function PortalDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Ad spend — managed clients only. PPL clients never render this block,
+          so there's no behaviour change for them. Per-platform, current month,
+          consistent with the "Leads This Month" window above. */}
+      {data.clientType === 'managed' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ad Spend</CardTitle>
+            <CardDescription>By platform · this month</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!data.adSpendByPlatform || data.adSpendByPlatform.length === 0 ? (
+              <EmptyState
+                icon={Wallet}
+                title="No ad spend this month"
+                description="Once ad spend is recorded against your campaigns this month, the per-platform breakdown will appear here."
+              />
+            ) : (
+              <div className="divide-y">
+                {data.adSpendByPlatform.map((row) => (
+                  <div key={row.platform} className="flex items-center justify-between py-2.5">
+                    <span className="text-sm">{row.platform}</span>
+                    <span className="text-sm font-medium tabular-nums">{formatCurrency(row.spend)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between pt-2.5 font-semibold">
+                  <span className="text-sm">Total</span>
+                  <span className="text-sm tabular-nums">
+                    {formatCurrency(data.adSpendByPlatform.reduce((sum, r) => sum + r.spend, 0))}
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
