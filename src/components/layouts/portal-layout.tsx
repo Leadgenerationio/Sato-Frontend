@@ -36,6 +36,12 @@ function isClientAdmin(role: UserRole | undefined): boolean {
   return role === 'client_admin';
 }
 
+function getInitials(name: string | undefined): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() ?? '').join('') || '?';
+}
+
 export function PortalLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -68,18 +74,27 @@ export function PortalLayout() {
               })}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
-            <span
-              className="hidden sm:inline-block max-w-[12rem] truncate text-sm text-muted-foreground"
-              title={user?.name}
-            >
-              {user?.name}
-            </span>
+          <div className="flex items-center gap-3 sm:gap-4 sm:border-l sm:pl-4">
+            <div className="hidden sm:flex items-center gap-2 min-w-0">
+              <div
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground"
+                aria-hidden="true"
+              >
+                {getInitials(user?.name)}
+              </div>
+              <span
+                className="max-w-[10rem] truncate text-sm font-medium text-foreground"
+                title={user?.name}
+              >
+                {user?.name}
+              </span>
+            </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => { logout(); toast.info('Signed out'); }}
               title="Sign out"
+              aria-label="Sign out"
             >
               <LogOut className="size-4" />
             </Button>
