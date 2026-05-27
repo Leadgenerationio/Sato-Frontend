@@ -8,9 +8,9 @@ vi.mock('@/components/providers/auth-provider', () => ({
   useAuth: () => ({ user: { id: '1', email: 'owner@stato.app', name: 'Owner', role: 'owner', isActive: true, businessId: null, clientId: null }, token: 'test', loading: false, login: vi.fn(), logout: vi.fn() }),
 }));
 
-// Mutable fixture so individual tests can flip clientType / adSpendByPlatform.
-// The hoisted object is shared by reference with the mock factory below.
-const { dashboardFixture } = vi.hoisted(() => ({
+// Mutable fixture so individual tests can flip clientType / adSpendByPlatform /
+// agreement fields. The hoisted object is shared by reference with the mock.
+const { dashboardFixture, updateStatusMock } = vi.hoisted(() => ({
   dashboardFixture: {
     companyName: 'Apex Media Ltd',
     clientType: 'ppl' as 'ppl' | 'managed',
@@ -20,7 +20,9 @@ const { dashboardFixture } = vi.hoisted(() => ({
     pendingInvoices: 2,
     overdueInvoices: 1,
     totalOutstanding: 4800,
-    agreementSigned: true,
+    agreementSigned: false,
+    agreementStatus: 'pending' as 'pending' | 'sent' | 'signed',
+    canManageAgreement: false,
     recentLeads: [
       { date: '2026-04-01', leads: 45 },
       { date: '2026-04-02', leads: 62 },
@@ -28,11 +30,16 @@ const { dashboardFixture } = vi.hoisted(() => ({
     ],
     adSpendByPlatform: [] as Array<{ platform: string; spend: number; currency: string }>,
   },
+  updateStatusMock: vi.fn().mockResolvedValue({ agreementStatus: 'signed', agreementSigned: true }),
 }));
 
 vi.mock('@/lib/hooks/use-portal', () => ({
   usePortalDashboard: () => ({ data: dashboardFixture, isLoading: false, error: null }),
+  useUpdateAgreementStatus: () => ({ mutateAsync: updateStatusMock, isPending: false }),
+  PORTAL_AGREEMENT_STATUSES: ['pending', 'sent', 'signed'],
 }));
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
@@ -59,6 +66,11 @@ describe('PortalDashboardPage', () => {
     // don't leak.
     dashboardFixture.clientType = 'ppl';
     dashboardFixture.adSpendByPlatform = [];
+    dashboardFixture.agreementSigned = false;
+    dashboardFixture.agreementStatus = 'pending';
+    dashboardFixture.canManageAgreement = false;
+    updateStatusMock.mockClear();
+    updateStatusMock.mockResolvedValue({ agreementStatus: 'signed', agreementSigned: true });
   });
 
   it('renders company name', () => {
@@ -150,5 +162,48 @@ describe('PortalDashboardPage', () => {
     renderPage();
     expect(screen.getByText('Ad Spend')).toBeInTheDocument();
     expect(screen.getByText('No ad spend this month')).toBeInTheDocument();
+  });
+
+  // Agreement status manual override — client-admin only.
+  it('does NOT render the agreement status control for a non-admin', () => {
+    dashboardFixture.canManageAgreement = false;
+    renderPage();
+    expect(screen.queryByText('Agreement status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /agreement status/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the agreement status control for a client admin', () => {
+    dashboardFixture.canManageAgreement = true;
+    dashboardFixture.agreementStatus = 'pending';
+    renderPage();
+    expect(screen.getByText('Agreement status')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /agreement status/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /update status/i })).toBeInTheDocument();
+  });
+
+  it('requires confirmation and then calls the mutation with the chosen status', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    dashboardFixture.canManageAgreement = true;
+    dashboardFixture.agreementStatus = 'pending';
+    renderPage();
+
+    // Pick "signed", open the confirm dialog.
+    fireEvent.change(screen.getByRole('combobox', { name: /agreement status/i }), { target: { value: 'signed' } });
+    fireEvent.click(screen.getByRole('button', { name: /update status/i }));
+
+    // Confirmation step (AC #4) — mutation not called until confirmed.
+    expect(screen.getByText('Change agreement status?')).toBeInTheDocument();
+    expect(updateStatusMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm change/i }));
+    expect(updateStatusMock).toHaveBeenCalledWith('signed');
+  });
+
+  it('disables Update when the selected status equals the current one', () => {
+    dashboardFixture.canManageAgreement = true;
+    dashboardFixture.agreementStatus = 'signed';
+    renderPage();
+    // Default selection mirrors current ('signed') → nothing to change.
+    expect(screen.getByRole('button', { name: /update status/i })).toBeDisabled();
   });
 });

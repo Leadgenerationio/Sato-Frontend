@@ -3,6 +3,9 @@ import { api, unwrap } from '@/lib/api';
 
 export type PortalClientType = 'managed' | 'ppl';
 
+export type PortalAgreementStatus = 'pending' | 'sent' | 'signed';
+export const PORTAL_AGREEMENT_STATUSES: PortalAgreementStatus[] = ['pending', 'sent', 'signed'];
+
 export interface PortalAdSpendPlatform {
   platform: string;
   spend: number;
@@ -24,6 +27,11 @@ export interface PortalDashboard {
   // array for PPL. Optional on the wire so a Vercel-first deploy (FE new, BE
   // not yet redeployed) doesn't TypeError on the old response shape.
   adSpendByPlatform?: PortalAdSpendPlatform[];
+  // Effective agreement status + whether the current user (client admin) may
+  // change it from the dashboard. Optional for the same deploy-ordering
+  // reason as adSpendByPlatform.
+  agreementStatus?: PortalAgreementStatus;
+  canManageAgreement?: boolean;
 }
 
 export interface PortalCampaign {
@@ -99,6 +107,25 @@ export function usePortalDashboard() {
     queryFn: async () => {
       const res = await api.get<PortalDashboard>('/api/v1/portal/dashboard');
       return unwrap(res);
+    },
+  });
+}
+
+// Client-admin-only: manually override the agreement status. The server
+// re-checks the admin flag; a non-admin call rejects with 403. On success we
+// refresh the dashboard so the "action needed" alert + status badge update.
+export function useUpdateAgreementStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (status: PortalAgreementStatus) => {
+      const res = await api.patch<{ agreementStatus: PortalAgreementStatus; agreementSigned: boolean }>(
+        '/api/v1/portal/agreement/status',
+        { status },
+      );
+      return unwrap(res);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal-dashboard'] });
     },
   });
 }
