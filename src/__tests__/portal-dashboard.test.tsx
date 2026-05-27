@@ -115,6 +115,35 @@ describe('PortalDashboardPage', () => {
     expect(screen.getByText('£420.50')).toBeInTheDocument();
   });
 
+  it('renders non-GBP spend with the correct currency symbol', () => {
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Google Ads', spend: 300, currency: 'USD' },
+    ];
+    renderPage();
+    // en-GB locale renders USD as "US$300.00" — the point is it's NOT £300,
+    // i.e. currency comes from the row, not a hardcoded GBP.
+    expect(screen.getAllByText('US$300.00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('£300.00')).not.toBeInTheDocument();
+  });
+
+  it('renders a separate Total per currency and never sums across currencies', () => {
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
+      { platform: 'Facebook Ads', spend: 50, currency: 'USD' },
+    ];
+    renderPage();
+    // £120.50 shows twice (the single GBP row + its GBP total); US$50.00 once.
+    expect(screen.getAllByText('£120.50').length).toBe(2);
+    expect(screen.getAllByText('US$50.00').length).toBe(2);
+    // Critically: no cross-currency mega-total.
+    expect(screen.queryByText('£170.50')).not.toBeInTheDocument();
+    expect(screen.queryByText(/170\.50/)).not.toBeInTheDocument();
+    // One "Total" label per currency.
+    expect(screen.getAllByText('Total')).toHaveLength(2);
+  });
+
   it('shows an empty state on the Ad Spend card for a managed client with no spend', () => {
     dashboardFixture.clientType = 'managed';
     dashboardFixture.adSpendByPlatform = [];
