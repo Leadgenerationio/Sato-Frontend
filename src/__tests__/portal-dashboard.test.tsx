@@ -87,85 +87,15 @@ describe('PortalDashboardPage', () => {
     expect(screen.getByText('Recent Lead Deliveries')).toBeInTheDocument();
   });
 
-  // Ad spend — managed clients only (feature: portal ad spend for managed clients).
-  it('does NOT render the Ad Spend card for a PPL client', () => {
-    dashboardFixture.clientType = 'ppl';
+  // Ad spend moved to its own /portal/ad-spend tab — the dashboard no longer
+  // renders an Ad Spend card, even for a managed client with spend data.
+  it('does NOT render an Ad Spend card on the dashboard (moved to its own tab)', () => {
+    dashboardFixture.clientType = 'managed';
     dashboardFixture.adSpendByPlatform = [
-      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
+      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
     ];
     renderPage();
-    // Even if the API somehow returned spend, the PPL gate must hide it.
     expect(screen.queryByText('Ad Spend')).not.toBeInTheDocument();
-    expect(screen.queryByText('Facebook Ads')).not.toBeInTheDocument();
-  });
-
-  it('renders the per-platform Ad Spend card with a total for a managed client', () => {
-    dashboardFixture.clientType = 'managed';
-    dashboardFixture.adSpendByPlatform = [
-      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
-      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
-    ];
-    renderPage();
-    expect(screen.getByText('Ad Spend')).toBeInTheDocument();
-    expect(screen.getByText('Google Ads')).toBeInTheDocument();
-    expect(screen.getByText('Facebook Ads')).toBeInTheDocument();
-    // Per-platform figures + the £420.50 total are all rendered.
-    expect(screen.getByText('£300.00')).toBeInTheDocument();
-    expect(screen.getByText('£120.50')).toBeInTheDocument();
-    expect(screen.getByText('£420.50')).toBeInTheDocument();
-  });
-
-  it('renders non-GBP spend with the correct currency symbol', () => {
-    dashboardFixture.clientType = 'managed';
-    dashboardFixture.adSpendByPlatform = [
-      { platform: 'Google Ads', spend: 300, currency: 'USD' },
-    ];
-    renderPage();
-    // en-GB locale renders USD as "US$300.00" — the point is it's NOT £300,
-    // i.e. currency comes from the row, not a hardcoded GBP.
-    expect(screen.getAllByText('US$300.00').length).toBeGreaterThan(0);
-    expect(screen.queryByText('£300.00')).not.toBeInTheDocument();
-  });
-
-  it('renders a separate Total per currency and never sums across currencies', () => {
-    dashboardFixture.clientType = 'managed';
-    dashboardFixture.adSpendByPlatform = [
-      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
-      { platform: 'Facebook Ads', spend: 50, currency: 'USD' },
-    ];
-    renderPage();
-    // £120.50 shows twice (the single GBP row + its GBP total); US$50.00 once.
-    expect(screen.getAllByText('£120.50').length).toBe(2);
-    expect(screen.getAllByText('US$50.00').length).toBe(2);
-    // Critically: no cross-currency mega-total.
-    expect(screen.queryByText('£170.50')).not.toBeInTheDocument();
-    expect(screen.queryByText(/170\.50/)).not.toBeInTheDocument();
-    // One "Total" label per currency.
-    expect(screen.getAllByText('Total')).toHaveLength(2);
-  });
-
-  it('shows an empty state on the Ad Spend card for a managed client with no spend', () => {
-    dashboardFixture.clientType = 'managed';
-    dashboardFixture.adSpendByPlatform = [];
-    renderPage();
-    expect(screen.getByText('Ad Spend')).toBeInTheDocument();
-    expect(screen.getByText('No ad spend this month')).toBeInTheDocument();
-  });
-
-  // Regression for the 2026-05-27 production crash: a malformed currency code
-  // (empty string here) must NOT throw out of Intl.NumberFormat and blank the
-  // dashboard. The render should complete and the row should still appear.
-  it('renders without crashing when a row has a malformed currency code', () => {
-    dashboardFixture.clientType = 'managed';
-    dashboardFixture.adSpendByPlatform = [
-      { platform: 'Taboola', spend: 10, currency: '' },
-      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
-    ];
-    // Before the fix this threw a RangeError during render.
-    expect(() => renderPage()).not.toThrow();
-    expect(screen.getByText('Ad Spend')).toBeInTheDocument();
-    expect(screen.getByText('Taboola')).toBeInTheDocument();
-    // The valid row still formats correctly.
-    expect(screen.getAllByText('£300.00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Google Ads')).not.toBeInTheDocument();
   });
 });
