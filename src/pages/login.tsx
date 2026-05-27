@@ -65,11 +65,13 @@ export function LoginPage() {
 
         {/* Sam (27 May 2026): asked for a minimal login page — keep only
             the logo on the left, drop the hero copy / feature cards /
-            stats. Centered logo reads as professional brand mark for
-            client-facing demos. */}
+            stats. Sam follow-up: "make the logo a bit bigger." Bumped
+            from `md` to `xl` and added a 1.5× scale class so the brand
+            mark fills the dark panel instead of getting lost in the
+            empty space on a wide desktop viewport. */}
         <div className="relative z-10 flex items-center justify-center p-12 xl:p-16 w-full">
-          <div className="animate-slide-up">
-            <LogoWhite size="md" />
+          <div className="animate-slide-up scale-150 origin-center">
+            <LogoWhite size="xl" />
           </div>
         </div>
       </div>
