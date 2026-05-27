@@ -374,10 +374,10 @@ export default function App() {
             />
           </Route>
 
-          {/* Client Portal — separate layout, client role only */}
+          {/* Client Portal — both portal roles (client + client_admin) */}
           <Route
             element={
-              <ProtectedRoute allowedRoles={['client']}>
+              <ProtectedRoute allowedRoles={['client', 'client_admin']}>
                 <PortalLayout />
               </ProtectedRoute>
             }

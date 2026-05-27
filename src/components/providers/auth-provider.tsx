@@ -34,7 +34,7 @@ function warmServerCache(accessToken: string, role: User['role']) {
     });
   };
 
-  if (role === 'client') {
+  if (role === 'client' || role === 'client_admin') {
     fire('/api/v1/portal/dashboard');
   } else {
     // Match useDashboardStats's three calls so all three Redis keys land warm.

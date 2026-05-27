@@ -22,7 +22,10 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  if (user) return <Navigate to={user.role === 'client' ? '/portal' : '/'} replace />;
+  if (user) {
+    const isPortal = user.role === 'client' || user.role === 'client_admin';
+    return <Navigate to={isPortal ? '/portal' : '/'} replace />;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +40,8 @@ export function LoginPage() {
       toast.error('Login failed', { description: err });
     } else {
       toast.success('Welcome back!', { description: 'You have been signed in successfully.' });
-      navigate(loggedInUser?.role === 'client' ? '/portal' : '/');
+      const isPortal = loggedInUser?.role === 'client' || loggedInUser?.role === 'client_admin';
+      navigate(isPortal ? '/portal' : '/');
     }
   }
 

@@ -31,7 +31,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === 'client' ? '/portal' : '/'} replace />;
+    const isPortal = user.role === 'client' || user.role === 'client_admin';
+    return <Navigate to={isPortal ? '/portal' : '/'} replace />;
   }
 
   return <>{children}</>;
