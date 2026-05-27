@@ -115,11 +115,14 @@ describe('PortalCompliancePage — asset approval', () => {
     expect(submitBtn).toBeDisabled();
   });
 
-  it('renders approved creative with status badge and decision metadata', async () => {
+  // Sam (2026-05-27 portal meeting): approved creatives no longer render on
+  // the Compliance tab — they move to the Creatives tab grouped by approval
+  // date. The Compliance tab now shows only items that still need a
+  // decision (pending + rejected + changes_requested).
+  it('does NOT render approved creatives on the Compliance tab', async () => {
     renderPage();
-    await screen.findByText('banner-v2.png');
-    // "Approved" appears both as the badge text and inside the metadata line.
-    expect(screen.getAllByText(/Approved/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/by Client User/i)).toBeInTheDocument();
+    // banner-v1.png (pending) appears; banner-v2.png (approved) does not.
+    await screen.findByText('banner-v1.png');
+    expect(screen.queryByText('banner-v2.png')).not.toBeInTheDocument();
   });
 });

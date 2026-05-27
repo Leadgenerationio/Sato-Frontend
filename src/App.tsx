@@ -51,6 +51,8 @@ const PortalCompliancePage = lazy(() => import('@/pages/portal/compliance').then
 const PortalCreativesPage = lazy(() => import('@/pages/portal/creatives').then((m) => ({ default: m.PortalCreativesPage })));
 const PortalAgreementPage = lazy(() => import('@/pages/portal/agreement').then((m) => ({ default: m.PortalAgreementPage })));
 const PortalAccountPage = lazy(() => import('@/pages/portal/account').then((m) => ({ default: m.PortalAccountPage })));
+// Sam (2026-05-27 portal meeting): client-side user management for client_admin.
+const PortalUsersPage = lazy(() => import('@/pages/portal/users').then((m) => ({ default: m.PortalUsersPage })));
 const NotificationsPage = lazy(() => import('@/pages/notifications').then((m) => ({ default: m.NotificationsPage })));
 const SopsPage = lazy(() => import('@/pages/sops/index').then((m) => ({ default: m.SopsPage })));
 const SopDetailPage = lazy(() => import('@/pages/sops/detail').then((m) => ({ default: m.SopDetailPage })));
@@ -386,6 +388,7 @@ export default function App() {
             <Route path="/portal/compliance" element={<PortalCompliancePage />} />
             <Route path="/portal/creatives" element={<PortalCreativesPage />} />
             <Route path="/portal/agreement" element={<PortalAgreementPage />} />
+            <Route path="/portal/users" element={<PortalUsersPage />} />
             <Route path="/portal/account" element={<PortalAccountPage />} />
           </Route>
 

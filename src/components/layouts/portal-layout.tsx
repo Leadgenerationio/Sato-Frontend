@@ -6,10 +6,20 @@ import { SosButton } from '@/components/shared/sos-button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone,
+  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone, Users as UsersIcon,
 } from 'lucide-react';
+import type { UserRole } from '@/types';
 
-const navItems = [
+// Sam (2026-05-27 portal meeting): "Users" tab is client_admin-only —
+// where they spawn extra portal logins for their own staff without
+// going through Sam. `requiresAdmin` lets us filter the rendered nav
+// per-user without N route guards.
+const navItems: Array<{
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  requiresAdmin?: boolean;
+}> = [
   { href: '/portal', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/portal/leads', label: 'Leads', icon: FileBarChart },
   { href: '/portal/invoices', label: 'Invoices', icon: FileText },
@@ -19,8 +29,13 @@ const navItems = [
   // overview → compliance state → assets to approve → sign agreement.
   { href: '/portal/creatives', label: 'Creatives', icon: Megaphone },
   { href: '/portal/agreement', label: 'Agreement', icon: ScrollText },
+  { href: '/portal/users', label: 'Users', icon: UsersIcon, requiresAdmin: true },
   { href: '/portal/account', label: 'Account', icon: UserCog },
 ];
+
+function isClientAdmin(role: UserRole | undefined): boolean {
+  return role === 'client_admin';
+}
 
 export function PortalLayout() {
   const { user, logout } = useAuth();
@@ -34,7 +49,7 @@ export function PortalLayout() {
           <div className="flex items-center gap-6">
             <Logo size="sm" />
             <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
+              {navItems.filter((item) => !item.requiresAdmin || isClientAdmin(user?.role)).map((item) => {
                 const isActive = item.href === '/portal'
                   ? location.pathname === '/portal'
                   : location.pathname.startsWith(item.href);
@@ -73,7 +88,7 @@ export function PortalLayout() {
         </div>
         {/* Mobile nav */}
         <div className="flex md:hidden overflow-x-auto border-t px-4 gap-1 py-1">
-          {navItems.map((item) => {
+          {navItems.filter((item) => !item.requiresAdmin || isClientAdmin(user?.role)).map((item) => {
             const isActive = item.href === '/portal'
               ? location.pathname === '/portal'
               : location.pathname.startsWith(item.href);

@@ -1,4 +1,7 @@
-export type UserRole = 'owner' | 'finance_admin' | 'ops_manager' | 'client' | 'readonly';
+// Sam (2026-05-27 portal meeting): 'client_admin' added so each client's
+// own admin can self-serve user management + agreement upload from inside
+// /portal — see Sato-Backend migration 0035 + portal.service.ts.
+export type UserRole = 'owner' | 'finance_admin' | 'ops_manager' | 'client' | 'client_admin' | 'readonly';
 
 export interface User {
   id: string;

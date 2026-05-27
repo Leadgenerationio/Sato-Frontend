@@ -65,8 +65,24 @@ vi.mock('@/lib/hooks/use-clients', async () => {
     useRemoveClientDocument: () => ({ mutateAsync: vi.fn(), isPending: false }),
     useClientInvoices: () => ({ data: { invoices: [] }, isLoading: false, isError: false }),
     useSyncClientInvoices: () => ({ mutateAsync: vi.fn(), isPending: false }),
+    // Sam (2026-05-27): admin-side "Mark as signed (external)" override
+    // on the onboarding strip uses useUpdateClient. Stub it so the test
+    // doesn't try to hit the network.
+    useUpdateClient: () => ({ mutateAsync: vi.fn(), isPending: false }),
   };
 });
+
+// PortalUsersCard on client detail uses useAuth + fetches /api/v1/users.
+// Mock both so the test doesn't try to make real network calls.
+vi.mock('@/components/providers/auth-provider', () => ({
+  useAuth: () => ({
+    user: { id: '1', email: 'owner@stato.app', name: 'Owner', role: 'owner', isActive: true, businessId: null, clientId: null },
+    token: 'test',
+    loading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
 
 vi.mock('@/lib/hooks/use-client-campaigns', () => ({
   useClientCampaigns: () => ({ data: [], isLoading: false }),

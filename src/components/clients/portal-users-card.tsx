@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/shared/empty-state';
-import { UserPlus, Users, Mail, Loader2, ShieldCheck, ShieldOff } from 'lucide-react';
+import { UserPlus, Users, Mail, Loader2, ShieldCheck, ShieldOff, Crown, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/providers/auth-provider';
 import { API_URL } from '@/lib/env';
@@ -51,8 +51,11 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
       });
       const data: ApiResponse<{ users: PortalUser[] }> = await res.json();
       if (data.status === 'success' && data.data) {
-        // BE doesn't filter — narrow to client-role users tied to THIS client.
-        setUsers(data.data.users.filter((u) => u.role === 'client' && u.clientId === clientId));
+        // BE doesn't filter — narrow to portal-role users (client OR
+        // client_admin) tied to THIS client.
+        setUsers(data.data.users.filter(
+          (u) => (u.role === 'client' || u.role === 'client_admin') && u.clientId === clientId,
+        ));
       }
     } catch (err) {
       logError('fetchPortalUsers failed', err);
@@ -60,6 +63,39 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
       setLoading(false);
     }
   }, [token, clientId]);
+
+  // Sam (2026-05-27 portal meeting): promote/demote a portal user
+  // between role=client and role=client_admin. client_admin gains the
+  // ability to manage portal users + upload externally-signed
+  // agreement from inside /portal, so they don't have to go through Sam.
+  const [promoting, setPromoting] = useState<string | null>(null);
+  async function togglePromotion(user: PortalUser) {
+    const nextRole: UserRole = user.role === 'client_admin' ? 'client' : 'client_admin';
+    setPromoting(user.id);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/users/${user.id}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role: nextRole }),
+      });
+      const data: ApiResponse<unknown> = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        toast.error(data.message || 'Failed to change role');
+        return;
+      }
+      toast.success(
+        nextRole === 'client_admin'
+          ? `${user.name} promoted — they can now manage portal users + upload agreement`
+          : `${user.name} demoted to standard portal user`,
+      );
+      fetchUsers();
+    } catch (err) {
+      logError('togglePromotion failed', err);
+      toast.error('Failed to change role');
+    } finally {
+      setPromoting(null);
+    }
+  }
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -132,7 +168,9 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
             />
           ) : (
             <div className="space-y-3">
-              {users.map((u) => (
+              {users.map((u) => {
+                const isAdmin = u.role === 'client_admin';
+                return (
                 <div
                   key={u.id}
                   className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3"
@@ -140,6 +178,15 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-medium">{u.name}</p>
+                      {isAdmin ? (
+                        <Badge className="bg-amber-500/10 text-amber-700 border-amber-200 text-xs">
+                          <Crown className="size-3 mr-1" /> Client admin
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">
+                          <UserIcon className="size-3 mr-1" /> Portal user
+                        </Badge>
+                      )}
                       {u.isActive ? (
                         <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-200 text-xs">
                           <ShieldCheck className="size-3 mr-1" /> Active
@@ -150,13 +197,32 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                         </Badge>
                       )}
                     </div>
+                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                      <Mail className="size-3" />
+                      {u.email}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Mail className="size-3" />
-                    {u.email}
-                  </div>
+                  {/* Sam (2026-05-27): promote/demote toggle. Client admin
+                      can self-serve user management + agreement upload
+                      from inside /portal — the new client-side surface
+                      designed in this round. */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => togglePromotion(u)}
+                    disabled={promoting === u.id}
+                    title={isAdmin ? 'Demote to standard portal user' : 'Promote to client admin'}
+                  >
+                    {promoting === u.id
+                      ? <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                      : isAdmin
+                        ? <UserIcon className="size-3.5 mr-1.5" />
+                        : <Crown className="size-3.5 mr-1.5" />}
+                    {isAdmin ? 'Demote' : 'Make admin'}
+                  </Button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
