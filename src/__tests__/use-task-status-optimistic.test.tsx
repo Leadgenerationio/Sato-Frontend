@@ -17,7 +17,10 @@ vi.mock('@/lib/api', async () => {
       get: vi.fn(),
       post: vi.fn(),
       put: vi.fn(),
-      patch: vi.fn().mockResolvedValue({ data: { status: 'success', data: { task: { id: 't-1', status: 'completed' } } } }),
+      // api.patch resolves to ApiResponse<T> = { status, data: T } directly
+      // (no outer `data` wrapper). The hook does unwrap(res).task so the
+      // task object must live at res.data.task.
+      patch: vi.fn().mockResolvedValue({ status: 'success', data: { task: { id: 't-1', status: 'completed' } } }),
       delete: vi.fn(),
     },
   };
@@ -105,6 +108,13 @@ describe('useUpdateTaskStatus — optimistic cache update', () => {
     const initial: PaginatedTasks = { tasks: [task], total: 1, page: 1, pageSize: 50 };
     qc.setQueryData(['tasks', listFilters], initial);
     qc.setQueryData(['tasks', boardFilters], initial);
+
+    // Override the suite-wide default patch mock so the server response
+    // matches this test's intent (in_progress, not the default completed).
+    vi.mocked(api.patch).mockResolvedValueOnce({
+      status: 'success',
+      data: { task: { ...task, status: 'in_progress' } },
+    } as Awaited<ReturnType<typeof api.patch>>);
 
     const { result } = renderHook(() => useUpdateTaskStatus(), { wrapper: makeWrapper(qc) });
 

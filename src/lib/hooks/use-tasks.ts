@@ -88,6 +88,9 @@ export interface TaskDetail extends TaskSummary {
 export interface TaskStats {
   total: number;
   inProgress: number;
+  // Sam — 27 May 2026: dashboard widget needs On Hold count so the
+  // BlockView tile mirrors the board's 4 columns.
+  onHold: number;
   completedToday: number;
   overdue: number;
 }
@@ -298,6 +301,15 @@ export function useTaskChildren(taskId: string) {
 // cached ['tasks', filters] list + ['task', id] detail immediately; on
 // failure we restore the snapshot. Mirrors the bank-feed optimistic
 // pattern (see use-bank-feed.ts).
+//
+// Sam — 27 May 2026 — "drag and drop is still taking time to load — need
+// to do it twice." Same race as the subtask hook had: onSettled used to
+// qc.invalidateQueries(['tasks']) + (['task', id]) which kicked a refetch
+// that could land between the user's next drag's optimistic flip and the
+// next PATCH, stomping it with the pre-second-drag server state. Replaced
+// with onSuccess that writes the server response straight into the cache.
+// task-stats is still invalidated (the stats query doesn't share a row
+// with the cards being dragged so there's no stomp risk).
 export function useUpdateTaskStatus() {
   const qc = useQueryClient();
   return useMutation({
@@ -333,10 +345,25 @@ export function useUpdateTaskStatus() {
         qc.setQueryData(['task', id], context.detailSnapshot);
       }
     },
-    onSettled: async (_data, _err, { id }) => {
-      await qc.invalidateQueries({ queryKey: ['tasks'] });
-      await qc.invalidateQueries({ queryKey: ['task', id] });
-      await qc.invalidateQueries({ queryKey: ['task-stats'] });
+    // No invalidate-refetch — write server response directly so a slow
+    // refetch can't race with the next drag and stomp it.
+    onSuccess: (server) => {
+      // Update every cached ['tasks', filters] list that contains this row.
+      const listSnapshots = qc.getQueriesData<PaginatedTasks>({ queryKey: ['tasks'] });
+      for (const [key, old] of listSnapshots) {
+        if (!old) continue;
+        const nextRows = old.tasks.map((t) =>
+          t.id === server.id ? { ...t, status: server.status } : t,
+        );
+        qc.setQueryData(key, { ...old, tasks: nextRows });
+      }
+      // Update the detail cache for this task.
+      qc.setQueryData<TaskDetail>(['task', server.id], (prev) =>
+        prev ? { ...prev, status: server.status } : prev,
+      );
+      // Stats card just needs a fresh count; safe to invalidate (no
+      // optimistic state in the stats query to stomp).
+      qc.invalidateQueries({ queryKey: ['task-stats'] });
     },
   });
 }

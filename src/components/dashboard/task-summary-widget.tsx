@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckSquare, Clock, AlertTriangle, CheckCircle2, ExternalLink } from 'lucide-react';
+import { CheckSquare, Clock, AlertTriangle, CheckCircle2, ExternalLink, PauseCircle } from 'lucide-react';
 import { useTaskStats } from '@/lib/hooks/use-tasks';
 
 export function TaskSummaryWidget() {
@@ -22,8 +22,11 @@ export function TaskSummaryWidget() {
 
   if (!stats) return null;
 
+  // Sam — 27 May 2026: On Hold added to mirror the board's 4 columns.
+  // Order matches the board left→right: In Progress · On Hold · Completed Today · Overdue.
   const items = [
     { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+    { label: 'On Hold', value: stats.onHold, icon: PauseCircle, color: 'text-amber-600', bg: 'bg-amber-500/10' },
     { label: 'Completed Today', value: stats.completedToday, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
     { label: 'Overdue', value: stats.overdue, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-500/10' },
   ];

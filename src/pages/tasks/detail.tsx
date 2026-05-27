@@ -89,22 +89,9 @@ const priorityColors: Record<string, string> = {
   low: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
-const STATUS_TRANSITIONS: Record<string, { label: string; next: string }[]> = {
-  todo: [
-    { label: 'Start', next: 'in_progress' },
-    { label: 'Hold', next: 'on_hold' },
-  ],
-  in_progress: [
-    { label: 'Complete', next: 'completed' },
-    { label: 'Hold', next: 'on_hold' },
-  ],
-  on_hold: [
-    { label: 'Resume', next: 'in_progress' },
-  ],
-  completed: [
-    { label: 'Reopen', next: 'todo' },
-  ],
-};
+// STATUS_TRANSITIONS removed 27 May 2026 — the Actions section now uses
+// a free status dropdown so users can move between any pair of statuses
+// without being constrained to the curated edges.
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '--';
@@ -216,8 +203,6 @@ export function TaskDetailPage() {
       </div>
     );
   }
-
-  const transitions = STATUS_TRANSITIONS[task.status] || [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -406,28 +391,38 @@ export function TaskDetailPage() {
           {/* Activity feed (Sam #88) */}
           <ActivityCard activity={task.activity ?? []} />
 
-          {/* Status Actions */}
-          {transitions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {transitions.map((t) => (
-                  <Button
-                    key={t.next}
-                    variant={t.next === 'completed' ? 'default' : 'outline'}
-                    className="w-full"
-                    disabled={updateStatus.isPending}
-                    onClick={() => handleStatusChange(t.next)}
-                  >
-                    {updateStatus.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
-                    {t.label}
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+          {/* Status Actions — Sam (27 May 2026): "change Actions to dropdown."
+              Replaces the previous N Start/Hold/Resume/Complete/Reopen buttons
+              with a single status picker mirroring the list view's inline
+              dropdown. User can move freely between any pair of statuses,
+              not just the curated STATUS_TRANSITIONS edges. */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <label className="sr-only" htmlFor="task-status-picker">
+                Change task status
+              </label>
+              <select
+                id="task-status-picker"
+                value={task.status}
+                disabled={updateStatus.isPending}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm capitalize disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="todo">To Do</option>
+                <option value="in_progress">In Progress</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+              </select>
+              {updateStatus.isPending && (
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="size-3 animate-spin" /> Saving…
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
