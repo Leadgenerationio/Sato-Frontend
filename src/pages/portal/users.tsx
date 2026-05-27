@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/shared/empty-state';
-import { UserPlus, Users as UsersIcon, Mail, Loader2, Crown, User as UserIcon, ShieldCheck, ShieldOff } from 'lucide-react';
+import { UserPlus, Users as UsersIcon, Mail, Loader2, Crown, User as UserIcon, ShieldCheck, ShieldOff, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/providers/auth-provider';
 import { API_URL } from '@/lib/env';
@@ -40,6 +40,9 @@ export function PortalUsersPage() {
   const [addForm, setAddForm] = useState({ name: '', email: '', password: '', makeAdmin: false });
   const [addError, setAddError] = useState('');
   const [addLoading, setAddLoading] = useState(false);
+
+  const [removeTarget, setRemoveTarget] = useState<PortalUser | null>(null);
+  const [removeLoading, setRemoveLoading] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -95,6 +98,30 @@ export function PortalUsersPage() {
     }
   }
 
+  async function handleRemove() {
+    if (!removeTarget) return;
+    setRemoveLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/portal/users/${removeTarget.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data: ApiResponse<unknown> = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        toast.error(data.message || 'Failed to remove user');
+        return;
+      }
+      toast.success(`Portal user removed — ${removeTarget.email}`);
+      setRemoveTarget(null);
+      fetchUsers();
+    } catch (err) {
+      logError('deletePortalUser (portal) failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to remove user');
+    } finally {
+      setRemoveLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -138,6 +165,7 @@ export function PortalUsersPage() {
             <div className="space-y-3">
               {users.map((u) => {
                 const isAdmin = u.role === 'client_admin';
+                const canRemove = currentUser?.role === 'client_admin' && !u.isYou;
                 return (
                   <div
                     key={u.id}
@@ -173,6 +201,18 @@ export function PortalUsersPage() {
                         {u.email}
                       </div>
                     </div>
+                    {canRemove && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setRemoveTarget(u)}
+                        title="Remove user"
+                        aria-label={`Remove ${u.email}`}
+                        className="text-muted-foreground hover:text-red-600"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    )}
                   </div>
                 );
               })}
@@ -265,6 +305,28 @@ export function PortalUsersPage() {
           access if you need to manage other users.
         </p>
       )}
+
+      <Dialog open={removeTarget !== null} onOpenChange={(o) => { if (!o) setRemoveTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove portal user?</DialogTitle>
+            <DialogDescription>
+              {removeTarget?.name} ({removeTarget?.email}) will lose access to this portal
+              immediately. This can't be undone — you'd need to add them again with a new
+              password.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRemoveTarget(null)} disabled={removeLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleRemove} disabled={removeLoading} className="bg-red-600 hover:bg-red-700 text-white">
+              {removeLoading ? <Loader2 className="size-4 mr-1.5 animate-spin" /> : <Trash2 className="size-4 mr-1.5" />}
+              Remove user
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
