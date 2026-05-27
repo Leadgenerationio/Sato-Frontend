@@ -17,6 +17,11 @@ export interface TaskSummary {
   // Sam-Loom (jam-video #2) — surfaced so the list view can indent children
   // under their parent and the board card can show a "↪ Parent" hint.
   parentTaskId?: string | null;
+  // Sam-Loom #2 follow-up — parent's title is always populated by the BE so
+  // the FE can render "↪ Parent: <title>" even when the parent task is on
+  // a different page of the result set (otherwise pagination silently
+  // breaks the visual link).
+  parentTitle?: string | null;
 }
 
 export interface TaskComment {

@@ -182,13 +182,15 @@ function DraggableCard({
               <Trash2 className="size-3.5 text-red-600" />
             </Button>
           </div>
-          {parentTitle && (
+          {(parentTitle || task.parentTitle) && (
             // Sam-Loom #2 — surfaces the parent → child link on the card so
             // "I wouldn't know these two are connected while looking at a
             // screen" becomes "↪ Parent: Foo" with the arrow as a visual cue.
+            // Prefer the in-page title (cached freshness), fall back to the
+            // BE-provided field for cross-page parents.
             <p className="flex items-center gap-1 text-[10px] text-muted-foreground italic">
               <CornerDownRight className="size-3" />
-              <span className="truncate">{parentTitle}</span>
+              <span className="truncate">{parentTitle ?? task.parentTitle}</span>
             </p>
           )}
           <div className="flex items-center gap-2 flex-wrap">
@@ -374,8 +376,10 @@ export function TasksPage() {
   }, [rawTasks, dueFilter, timeFilter]);
 
   // Sam-Loom #2 — parent → title lookup for the board card hint. Built from
-  // whatever's currently loaded; an off-page parent silently degrades to no
-  // hint (cheaper than a separate fetch per orphan).
+  // whatever's on the current page (used to decide indentation in the list
+  // view). The BE now populates `parentTitle` on each row directly, so
+  // off-page parents still get the "↪ <title>" hint — this map only covers
+  // the indent grouping case where parent + child are co-resident.
   const parentTitleById = useMemo(() => {
     const map = new Map<string, string>();
     for (const t of rawTasks) map.set(t.id, t.title);
@@ -696,10 +700,22 @@ export function TasksPage() {
                         style={{ paddingLeft: depth === 1 ? '2.25rem' : undefined }}
                       >
                         {/* Sam-Loom #2 — child rows indent + show a corner glyph so
-                            the parent/child relationship reads at a glance. */}
-                        <span className="inline-flex items-center gap-1.5">
-                          {depth === 1 && <CornerDownRight className="size-3.5 text-muted-foreground shrink-0" />}
-                          <span className="truncate">{t.title}</span>
+                            the parent/child relationship reads at a glance.
+                            Pagination edge case: when the parent is on a different
+                            page, depth stays 0 but parentTitle is still populated by
+                            the BE — render a small italic hint so the link still
+                            reads on screen. */}
+                        <span className="inline-flex flex-col gap-0.5">
+                          <span className="inline-flex items-center gap-1.5">
+                            {depth === 1 && <CornerDownRight className="size-3.5 text-muted-foreground shrink-0" />}
+                            <span className="truncate">{t.title}</span>
+                          </span>
+                          {depth === 0 && t.parentTaskId && t.parentTitle && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground italic">
+                              <CornerDownRight className="size-3 shrink-0" />
+                              <span className="truncate">{t.parentTitle}</span>
+                            </span>
+                          )}
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{t.assignee}</TableCell>
