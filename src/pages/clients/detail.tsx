@@ -26,6 +26,7 @@ import {
   type ClientCampaignLink,
 } from '@/lib/hooks/use-client-campaigns';
 import { AddCampaignDialog } from '@/components/clients/add-campaign-dialog';
+import { PortalUsersCard } from '@/components/clients/portal-users-card';
 import {
   Table,
   TableHeader,
@@ -352,6 +353,10 @@ export function ClientDetailPage() {
                 )}
               </CardContent>
             </Card>
+            {/* Sam (27 May 2026 meeting): "we have multiple people that we
+                need to provide access to this account." Adds the portal
+                users management card to every client detail Overview tab. */}
+            <PortalUsersCard clientId={client.id} clientName={client.companyName} />
             {client.notes && (
               <Card className="lg:col-span-2">
                 <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
