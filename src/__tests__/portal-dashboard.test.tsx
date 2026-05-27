@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,27 +8,38 @@ vi.mock('@/components/providers/auth-provider', () => ({
   useAuth: () => ({ user: { id: '1', email: 'owner@stato.app', name: 'Owner', role: 'owner', isActive: true, businessId: null, clientId: null }, token: 'test', loading: false, login: vi.fn(), logout: vi.fn() }),
 }));
 
-vi.mock('@/lib/hooks/use-portal', () => ({
-  usePortalDashboard: () => ({
-    data: {
-      companyName: 'Apex Media Ltd',
-      activeCampaigns: 3,
-      totalLeadsThisMonth: 1250,
-      totalLeadsAllTime: 15400,
-      pendingInvoices: 2,
-      overdueInvoices: 1,
-      totalOutstanding: 4800,
-      agreementSigned: true,
-      recentLeads: [
-        { date: '2026-04-01', leads: 45 },
-        { date: '2026-04-02', leads: 62 },
-        { date: '2026-04-03', leads: 38 },
-      ],
-    },
-    isLoading: false,
-    error: null,
-  }),
+// Mutable fixture so individual tests can flip clientType / adSpendByPlatform /
+// agreement fields. The hoisted object is shared by reference with the mock.
+const { dashboardFixture, updateStatusMock } = vi.hoisted(() => ({
+  dashboardFixture: {
+    companyName: 'Apex Media Ltd',
+    clientType: 'ppl' as 'ppl' | 'managed',
+    activeCampaigns: 3,
+    totalLeadsThisMonth: 1250,
+    totalLeadsAllTime: 15400,
+    pendingInvoices: 2,
+    overdueInvoices: 1,
+    totalOutstanding: 4800,
+    agreementSigned: false,
+    agreementStatus: 'pending' as 'pending' | 'sent' | 'signed',
+    canManageAgreement: false,
+    recentLeads: [
+      { date: '2026-04-01', leads: 45 },
+      { date: '2026-04-02', leads: 62 },
+      { date: '2026-04-03', leads: 38 },
+    ],
+    adSpendByPlatform: [] as Array<{ platform: string; spend: number; currency: string }>,
+  },
+  updateStatusMock: vi.fn().mockResolvedValue({ agreementStatus: 'signed', agreementSigned: true }),
 }));
+
+vi.mock('@/lib/hooks/use-portal', () => ({
+  usePortalDashboard: () => ({ data: dashboardFixture, isLoading: false, error: null }),
+  useUpdateAgreementStatus: () => ({ mutateAsync: updateStatusMock, isPending: false }),
+  PORTAL_AGREEMENT_STATUSES: ['pending', 'sent', 'signed'],
+}));
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
@@ -50,6 +61,18 @@ function renderPage() {
 }
 
 describe('PortalDashboardPage', () => {
+  beforeEach(() => {
+    // Reset to the default PPL fixture before each test so per-test mutations
+    // don't leak.
+    dashboardFixture.clientType = 'ppl';
+    dashboardFixture.adSpendByPlatform = [];
+    dashboardFixture.agreementSigned = false;
+    dashboardFixture.agreementStatus = 'pending';
+    dashboardFixture.canManageAgreement = false;
+    updateStatusMock.mockClear();
+    updateStatusMock.mockResolvedValue({ agreementStatus: 'signed', agreementSigned: true });
+  });
+
   it('renders company name', () => {
     renderPage();
     expect(screen.getByText('Apex Media Ltd')).toBeInTheDocument();
@@ -74,5 +97,113 @@ describe('PortalDashboardPage', () => {
   it('renders lead delivery chart heading', () => {
     renderPage();
     expect(screen.getByText('Recent Lead Deliveries')).toBeInTheDocument();
+  });
+
+  // Ad spend — managed clients only (feature: portal ad spend for managed clients).
+  it('does NOT render the Ad Spend card for a PPL client', () => {
+    dashboardFixture.clientType = 'ppl';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
+    ];
+    renderPage();
+    // Even if the API somehow returned spend, the PPL gate must hide it.
+    expect(screen.queryByText('Ad Spend')).not.toBeInTheDocument();
+    expect(screen.queryByText('Facebook Ads')).not.toBeInTheDocument();
+  });
+
+  it('renders the per-platform Ad Spend card with a total for a managed client', () => {
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
+      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
+    ];
+    renderPage();
+    expect(screen.getByText('Ad Spend')).toBeInTheDocument();
+    expect(screen.getByText('Google Ads')).toBeInTheDocument();
+    expect(screen.getByText('Facebook Ads')).toBeInTheDocument();
+    // Per-platform figures + the £420.50 total are all rendered.
+    expect(screen.getByText('£300.00')).toBeInTheDocument();
+    expect(screen.getByText('£120.50')).toBeInTheDocument();
+    expect(screen.getByText('£420.50')).toBeInTheDocument();
+  });
+
+  it('renders non-GBP spend with the correct currency symbol', () => {
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Google Ads', spend: 300, currency: 'USD' },
+    ];
+    renderPage();
+    // en-GB locale renders USD as "US$300.00" — the point is it's NOT £300,
+    // i.e. currency comes from the row, not a hardcoded GBP.
+    expect(screen.getAllByText('US$300.00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('£300.00')).not.toBeInTheDocument();
+  });
+
+  it('renders a separate Total per currency and never sums across currencies', () => {
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
+      { platform: 'Facebook Ads', spend: 50, currency: 'USD' },
+    ];
+    renderPage();
+    // £120.50 shows twice (the single GBP row + its GBP total); US$50.00 once.
+    expect(screen.getAllByText('£120.50').length).toBe(2);
+    expect(screen.getAllByText('US$50.00').length).toBe(2);
+    // Critically: no cross-currency mega-total.
+    expect(screen.queryByText('£170.50')).not.toBeInTheDocument();
+    expect(screen.queryByText(/170\.50/)).not.toBeInTheDocument();
+    // One "Total" label per currency.
+    expect(screen.getAllByText('Total')).toHaveLength(2);
+  });
+
+  it('shows an empty state on the Ad Spend card for a managed client with no spend', () => {
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [];
+    renderPage();
+    expect(screen.getByText('Ad Spend')).toBeInTheDocument();
+    expect(screen.getByText('No ad spend this month')).toBeInTheDocument();
+  });
+
+  // Agreement status manual override — client-admin only.
+  it('does NOT render the agreement status control for a non-admin', () => {
+    dashboardFixture.canManageAgreement = false;
+    renderPage();
+    expect(screen.queryByText('Agreement status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /agreement status/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the agreement status control for a client admin', () => {
+    dashboardFixture.canManageAgreement = true;
+    dashboardFixture.agreementStatus = 'pending';
+    renderPage();
+    expect(screen.getByText('Agreement status')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /agreement status/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /update status/i })).toBeInTheDocument();
+  });
+
+  it('requires confirmation and then calls the mutation with the chosen status', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    dashboardFixture.canManageAgreement = true;
+    dashboardFixture.agreementStatus = 'pending';
+    renderPage();
+
+    // Pick "signed", open the confirm dialog.
+    fireEvent.change(screen.getByRole('combobox', { name: /agreement status/i }), { target: { value: 'signed' } });
+    fireEvent.click(screen.getByRole('button', { name: /update status/i }));
+
+    // Confirmation step (AC #4) — mutation not called until confirmed.
+    expect(screen.getByText('Change agreement status?')).toBeInTheDocument();
+    expect(updateStatusMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm change/i }));
+    expect(updateStatusMock).toHaveBeenCalledWith('signed');
+  });
+
+  it('disables Update when the selected status equals the current one', () => {
+    dashboardFixture.canManageAgreement = true;
+    dashboardFixture.agreementStatus = 'signed';
+    renderPage();
+    // Default selection mirrors current ('signed') → nothing to change.
+    expect(screen.getByRole('button', { name: /update status/i })).toBeDisabled();
   });
 });

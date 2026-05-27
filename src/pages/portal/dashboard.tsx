@@ -1,14 +1,120 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3, Wallet, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { usePortalDashboard } from '@/lib/hooks/use-portal';
+import {
+  usePortalDashboard,
+  useUpdateAgreementStatus,
+  PORTAL_AGREEMENT_STATUSES,
+  type PortalAgreementStatus,
+} from '@/lib/hooks/use-portal';
 import { EmptyState } from '@/components/shared/empty-state';
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
+const STATUS_LABELS: Record<PortalAgreementStatus, string> = {
+  pending: 'Pending',
+  sent: 'Sent',
+  signed: 'Signed',
+};
+
+// Client-admin-only control to correct the agreement status (e.g. for an
+// agreement signed outside Stato). A confirmation dialog gates the write
+// (AC #4). Non-admins never render this — the dashboard's Agreement stat card
+// already shows the status read-only for them.
+function AgreementStatusManager({ current }: { current: PortalAgreementStatus }) {
+  const [selected, setSelected] = useState<PortalAgreementStatus>(current);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const updateStatus = useUpdateAgreementStatus();
+
+  const apply = async () => {
+    try {
+      await updateStatus.mutateAsync(selected);
+      toast.success(`Agreement status updated to "${STATUS_LABELS[selected]}".`);
+      setConfirmOpen(false);
+    } catch {
+      toast.error('Could not update agreement status. Please try again.');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Agreement status</CardTitle>
+        <CardDescription>
+          Signed outside Stato? Update the status here so your dashboard reflects reality.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm text-muted-foreground">Current:</span>
+          <Badge variant="secondary">{STATUS_LABELS[current]}</Badge>
+          <select
+            aria-label="Agreement status"
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value as PortalAgreementStatus)}
+          >
+            {PORTAL_AGREEMENT_STATUSES.map((s) => (
+              <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={selected === current}
+            onClick={() => setConfirmOpen(true)}
+          >
+            Update status
+          </Button>
+        </div>
+      </CardContent>
+
+      <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setConfirmOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change agreement status?</DialogTitle>
+            <DialogDescription>
+              This will change your agreement status from <strong>{STATUS_LABELS[current]}</strong> to{' '}
+              <strong>{STATUS_LABELS[selected]}</strong>. This action is recorded.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={updateStatus.isPending}>
+              Cancel
+            </Button>
+            <Button onClick={apply} disabled={updateStatus.isPending}>
+              {updateStatus.isPending && <Loader2 className="size-4 animate-spin" />}
+              Confirm change
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+function formatCurrency(value: number, currency = 'GBP') {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
+}
+
+// Sum ad-spend rows into one total per currency, preserving the (spend-desc)
+// order the API already returned — first-seen currency wins. Never sums
+// across currencies.
+function totalsByCurrency(
+  rows: { spend: number; currency: string }[],
+): { currency: string; total: number }[] {
+  const order: string[] = [];
+  const totals = new Map<string, number>();
+  for (const r of rows) {
+    if (!totals.has(r.currency)) order.push(r.currency);
+    totals.set(r.currency, (totals.get(r.currency) ?? 0) + r.spend);
+  }
+  return order.map((currency) => ({ currency, total: totals.get(currency)! }));
 }
 
 function StatCard({
@@ -95,6 +201,12 @@ export function PortalDashboardPage() {
         />
       </div>
 
+      {/* Client admins get an inline control to correct the agreement status.
+          Non-admins see only the read-only Agreement stat card above. */}
+      {data.canManageAgreement && (
+        <AgreementStatusManager current={data.agreementStatus ?? (data.agreementSigned ? 'signed' : 'pending')} />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Recent Lead Deliveries</CardTitle>
@@ -122,6 +234,46 @@ export function PortalDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Ad spend — managed clients only. PPL clients never render this block,
+          so there's no behaviour change for them. Per-platform, current month,
+          consistent with the "Leads This Month" window above. */}
+      {data.clientType === 'managed' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ad Spend</CardTitle>
+            <CardDescription>By platform · this month</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!data.adSpendByPlatform || data.adSpendByPlatform.length === 0 ? (
+              <EmptyState
+                icon={Wallet}
+                title="No ad spend this month"
+                description="Once ad spend is recorded against your campaigns this month, the per-platform breakdown will appear here."
+              />
+            ) : (
+              <div className="divide-y">
+                {data.adSpendByPlatform.map((row) => (
+                  <div key={`${row.platform}-${row.currency}`} className="flex items-center justify-between py-2.5">
+                    <span className="text-sm">{row.platform}</span>
+                    <span className="text-sm font-medium tabular-nums">{formatCurrency(row.spend, row.currency)}</span>
+                  </div>
+                ))}
+                {/* Totals per currency — a client running ads in more than one
+                    currency gets one Total line each, since spend in different
+                    currencies can't be summed into a single figure. The common
+                    single-currency case renders exactly one "Total" line. */}
+                {totalsByCurrency(data.adSpendByPlatform).map(({ currency, total }) => (
+                  <div key={currency} className="flex items-center justify-between pt-2.5 font-semibold">
+                    <span className="text-sm">Total</span>
+                    <span className="text-sm tabular-nums">{formatCurrency(total, currency)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
