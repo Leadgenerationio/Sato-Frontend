@@ -94,11 +94,11 @@ export function PortalLayout() {
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
+                      'flex items-center gap-2 rounded-md px-3 py-2 text-sm whitespace-nowrap transition-colors',
                       isActive ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                     )}
                   >
-                    <item.icon className="size-4" />
+                    <item.icon className="size-4 shrink-0" />
                     {item.label}
                   </Link>
                 );
