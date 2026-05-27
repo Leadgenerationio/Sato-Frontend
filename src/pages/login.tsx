@@ -8,21 +8,10 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  Shield,
-  Zap,
-  TrendingUp,
   Lock,
-  Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo, LogoWhite } from '@/components/shared/logo';
-
-const features = [
-  { icon: TrendingUp, title: 'Real-time Analytics', desc: 'Track revenue, leads and campaigns live' },
-  { icon: Shield, title: 'Role-Based Access', desc: '5 roles with granular permissions' },
-  { icon: Zap, title: 'Automated Workflows', desc: 'Invoicing, chasing and delivery on autopilot' },
-  { icon: TrendingUp, title: 'Financial Insights', desc: 'P&L, VAT reports and cash flow tracking' },
-];
 
 export function LoginPage() {
   const { user, login } = useAuth();
@@ -74,52 +63,13 @@ export function LoginPage() {
           }}
         />
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 w-full">
-
-          {/* Logo */}
+        {/* Sam (27 May 2026): asked for a minimal login page — keep only
+            the logo on the left, drop the hero copy / feature cards /
+            stats. Centered logo reads as professional brand mark for
+            client-facing demos. */}
+        <div className="relative z-10 flex items-center justify-center p-12 xl:p-16 w-full">
           <div className="animate-slide-up">
             <LogoWhite size="md" />
-          </div>
-
-          {/* Hero */}
-          <div className="max-w-lg">
-            <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight animate-slide-up delay-100">
-              Everything your business needs.{' '}
-              <span className="text-neutral-400">One platform.</span>
-            </h1>
-
-            <p className="mt-6 text-base text-neutral-400 leading-relaxed animate-slide-up delay-200">
-              Manage clients, campaigns, invoicing, and operations from a single dashboard built for lead generation businesses.
-            </p>
-
-            {/* Features */}
-            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {features.map((feature, i) => (
-                <div
-                  key={feature.title}
-                  className={`group rounded-xl bg-white/[0.04] border border-white/[0.06] p-5 transition-all duration-300 hover:bg-white/[0.08] hover:border-white/10 hover:scale-[1.02] animate-slide-up delay-${(i + 3) * 100}`}
-                >
-                  <feature.icon className="size-5 text-neutral-500 mb-3 group-hover:text-white transition-colors" />
-                  <p className="text-sm font-medium text-white">{feature.title}</p>
-                  <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{feature.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center gap-10 animate-fade-in delay-800">
-            {[
-              { label: 'Active Clients', value: '200+' },
-              { label: 'Leads Delivered', value: '50K+' },
-              { label: 'Revenue Tracked', value: '$2M+' },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
-                <p className="text-xs text-neutral-500 mt-1">{stat.label}</p>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -215,35 +165,10 @@ export function LoginPage() {
               </form>
             </div>
 
-            {/* Need access? */}
-            <div className="px-8 pb-8 animate-slide-up delay-500">
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 text-center">
-                <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-white shadow-sm">
-                  <Mail className="size-5 text-neutral-600" />
-                </div>
-                <p className="mt-3 text-sm font-medium text-neutral-800">
-                  Need an account?
-                </p>
-                <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
-                  Stato is currently invite-only.
-                  <br />
-                  Contact the Octogle Team to be added to your business.
-                </p>
-                <a
-                  href="mailto:hello@octogle.com?subject=Stato%20access%20request"
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-800 transition-colors hover:border-neutral-900"
-                >
-                  <Mail className="size-3.5" />
-                  Email the Octogle Team
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-8 flex items-center justify-center text-xs text-neutral-600 animate-fade-in delay-800">
-            <Logo size="sm" showText={false} className="opacity-30 scale-75" />
-            <span className="ml-1">Stato Business Management</span>
+            {/* Sam (27 May 2026) — removed the "Need an account? Contact
+                the Octogle Team" panel. Client-facing demo wants a clean
+                Stato-only login. */}
+            <div className="pb-2" />
           </div>
         </div>
       </main>
