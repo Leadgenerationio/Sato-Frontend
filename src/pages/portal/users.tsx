@@ -186,6 +186,10 @@ export function PortalUsersPage() {
         return;
       }
       toast.success(`Portal user removed — ${removeTarget.email}`);
+      // Optimistic: drop the row immediately so the table reflects the
+      // delete on the same tick the dialog closes. fetchUsers() then
+      // reconciles with the server in the background.
+      setUsers((prev) => prev.filter((u) => u.id !== removeTarget.id));
       setRemoveTarget(null);
       fetchUsers();
     } catch (err) {
