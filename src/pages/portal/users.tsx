@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/shared/empty-state';
-import { UserPlus, Users as UsersIcon, Mail, Loader2, Crown, User as UserIcon, ShieldCheck, ShieldOff, Trash2 } from 'lucide-react';
+import { UserPlus, Users as UsersIcon, Mail, Loader2, Crown, User as UserIcon, ShieldCheck, ShieldOff, Trash2, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/providers/auth-provider';
 import { API_URL } from '@/lib/env';
@@ -21,6 +21,18 @@ import { logError } from '../../lib/log';
 // the agency touching anything. Scope is enforced server-side: a forged
 // request body can only ever operate on `req.user.clientId`.
 
+// Per-user tab visibility (Sam 27-May meeting). Dashboard + Account are
+// always shown — these are the opt-in extras the admin toggles per user.
+// Keep in sync with the BE PORTAL_TAB_SLUGS constant.
+export type PortalTabSlug = 'leads' | 'invoices' | 'compliance' | 'creatives' | 'agreement';
+export const PORTAL_TAB_OPTIONS: Array<{ slug: PortalTabSlug; label: string }> = [
+  { slug: 'leads', label: 'Leads' },
+  { slug: 'invoices', label: 'Invoices' },
+  { slug: 'compliance', label: 'Compliance' },
+  { slug: 'creatives', label: 'Creatives' },
+  { slug: 'agreement', label: 'Agreement' },
+];
+
 interface PortalUser {
   id: string;
   email: string;
@@ -29,6 +41,8 @@ interface PortalUser {
   isActive: boolean;
   isYou: boolean;
   createdAt: string;
+  // null = full access. non-null = the listed tabs (+ dashboard + account).
+  allowedTabs: PortalTabSlug[] | null;
 }
 
 export function PortalUsersPage() {
@@ -36,13 +50,23 @@ export function PortalUsersPage() {
   const [users, setUsers] = useState<PortalUser[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const allTabsAllowed: Record<PortalTabSlug, boolean> = {
+    leads: true, invoices: true, compliance: true, creatives: true, agreement: true,
+  };
   const [addOpen, setAddOpen] = useState(false);
-  const [addForm, setAddForm] = useState({ name: '', email: '', password: '', makeAdmin: false });
+  const [addForm, setAddForm] = useState<{
+    name: string; email: string; password: string; makeAdmin: boolean;
+    tabs: Record<PortalTabSlug, boolean>;
+  }>({ name: '', email: '', password: '', makeAdmin: false, tabs: { ...allTabsAllowed } });
   const [addError, setAddError] = useState('');
   const [addLoading, setAddLoading] = useState(false);
 
   const [removeTarget, setRemoveTarget] = useState<PortalUser | null>(null);
   const [removeLoading, setRemoveLoading] = useState(false);
+
+  const [permsTarget, setPermsTarget] = useState<PortalUser | null>(null);
+  const [permsTabs, setPermsTabs] = useState<Record<PortalTabSlug, boolean>>({ ...allTabsAllowed });
+  const [permsLoading, setPermsLoading] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -62,6 +86,10 @@ export function PortalUsersPage() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
+  function tabsRecordToArray(rec: Record<PortalTabSlug, boolean>): PortalTabSlug[] {
+    return PORTAL_TAB_OPTIONS.filter((t) => rec[t.slug]).map((t) => t.slug);
+  }
+
   async function handleAdd() {
     setAddError('');
     if (!addForm.name.trim() || !addForm.email.trim() || addForm.password.length < 6) {
@@ -70,6 +98,13 @@ export function PortalUsersPage() {
     }
     setAddLoading(true);
     try {
+      // makeAdmin ignores per-tab restrictions (admins always see all).
+      // For regular users we send the picked subset; if all are picked we
+      // send null = "full access" (stays backward-compat in the DB).
+      const picked = tabsRecordToArray(addForm.tabs);
+      const allowedTabs = addForm.makeAdmin
+        ? null
+        : (picked.length === PORTAL_TAB_OPTIONS.length ? null : picked);
       const res = await fetch(`${API_URL}/api/v1/portal/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -78,6 +113,7 @@ export function PortalUsersPage() {
           name: addForm.name.trim(),
           password: addForm.password,
           promoteAsClientAdmin: addForm.makeAdmin,
+          allowedTabs,
         }),
       });
       const data: ApiResponse<{ user: PortalUser }> = await res.json();
@@ -88,13 +124,51 @@ export function PortalUsersPage() {
       }
       toast.success(`Portal user added — ${addForm.email}`);
       setAddOpen(false);
-      setAddForm({ name: '', email: '', password: '', makeAdmin: false });
+      setAddForm({ name: '', email: '', password: '', makeAdmin: false, tabs: { ...allTabsAllowed } });
       fetchUsers();
     } catch (err) {
       logError('createPortalUser (portal) failed', err);
       setAddError(err instanceof Error ? err.message : 'Failed to add user');
     } finally {
       setAddLoading(false);
+    }
+  }
+
+  function openPermissions(u: PortalUser) {
+    setPermsTarget(u);
+    // Pre-fill from current allowedTabs (null = all on).
+    const initial: Record<PortalTabSlug, boolean> = { ...allTabsAllowed };
+    if (u.allowedTabs !== null) {
+      PORTAL_TAB_OPTIONS.forEach((t) => { initial[t.slug] = u.allowedTabs!.includes(t.slug); });
+    }
+    setPermsTabs(initial);
+  }
+
+  async function handleUpdatePermissions() {
+    if (!permsTarget) return;
+    setPermsLoading(true);
+    try {
+      const picked = tabsRecordToArray(permsTabs);
+      // Same encoding as create: all picked = null (full access).
+      const allowedTabs = picked.length === PORTAL_TAB_OPTIONS.length ? null : picked;
+      const res = await fetch(`${API_URL}/api/v1/portal/users/${permsTarget.id}/permissions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ allowedTabs }),
+      });
+      const data: ApiResponse<{ user: PortalUser }> = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        toast.error(data.message || 'Failed to update permissions');
+        return;
+      }
+      toast.success(`Permissions updated — ${permsTarget.email}`);
+      setPermsTarget(null);
+      fetchUsers();
+    } catch (err) {
+      logError('updatePortalUserPermissions failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update permissions');
+    } finally {
+      setPermsLoading(false);
     }
   }
 
@@ -166,6 +240,12 @@ export function PortalUsersPage() {
               {users.map((u) => {
                 const isAdmin = u.role === 'client_admin';
                 const canRemove = currentUser?.role === 'client_admin' && !u.isYou;
+                const canEditPerms = currentUser?.role === 'client_admin' && !isAdmin && !u.isYou;
+                const tabsSummary = isAdmin
+                  ? 'All tabs'
+                  : u.allowedTabs === null
+                    ? 'All tabs'
+                    : `${u.allowedTabs.length} of ${PORTAL_TAB_OPTIONS.length} tabs`;
                 return (
                   <div
                     key={u.id}
@@ -196,23 +276,42 @@ export function PortalUsersPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                        <Mail className="size-3" />
-                        {u.email}
+                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Mail className="size-3" />
+                          {u.email}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Settings2 className="size-3" />
+                          {tabsSummary}
+                        </span>
                       </div>
                     </div>
-                    {canRemove && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => setRemoveTarget(u)}
-                        title="Remove user"
-                        aria-label={`Remove ${u.email}`}
-                        className="text-muted-foreground hover:text-red-600"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {canEditPerms && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openPermissions(u)}
+                          title="Edit permissions"
+                        >
+                          <Settings2 className="size-4 mr-1.5" />
+                          Permissions
+                        </Button>
+                      )}
+                      {canRemove && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setRemoveTarget(u)}
+                          title="Remove user"
+                          aria-label={`Remove ${u.email}`}
+                          className="text-muted-foreground hover:text-red-600"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -282,6 +381,33 @@ export function PortalUsersPage() {
                 </span>
               </Label>
             </div>
+            <div className={`rounded-md border p-3 space-y-2 ${addForm.makeAdmin ? 'opacity-50' : ''}`}>
+              <div>
+                <p className="text-sm font-medium">Tabs they can see</p>
+                <p className="text-xs text-muted-foreground">
+                  {addForm.makeAdmin
+                    ? 'Admins always see every tab — this section is ignored.'
+                    : 'Dashboard and Account are always visible. Toggle the rest as needed.'}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {PORTAL_TAB_OPTIONS.map((tab) => (
+                  <label
+                    key={tab.slug}
+                    htmlFor={`ppu-tab-${tab.slug}`}
+                    className="flex items-center gap-2 rounded border px-2 py-1.5 text-sm cursor-pointer hover:bg-accent/40"
+                  >
+                    <Switch
+                      id={`ppu-tab-${tab.slug}`}
+                      checked={addForm.tabs[tab.slug]}
+                      onCheckedChange={(v: boolean) => setAddForm((f) => ({ ...f, tabs: { ...f.tabs, [tab.slug]: v } }))}
+                      disabled={addLoading || addForm.makeAdmin}
+                    />
+                    {tab.label}
+                  </label>
+                ))}
+              </div>
+            </div>
             {addError && (
               <p className="text-sm text-red-600">{addError}</p>
             )}
@@ -323,6 +449,49 @@ export function PortalUsersPage() {
             <Button onClick={handleRemove} disabled={removeLoading} className="bg-red-600 hover:bg-red-700 text-white">
               {removeLoading ? <Loader2 className="size-4 mr-1.5 animate-spin" /> : <Trash2 className="size-4 mr-1.5" />}
               Remove user
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={permsTarget !== null} onOpenChange={(o) => { if (!o) setPermsTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tab permissions — {permsTarget?.name}</DialogTitle>
+            <DialogDescription>
+              Choose which tabs {permsTarget?.email} can see in the portal. Dashboard and
+              Account are always visible. Changes apply on their next page load.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <div className="grid grid-cols-2 gap-2">
+              {PORTAL_TAB_OPTIONS.map((tab) => (
+                <label
+                  key={tab.slug}
+                  htmlFor={`pup-tab-${tab.slug}`}
+                  className="flex items-center gap-2 rounded border px-2 py-1.5 text-sm cursor-pointer hover:bg-accent/40"
+                >
+                  <Switch
+                    id={`pup-tab-${tab.slug}`}
+                    checked={permsTabs[tab.slug]}
+                    onCheckedChange={(v: boolean) => setPermsTabs((t) => ({ ...t, [tab.slug]: v }))}
+                    disabled={permsLoading}
+                  />
+                  {tab.label}
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground pt-1">
+              Tip: turning every tab on is the same as leaving permissions unrestricted.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPermsTarget(null)} disabled={permsLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdatePermissions} disabled={permsLoading}>
+              {permsLoading ? <Loader2 className="size-4 mr-1.5 animate-spin" /> : <Settings2 className="size-4 mr-1.5" />}
+              Save permissions
             </Button>
           </DialogFooter>
         </DialogContent>

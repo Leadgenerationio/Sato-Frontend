@@ -7,33 +7,50 @@ import { toast } from 'sonner';
 import {
   LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone, Users as UsersIcon,
 } from 'lucide-react';
-import type { UserRole } from '@/types';
+import type { UserRole, User, PortalTabSlug } from '@/types';
 
-// Sam (2026-05-27 portal meeting): "Users" tab is client_admin-only —
-// where they spawn extra portal logins for their own staff without
-// going through Sam. `requiresAdmin` lets us filter the rendered nav
-// per-user without N route guards.
+// Sam (2026-05-27 portal meeting). Two layered access rules on the nav:
+//   1. `requiresAdmin` → only client_admin sees the Users tab.
+//   2. `tabSlug` (per Sam's "we just select what we want to have access
+//      to") → if the user's allowedTabs list is non-null, only items
+//      whose slug appears in it are shown. Dashboard + Account have no
+//      slug, so they're always visible.
 const navItems: Array<{
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   requiresAdmin?: boolean;
+  tabSlug?: PortalTabSlug;
 }> = [
   { href: '/portal', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/portal/leads', label: 'Leads', icon: FileBarChart },
-  { href: '/portal/invoices', label: 'Invoices', icon: FileText },
-  { href: '/portal/compliance', label: 'Compliance', icon: Shield },
+  { href: '/portal/leads', label: 'Leads', icon: FileBarChart, tabSlug: 'leads' },
+  { href: '/portal/invoices', label: 'Invoices', icon: FileText, tabSlug: 'invoices' },
+  { href: '/portal/compliance', label: 'Compliance', icon: Shield, tabSlug: 'compliance' },
   // Creative review v2 (Sam #9/#11). Sits between Compliance and Agreement
   // so the buyer's natural left-to-right reading order is:
   // overview → compliance state → assets to approve → sign agreement.
-  { href: '/portal/creatives', label: 'Creatives', icon: Megaphone },
-  { href: '/portal/agreement', label: 'Agreement', icon: ScrollText },
+  { href: '/portal/creatives', label: 'Creatives', icon: Megaphone, tabSlug: 'creatives' },
+  { href: '/portal/agreement', label: 'Agreement', icon: ScrollText, tabSlug: 'agreement' },
   { href: '/portal/users', label: 'Users', icon: UsersIcon, requiresAdmin: true },
   { href: '/portal/account', label: 'Account', icon: UserCog },
 ];
 
 function isClientAdmin(role: UserRole | undefined): boolean {
   return role === 'client_admin';
+}
+
+function isVisibleToUser(
+  item: { requiresAdmin?: boolean; tabSlug?: PortalTabSlug },
+  user: User | null,
+): boolean {
+  if (item.requiresAdmin && !isClientAdmin(user?.role)) return false;
+  // client_admin sees every tab. For role=client we restrict by allowedTabs
+  // if the BE returned a non-null list; null means full access (backward
+  // compat with users created before the permissions feature shipped).
+  if (item.tabSlug && user?.role === 'client' && user.allowedTabs) {
+    return user.allowedTabs.includes(item.tabSlug);
+  }
+  return true;
 }
 
 function getInitials(name: string | undefined): string {
@@ -54,7 +71,7 @@ export function PortalLayout() {
           <div className="flex items-center gap-6">
             <Logo size="sm" />
             <nav className="hidden md:flex items-center gap-1">
-              {navItems.filter((item) => !item.requiresAdmin || isClientAdmin(user?.role)).map((item) => {
+              {navItems.filter((item) => isVisibleToUser(item, user)).map((item) => {
                 const isActive = item.href === '/portal'
                   ? location.pathname === '/portal'
                   : location.pathname.startsWith(item.href);
@@ -102,7 +119,7 @@ export function PortalLayout() {
         </div>
         {/* Mobile nav */}
         <div className="flex md:hidden overflow-x-auto border-t px-4 gap-1 py-1">
-          {navItems.filter((item) => !item.requiresAdmin || isClientAdmin(user?.role)).map((item) => {
+          {navItems.filter((item) => isVisibleToUser(item, user)).map((item) => {
             const isActive = item.href === '/portal'
               ? location.pathname === '/portal'
               : location.pathname.startsWith(item.href);

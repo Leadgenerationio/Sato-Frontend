@@ -3,6 +3,11 @@
 // /portal — see Sato-Backend migration 0035 + portal.service.ts.
 export type UserRole = 'owner' | 'finance_admin' | 'ops_manager' | 'client' | 'client_admin' | 'readonly';
 
+// Per-portal-user tab visibility (Sam 27-May meeting). null = full access
+// (default for existing rows). Only meaningful for role='client' — the
+// backend always returns null for client_admin.
+export type PortalTabSlug = 'leads' | 'invoices' | 'compliance' | 'creatives' | 'agreement';
+
 export interface User {
   id: string;
   email: string;
@@ -12,6 +17,7 @@ export interface User {
   clientId: string | null;
   isActive: boolean;
   isPrimaryOwner?: boolean;
+  allowedTabs?: PortalTabSlug[] | null;
 }
 
 export interface AuthTokens {
