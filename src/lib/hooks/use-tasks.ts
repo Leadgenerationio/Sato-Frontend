@@ -406,7 +406,21 @@ export function useUpdateSubtask(taskId: string) {
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(['task', taskId], ctx.previous);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['task', taskId] }),
+    // Sam — 27 May 2026: rapid clicks made the tick "jump." onSettled used to
+    // qc.invalidateQueries(['task', taskId]) which triggered a useTask refetch
+    // that could race with the next click's optimistic flip and stomp it
+    // with a server value from before the second click. The PATCH already
+    // returns the authoritative subtask — write it straight into the cache
+    // and skip the refetch. Eliminates the race; no visible bounce.
+    onSuccess: (server) => {
+      qc.setQueryData<TaskDetail>(['task', taskId], (prev) => {
+        if (!prev?.subtasks) return prev;
+        return {
+          ...prev,
+          subtasks: prev.subtasks.map((s) => (s.id === server.id ? server : s)),
+        };
+      });
+    },
   });
 }
 
