@@ -215,12 +215,34 @@ function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
   );
 }
 
-function SectionCard({
-  title, description, creatives, emptyHint,
-}: {
+// Sam (27 May 2026 portal meeting): "creatives should be empty until they
+// approve... if they approve it will then show in Creatives on the date
+// that's there." Each row's approval.decidedAt becomes the folder header.
+// Falls back to the upload date when an approved asset somehow lacks a
+// decidedAt timestamp (shouldn't happen but the BE row schema technically
+// allows null).
+function folderKey(c: PortalReviewCreative): string {
+  const iso = c.approval.decidedAt ?? c.uploadedAt;
+  return iso.slice(0, 10); // YYYY-MM-DD
+}
+
+function groupByApprovalDate(creatives: PortalReviewCreative[]): Array<{ date: string; items: PortalReviewCreative[] }> {
+  const buckets = new Map<string, PortalReviewCreative[]>();
+  for (const c of creatives) {
+    const k = folderKey(c);
+    const list = buckets.get(k) ?? [];
+    list.push(c);
+    buckets.set(k, list);
+  }
+  // Sort dates newest-first so the most recent approvals sit at the top.
+  return Array.from(buckets.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([date, items]) => ({ date, items }));
+}
+
+function FolderSection({ title, groups, emptyHint }: {
   title: string;
-  description: string;
-  creatives: PortalReviewCreative[];
+  groups: Array<{ date: string; items: PortalReviewCreative[] }>;
   emptyHint: string;
 }) {
   return (
@@ -228,19 +250,29 @@ function SectionCard({
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>
-          {description} · {creatives.length} {creatives.length === 1 ? 'asset' : 'assets'}
+          {groups.reduce((n, g) => n + g.items.length, 0)}{' '}
+          approved asset{groups.reduce((n, g) => n + g.items.length, 0) === 1 ? '' : 's'}
+          {' · grouped by approval date'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {creatives.length === 0 ? (
-          <EmptyState
-            icon={FileText}
-            title="Nothing to review yet"
-            description={emptyHint}
-          />
+        {groups.length === 0 ? (
+          <EmptyState icon={FileText} title="Nothing here yet" description={emptyHint} />
         ) : (
-          <div className="space-y-3">
-            {creatives.map((c) => <CreativeRow key={c.id} creative={c} />)}
+          <div className="space-y-6">
+            {groups.map(({ date, items }) => (
+              <div key={date} className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground">
+                  {new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  <span className="ml-2 text-xs font-normal text-muted-foreground/80">
+                    · {items.length} asset{items.length === 1 ? '' : 's'}
+                  </span>
+                </h3>
+                <div className="space-y-3 pl-2 border-l-2 border-muted">
+                  {items.map((c) => <CreativeRow key={c.id} creative={c} />)}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
@@ -261,31 +293,36 @@ export function PortalCreativesPage() {
     );
   }
 
-  const media = data?.media ?? [];
-  const copyLp = data?.copyLp ?? [];
+  // Sam (27 May 2026 meeting): Creatives only shows what's been APPROVED.
+  // Pending and rejected items stay on the Compliance tab where they need
+  // attention — nothing here should be in a "needs decision" state.
+  const approvedMedia = (data?.media ?? []).filter((c) => c.approval.status === 'approved');
+  const approvedCopyLp = (data?.copyLp ?? []).filter((c) => c.approval.status === 'approved');
+
+  const mediaGroups = groupByApprovalDate(approvedMedia);
+  const copyLpGroups = groupByApprovalDate(approvedCopyLp);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Creative review</h1>
+        <h1 className="text-2xl font-bold">Creatives</h1>
         <p className="text-muted-foreground">
-          Sign off on the ads + landing pages running on your campaigns. Approve, reject, or
-          request changes — every decision is logged with a timestamp.
+          Approved assets currently running on your campaigns, grouped by the day they were
+          approved. Items still awaiting review live on the{' '}
+          <strong>Compliance</strong> tab.
         </p>
       </div>
 
-      <SectionCard
+      <FolderSection
         title="Media"
-        description="Image + video ad creatives"
-        creatives={media}
-        emptyHint="When the team uploads image or video creatives for your campaigns, they will appear here for sign-off."
+        groups={mediaGroups}
+        emptyHint="Image and video creatives appear here once you approve them on the Compliance tab."
       />
 
-      <SectionCard
+      <FolderSection
         title="Copy & landing pages"
-        description="Ad copy snippets + landing page URLs"
-        creatives={copyLp}
-        emptyHint="When the team uploads ad copy or links a landing page, it will appear here for sign-off."
+        groups={copyLpGroups}
+        emptyHint="Ad copy snippets and landing page URLs appear here once you approve them on the Compliance tab."
       />
     </div>
   );

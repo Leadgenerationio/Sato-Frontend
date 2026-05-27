@@ -216,25 +216,34 @@ export function PortalCompliancePage() {
         </div>
       )}
 
-      {compliance?.map((campaign) => (
+      {compliance?.map((campaign) => {
+        // Sam (27 May 2026 portal meeting): "creatives should only appear
+        // after compliance approval... if they approve will then move
+        // into Creatives." Compliance now hides anything already approved
+        // — those rows live on the Creatives tab. Rejected + changes_
+        // requested stay visible so the client can re-decide if needed.
+        const reviewable = campaign.creatives.filter(
+          (cr) => (cr.approval?.status ?? 'pending') !== 'approved',
+        );
+        return (
         <div key={campaign.campaignName} className="space-y-4">
           <h2 className="text-lg font-semibold">{campaign.campaignName}</h2>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Creatives</CardTitle>
-              <CardDescription>{campaign.creatives.length} creative{campaign.creatives.length !== 1 ? 's' : ''}</CardDescription>
+              <CardTitle className="text-base">Creatives awaiting review</CardTitle>
+              <CardDescription>{reviewable.length} creative{reviewable.length !== 1 ? 's' : ''} pending</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {campaign.creatives.length === 0 ? (
+              {reviewable.length === 0 ? (
                 <EmptyState
                   icon={Image}
-                  title="No creatives"
-                  description="Creatives for this campaign will appear here once uploaded."
+                  title="All clear here"
+                  description="No creatives are awaiting your review for this campaign. Approved items live on the Creatives tab."
                   size="compact"
                 />
               ) : (
-                campaign.creatives.map((cr) => (
+                reviewable.map((cr) => (
                   <CreativeRow key={cr.id} creative={cr} onReject={openRejectFor} />
                 ))
               )}
@@ -284,7 +293,8 @@ export function PortalCompliancePage() {
             </CardContent>
           </Card>
         </div>
-      ))}
+        );
+      })}
 
       <Dialog open={!!rejectState.creative} onOpenChange={(open) => { if (!open) setRejectState({ creative: null, feedback: '' }); }}>
         <DialogContent>
