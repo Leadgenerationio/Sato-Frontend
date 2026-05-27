@@ -41,12 +41,14 @@ describe('PortalAdSpendPage', () => {
 
   it('renders per-platform rows + a total for a managed client', () => {
     dashboardFixture.adSpendByPlatform = [
-      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
-      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
+      { platform: 'google-ads', spend: 300, currency: 'GBP' },
+      { platform: 'facebook-ads', spend: 120.5, currency: 'GBP' },
     ];
     renderPage();
+    // Raw Catchr platform values are prettified for display.
     expect(screen.getByText('Google Ads')).toBeInTheDocument();
     expect(screen.getByText('Facebook Ads')).toBeInTheDocument();
+    expect(screen.queryByText('google-ads')).not.toBeInTheDocument();
     expect(screen.getByText('£300.00')).toBeInTheDocument();
     expect(screen.getByText('£120.50')).toBeInTheDocument();
     expect(screen.getByText('£420.50')).toBeInTheDocument(); // GBP total
@@ -61,8 +63,8 @@ describe('PortalAdSpendPage', () => {
 
   it('shows one Total per currency, never summing across currencies', () => {
     dashboardFixture.adSpendByPlatform = [
-      { platform: 'Facebook Ads', spend: 120.5, currency: 'GBP' },
-      { platform: 'Facebook Ads', spend: 50, currency: 'USD' },
+      { platform: 'facebook-ads', spend: 120.5, currency: 'GBP' },
+      { platform: 'facebook-ads', spend: 50, currency: 'USD' },
     ];
     renderPage();
     expect(screen.getAllByText('£120.50').length).toBe(2); // row + GBP total
@@ -81,8 +83,8 @@ describe('PortalAdSpendPage', () => {
   // must not throw out of Intl.NumberFormat and blank the page.
   it('renders without crashing when a row has a malformed currency code', () => {
     dashboardFixture.adSpendByPlatform = [
-      { platform: 'Taboola', spend: 10, currency: '' },
-      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
+      { platform: 'taboola', spend: 10, currency: '' },
+      { platform: 'google-ads', spend: 300, currency: 'GBP' },
     ];
     expect(() => renderPage()).not.toThrow();
     expect(screen.getByText('Taboola')).toBeInTheDocument();
@@ -91,7 +93,7 @@ describe('PortalAdSpendPage', () => {
 
   it('shows a not-available state for a PPL client (managed-only feature)', () => {
     dashboardFixture.clientType = 'ppl';
-    dashboardFixture.adSpendByPlatform = [{ platform: 'Google Ads', spend: 300, currency: 'GBP' }];
+    dashboardFixture.adSpendByPlatform = [{ platform: 'google-ads', spend: 300, currency: 'GBP' }];
     renderPage();
     expect(screen.getByText(/isn't available on your plan/i)).toBeInTheDocument();
     // PPL must never see the actual spend figures.
