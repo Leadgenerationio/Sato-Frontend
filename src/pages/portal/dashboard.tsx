@@ -2,28 +2,13 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3, Wallet } from 'lucide-react';
+import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePortalDashboard } from '@/lib/hooks/use-portal';
 import { EmptyState } from '@/components/shared/empty-state';
 
-function formatCurrency(value: number, currency = 'GBP') {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
-}
-
-// Sum ad-spend rows into one total per currency, preserving the (spend-desc)
-// order the API already returned — first-seen currency wins. Never sums
-// across currencies.
-function totalsByCurrency(
-  rows: { spend: number; currency: string }[],
-): { currency: string; total: number }[] {
-  const order: string[] = [];
-  const totals = new Map<string, number>();
-  for (const r of rows) {
-    if (!totals.has(r.currency)) order.push(r.currency);
-    totals.set(r.currency, (totals.get(r.currency) ?? 0) + r.spend);
-  }
-  return order.map((currency) => ({ currency, total: totals.get(currency)! }));
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
 }
 
 function StatCard({
@@ -137,46 +122,6 @@ export function PortalDashboardPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Ad spend — managed clients only. PPL clients never render this block,
-          so there's no behaviour change for them. Per-platform, current month,
-          consistent with the "Leads This Month" window above. */}
-      {data.clientType === 'managed' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ad Spend</CardTitle>
-            <CardDescription>By platform · this month</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!data.adSpendByPlatform || data.adSpendByPlatform.length === 0 ? (
-              <EmptyState
-                icon={Wallet}
-                title="No ad spend this month"
-                description="Once ad spend is recorded against your campaigns this month, the per-platform breakdown will appear here."
-              />
-            ) : (
-              <div className="divide-y">
-                {data.adSpendByPlatform.map((row) => (
-                  <div key={`${row.platform}-${row.currency}`} className="flex items-center justify-between py-2.5">
-                    <span className="text-sm">{row.platform}</span>
-                    <span className="text-sm font-medium tabular-nums">{formatCurrency(row.spend, row.currency)}</span>
-                  </div>
-                ))}
-                {/* Totals per currency — a client running ads in more than one
-                    currency gets one Total line each, since spend in different
-                    currencies can't be summed into a single figure. The common
-                    single-currency case renders exactly one "Total" line. */}
-                {totalsByCurrency(data.adSpendByPlatform).map(({ currency, total }) => (
-                  <div key={currency} className="flex items-center justify-between pt-2.5 font-semibold">
-                    <span className="text-sm">Total</span>
-                    <span className="text-sm tabular-nums">{formatCurrency(total, currency)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
