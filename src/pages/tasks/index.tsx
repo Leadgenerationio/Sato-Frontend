@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/ui/pagination';
 import {
   Search, Plus, CheckSquare, Clock, AlertTriangle, ListTodo, LayoutGrid, List, Timer, Trash2, CornerDownRight, Archive,
+  ChevronRight, ChevronDown, Square,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -27,7 +28,8 @@ import {
 } from '@dnd-kit/core';
 import {
   useTasks, useTaskStats, useDeleteTask, useUpdateTaskStatus,
-  type TaskSummary,
+  useTask, useUpdateSubtask,
+  type TaskSummary, type TaskSubtask,
 } from '@/lib/hooks/use-tasks';
 import { useAuth } from '@/components/providers/auth-provider';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -315,6 +317,70 @@ function KanbanBoard({
 // to localStorage so each staff member sees their preferred default.
 const SCOPE_KEY = 'stato:tasks:scope';
 
+// Sam (27 May 2026) — Task and subtasks in folders, option (a). Each
+// list-view row renders this component when expanded. Lazy-loads the
+// task's subtasks via useTask(id) and renders them as indented
+// sub-rows. Subtask checkbox toggles isDone inline through the same
+// optimistic useUpdateSubtask hook the detail page uses.
+function SubtaskFolderRows({ taskId, depth }: { taskId: string; depth: number }) {
+  const { data: task, isLoading } = useTask(taskId);
+  const update = useUpdateSubtask(taskId);
+  // Title cell sits in col 1; we span every other column with the
+  // status/footer info so the layout doesn't shear.
+  const indentPx = `${(depth + 1) * 2.25}rem`;
+
+  if (isLoading) {
+    return (
+      <TableRow>
+        <TableCell colSpan={8} style={{ paddingLeft: indentPx }} className="text-xs text-muted-foreground bg-muted/20">
+          Loading subtasks…
+        </TableCell>
+      </TableRow>
+    );
+  }
+  const subtasks = task?.subtasks ?? [];
+  if (subtasks.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={8} style={{ paddingLeft: indentPx }} className="text-xs text-muted-foreground italic bg-muted/20">
+          No subtasks yet — open the task to add one.
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  const toggle = (s: TaskSubtask) =>
+    update.mutateAsync({ subtaskId: s.id, isDone: !s.isDone }).catch((err) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to update subtask');
+    });
+
+  return (
+    <>
+      {subtasks.map((s) => (
+        <TableRow key={s.id} className="bg-muted/20 hover:bg-muted/30">
+          <TableCell colSpan={8} style={{ paddingLeft: indentPx }} className="py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <button
+                type="button"
+                onClick={() => toggle(s)}
+                aria-label={s.isDone ? `Mark "${s.title}" not done` : `Mark "${s.title}" done`}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                {s.isDone
+                  ? <CheckSquare className="size-4 text-emerald-600" />
+                  : <Square className="size-4" />}
+              </button>
+              <span className={`truncate ${s.isDone ? 'line-through text-muted-foreground' : ''}`}>
+                {s.title}
+              </span>
+            </div>
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
 export function TasksPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -335,6 +401,20 @@ export function TasksPage() {
   const handleScopeChange = (s: 'all' | 'mine') => {
     setScope(s); setPage(1);
     try { localStorage.setItem(SCOPE_KEY, s); } catch { /* ignore */ }
+  };
+
+  // Sam (27 May 2026) "Task and subtasks in folders" — list-view rows
+  // now have a chevron that expands to show their subtasks indented
+  // underneath, file-tree style. Lazy-loaded via useTask(id) per row so
+  // we don't fetch subtasks for every task on the page on mount.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   // "My tasks" filters by the user's name OR email — backend assignee field
@@ -699,9 +779,11 @@ export function TasksPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {groupedTasks.map(({ task: t, depth }) => (
+                  {groupedTasks.map(({ task: t, depth }) => {
+                    const isExpanded = expandedIds.has(t.id);
+                    return (
+                    <Fragment key={t.id}>
                     <TableRow
-                      key={t.id}
                       className="cursor-pointer"
                       onClick={() => navigate(`/tasks/${t.id}`)}
                     >
@@ -714,9 +796,22 @@ export function TasksPage() {
                             Pagination edge case: when the parent is on a different
                             page, depth stays 0 but parentTitle is still populated by
                             the BE — render a small italic hint so the link still
-                            reads on screen. */}
+                            reads on screen.
+                            Sam (27 May 2026) — chevron toggle expands the row to
+                            show its subtasks below, file-tree style. */}
                         <span className="inline-flex flex-col gap-0.5">
                           <span className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleExpanded(t.id); }}
+                              aria-label={`${isExpanded ? 'Hide' : 'Show'} subtasks for ${t.title}`}
+                              aria-expanded={isExpanded}
+                              className="shrink-0 text-muted-foreground hover:text-foreground"
+                            >
+                              {isExpanded
+                                ? <ChevronDown className="size-3.5" />
+                                : <ChevronRight className="size-3.5" />}
+                            </button>
                             {depth === 1 && <CornerDownRight className="size-3.5 text-muted-foreground shrink-0" />}
                             <span className="truncate">{t.title}</span>
                           </span>
@@ -782,7 +877,9 @@ export function TasksPage() {
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    {isExpanded && <SubtaskFolderRows taskId={t.id} depth={depth} />}
+                    </Fragment>
+                  );})}
                 </TableBody>
               </Table>
             </div>
