@@ -246,6 +246,17 @@ export function usePortalCreatives() {
   });
 }
 
+// Per-creative signed URL for the buyer. Replaces fetchFreshDownloadUrl on
+// portal/creatives — the previous call hardcoded folder='creatives' but
+// every pre-fix upload landed in misc/, which yielded R2's ExpiredRequest
+// XML via the stale-fileUrl fallback. The server now picks the folder per
+// row from the stored file_url, so misc/legacy and creatives/new both
+// resolve through this single endpoint.
+export async function fetchPortalCreativeSignedUrl(creativeId: string): Promise<string> {
+  const res = await api.get<{ url: string }>(`/api/v1/portal/creatives/${creativeId}/signed-url`);
+  return unwrap(res).url;
+}
+
 export function usePortalAgreement() {
   return useQuery({
     queryKey: ['portal-agreement'],

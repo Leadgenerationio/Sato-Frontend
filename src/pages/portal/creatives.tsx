@@ -3,10 +3,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image as ImageIcon, Video, FileText, ExternalLink } from 'lucide-react';
 import {
+  fetchPortalCreativeSignedUrl,
   usePortalCreatives,
   type PortalReviewCreative,
 } from '@/lib/hooks/use-portal';
-import { fetchFreshDownloadUrl } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
 import { toast } from 'sonner';
 
@@ -31,18 +31,12 @@ function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
 
   const handleView = async () => {
     try {
-      // Prefer r2Key for ALL types — image/video/text creatives are all
-      // R2-stored and their fileUrl is the stale upload-time presigned URL.
-      // (Don't shortcut on type === 'text': text creatives also store a file
-      // in R2 and need the same fresh-URL flow.) Fall back to fileUrl only
-      // when r2Key is null — legacy rows or genuine external links pasted
-      // into fileUrl.
-      if (creative.r2Key) {
-        const url = await fetchFreshDownloadUrl('creatives', creative.r2Key);
-        window.open(url, '_blank', 'noopener,noreferrer');
-        return;
-      }
-      window.open(creative.fileUrl, '_blank', 'noopener,noreferrer');
+      // Server resolves the right R2 folder per row (legacy uploads landed
+      // in misc/, new uploads in creatives/) so the FE no longer guesses.
+      // Replaces the previous r2Key-or-fallback dance which still surfaced
+      // R2's ExpiredRequest XML for misc-folder rows.
+      const url = await fetchPortalCreativeSignedUrl(creative.id);
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch {
       toast.error('Could not generate a fresh link for this asset');
     }
