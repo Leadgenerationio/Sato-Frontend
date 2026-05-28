@@ -31,12 +31,25 @@ function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
 
   const handleView = async () => {
     try {
-      if (creative.type === 'text' || creative.fileUrl.startsWith('http')) {
+      // Text-type creatives carry the content (or an external link) directly
+      // in fileUrl — open as-is. Everything else is an R2-stored asset, so
+      // we ALWAYS fetch a fresh signed URL keyed by r2Key. We used to fall
+      // back to opening fileUrl directly when it started with http, but
+      // that's exactly the bug: stored fileUrl values are upload-time
+      // presigned URLs that expire (R2 returns the `ExpiredRequest` XML).
+      // Use the proper 'creatives' folder, not 'misc'.
+      if (creative.type === 'text') {
         window.open(creative.fileUrl, '_blank', 'noopener,noreferrer');
         return;
       }
-      const url = await fetchFreshDownloadUrl('misc', creative.fileUrl);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      if (creative.r2Key) {
+        const url = await fetchFreshDownloadUrl('creatives', creative.r2Key);
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      // Legacy rows with no r2Key: best-effort open of the stored URL. It
+      // may still be expired — surface a clear error if the user reports it.
+      window.open(creative.fileUrl, '_blank', 'noopener,noreferrer');
     } catch {
       toast.error('Could not generate a fresh link for this asset');
     }
