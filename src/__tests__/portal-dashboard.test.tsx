@@ -87,9 +87,10 @@ describe('PortalDashboardPage', () => {
     expect(screen.getByText('Recent Lead Deliveries')).toBeInTheDocument();
   });
 
-  // Ad spend moved to its own /portal/ad-spend tab — the dashboard no longer
-  // renders an Ad Spend card, even for a managed client with spend data.
-  it('does NOT render an Ad Spend card on the dashboard (moved to its own tab)', () => {
+  // Sam jam-video #2 (27-May-2026): no ad-spend section on the client
+  // portal yet. The dashboard must not render an Ad Spend card even if
+  // the BE keeps returning adSpendByPlatform for managed clients.
+  it('does NOT render an Ad Spend card on the dashboard', () => {
     dashboardFixture.clientType = 'managed';
     dashboardFixture.adSpendByPlatform = [
       { platform: 'Google Ads', spend: 300, currency: 'GBP' },

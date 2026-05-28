@@ -118,9 +118,23 @@ export interface PortalLeadsRange {
   to: string;
 }
 
+export interface PortalLeadsBySource {
+  platform: string;
+  leads: number;
+  spend: number;
+  currency: string;
+  /** True when the lead count was pro-rated by spend share across multiple
+   *  sources on the same campaign — show a footnote so the client knows the
+   *  number is an attribution estimate, not a LeadByte hard total. */
+  leadsAreEstimated: boolean;
+}
+
 export interface PortalLeadsResponse {
   leads: PortalLeadDay[];
   range: PortalLeadsRange;
+  // Sam (jam-video #2, 27-May-2026): per-source spend for the same date
+  // range. Optional on the wire so a FE deploy ahead of BE doesn't crash.
+  bySource?: PortalLeadsBySource[];
 }
 
 export function usePortalLeads(filter?: { from?: string; to?: string }) {

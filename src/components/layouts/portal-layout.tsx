@@ -1,62 +1,42 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
-import { usePortalDashboard } from '@/lib/hooks/use-portal';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/shared/logo';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone, Users as UsersIcon, Wallet,
+  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone,
 } from 'lucide-react';
-import type { UserRole, User, PortalTabSlug } from '@/types';
+import type { User, PortalTabSlug } from '@/types';
 
-// Sam (2026-05-27 portal meeting). Two layered access rules on the nav:
-//   1. `requiresAdmin` → only client_admin sees the Users tab.
-//   2. `tabSlug` (per Sam's "we just select what we want to have access
-//      to") → if the user's allowedTabs list is non-null, only items
-//      whose slug appears in it are shown. Dashboard + Account have no
-//      slug, so they're always visible.
+// Sam (2026-05-27 jam-video #2): the portal is *display-only* for clients.
+// Users management + ad-spend dedicated tab + agreement self-upload all
+// belong to the admin side, not the client portal. The remaining nav
+// items are read-only views the client sees. allowedTabs (admin-set) can
+// still hide individual tabs per portal user.
 const navItems: Array<{
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  requiresAdmin?: boolean;
-  // Ad spend is a managed-account feature — hide the tab for PPL clients.
-  requiresManaged?: boolean;
   tabSlug?: PortalTabSlug;
 }> = [
   { href: '/portal', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/portal/leads', label: 'Leads', icon: FileBarChart, tabSlug: 'leads' },
   { href: '/portal/invoices', label: 'Invoices', icon: FileText, tabSlug: 'invoices' },
   { href: '/portal/compliance', label: 'Compliance', icon: Shield, tabSlug: 'compliance' },
-  // Ad spend — managed clients only. Hidden for PPL via requiresManaged.
-  { href: '/portal/ad-spend', label: 'Ad Spend', icon: Wallet, requiresManaged: true },
-  // Creative review v2 (Sam #9/#11). Sits between Compliance and Agreement
-  // so the buyer's natural left-to-right reading order is:
-  // overview → compliance state → assets to approve → sign agreement.
   { href: '/portal/creatives', label: 'Creatives', icon: Megaphone, tabSlug: 'creatives' },
   { href: '/portal/agreement', label: 'Agreement', icon: ScrollText, tabSlug: 'agreement' },
-  { href: '/portal/users', label: 'Users', icon: UsersIcon, requiresAdmin: true },
   { href: '/portal/account', label: 'Account', icon: UserCog },
 ];
 
-function isClientAdmin(role: UserRole | undefined): boolean {
-  return role === 'client_admin';
-}
-
 function isVisibleToUser(
-  item: { requiresAdmin?: boolean; requiresManaged?: boolean; tabSlug?: PortalTabSlug },
+  item: { tabSlug?: PortalTabSlug },
   user: User | null,
-  isManaged: boolean,
 ): boolean {
-  if (item.requiresAdmin && !isClientAdmin(user?.role)) return false;
-  // Ad spend is managed-only. Default to hidden until we know the client type
-  // (fail-closed) so we never briefly flash a tab the client can't use.
-  if (item.requiresManaged && !isManaged) return false;
-  // client_admin sees every tab. For role=client we restrict by allowedTabs
-  // if the BE returned a non-null list; null means full access (backward
-  // compat with users created before the permissions feature shipped).
-  if (item.tabSlug && user?.role === 'client' && user.allowedTabs) {
+  // Admin (Sam-side) can pick per-portal-user tab visibility via allowedTabs.
+  // null = full access (backward compat). Dashboard + Account have no slug,
+  // so they're always visible.
+  if (item.tabSlug && user?.allowedTabs) {
     return user.allowedTabs.includes(item.tabSlug);
   }
   return true;
@@ -71,11 +51,6 @@ function getInitials(name: string | undefined): string {
 export function PortalLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
-  // clientType isn't on the auth user, so read it from the dashboard payload
-  // (react-query cached — shares the dashboard page's fetch). Drives whether
-  // the managed-only Ad Spend tab is shown.
-  const { data: dashboard } = usePortalDashboard();
-  const isManaged = dashboard?.clientType === 'managed';
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,7 +60,7 @@ export function PortalLayout() {
           <div className="flex items-center gap-6">
             <Logo size="sm" />
             <nav className="hidden md:flex items-center gap-1">
-              {navItems.filter((item) => isVisibleToUser(item, user, isManaged)).map((item) => {
+              {navItems.filter((item) => isVisibleToUser(item, user)).map((item) => {
                 const isActive = item.href === '/portal'
                   ? location.pathname === '/portal'
                   : location.pathname.startsWith(item.href);
@@ -133,7 +108,7 @@ export function PortalLayout() {
         </div>
         {/* Mobile nav */}
         <div className="flex md:hidden overflow-x-auto border-t px-4 gap-1 py-1">
-          {navItems.filter((item) => isVisibleToUser(item, user, isManaged)).map((item) => {
+          {navItems.filter((item) => isVisibleToUser(item, user)).map((item) => {
             const isActive = item.href === '/portal'
               ? location.pathname === '/portal'
               : location.pathname.startsWith(item.href);

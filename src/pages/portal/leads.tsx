@@ -9,7 +9,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ChevronRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePortalLeads } from '@/lib/hooks/use-portal';
-import type { PortalLeadDay } from '@/lib/hooks/use-portal';
+import type { PortalLeadDay, PortalLeadsBySource } from '@/lib/hooks/use-portal';
+import { platformLabel, formatMoney } from '@/lib/hooks/use-ad-spend';
 import { cn } from '@/lib/utils';
 
 function isoDay(offsetDays = 0): string {
@@ -20,6 +21,19 @@ function isoDay(offsetDays = 0): string {
 
 function formatDayShort(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+// Sam (jam-video #2, 27-May-2026): "you can see the amount of leads that
+// google or facebook has generated, and the ad spend next to it".
+// Platform label + money formatting come from use-ad-spend.ts so the portal
+// shows the same prettified names as the agency Ad Spend page (Hari PR #30).
+
+function totalSpendByCurrency(rows: PortalLeadsBySource[]): Array<{ currency: string; total: number }> {
+  const buckets = new Map<string, number>();
+  for (const r of rows) {
+    buckets.set(r.currency, (buckets.get(r.currency) ?? 0) + r.spend);
+  }
+  return Array.from(buckets.entries()).map(([currency, total]) => ({ currency, total }));
 }
 
 const PRESETS: { label: string; from: () => string; to: () => string }[] = [
@@ -79,6 +93,7 @@ export function PortalLeadsPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const { data, isLoading } = usePortalLeads({ from, to });
   const leads = data?.leads;
+  const bySource = data?.bySource ?? [];
 
   const summary = useMemo(() => {
     if (!leads || leads.length === 0) return { total: 0, avg: 0, peak: 0 };
@@ -177,6 +192,62 @@ export function PortalLeadsPage() {
             <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{summary.avg}</p><p className="text-sm text-muted-foreground">Avg / Day</p></CardContent></Card>
             <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{summary.peak}</p><p className="text-sm text-muted-foreground">Peak Day</p></CardContent></Card>
           </div>
+
+          {bySource.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>By Source</CardTitle>
+                <CardDescription>
+                  Leads and ad spend per platform for the selected date range. Lead
+                  counts on multi-source campaigns are pro-rated by spend share
+                  (marked with &ldquo;est.&rdquo;).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Source</TableHead>
+                      <TableHead className="text-right">Leads</TableHead>
+                      <TableHead className="text-right">Ad spend</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bySource.map((row) => (
+                      <TableRow key={`${row.platform}-${row.currency}`}>
+                        <TableCell className="font-medium">{platformLabel(row.platform)}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {row.leads.toLocaleString()}
+                          {row.leadsAreEstimated && (
+                            <span
+                              className="ml-1 text-xs text-muted-foreground"
+                              title="Multi-source campaign — leads pro-rated by spend share"
+                            >
+                              est.
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {formatMoney(row.spend, row.currency)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {totalSpendByCurrency(bySource).map(({ currency, total }) => (
+                      <TableRow key={`total-${currency}`} className="border-t-2 bg-muted/30">
+                        <TableCell className="font-semibold">Total</TableCell>
+                        <TableCell className="text-right tabular-nums font-semibold">
+                          {summary.total.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-semibold">
+                          {formatMoney(total, currency)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader><CardTitle>Daily Volume</CardTitle><CardDescription>Leads delivered per day</CardDescription></CardHeader>
