@@ -89,6 +89,7 @@ vi.mock('@/lib/hooks/use-creatives', () => ({
   useCreateCreative: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteCreative: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSubmitCreative: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  fetchCreativeSignedUrl: vi.fn(),
 }));
 
 vi.mock('@/lib/hooks/use-uploads', () => ({

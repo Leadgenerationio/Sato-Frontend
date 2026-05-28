@@ -76,6 +76,15 @@ export function useDeleteCreative(campaignId: string) {
   });
 }
 
+// Staff-side per-creative signed URL. The server resolves the R2 folder
+// from the stored file_url so the FE no longer has to guess between
+// 'creatives' (new uploads) and 'misc' (legacy uploads) — both open from
+// the same endpoint.
+export async function fetchCreativeSignedUrl(creativeId: string): Promise<string> {
+  const res = await api.get<{ url: string }>(`/api/v1/creatives/${creativeId}/signed-url`);
+  return unwrap(res).url;
+}
+
 // T2 (Sam, 2026-05-20) — staff submit-for-approval. Mutation invalidates
 // the creatives list so the status pill flips immediately on success.
 // Backend returns 409 when the source state isn't draft / changes_requested

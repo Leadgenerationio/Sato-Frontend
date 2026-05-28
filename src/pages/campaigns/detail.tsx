@@ -24,9 +24,9 @@ import {
   useCatchrAccounts, useCatchrPlatforms,
   useCampaignDeliveries,
 } from '@/lib/hooks/use-campaigns';
-import { useCreatives, useCreateCreative, useDeleteCreative, useSubmitCreative, type CreativeStatus } from '@/lib/hooks/use-creatives';
+import { fetchCreativeSignedUrl, useCreatives, useCreateCreative, useDeleteCreative, useSubmitCreative, type CreativeStatus } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
-import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
+import { type PresignedUpload } from '@/lib/hooks/use-uploads';
 import { Image as ImageIcon, Video, FileText, Download, Trash2, Save, Loader2, Pencil, Users as UsersIcon, Plus } from 'lucide-react';
 import type { CampaignLinkedClient } from '@/lib/hooks/use-campaigns';
 import { toast } from 'sonner';
@@ -996,7 +996,7 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
         name: file.name,
         type: guessTypeFromContentType(result.contentType),
         r2Key: result.key,
-        fileUrl: result.downloadUrl, // Initial signed URL, refreshed via fetchFreshDownloadUrl on view.
+        fileUrl: result.downloadUrl, // Initial signed URL, refreshed via fetchCreativeSignedUrl(id) on view.
         sizeBytes: result.sizeBytes,
         contentType: result.contentType,
         section: uploadSection,
@@ -1008,10 +1008,11 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
     }
   };
 
-  const handleView = async (key: string | null) => {
-    if (!key) return;
+  const handleView = async (id: string) => {
     try {
-      const url = await fetchFreshDownloadUrl('misc', key);
+      // Server-resolved folder per row — works for both legacy misc/ uploads
+      // and post-fix creatives/ uploads without the FE knowing which.
+      const url = await fetchCreativeSignedUrl(id);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
       logError('Operation failed', err);
@@ -1048,7 +1049,7 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
               captured per decision for audit.
             </CardDescription>
           </div>
-          <FileUpload folder="misc" maxSizeMB={50} label="Upload creative" onUploaded={handleUploaded} />
+          <FileUpload folder="creatives" maxSizeMB={50} label="Upload creative" onUploaded={handleUploaded} />
         </div>
         {/* Sam #9/#11 buyer-review section picker. Drives which card the
             upload appears under on the buyer's review tab. */}
@@ -1126,7 +1127,7 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
                         {canResubmit ? 'Re-submit' : 'Submit for approval'}
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => handleView(c.r2Key)} aria-label="View" disabled={!c.r2Key}>
+                    <Button variant="ghost" size="sm" onClick={() => handleView(c.id)} aria-label="View">
                       <Download className="size-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleRemove(c.id)} aria-label="Remove">
