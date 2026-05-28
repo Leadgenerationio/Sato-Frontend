@@ -222,6 +222,10 @@ export interface PortalReviewCreative {
   name: string;
   type: string;
   fileUrl: string;
+  // R2 key for fetching a fresh signed URL on open. Optional on the wire so
+  // a Vercel-first deploy doesn't TypeError on the old response shape, and
+  // null for legacy rows uploaded before r2Key was recorded.
+  r2Key?: string | null;
   uploadedAt: string;
   section: 'media' | 'copy_lp';
   approval: CreativeApprovalState;

@@ -31,12 +31,18 @@ function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
 
   const handleView = async () => {
     try {
-      if (creative.type === 'text' || creative.fileUrl.startsWith('http')) {
-        window.open(creative.fileUrl, '_blank', 'noopener,noreferrer');
+      // Prefer r2Key for ALL types — image/video/text creatives are all
+      // R2-stored and their fileUrl is the stale upload-time presigned URL.
+      // (Don't shortcut on type === 'text': text creatives also store a file
+      // in R2 and need the same fresh-URL flow.) Fall back to fileUrl only
+      // when r2Key is null — legacy rows or genuine external links pasted
+      // into fileUrl.
+      if (creative.r2Key) {
+        const url = await fetchFreshDownloadUrl('creatives', creative.r2Key);
+        window.open(url, '_blank', 'noopener,noreferrer');
         return;
       }
-      const url = await fetchFreshDownloadUrl('misc', creative.fileUrl);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(creative.fileUrl, '_blank', 'noopener,noreferrer');
     } catch {
       toast.error('Could not generate a fresh link for this asset');
     }
