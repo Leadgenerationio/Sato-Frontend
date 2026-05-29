@@ -47,11 +47,9 @@ const PENDING_APPROVAL: CreativeApprovalState = {
   feedback: null,
 };
 
-function CreativeRow({ creative, onReject }: { creative: PortalCreative; onReject: (creative: PortalCreative) => void }) {
+function CreativeRow({ creative, onReject, onPreview }: { creative: PortalCreative; onReject: (creative: PortalCreative) => void; onPreview: (creative: PortalCreative) => void }) {
   const Icon = typeIcons[creative.type] ?? FileText;
   const approve = useApproveCreative();
-  // Defensive default — if API hasn't been redeployed yet (Vercel-first race),
-  // treat the missing approval block as pending.
   const approval = creative.approval ?? PENDING_APPROVAL;
 
   async function handleApprove() {
@@ -65,14 +63,30 @@ function CreativeRow({ creative, onReject }: { creative: PortalCreative; onRejec
   }
 
   const isPending = approval.status === 'pending';
-  const isSafeFileUrl = typeof creative.fileUrl === 'string' && (creative.fileUrl.startsWith('http://') || creative.fileUrl.startsWith('https://'));
+  // Sam (jam-video #3, 29-May-2026): "you have to open it up in a brand new
+  // tab, so it's not very user-friendly". Show inline thumbnails for
+  // image/video using the BE-signed URL. Clicking the row opens a preview
+  // modal — no more new-tab dance to see what an asset actually is.
+  const isImage = creative.type === 'image' && !!creative.signedUrl;
+  const isVideo = creative.type === 'video' && !!creative.signedUrl;
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-            <Icon className="size-5 text-muted-foreground" />
+        <button
+          type="button"
+          onClick={() => onPreview(creative)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left rounded-md hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          title="Open preview"
+        >
+          <div className="flex size-16 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden">
+            {isImage ? (
+              <img src={creative.signedUrl!} alt={creative.name} className="size-full object-cover" loading="lazy" />
+            ) : isVideo ? (
+              <video src={creative.signedUrl!} className="size-full object-cover" muted preload="metadata" />
+            ) : (
+              <Icon className="size-5 text-muted-foreground" />
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{creative.name}</p>
@@ -80,14 +94,9 @@ function CreativeRow({ creative, onReject }: { creative: PortalCreative; onRejec
               Uploaded {formatDate(creative.uploadedAt)} · <Badge variant="secondary" className="text-xs capitalize">{creative.type}</Badge>
             </p>
           </div>
-        </div>
+        </button>
         <div className="shrink-0 flex items-center gap-2">
           <StatusBadge status={approval.status} />
-          {isSafeFileUrl && (
-            <a href={creative.fileUrl} target="_blank" rel="noopener noreferrer" title="Open creative">
-              <ExternalLink className="size-4 text-muted-foreground hover:text-foreground" />
-            </a>
-          )}
         </div>
       </div>
 
@@ -144,6 +153,8 @@ export function PortalCompliancePage() {
   const { data: compliance, isLoading } = usePortalCompliance();
   const reject = useRejectCreative();
   const [rejectState, setRejectState] = useState<RejectDialogState>({ creative: null, feedback: '' });
+  // Sam jam-video #3: inline preview modal — no more "open in new tab" dance.
+  const [previewCreative, setPreviewCreative] = useState<PortalCreative | null>(null);
 
   if (isLoading) {
     return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-96" /></div>;
@@ -244,7 +255,7 @@ export function PortalCompliancePage() {
                 />
               ) : (
                 reviewable.map((cr) => (
-                  <CreativeRow key={cr.id} creative={cr} onReject={openRejectFor} />
+                  <CreativeRow key={cr.id} creative={cr} onReject={openRejectFor} onPreview={setPreviewCreative} />
                 ))
               )}
             </CardContent>
@@ -328,6 +339,64 @@ export function PortalCompliancePage() {
               Submit rejection
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sam (jam-video #3, 29-May-2026): inline preview modal — opens
+          when the row is clicked. Shows the asset at full size with the
+          decision audit log if any, plus the decision buttons. Replaces
+          the "open in a new tab" pattern Sam called user-unfriendly. */}
+      <Dialog open={!!previewCreative} onOpenChange={(open) => { if (!open) setPreviewCreative(null); }}>
+        <DialogContent className="max-w-3xl">
+          {previewCreative && (() => {
+            const ap = previewCreative.approval ?? PENDING_APPROVAL;
+            const isImg = previewCreative.type === 'image' && !!previewCreative.signedUrl;
+            const isVid = previewCreative.type === 'video' && !!previewCreative.signedUrl;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="truncate">{previewCreative.name}</DialogTitle>
+                  <DialogDescription>
+                    Uploaded {formatDate(previewCreative.uploadedAt)} · <span className="capitalize">{previewCreative.type}</span>
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center justify-center bg-muted rounded-md min-h-[320px] max-h-[60vh] overflow-hidden">
+                  {isImg ? (
+                    <img src={previewCreative.signedUrl!} alt={previewCreative.name} className="max-h-[60vh] w-auto object-contain" />
+                  ) : isVid ? (
+                    <video src={previewCreative.signedUrl!} className="max-h-[60vh] w-auto" controls autoPlay muted />
+                  ) : previewCreative.signedUrl || previewCreative.fileUrl ? (
+                    <a
+                      href={previewCreative.signedUrl ?? previewCreative.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 underline"
+                    >
+                      Open {previewCreative.name} ↗
+                    </a>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No preview available</p>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={ap.status} />
+                    {ap.status !== 'pending' && ap.decidedAt && (
+                      <span>
+                        on {formatDateTime(ap.decidedAt)}
+                        {ap.decidedByName && ` by ${ap.decidedByName}`}
+                      </span>
+                    )}
+                  </div>
+                  {ap.feedback && (
+                    <p className="rounded-md bg-muted/50 p-2 text-foreground">
+                      <span className="font-medium">Feedback:</span> {ap.feedback}
+                    </p>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

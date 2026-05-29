@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Image as ImageIcon, Video, FileText, ExternalLink } from 'lucide-react';
 import {
   fetchPortalCreativeSignedUrl,
@@ -26,15 +28,22 @@ function iconFor(type: string) {
   return FileText;
 }
 
-function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
+function CreativeRow({ creative, onPreview }: { creative: PortalReviewCreative; onPreview: (c: PortalReviewCreative) => void }) {
   const Icon = iconFor(creative.type);
+  // Sam (jam-video #3, 29-May-2026): inline thumbnails for image/video. Use
+  // the BE-signed URL directly so we don't have to lazy-fetch one per row.
+  // Falling back to fetching via /signed-url on click for legacy bundles
+  // where signedUrl isn't yet present in the API response.
+  const isImage = creative.type === 'image' && !!creative.signedUrl;
+  const isVideo = creative.type === 'video' && !!creative.signedUrl;
 
-  const handleView = async () => {
+  const handleClick = async () => {
+    if (creative.signedUrl) {
+      onPreview(creative);
+      return;
+    }
+    // Legacy fallback — BE hasn't redeployed with signedUrl yet.
     try {
-      // Server resolves the right R2 folder per row (legacy uploads landed
-      // in misc/, new uploads in creatives/) so the FE no longer guesses.
-      // Replaces the previous r2Key-or-fallback dance which still surfaced
-      // R2's ExpiredRequest XML for misc-folder rows.
       const url = await fetchPortalCreativeSignedUrl(creative.id);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch {
@@ -43,19 +52,24 @@ function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:gap-4">
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-        <Icon className="size-5 text-muted-foreground" />
+    <button
+      type="button"
+      onClick={handleClick}
+      className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:gap-4 text-left w-full hover:bg-accent/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+      title="Open preview"
+    >
+      <div className="flex size-20 shrink-0 items-center justify-center rounded-md bg-muted overflow-hidden">
+        {isImage ? (
+          <img src={creative.signedUrl!} alt={creative.name} className="size-full object-cover" loading="lazy" />
+        ) : isVideo ? (
+          <video src={creative.signedUrl!} className="size-full object-cover" muted preload="metadata" />
+        ) : (
+          <Icon className="size-6 text-muted-foreground" />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleView}
-            className="text-sm font-medium underline-offset-2 hover:underline truncate text-left"
-            title="Open asset in new tab"
-          >
-            {creative.name}
-          </button>
+          <span className="text-sm font-medium truncate">{creative.name}</span>
           <ExternalLink className="size-3 text-muted-foreground" />
           <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-200 text-xs">
             Approved
@@ -67,8 +81,15 @@ function CreativeRow({ creative }: { creative: PortalReviewCreative }) {
             <> · Approved {formatDate(creative.approval.decidedAt)}</>
           )}
         </p>
+        {/* Sam (jam-video #3): "shows you how many to date, who signed them off". */}
+        {creative.approval.decidedByName && (
+          <p className="mt-1 text-xs text-emerald-700">
+            Signed off by <span className="font-medium">{creative.approval.decidedByName}</span>
+            {creative.approval.decidedAt && <> · {formatDate(creative.approval.decidedAt)}</>}
+          </p>
+        )}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -90,10 +111,11 @@ function groupByApprovalDate(creatives: PortalReviewCreative[]): Array<{ date: s
     .map(([date, items]) => ({ date, items }));
 }
 
-function FolderSection({ title, groups, emptyHint }: {
+function FolderSection({ title, groups, emptyHint, onPreview }: {
   title: string;
   groups: Array<{ date: string; items: PortalReviewCreative[] }>;
   emptyHint: string;
+  onPreview: (c: PortalReviewCreative) => void;
 }) {
   return (
     <Card>
@@ -119,7 +141,7 @@ function FolderSection({ title, groups, emptyHint }: {
                   </span>
                 </h3>
                 <div className="space-y-3 pl-2 border-l-2 border-muted">
-                  {items.map((c) => <CreativeRow key={c.id} creative={c} />)}
+                  {items.map((c) => <CreativeRow key={c.id} creative={c} onPreview={onPreview} />)}
                 </div>
               </div>
             ))}
@@ -132,6 +154,7 @@ function FolderSection({ title, groups, emptyHint }: {
 
 export function PortalCreativesPage() {
   const { data, isLoading } = usePortalCreatives();
+  const [preview, setPreview] = useState<PortalReviewCreative | null>(null);
 
   if (isLoading) {
     return (
@@ -164,13 +187,65 @@ export function PortalCreativesPage() {
         title="Media"
         groups={mediaGroups}
         emptyHint="Image and video creatives appear here once they're approved on the Compliance tab."
+        onPreview={setPreview}
       />
 
       <FolderSection
         title="Copy & landing pages"
         groups={copyLpGroups}
         emptyHint="Ad copy snippets and landing page URLs appear here once they're approved on the Compliance tab."
+        onPreview={setPreview}
       />
+
+      {/* Sam (jam-video #3, 29-May-2026): inline preview modal — full-size
+          image/video on click, signed-off attribution prominent. */}
+      <Dialog open={!!preview} onOpenChange={(open) => { if (!open) setPreview(null); }}>
+        <DialogContent className="max-w-3xl">
+          {preview && (() => {
+            const isImg = preview.type === 'image' && !!preview.signedUrl;
+            const isVid = preview.type === 'video' && !!preview.signedUrl;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="truncate">{preview.name}</DialogTitle>
+                  <DialogDescription>
+                    {preview.campaignName} · Uploaded {formatDate(preview.uploadedAt)}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center justify-center bg-muted rounded-md min-h-[320px] max-h-[60vh] overflow-hidden">
+                  {isImg ? (
+                    <img src={preview.signedUrl!} alt={preview.name} className="max-h-[60vh] w-auto object-contain" />
+                  ) : isVid ? (
+                    <video src={preview.signedUrl!} className="max-h-[60vh] w-auto" controls autoPlay muted />
+                  ) : preview.signedUrl || preview.fileUrl ? (
+                    <a
+                      href={preview.signedUrl ?? preview.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 underline"
+                    >
+                      Open {preview.name} ↗
+                    </a>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No preview available</p>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p className="flex items-center gap-2">
+                    <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-200 text-xs">Approved</Badge>
+                    {preview.approval.decidedAt && (
+                      <span>on {formatDate(preview.approval.decidedAt)}</span>
+                    )}
+                    {preview.approval.decidedByName && (
+                      <span>by <span className="font-medium text-foreground">{preview.approval.decidedByName}</span></span>
+                    )}
+                  </p>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

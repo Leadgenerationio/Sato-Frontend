@@ -73,6 +73,9 @@ export interface PortalCreative {
   type: string;
   uploadedAt: string;
   fileUrl: string;
+  /** Fresh 1-hour R2 signed URL ready for <img>/<video>. Optional so an
+   *  FE-first deploy doesn't TypeError; treat missing as null. */
+  signedUrl?: string | null;
   // Optional so a Vercel-first deploy (FE new, BE not yet redeployed) doesn't
   // TypeError on the old API response shape. Treat missing as "pending".
   approval?: CreativeApprovalState;
@@ -230,6 +233,8 @@ export interface PortalReviewCreative {
   // a Vercel-first deploy doesn't TypeError on the old response shape, and
   // null for legacy rows uploaded before r2Key was recorded.
   r2Key?: string | null;
+  /** Fresh 1-hour R2 signed URL — drop straight into <img>/<video>. */
+  signedUrl?: string | null;
   uploadedAt: string;
   section: 'media' | 'copy_lp';
   approval: CreativeApprovalState;
