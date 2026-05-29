@@ -132,15 +132,26 @@ export function PortalLeadsPage() {
   const bySource = data?.bySource ?? [];
   const bySourceWindow = data?.bySourceWindow;
 
-  // Sam (jam-video #3, 29-May-2026): admin /reports/campaign reads VALID
-  // leads, not total — portal must match. Headline tile + chart now sum
-  // validLeads so "Total Leads" reconciles with the admin number.
+  // Sam (jam-video #3, 29-May-2026): "Google's on 18 valid leads and
+  // Facebook's on 92 valid leads, so it's 110 but 141, you've got the
+  // figures well off." Admin /reports reads valid leads from LeadByte's
+  // per-supplier report — that's what bySource carries on preset ranges.
+  // Sum that for Total Leads so the portal matches admin to the lead.
+  // For custom (non-preset) ranges fall back to lead_deliveries.validLeads
+  // — the breakdown isn't available there anyway so the discrepancy is
+  // transparent to the user.
   const summary = useMemo(() => {
+    if (bySource.length > 0) {
+      const total = bySource.reduce((s, r) => s + r.leads, 0);
+      const days = leads?.length ?? 0;
+      const peak = leads ? leads.reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0) : 0;
+      return { total, avg: days > 0 ? Math.round(total / days) : 0, peak };
+    }
     if (!leads || leads.length === 0) return { total: 0, avg: 0, peak: 0 };
     const total = leads.reduce((s, d) => s + d.validLeads, 0);
     const peak = leads.reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0);
     return { total, avg: Math.round(total / leads.length), peak };
-  }, [leads]);
+  }, [leads, bySource]);
 
   const chartData = useMemo(
     () =>
