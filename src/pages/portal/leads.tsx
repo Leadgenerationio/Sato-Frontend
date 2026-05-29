@@ -13,10 +13,24 @@ import type { PortalLeadDay, PortalLeadsBySource } from '@/lib/hooks/use-portal'
 import { platformLabel, formatMoney } from '@/lib/hooks/use-ad-spend';
 import { cn } from '@/lib/utils';
 
+// Sam (jam-video #3, 29-May-2026): timezone-safe ISO date formatter. The
+// previous `.toISOString().split('T')[0]` path broke for BST/UK users on
+// month-/week-start dates: `new Date(2026, 4, 1)` is "1 May 00:00 BST" =
+// "30 Apr 23:00 UTC", which `.toISOString()` then rendered as 2026-04-30.
+// That kicked the preset away from LeadByte's 'this_month' bucket and the
+// By Source breakdown vanished — Sam saw "only visible in Today / Yesterday"
+// because those are the only presets whose times aren't midnight-local.
+function isoLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
 function isoDay(offsetDays = 0): string {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().split('T')[0];
+  return isoLocal(d);
 }
 
 function formatDayShort(iso: string): string {
@@ -42,19 +56,16 @@ function totalSpendByCurrency(rows: PortalLeadsBySource[]): Array<{ currency: st
 // numbers Sam called "made up figures, non-negotiable." Replaced with the
 // LeadByte preset set the admin /reports page already uses.
 function firstOfMonth(year: number, month: number): string {
-  // month is 0-indexed (Jan = 0)
-  const d = new Date(year, month, 1);
-  return d.toISOString().split('T')[0];
+  // month is 0-indexed (Jan = 0). isoLocal avoids the UTC rollback bug.
+  return isoLocal(new Date(year, month, 1));
 }
 function lastOfMonth(year: number, month: number): string {
-  const d = new Date(year, month + 1, 0);
-  return d.toISOString().split('T')[0];
+  return isoLocal(new Date(year, month + 1, 0));
 }
 function startOfWeek(): string {
   const now = new Date();
   const dow = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Mon
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
-  return d.toISOString().split('T')[0];
+  return isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow));
 }
 
 const PRESETS: { label: string; from: () => string; to: () => string }[] = [
