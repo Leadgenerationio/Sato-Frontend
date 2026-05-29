@@ -172,8 +172,7 @@ export function PortalCreativesPage() {
       <div>
         <h1 className="text-2xl font-bold">Creatives</h1>
         <p className="text-muted-foreground">
-          Approved assets currently running on your campaigns. Items still awaiting review live on the{' '}
-          <strong>Compliance</strong> tab.
+          Approved assets currently running on your campaigns.
         </p>
       </div>
 
