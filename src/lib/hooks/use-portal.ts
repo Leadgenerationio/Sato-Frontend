@@ -120,21 +120,25 @@ export interface PortalLeadsRange {
 
 export interface PortalLeadsBySource {
   platform: string;
+  /** Valid lead count from LeadByte's supplier report — matches admin. */
   leads: number;
   spend: number;
   currency: string;
-  /** True when the lead count was pro-rated by spend share across multiple
-   *  sources on the same campaign — show a footnote so the client knows the
-   *  number is an attribution estimate, not a LeadByte hard total. */
-  leadsAreEstimated: boolean;
 }
+
+// Sam (jam-video #3, 29-May-2026): no more spend-share estimates. The BE
+// only returns per-source rows when the range matches a LeadByte preset.
+// `bySourceWindow` tells the FE whether the breakdown is available + which
+// preset gave it.
+export type PortalLeadsBySourceWindow =
+  | { kind: 'preset'; preset: 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'ytd' }
+  | { kind: 'custom-no-preset-match' };
 
 export interface PortalLeadsResponse {
   leads: PortalLeadDay[];
   range: PortalLeadsRange;
-  // Sam (jam-video #2, 27-May-2026): per-source spend for the same date
-  // range. Optional on the wire so a FE deploy ahead of BE doesn't crash.
   bySource?: PortalLeadsBySource[];
+  bySourceWindow?: PortalLeadsBySourceWindow;
 }
 
 export function usePortalLeads(filter?: { from?: string; to?: string }) {

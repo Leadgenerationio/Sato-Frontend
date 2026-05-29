@@ -36,10 +36,41 @@ function totalSpendByCurrency(rows: PortalLeadsBySource[]): Array<{ currency: st
   return Array.from(buckets.entries()).map(([currency, total]) => ({ currency, total }));
 }
 
+// Sam (jam-video #3, 29-May-2026): preset buttons must map 1:1 to LeadByte
+// presets so the By Source breakdown is always available with real (valid)
+// lead counts — no estimates. 7d/30d/90d don't map and produced "est."
+// numbers Sam called "made up figures, non-negotiable." Replaced with the
+// LeadByte preset set the admin /reports page already uses.
+function firstOfMonth(year: number, month: number): string {
+  // month is 0-indexed (Jan = 0)
+  const d = new Date(year, month, 1);
+  return d.toISOString().split('T')[0];
+}
+function lastOfMonth(year: number, month: number): string {
+  const d = new Date(year, month + 1, 0);
+  return d.toISOString().split('T')[0];
+}
+function startOfWeek(): string {
+  const now = new Date();
+  const dow = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Mon
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+  return d.toISOString().split('T')[0];
+}
+
 const PRESETS: { label: string; from: () => string; to: () => string }[] = [
-  { label: '7d', from: () => isoDay(-6), to: () => isoDay(0) },
-  { label: '30d', from: () => isoDay(-29), to: () => isoDay(0) },
-  { label: '90d', from: () => isoDay(-89), to: () => isoDay(0) },
+  { label: 'Today', from: () => isoDay(0), to: () => isoDay(0) },
+  { label: 'Yesterday', from: () => isoDay(-1), to: () => isoDay(-1) },
+  { label: 'This week', from: () => startOfWeek(), to: () => isoDay(0) },
+  {
+    label: 'This month',
+    from: () => { const n = new Date(); return firstOfMonth(n.getFullYear(), n.getMonth()); },
+    to: () => isoDay(0),
+  },
+  {
+    label: 'Last month',
+    from: () => { const n = new Date(); return firstOfMonth(n.getFullYear(), n.getMonth() - 1); },
+    to: () => { const n = new Date(); return lastOfMonth(n.getFullYear(), n.getMonth() - 1); },
+  },
   { label: 'YTD', from: () => `${new Date().getFullYear()}-01-01`, to: () => isoDay(0) },
 ];
 
@@ -82,23 +113,32 @@ function groupByDelivery(leads: PortalLeadDay[]): DeliveryGroup[] {
       });
     }
   }
+  // Sam (jam-video #3, 29-May-2026): admin /reports/campaign shows VALID
+  // leads, not total — sort by validLeads so the campaign table matches.
   return Array.from(map.values())
     .map((g) => ({ ...g, days: g.days.slice().sort((a, b) => b.date.localeCompare(a.date)) }))
-    .sort((a, b) => b.totalLeads - a.totalLeads);
+    .sort((a, b) => b.validLeads - a.validLeads);
 }
 
 export function PortalLeadsPage() {
-  const [from, setFrom] = useState<string>(isoDay(-29));
+  // Sam (jam-video #3): default to "This month" — maps to the LeadByte
+  // preset so the By Source breakdown is populated on first load.
+  const initialFrom = (() => { const n = new Date(); return firstOfMonth(n.getFullYear(), n.getMonth()); })();
+  const [from, setFrom] = useState<string>(initialFrom);
   const [to, setTo] = useState<string>(isoDay(0));
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const { data, isLoading } = usePortalLeads({ from, to });
   const leads = data?.leads;
   const bySource = data?.bySource ?? [];
+  const bySourceWindow = data?.bySourceWindow;
 
+  // Sam (jam-video #3, 29-May-2026): admin /reports/campaign reads VALID
+  // leads, not total — portal must match. Headline tile + chart now sum
+  // validLeads so "Total Leads" reconciles with the admin number.
   const summary = useMemo(() => {
     if (!leads || leads.length === 0) return { total: 0, avg: 0, peak: 0 };
-    const total = leads.reduce((s, d) => s + d.leadCount, 0);
-    const peak = leads.reduce((m, d) => (d.leadCount > m ? d.leadCount : m), 0);
+    const total = leads.reduce((s, d) => s + d.validLeads, 0);
+    const peak = leads.reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0);
     return { total, avg: Math.round(total / leads.length), peak };
   }, [leads]);
 
@@ -107,7 +147,7 @@ export function PortalLeadsPage() {
       (leads ?? [])
         .slice()
         .sort((a, b) => a.date.localeCompare(b.date))
-        .map((d) => ({ date: formatDayShort(d.date), leads: d.leadCount })),
+        .map((d) => ({ date: formatDayShort(d.date), leads: d.validLeads })),
     [leads],
   );
 
@@ -193,14 +233,33 @@ export function PortalLeadsPage() {
             <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{summary.peak}</p><p className="text-sm text-muted-foreground">Peak Day</p></CardContent></Card>
           </div>
 
-          {bySource.length > 0 && (
+          {bySourceWindow?.kind === 'custom-no-preset-match' ? (
             <Card>
               <CardHeader>
                 <CardTitle>By Source</CardTitle>
                 <CardDescription>
-                  Leads and ad spend per platform for the selected date range. Lead
-                  counts on multi-source campaigns are pro-rated by spend share
-                  (marked with &ldquo;est.&rdquo;).
+                  Per-source breakdown uses the LeadByte report, which only supports the
+                  presets below. Pick one to see Facebook / Google / etc. lead counts and
+                  spend.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {PRESETS.map((p) => (
+                    <Button key={p.label} type="button" variant="outline" size="sm" onClick={() => applyPreset(p)}>
+                      {p.label}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : bySource.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>By Source</CardTitle>
+                <CardDescription>
+                  Valid leads from LeadByte and ad spend from Catchr — same numbers as
+                  the admin <span className="font-medium">/reports</span> campaign view.
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
@@ -218,14 +277,6 @@ export function PortalLeadsPage() {
                         <TableCell className="font-medium">{platformLabel(row.platform)}</TableCell>
                         <TableCell className="text-right tabular-nums">
                           {row.leads.toLocaleString()}
-                          {row.leadsAreEstimated && (
-                            <span
-                              className="ml-1 text-xs text-muted-foreground"
-                              title="Multi-source campaign — leads pro-rated by spend share"
-                            >
-                              est.
-                            </span>
-                          )}
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
                           {formatMoney(row.spend, row.currency)}
@@ -319,7 +370,7 @@ export function PortalLeadsPage() {
                                       {d.activeDays}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums font-medium">
-                                      {d.totalLeads}
+                                      {d.validLeads}
                                     </TableCell>
                                   </TableRow>
                                   {isExpanded && (
@@ -388,7 +439,7 @@ export function PortalLeadsPage() {
                               <TableRow key={i}>
                                 <TableCell>{formatDayShort(d.date)}</TableCell>
                                 <TableCell className="text-muted-foreground">{d.campaignName}</TableCell>
-                                <TableCell className="text-right tabular-nums font-medium">{d.leadCount}</TableCell>
+                                <TableCell className="text-right tabular-nums font-medium">{d.validLeads}</TableCell>
                               </TableRow>
                             ))
                           ) : (
