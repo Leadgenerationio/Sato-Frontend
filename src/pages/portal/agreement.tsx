@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle2, Clock, ScrollText } from 'lucide-react';
 import { usePortalAgreement } from '@/lib/hooks/use-portal';
+import { usePageTitle } from '@/lib/hooks/use-page-title';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -16,6 +17,7 @@ function formatDate(iso: string) {
 // (clients/detail) keeps the "Mark as signed (external)" override.
 
 export function PortalAgreementPage() {
+  usePageTitle('Stato — Agreement');
   const { data: agreement, isLoading } = usePortalAgreement();
 
   if (isLoading || !agreement) {

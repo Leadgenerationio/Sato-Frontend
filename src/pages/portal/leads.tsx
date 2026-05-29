@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ChevronRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePortalLeads } from '@/lib/hooks/use-portal';
+import { usePageTitle } from '@/lib/hooks/use-page-title';
 import type { PortalLeadDay, PortalLeadsBySource } from '@/lib/hooks/use-portal';
 import { platformLabel, formatMoney } from '@/lib/hooks/use-ad-spend';
 import { cn } from '@/lib/utils';
@@ -132,6 +133,7 @@ function groupByDelivery(leads: PortalLeadDay[]): DeliveryGroup[] {
 }
 
 export function PortalLeadsPage() {
+  usePageTitle('Stato — Leads');
   // Sam (jam-video #3): default to "This month" — maps to the LeadByte
   // preset so the By Source breakdown is populated on first load.
   const initialFrom = (() => { const n = new Date(); return firstOfMonth(n.getFullYear(), n.getMonth()); })();
@@ -192,7 +194,7 @@ export function PortalLeadsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Lead Deliveries</h1>
+        <h1 className="text-2xl font-bold">Leads</h1>
         <p className="text-muted-foreground">Lead breakdown by campaign for the selected date range</p>
       </div>
 

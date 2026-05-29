@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePortalDashboard } from '@/lib/hooks/use-portal';
+import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { EmptyState } from '@/components/shared/empty-state';
 import { formatCurrency } from '@/lib/currency';
 
@@ -42,6 +43,7 @@ function StatCard({
 }
 
 export function PortalDashboardPage() {
+  usePageTitle('Stato — Dashboard');
   const { data, isLoading } = usePortalDashboard();
 
   if (isLoading || !data) {
@@ -105,8 +107,8 @@ export function PortalDashboardPage() {
               description="Once leads are delivered against your campaigns, you'll see daily volumes here."
             />
           ) : (
-            <div className="h-[180px] sm:h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[180px] sm:h-[250px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minHeight={180}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
+import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Loader2, KeyRound, User } from 'lucide-react';
@@ -16,6 +17,7 @@ import { Loader2, KeyRound, User } from 'lucide-react';
 // just mounted under /portal so client users can reach it.
 
 export function PortalAccountPage() {
+  usePageTitle('Stato — Account');
   const { user, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -24,8 +26,8 @@ export function PortalAccountPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters');
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -107,9 +109,9 @@ export function PortalAccountPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
-              <p className="text-xs text-muted-foreground">At least 6 characters.</p>
+              <p className="text-xs text-muted-foreground">At least 8 characters.</p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="confirm-password">Confirm new password</Label>

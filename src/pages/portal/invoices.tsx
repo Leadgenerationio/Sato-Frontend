@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FileText, Printer } from 'lucide-react';
 import { usePortalInvoices, type PortalInvoice } from '@/lib/hooks/use-portal';
+import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { toMoney } from '@/lib/hooks/use-invoices';
 import { EmptyState } from '@/components/shared/empty-state';
 
@@ -97,6 +98,7 @@ function handleViewInvoice(inv: PortalInvoice) {
 const PORTAL_HIDDEN_INVOICE_STATUSES = new Set(['draft', 'voided', 'deleted']);
 
 export function PortalInvoicesPage() {
+  usePageTitle('Stato — Invoices');
   const { data: rawInvoices, isLoading } = usePortalInvoices();
   const invoices = rawInvoices?.filter((i) => !PORTAL_HIDDEN_INVOICE_STATUSES.has((i.status ?? '').toLowerCase()));
 

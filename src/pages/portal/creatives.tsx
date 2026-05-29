@@ -17,6 +17,7 @@ import {
   type CampaignMetrics,
 } from '@/components/portal/creative-detail-panel';
 import type { PortalCreativeCampaignMetrics } from '@/lib/hooks/use-portal';
+import { usePageTitle } from '@/lib/hooks/use-page-title';
 
 function adaptMetrics(m: PortalCreativeCampaignMetrics | null | undefined): CampaignMetrics | null | undefined {
   if (m === undefined) return undefined;
@@ -131,6 +132,7 @@ function SideBySideSection({ title, description, items, selectedId, onSelect, em
 }
 
 export function PortalCreativesPage() {
+  usePageTitle('Stato — Creatives');
   const { data, isLoading } = usePortalCreatives();
 
   const media = useMemo(

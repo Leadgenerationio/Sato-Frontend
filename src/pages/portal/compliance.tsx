@@ -18,6 +18,7 @@ import {
   type CampaignMetrics,
 } from '@/components/portal/creative-detail-panel';
 import type { PortalCreativeCampaignMetrics } from '@/lib/hooks/use-portal';
+import { usePageTitle } from '@/lib/hooks/use-page-title';
 
 function adaptMetrics(m: PortalCreativeCampaignMetrics | null | undefined): CampaignMetrics | null | undefined {
   if (m === undefined) return undefined;
@@ -90,6 +91,7 @@ function toDetail(row: FlatRow): CreativeDetailData {
 }
 
 export function PortalCompliancePage() {
+  usePageTitle('Stato — Compliance');
   const { data: compliance, isLoading } = usePortalCompliance();
 
   // Sam (jam-video #3, 29-May-2026): flatten creatives across campaigns into
