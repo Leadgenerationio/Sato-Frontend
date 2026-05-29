@@ -984,6 +984,11 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
   // sections as separate cards.
   const [uploadSection, setUploadSection] = useState<'media' | 'copy_lp'>('media');
 
+  // Sam (jam-video #3, 29-May-2026): "can't delete it" — admin needs a
+  // confirm dialog before delete since portal is display-only and this is
+  // the only place a mistaken upload can be removed.
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+
   const guessTypeFromContentType = (ct: string): 'image' | 'video' | 'text' => {
     if (ct.startsWith('image/')) return 'image';
     if (ct.startsWith('video/')) return 'video';
@@ -1020,10 +1025,12 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
     }
   };
 
-  const handleRemove = async (id: string) => {
+  const handleConfirmRemove = async () => {
+    if (!confirmDelete) return;
     try {
-      await remove.mutateAsync(id);
-      toast.info('Removed (file kept in storage)');
+      await remove.mutateAsync(confirmDelete.id);
+      toast.info(`Removed "${confirmDelete.name}" (file kept in storage)`);
+      setConfirmDelete(null);
     } catch (err) {
       logError('Operation failed', err);
       toast.error('Failed to remove');
@@ -1130,7 +1137,13 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
                     <Button variant="ghost" size="sm" onClick={() => handleView(c.id)} aria-label="View">
                       <Download className="size-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleRemove(c.id)} aria-label="Remove">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
+                      aria-label="Remove"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
@@ -1140,6 +1153,32 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
           </div>
         )}
       </CardContent>
+
+      {/* Sam (jam-video #3, 29-May-2026): confirm-before-delete. Portal is
+          display-only so this is the only delete affordance — a mistaken
+          click would otherwise pull the creative from every linked buyer
+          with no recovery beyond DB inspection. */}
+      <Dialog open={!!confirmDelete} onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete creative?</DialogTitle>
+            <DialogDescription>
+              Remove <span className="font-medium">{confirmDelete?.name}</span> from this campaign?
+              The file stays in storage; the row is hidden from the campaign and from every linked
+              buyer's portal. Past approval history is preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)} disabled={remove.isPending}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmRemove} disabled={remove.isPending}>
+              {remove.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Trash2 className="size-4 mr-1.5" />}
+              Delete creative
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -58,6 +58,24 @@ export interface PortalInvoice {
   daysOverdue: number;
 }
 
+/**
+ * Sam (jam-video #3, 29-May-2026) — parent-campaign performance card on
+ * each Compliance / Creatives row. Real Catchr spend + real LeadByte valid
+ * leads MTD, no estimates. `null` (whole object) means the BE failed to
+ * compute it this request — FE renders "temporarily unavailable" rather
+ * than a fabricated zero. Field-level real-zeros come with a `notes`
+ * tooltip explaining why (no Catchr account / no LeadByte mapping).
+ */
+export interface PortalCreativeCampaignMetrics {
+  windowFrom: string;
+  windowTo: string;
+  spend: number;
+  spendCurrency: string;
+  validLeads: number;
+  costPerLead: number | null;
+  notes?: { spend?: string; leads?: string };
+}
+
 export type CreativeApprovalStatus = 'pending' | 'approved' | 'rejected' | 'changes_requested';
 
 export interface CreativeApprovalState {
@@ -79,6 +97,10 @@ export interface PortalCreative {
   // Optional so a Vercel-first deploy (FE new, BE not yet redeployed) doesn't
   // TypeError on the old API response shape. Treat missing as "pending".
   approval?: CreativeApprovalState;
+  /** Optional on the wire so an FE-first Vercel deploy doesn't TypeError when
+   *  the BE hasn't redeployed with the new field. null = BE failed; missing =
+   *  stale BE response (treat both the same — no card rendered). */
+  campaignMetrics?: PortalCreativeCampaignMetrics | null;
 }
 
 export interface PortalCompliance {
@@ -238,6 +260,8 @@ export interface PortalReviewCreative {
   uploadedAt: string;
   section: 'media' | 'copy_lp';
   approval: CreativeApprovalState;
+  /** Parent-campaign MTD performance — same shape as PortalCreative. */
+  campaignMetrics?: PortalCreativeCampaignMetrics | null;
 }
 
 export interface PortalCreativesBySection {
