@@ -164,6 +164,13 @@ export interface PortalLeadsResponse {
   range: PortalLeadsRange;
   bySource?: PortalLeadsBySource[];
   bySourceWindow?: PortalLeadsBySourceWindow;
+  /** Yash (30-May-2026): per-Sato-campaign valid-lead count derived from
+   *  LeadByte's per-supplier truth (Catchr-mapped suppliers only). FE uses
+   *  this to override the By Campaign table when the preset window matches —
+   *  otherwise the table sums lead_deliveries.valid_lead_count which
+   *  includes Direct + unmapped suppliers, producing 144 vs the tile's 110.
+   *  Undefined for custom date ranges that don't map to a LeadByte preset. */
+  validLeadsByCampaign?: Record<string, number>;
 }
 
 export function usePortalLeads(filter?: { from?: string; to?: string }) {

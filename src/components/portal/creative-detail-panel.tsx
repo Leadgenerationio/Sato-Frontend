@@ -83,7 +83,7 @@ function MetricsCard({ metrics }: { metrics: CampaignMetrics | null }) {
     <Card>
       <CardContent className="py-3">
         <p className="text-xs font-medium text-muted-foreground mb-2">
-          Campaign performance · last {metrics.windowDays} days
+          Campaign performance · this month
         </p>
         <div className="grid grid-cols-3 gap-3 tabular-nums">
           <div>
@@ -208,7 +208,7 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
               {ap.decidedByName && <> by <span className="font-medium">{ap.decidedByName}</span></>}
               {ap.decidedAt && <> on {formatDateTime(ap.decidedAt)}</>}
             </p>
-            {ap.feedback && (
+            {ap.feedback && !/^(na|n\/a|none|-|nil)$/i.test(ap.feedback.trim()) && (
               <p className="rounded-md bg-rose-50 dark:bg-rose-950/30 p-2 text-foreground">
                 <span className="font-medium">Feedback:</span> {ap.feedback}
               </p>

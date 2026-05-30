@@ -174,7 +174,7 @@ export function PortalCompliancePage() {
       {reviewable.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Creatives awaiting review</CardTitle>
+            <CardTitle className="text-base">Open compliance items</CardTitle>
             <CardDescription>
               {reviewable.length} item{reviewable.length === 1 ? '' : 's'} across {compliance?.length ?? 0} campaign{(compliance?.length ?? 0) === 1 ? '' : 's'}
             </CardDescription>

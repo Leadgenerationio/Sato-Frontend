@@ -144,6 +144,12 @@ export function PortalLeadsPage() {
   const leads = data?.leads;
   const bySource = data?.bySource ?? [];
   const bySourceWindow = data?.bySourceWindow;
+  // Yash (30-May-2026): when the preset window matches, the BE returns the
+  // per-campaign valid-lead count derived from LeadByte's per-supplier truth
+  // (Catchr-mapped suppliers only). FE applies this as an override on the
+  // By Campaign table so the row count matches the summary tile (110) and
+  // not lead_deliveries.lead_count (144 — includes Direct / unmapped).
+  const validLeadsByCampaign = data?.validLeadsByCampaign;
 
   // Sam (jam-video #3, 29-May-2026): "Google's on 18 valid leads and
   // Facebook's on 92 valid leads, so it's 110 but 141, you've got the
@@ -175,7 +181,19 @@ export function PortalLeadsPage() {
     [leads],
   );
 
-  const deliveries = useMemo(() => groupByDelivery(leads ?? []), [leads]);
+  const deliveries = useMemo(() => {
+    const groups = groupByDelivery(leads ?? []);
+    if (!validLeadsByCampaign) return groups;
+    // Override per-row validLeads with LeadByte truth when available so the
+    // By Campaign table matches the summary tile. Re-sort because the
+    // override can change the rank order.
+    return groups
+      .map((g) => {
+        const override = validLeadsByCampaign[g.campaignId];
+        return override != null ? { ...g, validLeads: override } : g;
+      })
+      .sort((a, b) => b.validLeads - a.validLeads);
+  }, [leads, validLeadsByCampaign]);
 
   const toggleExpanded = (campaignId: string) => {
     setExpanded((prev) => {
