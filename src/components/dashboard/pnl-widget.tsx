@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { api, unwrap } from '@/lib/api';
+import { formatPercentCapped } from '@/lib/currency';
 
 interface PnlSummary {
   fromDate: string;
@@ -30,8 +31,12 @@ function toMoney(s: string | number | null | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+// Match the Dashboard tile format (£X, no decimals) so the same page doesn't
+// mix £305,840 (tile) with £305,840.32 (this widget). Real money values are
+// preserved exactly server-side; this is a display-only rounding so values
+// across the Dashboard read as one consistent unit.
 function formatCurrency(value: number, currency = 'GBP') {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 }
 
 function formatDate(iso: string) {
@@ -122,7 +127,7 @@ export function PnlWidget() {
           </p>
           <p className="mt-1 flex items-center justify-center gap-1 text-xs text-muted-foreground">
             {isPositive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
-            Net profit · {(margin * 100).toFixed(1)}% margin
+            Net profit · {formatPercentCapped(margin * 100)} margin
           </p>
         </div>
 
@@ -188,7 +193,7 @@ export function PnlWidget() {
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
               <span>Margin</span>
-              <span className="ml-auto whitespace-nowrap tabular-nums">{(margin * 100).toFixed(1)}%</span>
+              <span className="ml-auto whitespace-nowrap tabular-nums">{formatPercentCapped(margin * 100)}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div

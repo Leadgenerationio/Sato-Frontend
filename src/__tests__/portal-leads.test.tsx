@@ -48,15 +48,16 @@ function renderPage() {
 }
 
 describe('PortalLeadsPage — By Campaign', () => {
-  it('groups leads by campaign and shows total per campaign', () => {
+  it('groups leads by campaign and shows valid leads per campaign', () => {
     renderPage();
-    // Dublin = 12 + 9 = 21
+    // Sam jam-video #3: table column shows valid leads (LeadByte truth),
+    // not raw lead_deliveries.lead_count. Dublin = 11 + 8 valid = 19.
     const dublinRow = screen.getByText('Audiology - Dublin').closest('tr')!;
-    expect(within(dublinRow).getByText('21')).toBeInTheDocument();
-    // Cork = 5
+    expect(within(dublinRow).getByText('19')).toBeInTheDocument();
+    // Cork valid = 5
     const corkRow = screen.getByText('Audiology - Cork').closest('tr')!;
     expect(within(corkRow).getByText('5')).toBeInTheDocument();
-    // Clare = 3
+    // Clare valid = 3
     const clareRow = screen.getByText('Audiology - Clare').closest('tr')!;
     expect(within(clareRow).getByText('3')).toBeInTheDocument();
   });
@@ -76,9 +77,11 @@ describe('PortalLeadsPage — By Campaign', () => {
     renderPage();
     const dublinRow = screen.getByText('Audiology - Dublin').closest('tr')!;
     fireEvent.click(dublinRow);
-    // After expanding, both Dublin days should be visible. The 12-lead day has
-    // valid=11, invalid=1. Match the values directly.
-    expect(screen.getByText('11')).toBeInTheDocument();
+    // Two Dublin days expand below: validLeads of 11 + 8 with invalid=1 each.
+    // After Sam jam-video #3 fix, the summary tile + table use validLeads
+    // so 11 also appears on the Peak Day tile — match the cell directly
+    // inside the expanded breakdown rather than asserting one occurrence.
+    expect(screen.getAllByText('11').length).toBeGreaterThan(0);
     expect(screen.getAllByText('1').length).toBeGreaterThan(0);
   });
 

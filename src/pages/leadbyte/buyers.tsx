@@ -16,9 +16,31 @@ function formatMoney(value?: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
 
+// Yash (31-May-2026): LeadByte's /buyers API returns the same company
+// twice when both a legacy numeric BID and the new slug BID exist for
+// the same legal entity (e.g. "Trustmark Law" appears with BID "1" AND
+// "TRUSTMARK-LAW"). Sam sees both rows on the admin page and reads it
+// as a Stato bug. Dedupe by company name (case-insensitive), preferring
+// the slug BID over the numeric one — slugs are LeadByte's current ID
+// scheme; numerics are legacy and surface only on old buyer records.
+function dedupeBuyers<T extends { company?: string | null; bid?: string | null }>(rows: T[]): T[] {
+  const isNumericBid = (b: string | null | undefined): boolean => !!b && /^\d+$/.test(b);
+  const byKey = new Map<string, T>();
+  for (const r of rows) {
+    const key = (r.company ?? '').trim().toLowerCase();
+    if (!key) { byKey.set(`__${Math.random()}`, r); continue; }
+    const existing = byKey.get(key);
+    if (!existing) { byKey.set(key, r); continue; }
+    // Prefer the slug BID over numeric (1, 2, etc.) when both exist.
+    if (isNumericBid(existing.bid) && !isNumericBid(r.bid)) byKey.set(key, r);
+  }
+  return Array.from(byKey.values());
+}
+
 export function LeadByteBuyersPage() {
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_TABS)[number]>('all');
-  const { data: buyers, isLoading, error } = useLbBuyers(statusFilter === 'all' ? undefined : statusFilter);
+  const { data: rawBuyers, isLoading, error } = useLbBuyers(statusFilter === 'all' ? undefined : statusFilter);
+  const buyers = rawBuyers ? dedupeBuyers(rawBuyers) : rawBuyers;
   const updateBuyer = useUpdateLbBuyer();
 
   const toggleStatus = (buyer: LbBuyer) => {

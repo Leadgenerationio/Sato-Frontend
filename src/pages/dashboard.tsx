@@ -17,6 +17,7 @@ import {
 } from '@/lib/hooks/use-dashboard';
 import { useCampaigns, type CampaignSummary } from '@/lib/hooks/use-campaigns';
 import { toMoney } from '@/lib/hooks/use-invoices';
+import { formatPercentCapped } from '@/lib/currency';
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from '@/components/ui/card';
@@ -328,7 +329,7 @@ export function DashboardPage() {
           value={formatCurrency(stats.totalRevenue)}
           change={
             stats.revenueChange !== null
-              ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange}% vs prior period`
+              ? `${formatPercentCapped(stats.revenueChange, { showSign: true })} vs prior period`
               : null
           }
           trend={(stats.revenueChange ?? 0) >= 0 ? 'up' : 'down'}
@@ -368,7 +369,7 @@ export function DashboardPage() {
           value={stats.totalLeadsThisMonth.toLocaleString()}
           change={
             stats.leadsChange !== null
-              ? `${stats.leadsChange >= 0 ? '+' : ''}${stats.leadsChange}% vs prior period`
+              ? `${formatPercentCapped(stats.leadsChange, { showSign: true })} vs prior period`
               : null
           }
           trend={(stats.leadsChange ?? 0) >= 0 ? 'up' : 'down'}
@@ -393,13 +394,13 @@ export function DashboardPage() {
         <StatCard
           title="Net Profit — rolling 12mo / 90d"
           value={formatCurrency(stats.netProfit)}
-          change={`${stats.profitMargin}% margin · period-coherent`}
+          change={`${formatPercentCapped(stats.profitMargin)} margin · period-coherent`}
           trend={stats.netProfit >= 0 ? 'up' : 'down'}
           icon={TrendingUp}
         />
         <StatCard
           title="Margin — rolling 12mo / 90d"
-          value={`${stats.profitMargin}%`}
+          value={formatPercentCapped(stats.profitMargin)}
           change={stats.profitMargin >= 30 ? 'healthy' : stats.profitMargin >= 0 ? 'review' : 'loss-making'}
           trend={stats.profitMargin >= 30 ? 'up' : stats.profitMargin >= 0 ? 'neutral' : 'down'}
           icon={Activity}

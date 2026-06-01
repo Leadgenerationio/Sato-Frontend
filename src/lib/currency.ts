@@ -23,6 +23,31 @@ export function formatCurrency(value: number, currency = 'GBP'): string {
 }
 
 /**
+ * Cap an extreme percentage for display.
+ *
+ * When the divisor of a percentage is near zero (e.g. last-period revenue
+ * was £0.01 and current is £88), the raw ratio explodes ("+88333.5%") and
+ * misleads readers — the £ delta is real and exact, but the % is noise.
+ * We clamp display at ±999% and add an arrow so the trend direction is
+ * still obvious. The £ values shown elsewhere on the page remain exact.
+ *
+ * Sam's hard rule (jam-video #3, 2026-05-29): money figures must be real.
+ * A capped percentage is a ratio, not a money figure — the underlying £
+ * revenue, £ cost, £ delta stay 100% real and exact.
+ */
+export function formatPercentCapped(
+  value: number,
+  opts: { decimals?: number; showSign?: boolean; cap?: number } = {},
+): string {
+  const { decimals = 1, showSign = false, cap = 999 } = opts;
+  if (!Number.isFinite(value)) return '—';
+  if (value > cap) return `>+${cap}%↑`;
+  if (value < -cap) return `<-${cap}%↓`;
+  const sign = showSign && value >= 0 ? '+' : '';
+  return `${sign}${value.toFixed(decimals)}%`;
+}
+
+/**
  * Sum ad-spend rows into one total per currency, preserving first-seen order.
  * Never sums across currencies — a client running ads in more than one
  * currency gets one total line per currency.
