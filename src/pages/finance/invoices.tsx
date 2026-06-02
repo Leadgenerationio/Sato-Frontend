@@ -35,9 +35,14 @@ function formatDate(iso: string) {
 }
 
 function exportCsv(invoices: InvoiceSummary[]) {
+  // Quote + escape every field — client names routinely contain commas
+  // ("Acme, Inc.") which would otherwise shift columns and corrupt the CSV.
+  const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const header = 'Invoice,Client,Status,Currency,Subtotal,VAT,Total,Due Date,Created\n';
   const rows = invoices.map((inv) =>
-    `${inv.invoiceNumber},${inv.clientName},${inv.status},${inv.currency},${inv.subtotal},${inv.vatAmount},${inv.total},${formatDate(inv.dueDate)},${formatDate(inv.createdAt)}`,
+    [inv.invoiceNumber, inv.clientName, inv.status, inv.currency, inv.subtotal, inv.vatAmount, inv.total, formatDate(inv.dueDate), formatDate(inv.createdAt)]
+      .map(q)
+      .join(','),
   ).join('\n');
   const blob = new Blob([header + rows], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);

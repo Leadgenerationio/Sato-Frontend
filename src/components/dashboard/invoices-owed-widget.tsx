@@ -32,7 +32,7 @@ function severityColor(days: number) {
 
 const BUCKETS: { id: Bucket; label: string; buttonLabel: string; viewAllPath: string }[] = [
   { id: 'all', label: 'All', buttonLabel: 'View all', viewAllPath: '/finance/invoices' },
-  { id: 'due', label: 'Due', buttonLabel: 'View all due', viewAllPath: '/finance/invoices?status=sent' },
+  { id: 'due', label: 'Due', buttonLabel: 'View all due', viewAllPath: '/finance/invoices?status=authorised' },
   { id: 'overdue', label: 'Overdue', buttonLabel: 'View all overdue', viewAllPath: '/finance/invoices?status=overdue' },
 ];
 

@@ -160,16 +160,19 @@ export function PortalLeadsPage() {
   // — the breakdown isn't available there anyway so the discrepancy is
   // transparent to the user.
   const summary = useMemo(() => {
+    // `leads` has one row per (campaign × day), so leads.length over-counts the
+    // denominator for multi-campaign clients (a day with 3 campaigns = 3 rows).
+    // "Avg / Day" must divide by DISTINCT calendar days, not row count.
+    const distinctDays = new Set((leads ?? []).map((d) => d.date)).size;
     if (bySource.length > 0) {
       const total = bySource.reduce((s, r) => s + r.leads, 0);
-      const days = leads?.length ?? 0;
       const peak = leads ? leads.reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0) : 0;
-      return { total, avg: days > 0 ? Math.round(total / days) : 0, peak };
+      return { total, avg: distinctDays > 0 ? Math.round(total / distinctDays) : 0, peak };
     }
     if (!leads || leads.length === 0) return { total: 0, avg: 0, peak: 0 };
     const total = leads.reduce((s, d) => s + d.validLeads, 0);
     const peak = leads.reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0);
-    return { total, avg: Math.round(total / leads.length), peak };
+    return { total, avg: distinctDays > 0 ? Math.round(total / distinctDays) : 0, peak };
   }, [leads, bySource]);
 
   const chartData = useMemo(
