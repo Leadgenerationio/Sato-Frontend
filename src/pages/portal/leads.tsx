@@ -261,6 +261,10 @@ export function PortalLeadsPage() {
                 type="button"
                 variant={activePreset === p.label ? 'default' : 'outline'}
                 size="sm"
+                // The default (active) variant has no border; the outline
+                // variant does. Add a transparent border so the active chip
+                // keeps the same box and doesn't visibly shrink on click.
+                className={activePreset === p.label ? 'border border-transparent' : undefined}
                 onClick={() => applyPreset(p)}
               >
                 {p.label}
@@ -297,7 +301,7 @@ export function PortalLeadsPage() {
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {PRESETS.map((p) => (
-                    <Button key={p.label} type="button" variant={activePreset === p.label ? 'default' : 'outline'} size="sm" onClick={() => applyPreset(p)}>
+                    <Button key={p.label} type="button" variant={activePreset === p.label ? 'default' : 'outline'} size="sm" className={activePreset === p.label ? 'border border-transparent' : undefined} onClick={() => applyPreset(p)}>
                       {p.label}
                     </Button>
                   ))}

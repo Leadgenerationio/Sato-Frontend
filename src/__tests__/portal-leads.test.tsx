@@ -129,6 +129,17 @@ describe('PortalLeadsPage — date range presets', () => {
     expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
   });
 
+  it('keeps a border on the active chip so it does not resize when selected', () => {
+    // The active chip uses the filled (primary) look; without a border it is
+    // ~2px narrower than the outline chips and visibly jumps on click. It must
+    // keep a (transparent) border to occupy the same box as the others.
+    renderPage();
+    const active = screen.getByRole('button', { name: 'This month' });
+    const inactive = screen.getByRole('button', { name: 'Today' });
+    expect(active).toHaveClass('border');
+    expect(inactive).toHaveClass('border');
+  });
+
   it('clears the highlight when the range is edited manually', () => {
     renderPage();
     // "This month" is highlighted on load; editing a date input must drop it.
