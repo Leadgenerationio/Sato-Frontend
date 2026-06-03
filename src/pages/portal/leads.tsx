@@ -135,10 +135,15 @@ function groupByDelivery(leads: PortalLeadDay[]): DeliveryGroup[] {
 export function PortalLeadsPage() {
   usePageTitle('Stato — Leads');
   // Sam (jam-video #3): default to "This month" — maps to the LeadByte
-  // preset so the By Source breakdown is populated on first load.
-  const initialFrom = (() => { const n = new Date(); return firstOfMonth(n.getFullYear(), n.getMonth()); })();
-  const [from, setFrom] = useState<string>(initialFrom);
-  const [to, setTo] = useState<string>(isoDay(0));
+  // preset so the By Source breakdown is populated on first load. Derive the
+  // initial range AND highlighted chip from one preset so they can't desync.
+  const DEFAULT_PRESET = PRESETS.find((p) => p.label === 'This month')!;
+  const [from, setFrom] = useState<string>(DEFAULT_PRESET.from());
+  const [to, setTo] = useState<string>(DEFAULT_PRESET.to());
+  // Track the explicitly-selected preset by label, not by range-equality:
+  // "This week" and "This month" produce an identical range when the month
+  // starts on a Monday, so range matching would light up both. null = custom.
+  const [activePreset, setActivePreset] = useState<string | null>(DEFAULT_PRESET.label);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const { data, isLoading } = usePortalLeads({ from, to });
   const leads = data?.leads;
@@ -210,6 +215,7 @@ export function PortalLeadsPage() {
   const applyPreset = (preset: typeof PRESETS[number]) => {
     setFrom(preset.from());
     setTo(preset.to());
+    setActivePreset(preset.label);
   };
 
   return (
@@ -232,7 +238,7 @@ export function PortalLeadsPage() {
               type="date"
               value={from}
               max={to}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => { setFrom(e.target.value); setActivePreset(null); }}
               className="w-full sm:w-[160px]"
             />
           </div>
@@ -244,7 +250,7 @@ export function PortalLeadsPage() {
               value={to}
               min={from}
               max={isoDay(0)}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={(e) => { setTo(e.target.value); setActivePreset(null); }}
               className="w-full sm:w-[160px]"
             />
           </div>
@@ -253,7 +259,7 @@ export function PortalLeadsPage() {
               <Button
                 key={p.label}
                 type="button"
-                variant="outline"
+                variant={activePreset === p.label ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => applyPreset(p)}
               >
@@ -291,7 +297,7 @@ export function PortalLeadsPage() {
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {PRESETS.map((p) => (
-                    <Button key={p.label} type="button" variant="outline" size="sm" onClick={() => applyPreset(p)}>
+                    <Button key={p.label} type="button" variant={activePreset === p.label ? 'default' : 'outline'} size="sm" onClick={() => applyPreset(p)}>
                       {p.label}
                     </Button>
                   ))}
