@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -89,5 +89,51 @@ describe('PortalLeadsPage — By Campaign', () => {
     renderPage();
     expect(screen.getByLabelText('From')).toBeInTheDocument();
     expect(screen.getByLabelText('To')).toBeInTheDocument();
+  });
+});
+
+describe('PortalLeadsPage — date range presets', () => {
+  // Presets are relative to "today", so pin the clock to a date where no two
+  // presets coincide: Wed 17-Jun-2026 is mid-week (week starts Mon 15th),
+  // mid-month (month starts the 1st), and not January (YTD starts Jan 1).
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-06-17T12:00:00'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('highlights the preset matching the default range (This month) on load', () => {
+    renderPage();
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'default');
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'This week' })).toHaveAttribute('data-variant', 'outline');
+  });
+
+  it('moves the highlight to the preset that was clicked', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }));
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('data-variant', 'default');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
+  });
+
+  it('highlights only the clicked preset when two presets share the same range', () => {
+    // 03-Jun-2026 is a Wednesday in a month whose 1st is a Monday, so
+    // "This week" (Mon 1st → today) and "This month" (1st → today) produce
+    // an identical range. Selecting one must not light up the other.
+    vi.setSystemTime(new Date('2026-06-03T12:00:00'));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'This week' }));
+    expect(screen.getByRole('button', { name: 'This week' })).toHaveAttribute('data-variant', 'default');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
+  });
+
+  it('clears the highlight when the range is edited manually', () => {
+    renderPage();
+    // "This month" is highlighted on load; editing a date input must drop it.
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'default');
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-06-10' } });
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
   });
 });
