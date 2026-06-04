@@ -338,11 +338,14 @@ export function PortalLeadsPage() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {totalSpendByCurrency(bySource).map(({ currency, total }) => (
+                    {totalSpendByCurrency(bySource).map(({ currency, total }, idx) => (
                       <TableRow key={`total-${currency}`} className="border-t-2 bg-muted/30">
                         <TableCell className="font-semibold">Total</TableCell>
                         <TableCell className="text-right tabular-nums font-semibold">
-                          {summary.total.toLocaleString()}
+                          {/* Leads aren't currency-bound — show the grand total
+                              once (on the first currency row) so a multi-currency
+                              client doesn't see the lead count repeated per row. */}
+                          {idx === 0 ? summary.total.toLocaleString() : ''}
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-semibold">
                           {formatMoney(total, currency)}

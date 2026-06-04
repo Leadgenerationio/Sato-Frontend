@@ -551,6 +551,11 @@ export function DashboardPage() {
                         {...tooltipStyle}
                         formatter={(value, _name, item) => {
                           const payload = (item as { payload?: { name?: string; leads?: number } } | undefined)?.payload;
+                          // Empty-state placeholder slice — don't render the
+                          // misleading "100% · 0 leads"; show an honest label.
+                          if (payload?.name === 'No data') {
+                            return ['No leads in this period', ''];
+                          }
                           return [
                             `${value}% · ${(payload?.leads ?? 0).toLocaleString()} leads`,
                             payload?.name ?? '',
