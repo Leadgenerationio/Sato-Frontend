@@ -182,7 +182,7 @@ export function UnifiedReportPage() {
         title="Reports"
         description="One unified view — revenue from LeadByte, cost from Catchr ad spend (NOT LeadByte supplier payout), profit + margin per supplier."
       >
-        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
+        <Badge className="bg-positive/10 text-positive border-positive/30">
           <Sparkles className="size-3 mr-1" />New
         </Badge>
       </PageHeader>
@@ -238,15 +238,15 @@ export function UnifiedReportPage() {
             label="Profit"
             value={formatTileCurrency(totals.profit)}
             fullValue={formatCurrency(totals.profit)}
-            valueClassName={totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}
+            valueClassName={totals.profit >= 0 ? 'text-positive' : 'text-negative'}
             hint={MARGIN_HINT}
           />
           <TotalCard
             label="Margin"
             value={`${totals.margin}%`}
             valueClassName={
-              totals.margin >= 50 ? 'text-emerald-600' :
-              totals.margin >= 30 ? 'text-amber-600' : 'text-red-600'
+              totals.margin >= 50 ? 'text-positive' :
+              totals.margin >= 30 ? 'text-warning' : 'text-negative'
             }
             hint={MARGIN_HINT}
           />
@@ -364,12 +364,12 @@ export function UnifiedReportPage() {
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(r.spend)}</td>
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(r.cpl)}</td>
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(r.revenue)}</td>
-                      <td className={`py-3 px-3 text-right tabular-nums font-medium ${r.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <td className={`py-3 px-3 text-right tabular-nums font-medium ${r.profit >= 0 ? 'text-positive' : 'text-negative'}`}>
                         {formatCurrency(r.profit)}
                       </td>
                       <td className={`py-3 pl-3 pr-4 text-right tabular-nums font-medium ${
-                        r.margin >= 50 ? 'text-emerald-600' :
-                        r.margin >= 30 ? 'text-amber-600' : 'text-red-600'
+                        r.margin >= 50 ? 'text-positive' :
+                        r.margin >= 30 ? 'text-warning' : 'text-negative'
                       }`}>
                         {r.margin}%
                       </td>
@@ -384,12 +384,12 @@ export function UnifiedReportPage() {
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.spend)}</td>
                       <td className="py-3 px-3"></td>
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
-                      <td className={`py-3 px-3 text-right tabular-nums ${totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <td className={`py-3 px-3 text-right tabular-nums ${totals.profit >= 0 ? 'text-positive' : 'text-negative'}`}>
                         {formatCurrency(totals.profit)}
                       </td>
                       <td className={`py-3 pl-3 pr-4 text-right tabular-nums ${
-                        totals.margin >= 50 ? 'text-emerald-600' :
-                        totals.margin >= 30 ? 'text-amber-600' : 'text-red-600'
+                        totals.margin >= 50 ? 'text-positive' :
+                        totals.margin >= 30 ? 'text-warning' : 'text-negative'
                       }`}>
                         {totals.margin}%
                       </td>
@@ -459,12 +459,12 @@ export function UnifiedReportPage() {
                         <td className="py-3 px-3 text-right tabular-nums">{subLeads.toLocaleString()}</td>
                         <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(subSpend)}</td>
                         <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(subRevenue)}</td>
-                        <td className={`py-3 px-3 text-right tabular-nums font-medium ${subProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        <td className={`py-3 px-3 text-right tabular-nums font-medium ${subProfit >= 0 ? 'text-positive' : 'text-negative'}`}>
                           {formatCurrency(subProfit)}
                         </td>
                         <td className={`py-3 pl-3 pr-4 text-right tabular-nums font-medium ${
-                          subMargin >= 50 ? 'text-emerald-600' :
-                          subMargin >= 30 ? 'text-amber-600' : 'text-red-600'
+                          subMargin >= 50 ? 'text-positive' :
+                          subMargin >= 30 ? 'text-warning' : 'text-negative'
                         }`}>
                           {subMargin}%
                         </td>
@@ -545,12 +545,12 @@ export function UnifiedReportPage() {
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.spend)}</td>
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.cpl)}</td>
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.revenue)}</td>
-                      <td className={`py-3 px-3 text-right tabular-nums font-medium ${p.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <td className={`py-3 px-3 text-right tabular-nums font-medium ${p.profit >= 0 ? 'text-positive' : 'text-negative'}`}>
                         {formatCurrency(p.profit)}
                       </td>
                       <td className={`py-3 pl-3 pr-4 text-right tabular-nums font-medium ${
-                        p.margin >= 50 ? 'text-emerald-600' :
-                        p.margin >= 30 ? 'text-amber-600' : 'text-red-600'
+                        p.margin >= 50 ? 'text-positive' :
+                        p.margin >= 30 ? 'text-warning' : 'text-negative'
                       }`}>
                         {p.margin}%
                       </td>
@@ -565,12 +565,12 @@ export function UnifiedReportPage() {
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.spend)}</td>
                       <td className="py-3 px-3"></td>
                       <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
-                      <td className={`py-3 px-3 text-right tabular-nums ${totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <td className={`py-3 px-3 text-right tabular-nums ${totals.profit >= 0 ? 'text-positive' : 'text-negative'}`}>
                         {formatCurrency(totals.profit)}
                       </td>
                       <td className={`py-3 pl-3 pr-4 text-right tabular-nums ${
-                        totals.margin >= 50 ? 'text-emerald-600' :
-                        totals.margin >= 30 ? 'text-amber-600' : 'text-red-600'
+                        totals.margin >= 50 ? 'text-positive' :
+                        totals.margin >= 30 ? 'text-warning' : 'text-negative'
                       }`}>
                         {totals.margin}%
                       </td>

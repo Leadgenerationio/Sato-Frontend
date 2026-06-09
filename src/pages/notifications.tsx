@@ -29,14 +29,14 @@ const FILTER_TABS = ['all', 'unread'] as const;
 const defaultTypeConfig = { icon: Bell, color: 'text-neutral-600', bg: 'bg-neutral-500/10' };
 
 const typeConfig: Record<NotificationType, { icon: React.ElementType; color: string; bg: string }> = {
-  invoice_overdue: { icon: FileWarning, color: 'text-red-600', bg: 'bg-red-500/10' },
-  credit_alert: { icon: ShieldAlert, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-  workflow_complete: { icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-  payment_received: { icon: CreditCard, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-  onboarding_update: { icon: UserPlus, color: 'text-indigo-600', bg: 'bg-indigo-500/10' },
-  lead_delivery: { icon: Send, color: 'text-violet-600', bg: 'bg-violet-500/10' },
-  vat_shortfall: { icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-500/10' },
-  agreement_signed: { icon: FileSignature, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+  invoice_overdue: { icon: FileWarning, color: 'text-negative', bg: 'bg-negative/10' },
+  credit_alert: { icon: ShieldAlert, color: 'text-warning', bg: 'bg-warning/10' },
+  workflow_complete: { icon: CheckCircle2, color: 'text-positive', bg: 'bg-positive/10' },
+  payment_received: { icon: CreditCard, color: 'text-info', bg: 'bg-info/10' },
+  onboarding_update: { icon: UserPlus, color: 'text-info', bg: 'bg-info/10' },
+  lead_delivery: { icon: Send, color: 'text-lime-600', bg: 'bg-lime-400/10' },
+  vat_shortfall: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10' },
+  agreement_signed: { icon: FileSignature, color: 'text-positive', bg: 'bg-positive/10' },
   system_error: { icon: ServerCrash, color: 'text-neutral-600', bg: 'bg-neutral-500/10' },
 };
 
@@ -88,7 +88,7 @@ function NotificationItem({
               {formatTimestamp(notification.createdAt)}
             </span>
             {!notification.read && (
-              <span className="size-2 rounded-full bg-blue-500 flex-shrink-0" />
+              <span className="size-2 rounded-full bg-info flex-shrink-0" />
             )}
           </div>
         </div>
@@ -137,7 +137,7 @@ export function NotificationsPage() {
           >
             {tab}
             {tab === 'unread' && unreadCount > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold size-4">
+              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-info text-white text-[10px] font-bold size-4">
                 {unreadCount}
               </span>
             )}

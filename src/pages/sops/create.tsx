@@ -107,7 +107,7 @@ export function SopCreatePage() {
               value={loomUrl}
               onChange={(e) => setLoomUrl(e.target.value)}
               placeholder="https://www.loom.com/share/…"
-              className={loomUrl && !loomValid ? 'border-red-300' : ''}
+              className={loomUrl && !loomValid ? 'border-negative/30' : ''}
             />
           </div>
           {embed && (

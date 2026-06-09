@@ -37,16 +37,16 @@ function formatDateTime(iso: string) {
 
 function StatusBadge({ status }: { status: AutoInvoiceRun['status'] }) {
   if (status === 'completed') {
-    return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200"><CheckCircle2 className="size-3 mr-1" />Completed</Badge>;
+    return <Badge className="bg-positive/10 text-positive border-positive/30"><CheckCircle2 className="size-3 mr-1" />Completed</Badge>;
   }
   if (status === 'failed') {
-    return <Badge className="bg-red-500/10 text-red-600 border-red-200"><XCircle className="size-3 mr-1" />Failed</Badge>;
+    return <Badge className="bg-negative/10 text-negative border-negative/30"><XCircle className="size-3 mr-1" />Failed</Badge>;
   }
   if (status === 'skipped') {
     return <Badge className="bg-neutral-500/10 text-neutral-500 border-neutral-200"><SkipForward className="size-3 mr-1" />Skipped</Badge>;
   }
   if (status === 'running') {
-    return <Badge className="bg-blue-500/10 text-blue-600 border-blue-200"><Loader2 className="size-3 mr-1 animate-spin" />Running</Badge>;
+    return <Badge className="bg-info/10 text-info border-info/30"><Loader2 className="size-3 mr-1 animate-spin" />Running</Badge>;
   }
   return <Badge variant="secondary">{status}</Badge>;
 }
@@ -124,7 +124,7 @@ export function AutoInvoicePage() {
       </PageHeader>
 
       {isPaused && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
           <Pause className="size-4" />
           <span>Auto-invoice is paused. The Monday 09:00 UTC cron will continue to fire, but the handler skips until you click Resume.</span>
         </div>

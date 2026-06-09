@@ -36,9 +36,9 @@ function formatDate(dateStr: string) {
 }
 
 const staffStatusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  on_leave: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  terminated: 'bg-red-500/10 text-red-600 border-red-200',
+  active: 'bg-positive/10 text-positive border-positive/30',
+  on_leave: 'bg-warning/10 text-warning border-warning/30',
+  terminated: 'bg-negative/10 text-negative border-negative/30',
 };
 
 const staffStatusLabels: Record<string, string> = {
@@ -48,20 +48,20 @@ const staffStatusLabels: Record<string, string> = {
 };
 
 const departmentColors: Record<string, string> = {
-  'Content Team': 'bg-purple-500/10 text-purple-600 border-purple-200',
-  'Operations': 'bg-blue-500/10 text-blue-600 border-blue-200',
+  'Content Team': 'bg-lime-400/10 text-lime-600 border-lime-300',
+  'Operations': 'bg-info/10 text-info border-info/30',
 };
 
 const holidayTypeColors: Record<string, string> = {
-  annual: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  sick: 'bg-red-500/10 text-red-600 border-red-200',
-  personal: 'bg-amber-500/10 text-amber-600 border-amber-200',
+  annual: 'bg-info/10 text-info border-info/30',
+  sick: 'bg-negative/10 text-negative border-negative/30',
+  personal: 'bg-warning/10 text-warning border-warning/30',
 };
 
 const holidayStatusColors: Record<string, string> = {
-  pending: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  approved: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  rejected: 'bg-red-500/10 text-red-600 border-red-200',
+  pending: 'bg-warning/10 text-warning border-warning/30',
+  approved: 'bg-positive/10 text-positive border-positive/30',
+  rejected: 'bg-negative/10 text-negative border-negative/30',
 };
 
 const PIPELINE_STAGES: Applicant['stage'][] = ['applied', 'screening', 'interview', 'offer', 'hired'];
@@ -94,9 +94,9 @@ function StatsCards() {
 
   const cards = [
     { label: 'Total Staff', value: stats.totalStaff, icon: Users, bg: 'bg-muted', iconColor: 'text-muted-foreground' },
-    { label: 'Active Staff', value: stats.activeStaff, icon: UserCheck, bg: 'bg-emerald-500/10', iconColor: 'text-emerald-600' },
-    { label: 'Open Positions', value: stats.openPositions, icon: Briefcase, bg: 'bg-blue-500/10', iconColor: 'text-blue-600' },
-    { label: 'Pending Holidays', value: stats.pendingHolidays, icon: Calendar, bg: 'bg-amber-500/10', iconColor: 'text-amber-600' },
+    { label: 'Active Staff', value: stats.activeStaff, icon: UserCheck, bg: 'bg-positive/10', iconColor: 'text-positive' },
+    { label: 'Open Positions', value: stats.openPositions, icon: Briefcase, bg: 'bg-info/10', iconColor: 'text-info' },
+    { label: 'Pending Holidays', value: stats.pendingHolidays, icon: Calendar, bg: 'bg-warning/10', iconColor: 'text-warning' },
   ];
 
   return (
@@ -455,8 +455,8 @@ function ApplicantPipeline({ jobId }: { jobId: string }) {
           </p>
           <div className="flex gap-2 flex-wrap">
             {rejected.map((a) => (
-              <div key={a.id} className="rounded-md border border-red-200 bg-red-500/5 p-2">
-                <p className="text-sm font-medium text-red-600">{a.name}</p>
+              <div key={a.id} className="rounded-md border border-negative/30 bg-negative/5 p-2">
+                <p className="text-sm font-medium text-negative">{a.name}</p>
                 <p className="text-xs text-muted-foreground">Score: {a.score}</p>
               </div>
             ))}
@@ -486,7 +486,7 @@ function JobPostingCard({ job }: { job: JobPosting }) {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground tabular-nums">{job.applicantCount} applicants</span>
-            <Badge className={`text-xs capitalize ${job.status === 'open' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-neutral-500/10 text-neutral-500 border-neutral-200'}`}>
+            <Badge className={`text-xs capitalize ${job.status === 'open' ? 'bg-positive/10 text-positive border-positive/30' : 'bg-neutral-500/10 text-neutral-500 border-neutral-200'}`}>
               {job.status}
             </Badge>
           </div>
@@ -619,7 +619,7 @@ function HolidaysTab() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+                          className="h-7 text-positive hover:bg-positive/10 hover:text-positive"
                           onClick={() => approveMutation.mutate(h.id)}
                           disabled={approveMutation.isPending}
                         >
@@ -629,7 +629,7 @@ function HolidaysTab() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-red-600 hover:bg-red-500/10 hover:text-red-700"
+                          className="h-7 text-negative hover:bg-negative/10 hover:text-negative"
                           onClick={() => rejectMutation.mutate(h.id)}
                           disabled={rejectMutation.isPending}
                         >

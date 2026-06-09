@@ -25,10 +25,10 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { logError } from '../../lib/log';
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  authorised: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
-  paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  overdue: 'bg-red-500/10 text-red-600 border-red-200',
+  sent: 'bg-info/10 text-info border-info/30',
+  authorised: 'bg-info/10 text-info border-info/30',
+  paid: 'bg-positive/10 text-positive border-positive/30',
+  overdue: 'bg-negative/10 text-negative border-negative/30',
 };
 
 // Escape any user-provided string before interpolating into the print-window HTML.
@@ -177,7 +177,7 @@ export function InvoiceDetailPage() {
                 Download PDF
               </Button>
               {invoice.xeroInvoiceId ? (
-                <Badge className="bg-blue-500/10 text-blue-600 border-blue-200">
+                <Badge className="bg-info/10 text-info border-info/30">
                   <Check className="size-3 mr-1" />
                   In Xero
                 </Badge>
@@ -280,7 +280,7 @@ export function InvoiceDetailPage() {
                   <Separator />
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Paid Date</span>
-                    <span className="font-medium text-emerald-600">{formatDate(invoice.paidDate)}</span>
+                    <span className="font-medium text-positive">{formatDate(invoice.paidDate)}</span>
                   </div>
                 </>
               )}
@@ -294,7 +294,7 @@ export function InvoiceDetailPage() {
                   <Separator />
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Chase Count</span>
-                    <span className="font-medium text-red-600">{invoice.chaseCount}</span>
+                    <span className="font-medium text-negative">{invoice.chaseCount}</span>
                   </div>
                 </>
               )}

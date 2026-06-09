@@ -22,14 +22,14 @@ const typeIcons: Record<NotificationType, React.ElementType> = {
 };
 
 const typeColors: Record<NotificationType, string> = {
-  invoice_overdue: 'bg-red-500/10 text-red-600',
-  credit_alert: 'bg-red-500/10 text-red-600',
-  workflow_complete: 'bg-amber-500/10 text-amber-600',
-  payment_received: 'bg-emerald-500/10 text-emerald-600',
-  onboarding_update: 'bg-indigo-500/10 text-indigo-600',
-  lead_delivery: 'bg-emerald-500/10 text-emerald-600',
-  vat_shortfall: 'bg-red-500/10 text-red-600',
-  agreement_signed: 'bg-emerald-500/10 text-emerald-600',
+  invoice_overdue: 'bg-negative/10 text-negative',
+  credit_alert: 'bg-negative/10 text-negative',
+  workflow_complete: 'bg-warning/10 text-warning',
+  payment_received: 'bg-positive/10 text-positive',
+  onboarding_update: 'bg-info/10 text-info',
+  lead_delivery: 'bg-positive/10 text-positive',
+  vat_shortfall: 'bg-negative/10 text-negative',
+  agreement_signed: 'bg-positive/10 text-positive',
   system_error: 'bg-neutral-500/10 text-neutral-500',
 };
 
@@ -67,7 +67,7 @@ export function NotificationFeed() {
             <CardDescription>{isLoading ? 'Loading…' : `${unread} unread`}</CardDescription>
           </div>
           {unread > 0 && (
-            <Badge className="bg-red-500 text-white text-xs">{unread}</Badge>
+            <Badge className="bg-negative text-white text-xs">{unread}</Badge>
           )}
         </div>
       </CardHeader>
@@ -112,7 +112,7 @@ export function NotificationFeed() {
                 <p className="text-xs text-muted-foreground mt-0.5">{relativeTime(n.createdAt)}</p>
               </div>
               {n.actionUrl && <ExternalLink className="size-3 text-muted-foreground mt-1 shrink-0" />}
-              {!n.read && <div className="size-2 rounded-full bg-blue-500 mt-2 shrink-0" />}
+              {!n.read && <div className="size-2 rounded-full bg-info mt-2 shrink-0" />}
             </div>
           );
         })}

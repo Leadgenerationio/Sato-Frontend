@@ -136,11 +136,11 @@ export function PortalCompliancePage() {
       </div>
 
       {pendingCount > 0 && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-warning dark:bg-warning/30 dark:text-warning">
           <AlertTriangle className="size-5 shrink-0" />
           <div className="text-sm">
             <p className="font-medium">{pendingCount} creative{pendingCount === 1 ? '' : 's'} need your review</p>
-            <p className="mt-0.5 text-amber-800 dark:text-amber-300">
+            <p className="mt-0.5 text-warning dark:text-warning">
               Each decision is timestamped with your IP address as a record of approval.
             </p>
           </div>
@@ -161,9 +161,9 @@ export function PortalCompliancePage() {
 
       {compliance && compliance.length > 0 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-amber-600">{pendingCount}</p><p className="text-xs text-muted-foreground">Pending review</p></CardContent></Card>
-          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-emerald-600">{approvedCount}</p><p className="text-xs text-muted-foreground">Approved</p></CardContent></Card>
-          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-rose-600">{rejectedCount}</p><p className="text-xs text-muted-foreground">Rejected</p></CardContent></Card>
+          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-warning">{pendingCount}</p><p className="text-xs text-muted-foreground">Pending review</p></CardContent></Card>
+          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-positive">{approvedCount}</p><p className="text-xs text-muted-foreground">Approved</p></CardContent></Card>
+          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-negative">{rejectedCount}</p><p className="text-xs text-muted-foreground">Rejected</p></CardContent></Card>
         </div>
       )}
 

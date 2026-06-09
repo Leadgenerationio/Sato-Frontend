@@ -3,65 +3,123 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   STATTO DESIGN SYSTEM — tokens
+   Brand: ink #062F28 + lime #9FE870. Ported from the client-approved
+   mockups (docs/2026-06-09-statto-restyle-ref/). UI-only restyle.
+   ============================================================ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.965 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.965 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.965 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
-  --sidebar-background: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.965 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* ---------- BRAND ---------- */
+  --statto-ink:  #062F28;
+  --statto-lime: #9FE870;
+
+  /* ---------- RAMPS ---------- */
+  --lime-50:  #F1FCE7; --lime-100: #E3F8CF; --lime-200: #CDF2AC; --lime-300: #B6ED8E;
+  --lime-400: #9FE870; --lime-500: #84D451; --lime-600: #66B534;
+
+  --green-50: #E9F0EE; --green-100: #C6D8D3; --green-300: #6E9089;
+  --green-500: #2E5249; --green-700: #123F36; --green-900: #062F28;
+
+  --gray-50:  #F6F6F7; --gray-100: #ECECEE; --gray-150: #E7E7E9; --gray-200: #DDDDE0;
+  --gray-300: #C9C9CD; --gray-400: #A9A9AF; --gray-500: #7B7B7B; --gray-600: #5C5C60;
+
+  /* ---------- SEMANTIC ---------- */
+  --positive: #66B534; --positive-bg: #E9F8DC;
+  --negative: #E5575B; --negative-bg: #FCE6E6;
+  --warning:  #E8A13A; --warning-bg:  #FBF0DC;
+  --info:     #3E7E8C; --info-bg:     #E3F0F2;
+
+  /* ---------- RADII / SHADOWS / MOTION ---------- */
+  --radius: 16px;
+  --shadow-xs-ink: 0 1px 2px rgba(6,47,40,.04);
+  --shadow-sm-ink: 0 2px 8px rgba(6,47,40,.05);
+  --shadow-md-ink: 0 6px 20px rgba(6,47,40,.06);
+  --shadow-lg-ink: 0 16px 40px rgba(6,47,40,.08);
+  --shadow-lime:   0 8px 24px rgba(132,212,81,.35);
+  --transition: 180ms cubic-bezier(.4,0,.2,1);
+
+  /* ---------- shadcn semantic vars → Statto (LIGHT) ---------- */
+  --background: var(--gray-150);
+  --foreground: var(--statto-ink);
+  --card: #FFFFFF;
+  --card-foreground: var(--statto-ink);
+  --popover: #FFFFFF;
+  --popover-foreground: var(--statto-ink);
+  --primary: var(--lime-400);
+  --primary-foreground: var(--statto-ink);
+  --secondary: var(--gray-100);
+  --secondary-foreground: var(--statto-ink);
+  --muted: var(--gray-50);
+  --muted-foreground: var(--gray-500);
+  --accent: var(--lime-50);
+  --accent-foreground: var(--statto-ink);
+  --destructive: var(--negative);
+  --destructive-foreground: #FFFFFF;
+  --border: #E3E3E6;
+  --input: #E3E3E6;
+  --ring: var(--lime-500);
+
+  /* Admin sidebar = white rail; active item ink bg + white text + lime icon */
+  --sidebar-background: #FFFFFF;
+  --sidebar-foreground: var(--gray-500);
+  --sidebar-primary: var(--statto-ink);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--gray-50);
+  --sidebar-accent-foreground: var(--statto-ink);
+  --sidebar-border: #E3E3E6;
+  --sidebar-ring: var(--lime-500);
+  --sidebar-active-icon: var(--statto-lime);
+
+  /* chart palette */
+  --chart-1: var(--lime-400);
+  --chart-2: var(--green-500);
+  --chart-3: var(--green-300);
+  --chart-4: var(--warning);
+  --chart-5: var(--info);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --sidebar-background: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* Derived from the Statto green ramp (mockups are light-only). */
+  --background: var(--green-900);
+  --foreground: #EAF3EF;
+  --card: var(--green-700);
+  --card-foreground: #EAF3EF;
+  --popover: var(--green-700);
+  --popover-foreground: #EAF3EF;
+  --primary: var(--lime-400);
+  --primary-foreground: var(--statto-ink);
+  --secondary: var(--green-500);
+  --secondary-foreground: #EAF3EF;
+  --muted: var(--green-700);
+  --muted-foreground: var(--green-100);
+  --accent: rgba(159,232,112,.14);
+  --accent-foreground: var(--statto-lime);
+  --destructive: var(--negative);
+  --destructive-foreground: #FFFFFF;
+  --border: var(--green-500);
+  --input: rgba(255,255,255,.12);
+  --ring: var(--lime-400);
+
+  --sidebar-background: #052420;
+  --sidebar-foreground: rgba(234,243,239,.75);
+  --sidebar-primary: var(--lime-400);
+  --sidebar-primary-foreground: var(--statto-ink);
+  --sidebar-accent: rgba(159,232,112,.16);
+  --sidebar-accent-foreground: var(--statto-lime);
+  --sidebar-border: rgba(255,255,255,.08);
+  --sidebar-ring: var(--lime-400);
+  --sidebar-active-icon: var(--statto-ink);
+
+  --chart-1: var(--lime-400);
+  --chart-2: var(--lime-200);
+  --chart-3: var(--green-300);
+  --chart-4: var(--warning);
+  --chart-5: var(--info);
+
+  --shadow-xs-ink: 0 1px 2px rgba(0,0,0,.30);
+  --shadow-sm-ink: 0 2px 8px rgba(0,0,0,.32);
+  --shadow-md-ink: 0 6px 20px rgba(0,0,0,.36);
+  --shadow-lg-ink: 0 16px 40px rgba(0,0,0,.45);
 }
 
 @theme inline {
@@ -92,10 +150,54 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Chart utilities (recharts via shadcn chart) */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Brand utilities — bg-statto-ink, text-statto-lime, bg-positive, etc. */
+  --color-statto-ink: var(--statto-ink);
+  --color-statto-lime: var(--statto-lime);
+  --color-ink: var(--statto-ink);
+  --color-ink-foreground: #EAF3EF;
+  --color-lime-50: var(--lime-50);
+  --color-lime-100: var(--lime-100);
+  --color-lime-200: var(--lime-200);
+  --color-lime-300: var(--lime-300);
+  --color-lime-400: var(--lime-400);
+  --color-lime-500: var(--lime-500);
+  --color-lime-600: var(--lime-600);
+  --color-brand-green-500: var(--green-500);
+  --color-brand-green-700: var(--green-700);
+  --color-brand-green-900: var(--green-900);
+  --color-positive: var(--positive);
+  --color-positive-bg: var(--positive-bg);
+  --color-negative: var(--negative);
+  --color-negative-bg: var(--negative-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+
+  /* Radii — Statto scale (Card uses rounded-xl = 24px) */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-3xl: 32px;
+
+  /* Soft ink-tinted shadows replace Tailwind defaults app-wide */
+  --shadow-xs: var(--shadow-xs-ink);
+  --shadow-sm: var(--shadow-sm-ink);
+  --shadow-md: var(--shadow-md-ink);
+  --shadow-lg: var(--shadow-lg-ink);
+  --shadow-lime: var(--shadow-lime);
+
+  --font-sans: 'Poppins', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 @layer base {
@@ -104,7 +206,9 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Manrope', sans-serif;
+    font-family: 'Poppins', 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -164,8 +268,8 @@
 }
 
 @keyframes border-glow {
-  0%, 100% { border-color: rgba(99, 102, 241, 0.3); box-shadow: 0 0 15px rgba(99, 102, 241, 0.1); }
-  50% { border-color: rgba(99, 102, 241, 0.6); box-shadow: 0 0 25px rgba(99, 102, 241, 0.2); }
+  0%, 100% { border-color: rgba(159, 232, 112, 0.35); box-shadow: 0 0 15px rgba(159, 232, 112, 0.12); }
+  50% { border-color: rgba(159, 232, 112, 0.7); box-shadow: 0 0 25px rgba(159, 232, 112, 0.25); }
 }
 
 .animate-gradient { animation: gradient-shift 8s ease infinite; background-size: 200% 200%; }

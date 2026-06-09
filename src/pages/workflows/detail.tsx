@@ -12,16 +12,16 @@ import { useWorkflow, useToggleWorkflowStatus, useExecuteWorkflow } from '@/lib/
 
 import { logError } from '../../lib/log';
 const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  paused: 'bg-amber-500/10 text-amber-600 border-amber-200',
+  active: 'bg-positive/10 text-positive border-positive/30',
+  paused: 'bg-warning/10 text-warning border-warning/30',
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
 const execStatusColors: Record<string, string> = {
-  completed: 'text-emerald-600',
-  failed: 'text-red-600',
-  running: 'text-blue-600',
-  paused: 'text-amber-600',
+  completed: 'text-positive',
+  failed: 'text-negative',
+  running: 'text-info',
+  paused: 'text-warning',
 };
 
 const execStatusIcons: Record<string, React.ElementType> = {
@@ -32,8 +32,8 @@ const execStatusIcons: Record<string, React.ElementType> = {
 };
 
 const stepStatusColors: Record<string, string> = {
-  completed: 'bg-emerald-500 text-white',
-  failed: 'bg-red-500 text-white',
+  completed: 'bg-positive text-white',
+  failed: 'bg-negative text-white',
   pending: 'bg-muted text-muted-foreground',
   skipped: 'bg-neutral-300 text-neutral-500',
 };
@@ -106,7 +106,7 @@ export function WorkflowDetailPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold">{workflow.totalRuns}</p><p className="text-sm text-muted-foreground">Total Runs</p></CardContent></Card>
-        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-emerald-600">{workflow.successRate}%</p><p className="text-sm text-muted-foreground">Success Rate</p></CardContent></Card>
+        <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-positive">{workflow.successRate}%</p><p className="text-sm text-muted-foreground">Success Rate</p></CardContent></Card>
         <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-sm font-medium">{workflow.lastRunAt ? formatDate(workflow.lastRunAt) : '—'}</p><p className="text-sm text-muted-foreground">Last Run</p></CardContent></Card>
         <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-sm font-medium">{workflow.nextRunAt ? formatDate(workflow.nextRunAt) : '—'}</p><p className="text-sm text-muted-foreground">Next Run</p></CardContent></Card>
       </div>
@@ -165,7 +165,7 @@ export function WorkflowDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-xs">{exec.stepsCompleted}/{exec.stepsTotal}</Badge>
-                    <Badge className={`text-xs capitalize ${exec.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : exec.status === 'failed' ? 'bg-red-500/10 text-red-600' : 'bg-blue-500/10 text-blue-600'}`}>
+                    <Badge className={`text-xs capitalize ${exec.status === 'completed' ? 'bg-positive/10 text-positive' : exec.status === 'failed' ? 'bg-negative/10 text-negative' : 'bg-info/10 text-info'}`}>
                       {exec.status}
                     </Badge>
                   </div>

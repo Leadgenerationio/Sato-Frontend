@@ -39,15 +39,15 @@ function formatDateTime(iso: string) {
 
 function StatusBadge({ status }: { status: CreativeApprovalState['status'] }) {
   if (status === 'approved') {
-    return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200"><Check className="size-3 mr-1" />Approved</Badge>;
+    return <Badge className="bg-positive/10 text-positive border-positive/30"><Check className="size-3 mr-1" />Approved</Badge>;
   }
   if (status === 'rejected') {
-    return <Badge className="bg-rose-500/10 text-rose-600 border-rose-200"><X className="size-3 mr-1" />Rejected</Badge>;
+    return <Badge className="bg-negative/10 text-negative border-negative/30"><X className="size-3 mr-1" />Rejected</Badge>;
   }
   if (status === 'changes_requested') {
-    return <Badge className="bg-orange-500/10 text-orange-600 border-orange-200">Changes requested</Badge>;
+    return <Badge className="bg-warning/10 text-warning border-warning/30">Changes requested</Badge>;
   }
-  return <Badge className="bg-amber-500/10 text-amber-600 border-amber-200"><Clock className="size-3 mr-1" />Pending review</Badge>;
+  return <Badge className="bg-warning/10 text-warning border-warning/30"><Clock className="size-3 mr-1" />Pending review</Badge>;
 }
 
 export interface CampaignMetrics {
@@ -178,7 +178,7 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
             href={creative.signedUrl ?? creative.fileUrl ?? '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-blue-600 underline px-6 py-12"
+            className="text-sm text-info underline px-6 py-12"
           >
             Open {creative.name} ↗
           </a>
@@ -193,7 +193,7 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
       {/* Decision audit */}
       <div className="rounded-lg border p-3 text-sm">
         {ap.status === 'approved' && (
-          <p className="text-emerald-700 dark:text-emerald-400">
+          <p className="text-positive dark:text-positive">
             <Check className="size-4 inline mr-1" />
             Signed off
             {ap.decidedByName && <> by <span className="font-medium">{ap.decidedByName}</span></>}
@@ -201,7 +201,7 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
           </p>
         )}
         {(ap.status === 'rejected' || ap.status === 'changes_requested') && (
-          <div className="space-y-2 text-rose-700 dark:text-rose-400">
+          <div className="space-y-2 text-negative dark:text-negative">
             <p>
               <X className="size-4 inline mr-1" />
               {ap.status === 'rejected' ? 'Rejected' : 'Changes requested'}
@@ -209,14 +209,14 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
               {ap.decidedAt && <> on {formatDateTime(ap.decidedAt)}</>}
             </p>
             {ap.feedback && !/^(na|n\/a|none|-|nil)$/i.test(ap.feedback.trim()) && (
-              <p className="rounded-md bg-rose-50 dark:bg-rose-950/30 p-2 text-foreground">
+              <p className="rounded-md bg-negative/10 dark:bg-negative/30 p-2 text-foreground">
                 <span className="font-medium">Feedback:</span> {ap.feedback}
               </p>
             )}
           </div>
         )}
         {isPending && (
-          <p className="text-amber-700 dark:text-amber-400">
+          <p className="text-warning dark:text-warning">
             <Clock className="size-4 inline mr-1" />
             Awaiting your review.
             {showDecisionControls && ' Each decision is timestamped with your IP for audit.'}

@@ -41,15 +41,15 @@ export function PortalAgreementPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`flex size-10 items-center justify-center rounded-lg ${isSigned ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
-                {isSigned ? <CheckCircle2 className="size-5 text-emerald-600" /> : <Clock className="size-5 text-amber-600" />}
+              <div className={`flex size-10 items-center justify-center rounded-lg ${isSigned ? 'bg-positive/10' : 'bg-warning/10'}`}>
+                {isSigned ? <CheckCircle2 className="size-5 text-positive" /> : <Clock className="size-5 text-warning" />}
               </div>
               <div>
                 <CardTitle className="text-base">Service Agreement</CardTitle>
                 <p className="text-sm text-muted-foreground">{agreement.clientName}</p>
               </div>
             </div>
-            <Badge className={isSigned ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-amber-500/10 text-amber-600 border-amber-200'}>
+            <Badge className={isSigned ? 'bg-positive/10 text-positive border-positive/30' : 'bg-warning/10 text-warning border-warning/30'}>
               {isSigned ? 'Signed' : 'Pending'}
             </Badge>
           </div>
@@ -57,7 +57,7 @@ export function PortalAgreementPage() {
         <CardContent className="space-y-4">
           {agreement.signedAt && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="size-4 text-emerald-600" />
+              <CheckCircle2 className="size-4 text-positive" />
               <span>Signed on {formatDate(agreement.signedAt)}</span>
             </div>
           )}
@@ -77,7 +77,7 @@ export function PortalAgreementPage() {
           {!isSigned && (
             <>
               <Separator />
-              <p className="text-sm text-amber-600">
+              <p className="text-sm text-warning">
                 Your agreement is pending signature. Please contact your account manager to complete the signing process.
               </p>
             </>

@@ -92,13 +92,13 @@ function formatCurrency(value: number, currency = 'GBP') {
 }
 
 function marginColor(margin: number): string {
-  if (margin >= 50) return 'text-emerald-600';
-  if (margin >= 30) return 'text-amber-600';
-  return 'text-red-600';
+  if (margin >= 50) return 'text-positive';
+  if (margin >= 30) return 'text-warning';
+  return 'text-negative';
 }
 
 function profitColor(profit: number): string {
-  return profit >= 0 ? 'text-emerald-600' : 'text-red-600';
+  return profit >= 0 ? 'text-positive' : 'text-negative';
 }
 
 const WIDGET_WINDOWS: { value: DeliveryWindow; label: string }[] = [

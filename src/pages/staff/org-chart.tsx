@@ -9,14 +9,14 @@ import { useStaffList, type StaffMember } from '@/lib/hooks/use-staff';
 // ─── Helpers ───
 
 const departmentColors: Record<string, string> = {
-  'Content Team': 'bg-purple-500/10 text-purple-600 border-purple-200',
-  'Operations': 'bg-blue-500/10 text-blue-600 border-blue-200',
+  'Content Team': 'bg-lime-400/10 text-lime-600 border-lime-300',
+  'Operations': 'bg-info/10 text-info border-info/30',
 };
 
 const statusIndicator: Record<string, string> = {
-  active: 'bg-emerald-500',
-  on_leave: 'bg-amber-500',
-  terminated: 'bg-red-500',
+  active: 'bg-positive',
+  on_leave: 'bg-warning',
+  terminated: 'bg-negative',
 };
 
 // ─── Org Node ───
@@ -131,8 +131,8 @@ export function OrgChartPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 w-full max-w-3xl mt-8">
           {/* Content Team Column */}
           <div className="flex flex-col items-center gap-0">
-            <div className="rounded-lg border-2 border-purple-200 bg-purple-500/5 px-4 py-2 mb-4">
-              <p className="text-sm font-semibold text-purple-600">Content Team</p>
+            <div className="rounded-lg border-2 border-lime-300 bg-lime-400/5 px-4 py-2 mb-4">
+              <p className="text-sm font-semibold text-lime-600">Content Team</p>
             </div>
 
             {contentManager && (
@@ -159,8 +159,8 @@ export function OrgChartPage() {
 
           {/* Operations Column */}
           <div className="flex flex-col items-center gap-0">
-            <div className="rounded-lg border-2 border-blue-200 bg-blue-500/5 px-4 py-2 mb-4">
-              <p className="text-sm font-semibold text-blue-600">Operations</p>
+            <div className="rounded-lg border-2 border-info/30 bg-info/5 px-4 py-2 mb-4">
+              <p className="text-sm font-semibold text-info">Operations</p>
             </div>
 
             {opsManager && (

@@ -23,8 +23,8 @@ import { EmptyState } from '@/components/shared/empty-state';
 const STATUS_TABS = ['all', 'onboarding', 'active', 'churned'] as const;
 
 const statusColors: Record<string, string> = {
-  onboarding: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  active:     'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  onboarding: 'bg-info/10 text-info border-info/30',
+  active:     'bg-positive/10 text-positive border-positive/30',
   churned:    'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
@@ -37,9 +37,9 @@ const statusLabels: Record<string, string> = {
 
 function creditBadge(score: number | null) {
   if (score === null) return <span className="text-xs text-muted-foreground">—</span>;
-  let color = 'text-emerald-600';
-  if (score < 50) color = 'text-red-600';
-  else if (score < 65) color = 'text-amber-600';
+  let color = 'text-positive';
+  if (score < 50) color = 'text-negative';
+  else if (score < 65) color = 'text-warning';
   return <span className={`text-sm font-medium tabular-nums ${color}`}>{score}</span>;
 }
 

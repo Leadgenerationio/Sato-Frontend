@@ -11,10 +11,10 @@ import { EmptyState } from '@/components/shared/empty-state';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500',
-  sent: 'bg-blue-500/10 text-blue-600',
-  authorised: 'bg-blue-500/10 text-blue-600',
-  paid: 'bg-emerald-500/10 text-emerald-600',
-  overdue: 'bg-red-500/10 text-red-600',
+  sent: 'bg-info/10 text-info',
+  authorised: 'bg-info/10 text-info',
+  paid: 'bg-positive/10 text-positive',
+  overdue: 'bg-negative/10 text-negative',
 };
 
 // Sam T8 (2026-05-20): client-facing label map. Xero's raw "authorised"
@@ -114,8 +114,8 @@ export function PortalInvoicesPage() {
 
       {!isLoading && invoices && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</p><p className="text-sm text-muted-foreground">Total Paid</p></CardContent></Card>
-          <Card className="gap-3 py-5"><CardContent className="text-center"><p className={`text-2xl font-bold ${totalOutstanding > 0 ? 'text-amber-600' : ''}`}>{formatCurrency(totalOutstanding)}</p><p className="text-sm text-muted-foreground">Outstanding</p></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-positive">{formatCurrency(totalPaid)}</p><p className="text-sm text-muted-foreground">Total Paid</p></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent className="text-center"><p className={`text-2xl font-bold ${totalOutstanding > 0 ? 'text-warning' : ''}`}>{formatCurrency(totalOutstanding)}</p><p className="text-sm text-muted-foreground">Outstanding</p></CardContent></Card>
         </div>
       )}
 

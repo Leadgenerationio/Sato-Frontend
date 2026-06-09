@@ -163,7 +163,7 @@ export function ClientCreatePage() {
                     </div>
                     {idx > 0 && (
                       <Button type="button" variant="ghost" size="icon" onClick={() => removeContact(idx)} aria-label="Remove contact">
-                        <Trash2 className="size-4 text-red-600" />
+                        <Trash2 className="size-4 text-negative" />
                       </Button>
                     )}
                   </div>
@@ -345,7 +345,7 @@ function LeadByteBuyerSelect({
     return (
       <>
         <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="e.g. lb-1" />
-        <p className="text-xs text-amber-600">LeadByte unreachable — entering buyer id manually.</p>
+        <p className="text-xs text-warning">LeadByte unreachable — entering buyer id manually.</p>
       </>
     );
   }

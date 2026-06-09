@@ -50,8 +50,8 @@ export function LoginPage() {
 
       {/* ─── Left Panel ─── */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        {/* Black animated gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 animate-gradient" />
+        {/* Ink-green animated gradient (Statto brand) */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#041f1a] via-statto-ink to-[#0a3a31] animate-gradient" />
 
         {/* Floating orbs */}
         <div className="absolute top-20 left-16 size-72 rounded-full bg-white/[0.03] blur-3xl animate-float-slow" />
@@ -81,34 +81,34 @@ export function LoginPage() {
       </div>
 
       {/* ─── Right Panel ─── */}
-      <main className="flex flex-1 items-center justify-center bg-neutral-50 p-6 sm:p-10 relative">
+      <main className="flex flex-1 items-center justify-center bg-background p-6 sm:p-10 relative">
 
         <div className="relative z-10 w-full max-w-[calc(100%-1rem)] sm:max-w-[400px]">
 
           {/* Mobile logo */}
           <div className="mb-10 flex flex-col items-center lg:hidden animate-scale-in">
             <Logo size="xl" />
-            <p className="text-sm text-neutral-500 mt-2">Business Management System</p>
+            <p className="text-sm text-muted-foreground mt-2">Business Management System</p>
           </div>
 
           {/* Login card */}
-          <div className="rounded-2xl border border-neutral-200 bg-white shadow-xl shadow-neutral-200/50 animate-slide-up delay-100">
+          <div className="rounded-2xl border border-border bg-card shadow-lg animate-slide-up delay-100">
 
             {/* Header */}
             <div className="px-8 pt-8 pb-0 text-center">
-              <div className="inline-flex items-center justify-center size-12 rounded-full bg-neutral-100 mb-4">
-                <Lock className="size-5 text-neutral-700" />
+              <div className="inline-flex items-center justify-center size-12 rounded-full bg-lime-50 mb-4">
+                <Lock className="size-5 text-statto-ink" />
               </div>
-              <h2 className="text-xl font-semibold text-neutral-900">Welcome back</h2>
-              <p className="text-sm text-neutral-500 mt-1">Enter your credentials to continue</p>
+              <h2 className="text-xl font-semibold text-foreground">Welcome back</h2>
+              <p className="text-sm text-muted-foreground mt-1">Enter your credentials to continue</p>
             </div>
 
             {/* Form */}
             <div className="p-8">
               <form onSubmit={handleSubmit} className="space-y-5">
                 {error && (
-                  <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 animate-scale-in">
-                    <div className="size-1.5 shrink-0 rounded-full bg-red-500 animate-pulse" />
+                  <div className="flex items-center gap-2 rounded-lg border border-negative/30 bg-negative-bg p-3 text-sm text-negative animate-scale-in">
+                    <div className="size-1.5 shrink-0 rounded-full bg-negative animate-pulse" />
                     {error}
                   </div>
                 )}
@@ -143,7 +143,7 @@ export function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-0 top-0 flex h-full items-center px-3 text-neutral-400 hover:text-neutral-700 transition-colors"
+                      className="absolute right-0 top-0 flex h-full items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
@@ -155,7 +155,7 @@ export function LoginPage() {
                 <div className="animate-slide-up delay-400 pt-1">
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white shadow-lg shadow-neutral-900/20 hover:shadow-neutral-900/30 transition-all duration-300 hover:scale-[1.01]"
+                    className="w-full h-11 bg-statto-ink hover:bg-brand-green-700 text-white shadow-lg transition-all duration-300 hover:scale-[1.01] [&_svg]:text-statto-lime"
                     disabled={loading}
                   >
                     {loading ? (

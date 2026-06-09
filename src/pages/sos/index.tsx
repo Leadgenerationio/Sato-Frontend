@@ -48,7 +48,7 @@ function renderMessageWithTaskLinks(message: string): React.ReactNode {
       <Link
         key={`l-${match.index}`}
         to={`/tasks/${match[1]}`}
-        className="text-blue-600 underline underline-offset-2 hover:text-blue-700"
+        className="text-info underline underline-offset-2 hover:text-info"
       >
         {match[0]}
       </Link>,
@@ -110,8 +110,8 @@ export function SosAdminPage() {
       {/* Summary card */}
       <Card>
         <CardContent className="flex items-center gap-4 p-5">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-red-500/10">
-            <LifeBuoy className="size-5 text-red-600" />
+          <div className="flex size-11 items-center justify-center rounded-lg bg-negative/10">
+            <LifeBuoy className="size-5 text-negative" />
           </div>
           <div>
             <p className="text-2xl font-bold tabular-nums">{openCount}</p>
@@ -203,7 +203,7 @@ export function SosAdminPage() {
                           r.pagePath.startsWith('/') ? (
                             <Link
                               to={r.pagePath}
-                              className="inline-block text-xs bg-muted px-1.5 py-0.5 rounded text-blue-600 underline underline-offset-2 hover:text-blue-700"
+                              className="inline-block text-xs bg-muted px-1.5 py-0.5 rounded text-info underline underline-offset-2 hover:text-info"
                             >
                               {r.pagePath}
                             </Link>
@@ -223,11 +223,11 @@ export function SosAdminPage() {
                       </TableCell>
                       <TableCell>
                         {r.resolvedAt ? (
-                          <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 text-xs">
+                          <Badge className="bg-positive/10 text-positive border-positive/30 text-xs">
                             Resolved {formatDateTime(r.resolvedAt)}
                           </Badge>
                         ) : (
-                          <Badge className="bg-red-500/10 text-red-600 border-red-200 text-xs">
+                          <Badge className="bg-negative/10 text-negative border-negative/30 text-xs">
                             Open
                           </Badge>
                         )}

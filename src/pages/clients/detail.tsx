@@ -50,9 +50,9 @@ import { EditClientButton } from '@/components/clients/edit-client-dialog';
 
 import { logError } from '../../lib/log';
 const contactTypeColors: Record<string, string> = {
-  primary: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  billing: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  compliance: 'bg-purple-500/10 text-purple-600 border-purple-200',
+  primary: 'bg-info/10 text-info border-info/30',
+  billing: 'bg-positive/10 text-positive border-positive/30',
+  compliance: 'bg-lime-400/10 text-lime-600 border-lime-300',
   other: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
@@ -60,12 +60,12 @@ const contactTypeColors: Record<string, string> = {
 // and 'paused' kept in the color map for back-compat in case a legacy row
 // slipped through 0022; would render with the closest visual.
 const statusColors: Record<string, string> = {
-  onboarding: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  active:     'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  onboarding: 'bg-info/10 text-info border-info/30',
+  active:     'bg-positive/10 text-positive border-positive/30',
   churned:    'bg-neutral-500/10 text-neutral-500 border-neutral-200',
   // Legacy fallbacks — should be empty post-migration but kept for safety.
-  prospect:   'bg-blue-500/10 text-blue-600 border-blue-200',
-  paused:     'bg-amber-500/10 text-amber-600 border-amber-200',
+  prospect:   'bg-info/10 text-info border-info/30',
+  paused:     'bg-warning/10 text-warning border-warning/30',
 };
 
 /**
@@ -98,11 +98,11 @@ const statusLabels: Record<string, string> = {
 };
 
 const riskColors: Record<string, string> = {
-  very_low: 'text-emerald-600',
-  low: 'text-emerald-500',
-  moderate: 'text-amber-600',
-  high: 'text-red-500',
-  very_high: 'text-red-600',
+  very_low: 'text-positive',
+  low: 'text-positive',
+  moderate: 'text-warning',
+  high: 'text-negative',
+  very_high: 'text-negative',
 };
 
 function formatCurrency(value: number, currency = 'GBP') {
@@ -238,11 +238,11 @@ export function ClientDetailPage() {
         banner so the next step is obvious instead of inferred.
       */}
       {!client.xeroContactId && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-          <Link2 className="size-4 mt-0.5 shrink-0 text-amber-600" />
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
+          <Link2 className="size-4 mt-0.5 shrink-0 text-warning" />
           <div className="flex-1">
-            <p className="font-medium text-amber-900">Not linked to Xero yet</p>
-            <p className="text-amber-800/90">
+            <p className="font-medium text-warning">Not linked to Xero yet</p>
+            <p className="text-warning/90">
               Invoices, revenue and Amount Owed will populate once a Xero contact is bound.
               Click <strong>Create Agreement</strong> above to auto-link on signature,
               or open <strong>Edit</strong> to paste a Xero Contact ID manually.
@@ -411,7 +411,7 @@ export function ClientDetailPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Card className="gap-3 py-5">
                 <CardContent className="text-center">
-                  <p className={`text-4xl font-bold tabular-nums ${client.creditScore >= 65 ? 'text-emerald-600' : client.creditScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                  <p className={`text-4xl font-bold tabular-nums ${client.creditScore >= 65 ? 'text-positive' : client.creditScore >= 50 ? 'text-warning' : 'text-negative'}`}>
                     {client.creditScore}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">Credit Score</p>
@@ -455,8 +455,8 @@ export function ClientDetailPage() {
                   {creditHistory.map((entry) => (
                     <div key={entry.id} className="flex items-center justify-between rounded-lg border p-3">
                       <div className="flex items-center gap-3">
-                        <div className={`flex size-10 items-center justify-center rounded-lg ${entry.creditScore >= 65 ? 'bg-emerald-500/10' : entry.creditScore >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'}`}>
-                          <span className={`text-sm font-bold tabular-nums ${entry.creditScore >= 65 ? 'text-emerald-600' : entry.creditScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                        <div className={`flex size-10 items-center justify-center rounded-lg ${entry.creditScore >= 65 ? 'bg-positive/10' : entry.creditScore >= 50 ? 'bg-warning/10' : 'bg-negative/10'}`}>
+                          <span className={`text-sm font-bold tabular-nums ${entry.creditScore >= 65 ? 'text-positive' : entry.creditScore >= 50 ? 'text-warning' : 'text-negative'}`}>
                             {entry.creditScore}
                           </span>
                         </div>
@@ -473,7 +473,7 @@ export function ClientDetailPage() {
                           </Badge>
                         )}
                         {entry.scoreChange !== null && (
-                          <span className={`flex items-center gap-1 text-xs font-medium ${entry.scoreChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          <span className={`flex items-center gap-1 text-xs font-medium ${entry.scoreChange >= 0 ? 'text-positive' : 'text-negative'}`}>
                             {entry.scoreChange >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
                             {entry.scoreChange > 0 ? '+' : ''}{entry.scoreChange}
                           </span>
@@ -587,9 +587,9 @@ export function OnboardingProgress({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <ClipboardCheck className={`size-4 ${agreementSigned ? 'text-emerald-600' : 'text-muted-foreground'}`} />
+            <ClipboardCheck className={`size-4 ${agreementSigned ? 'text-positive' : 'text-muted-foreground'}`} />
             <span className="text-muted-foreground">Agreement:</span>
-            <span className={`font-medium ${agreementSigned ? 'text-emerald-600' : ''}`}>
+            <span className={`font-medium ${agreementSigned ? 'text-positive' : ''}`}>
               {agreementSigned ? 'Signed' : 'Not signed'}
             </span>
             {/* Sam (27 May 2026): admin override for clients who signed
@@ -624,13 +624,13 @@ export function OnboardingProgress({
                   <div className="flex w-full items-center gap-1">
                     {/* Trailing line before the dot — invisible on the first step so the
                         row aligns left without a phantom segment. */}
-                    <div className={`h-0.5 flex-1 ${i === 0 ? 'invisible' : isDone || isCurrent ? 'bg-emerald-500' : 'bg-muted'}`} />
+                    <div className={`h-0.5 flex-1 ${i === 0 ? 'invisible' : isDone || isCurrent ? 'bg-positive' : 'bg-muted'}`} />
                     <div
                       className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
                         isDone
-                          ? 'bg-emerald-500 text-white'
+                          ? 'bg-positive text-white'
                           : isCurrent
-                            ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
+                            ? 'border-2 border-positive/30 bg-positive/10 text-positive'
                             : 'border border-muted-foreground/30 bg-muted text-muted-foreground'
                       }`}
                       title={step.hint}
@@ -638,7 +638,7 @@ export function OnboardingProgress({
                       {isDone ? '✓' : i + 1}
                     </div>
                     {/* Trailing line after the dot — invisible on the last step. */}
-                    <div className={`h-0.5 flex-1 ${isLast ? 'invisible' : isDone ? 'bg-emerald-500' : 'bg-muted'}`} />
+                    <div className={`h-0.5 flex-1 ${isLast ? 'invisible' : isDone ? 'bg-positive' : 'bg-muted'}`} />
                   </div>
                   <div className="text-center">
                     <p className={`text-xs font-medium ${isDone || isCurrent ? '' : 'text-muted-foreground'}`}>{step.label}</p>
@@ -661,8 +661,8 @@ export function OnboardingProgress({
 // Remove button per row and an Add Campaign button that opens a dialog.
 
 const campaignStatusColors: Record<string, string> = {
-  active:   'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  paused:   'bg-amber-500/10 text-amber-600 border-amber-200',
+  active:   'bg-positive/10 text-positive border-positive/30',
+  paused:   'bg-warning/10 text-warning border-warning/30',
   inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
   archived: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
@@ -742,7 +742,7 @@ function CampaignsTab({ clientId }: { clientId: string }) {
                         disabled={unlink.isPending}
                         onClick={() => handleRemove(c)}
                       >
-                        <Trash2 className="size-4 text-red-500" />
+                        <Trash2 className="size-4 text-negative" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -766,10 +766,10 @@ function CampaignsTab({ clientId }: { clientId: string }) {
 
 const invoiceStatusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  authorised: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
-  paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  overdue: 'bg-red-500/10 text-red-600 border-red-200',
+  sent: 'bg-info/10 text-info border-info/30',
+  authorised: 'bg-info/10 text-info border-info/30',
+  paid: 'bg-positive/10 text-positive border-positive/30',
+  overdue: 'bg-negative/10 text-negative border-negative/30',
 };
 
 // ─── Filter / sort options for the per-client Invoices tab ────────────────
@@ -976,7 +976,7 @@ export function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
                       Show an inline Overdue badge when the invoice is past due AND still
                       has an authorised (not paid) status, so Sam sees it at a glance. */}
                   {inv.status === 'authorised' && new Date(inv.dueDate).getTime() < Date.now() && (
-                    <Badge className="bg-red-500/10 text-red-600 border-red-200 text-xs">Overdue</Badge>
+                    <Badge className="bg-negative/10 text-negative border-negative/30 text-xs">Overdue</Badge>
                   )}
                 </div>
               </td>
@@ -986,7 +986,7 @@ export function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
               </td>
               <td className="py-3 px-3 text-right">
                 {inv.daysOverdue > 0 ? (
-                  <Badge className="bg-red-500/10 text-red-600 border-red-200 text-xs">
+                  <Badge className="bg-negative/10 text-negative border-negative/30 text-xs">
                     {inv.daysOverdue}d
                   </Badge>
                 ) : (
@@ -1256,7 +1256,7 @@ function EmailsTab({ clientId }: { clientId: string }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
-                      e.direction === 'inbound' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-600'
+                      e.direction === 'inbound' ? 'bg-positive/10 text-positive' : 'bg-info/10 text-info'
                     }`}>
                       {e.direction === 'inbound' ? <Inbox className="size-4" /> : <Send className="size-4" />}
                     </div>
@@ -1271,10 +1271,10 @@ function EmailsTab({ clientId }: { clientId: string }) {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Badge className={`text-xs capitalize ${
-                      e.direction === 'inbound' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-blue-500/10 text-blue-600 border-blue-200'
+                      e.direction === 'inbound' ? 'bg-positive/10 text-positive border-positive/30' : 'bg-info/10 text-info border-info/30'
                     }`}>{e.direction}</Badge>
                     <Button variant="ghost" size="sm" onClick={() => handleDelete(e)} aria-label="Remove from thread">
-                      <Trash2 className="size-4 text-red-600" />
+                      <Trash2 className="size-4 text-negative" />
                     </Button>
                   </div>
                 </div>

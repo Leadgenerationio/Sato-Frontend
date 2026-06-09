@@ -121,7 +121,7 @@ export function PnlWidget() {
             line (no whitespace-nowrap) as the last-resort fallback. */}
         <div className="@container/pnl text-center">
           <p
-            className={`font-bold tabular-nums text-[clamp(1rem,10cqi,1.875rem)] ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}
+            className={`font-bold tabular-nums text-[clamp(1rem,10cqi,1.875rem)] ${isPositive ? 'text-positive' : 'text-negative'}`}
           >
             {formatCurrency(netProfit, data.currency)}
           </p>
@@ -140,7 +140,7 @@ export function PnlWidget() {
             instead of the minus sign breaking away from its number. */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
           <span className="text-muted-foreground">Revenue (paid invoices)</span>
-          <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-emerald-600">
+          <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-positive">
             +{formatCurrency(revenue, data.currency)}
           </span>
         </div>
@@ -149,32 +149,32 @@ export function PnlWidget() {
         <div className="space-y-1.5 rounded-md border border-border/50 bg-muted/30 p-3 text-sm">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="text-muted-foreground">Fixed costs</span>
-            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
+            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-negative">
               -{formatCurrency(fixed, data.currency)}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="text-muted-foreground">One-off costs</span>
-            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
+            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-negative">
               -{formatCurrency(oneOff, data.currency)}
             </span>
           </div>
           {advertising > 0 && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
               <span className="text-muted-foreground" title="Bank-fed advertising rows (Facebook/Google bills you categorised as 'advertising')">Advertising (bank)</span>
-              <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
+              <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-negative">
                 -{formatCurrency(advertising, data.currency)}
               </span>
             </div>
           )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="text-muted-foreground" title="Ad spend pulled from Catchr (Facebook/Google ad-account APIs)">Ad spend (Catchr)</span>
-            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
+            <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-negative">
               -{formatCurrency(adSpend, data.currency)}
             </span>
           </div>
           {data.unattributedSpendRows && data.unattributedSpendRows > 0 ? (
-            <div className="flex items-start gap-1.5 rounded border border-amber-200 bg-amber-500/10 p-1.5 text-[11px] text-amber-700">
+            <div className="flex items-start gap-1.5 rounded border border-warning/30 bg-warning/10 p-1.5 text-[11px] text-warning">
               <AlertCircle className="size-3 mt-0.5 shrink-0" />
               <span>
                 {data.unattributedSpendRows} Catchr row{data.unattributedSpendRows === 1 ? '' : 's'} unmapped — not counted in this P&amp;L. Map them in Integrations → Catchr.
@@ -197,7 +197,7 @@ export function PnlWidget() {
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div
-                className={`h-full rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-red-500'}`}
+                className={`h-full rounded-full ${isPositive ? 'bg-positive' : 'bg-negative'}`}
                 style={{ width: `${Math.max(0, Math.min(100, Math.abs(margin) * 100))}%` }}
               />
             </div>

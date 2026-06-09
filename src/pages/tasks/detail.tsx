@@ -70,9 +70,9 @@ function describeRecurrence(cron: string | null | undefined): string {
 
 const statusColors: Record<string, string> = {
   todo: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  in_progress: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  completed: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  blocked: 'bg-red-500/10 text-red-600 border-red-200',
+  in_progress: 'bg-info/10 text-info border-info/30',
+  completed: 'bg-positive/10 text-positive border-positive/30',
+  blocked: 'bg-negative/10 text-negative border-negative/30',
 };
 
 const statusLabels: Record<string, string> = {
@@ -83,9 +83,9 @@ const statusLabels: Record<string, string> = {
 };
 
 const priorityColors: Record<string, string> = {
-  urgent: 'bg-red-500/10 text-red-600 border-red-200',
-  high: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  medium: 'bg-blue-500/10 text-blue-600 border-blue-200',
+  urgent: 'bg-negative/10 text-negative border-negative/30',
+  high: 'bg-warning/10 text-warning border-warning/30',
+  medium: 'bg-info/10 text-info border-info/30',
   low: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
@@ -487,13 +487,13 @@ function SubtasksCard({ taskId, subtasks }: { taskId: string; subtasks: TaskSubt
               aria-label={s.isDone ? 'Mark as not done' : 'Mark as done'}
               className="shrink-0 text-muted-foreground hover:text-foreground"
             >
-              {s.isDone ? <CheckSquare className="size-5 text-emerald-600" /> : <Square className="size-5" />}
+              {s.isDone ? <CheckSquare className="size-5 text-positive" /> : <Square className="size-5" />}
             </button>
             <span className={`flex-1 text-sm ${s.isDone ? 'line-through text-muted-foreground' : ''}`}>
               {s.title}
             </span>
             <Button variant="ghost" size="icon" onClick={() => handleRemove(s)} aria-label="Remove">
-              <Trash2 className="size-4 text-red-600" />
+              <Trash2 className="size-4 text-negative" />
             </Button>
           </div>
         ))}
@@ -586,7 +586,7 @@ function AttachmentsCard({ taskId, attachments }: { taskId: string; attachments:
                     {downloadingId === a.id ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => handleRemove(a)} aria-label="Remove">
-                    <Trash2 className="size-4 text-red-600" />
+                    <Trash2 className="size-4 text-negative" />
                   </Button>
                 </div>
               </div>
@@ -787,7 +787,7 @@ function RelationshipsCard({ task }: { task: TaskDetail }) {
                   <p className="text-xs text-muted-foreground">
                     5-field cron: minute hour day-of-month month day-of-week.
                     {customCron.trim() && !looksLikeCron(customCron) && (
-                      <span className="text-red-600"> Need 5 space-separated fields.</span>
+                      <span className="text-negative"> Need 5 space-separated fields.</span>
                     )}
                   </p>
                 </div>

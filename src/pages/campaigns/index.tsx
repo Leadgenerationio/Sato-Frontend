@@ -25,8 +25,8 @@ const TYPE_TABS = [
 ] as const;
 
 const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  paused: 'bg-amber-500/10 text-amber-600 border-amber-200',
+  active: 'bg-positive/10 text-positive border-positive/30',
+  paused: 'bg-warning/10 text-warning border-warning/30',
   inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
@@ -245,7 +245,7 @@ export function CampaignsPage() {
                       <TableCell className="text-right tabular-nums">{formatCurrency(c.totalRevenue)}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatCurrency(c.cpl)}</TableCell>
                       <TableCell className="text-right tabular-nums">
-                        <span className={c.margin >= 50 ? 'text-emerald-600' : c.margin >= 30 ? 'text-amber-600' : 'text-destructive'}>
+                        <span className={c.margin >= 50 ? 'text-positive' : c.margin >= 30 ? 'text-warning' : 'text-destructive'}>
                           {c.margin}%
                         </span>
                       </TableCell>
@@ -351,7 +351,7 @@ function VerticalGroup({
           <span><span className="text-muted-foreground">Revenue:</span> <span className="font-medium">{formatCurrency(group.totalRevenue)}</span></span>
           <span>
             <span className="text-muted-foreground">Margin:</span>{' '}
-            <span className={`font-medium ${margin >= 50 ? 'text-emerald-600' : margin >= 30 ? 'text-amber-600' : 'text-destructive'}`}>
+            <span className={`font-medium ${margin >= 50 ? 'text-positive' : margin >= 30 ? 'text-warning' : 'text-destructive'}`}>
               {margin}%
             </span>
           </span>
@@ -393,7 +393,7 @@ function VerticalGroup({
                   <TableCell className="text-right tabular-nums">{formatCurrency(c.totalRevenue)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatCurrency(c.cpl)}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    <span className={c.margin >= 50 ? 'text-emerald-600' : c.margin >= 30 ? 'text-amber-600' : 'text-destructive'}>
+                    <span className={c.margin >= 50 ? 'text-positive' : c.margin >= 30 ? 'text-warning' : 'text-destructive'}>
                       {c.margin}%
                     </span>
                   </TableCell>
@@ -435,12 +435,12 @@ function UnlinkedSpendCard() {
 
   const rows = expanded ? data.rows : data.rows.slice(0, 5);
   return (
-    <Card className="border-amber-200 bg-amber-50/40">
+    <Card className="border-warning/30 bg-warning/40">
       <CardContent className="p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-amber-100">
-              <AlertTriangle className="size-5 text-amber-600" />
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-warning/10">
+              <AlertTriangle className="size-5 text-warning" />
             </div>
             <div>
               <p className="text-sm font-semibold">
@@ -455,14 +455,14 @@ function UnlinkedSpendCard() {
             variant="ghost"
             size="sm"
             onClick={() => setExpanded((v) => !v)}
-            className="text-amber-700 hover:text-amber-800"
+            className="text-warning hover:text-warning"
           >
             {expanded ? 'Hide' : 'Show'} accounts
             {expanded ? <ChevronDown className="ml-1 size-4" /> : <ChevronRight className="ml-1 size-4" />}
           </Button>
         </div>
         {expanded && (
-          <div className="mt-3 overflow-x-auto rounded-md border border-amber-200 bg-white">
+          <div className="mt-3 overflow-x-auto rounded-md border border-warning/30 bg-white">
             <Table>
               <TableHeader>
                 <TableRow>

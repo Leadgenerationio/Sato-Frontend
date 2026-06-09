@@ -190,7 +190,7 @@ export function ClientImportPage() {
                               {isImported ? (
                                 <Link
                                   to={`/clients/${c.existingClientId}`}
-                                  className="inline-flex items-center text-xs text-emerald-600 hover:underline"
+                                  className="inline-flex items-center text-xs text-positive hover:underline"
                                 >
                                   Already imported
                                   <ChevronRight className="size-3 ml-0.5" />
@@ -222,7 +222,7 @@ export function ClientImportPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  <CheckCircle2 className="size-4 text-positive" />
                   Last import — {lastResult.created} created, {lastResult.skipped} skipped, {lastResult.errors} errored
                 </CardTitle>
                 <CardDescription>
@@ -240,9 +240,9 @@ export function ClientImportPage() {
                     >
                       <Badge
                         className={`text-xs capitalize ${
-                          r.status === 'created' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200'
-                          : r.status === 'skipped' ? 'bg-amber-500/10 text-amber-600 border-amber-200'
-                          : 'bg-red-500/10 text-red-600 border-red-200'
+                          r.status === 'created' ? 'bg-positive/10 text-positive border-positive/30'
+                          : r.status === 'skipped' ? 'bg-warning/10 text-warning border-warning/30'
+                          : 'bg-negative/10 text-negative border-negative/30'
                         }`}
                       >
                         {r.status}

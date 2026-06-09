@@ -114,7 +114,7 @@ export function PortalDashboardPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                   <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
                   <Tooltip />
-                  <Bar dataKey="leads" fill="#171717" radius={[4, 4, 0, 0]} name="Leads" />
+                  <Bar dataKey="leads" fill="#062F28" radius={[4, 4, 0, 0]} name="Leads" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

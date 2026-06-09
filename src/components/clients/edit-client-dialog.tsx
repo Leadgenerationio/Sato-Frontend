@@ -326,7 +326,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                       onClick={() => removeContact(idx)}
                       aria-label="Remove contact"
                     >
-                      <Trash2 className="size-4 text-red-600" />
+                      <Trash2 className="size-4 text-negative" />
                     </Button>
                   )}
                 </div>

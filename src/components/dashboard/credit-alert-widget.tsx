@@ -43,8 +43,8 @@ export function CreditAlertWidget() {
               {list.length} client{list.length !== 1 ? 's' : ''} flagged
             </CardDescription>
           </div>
-          <div className={`flex size-10 items-center justify-center rounded-lg ${severeAlerts.length > 0 ? 'bg-red-500/10' : 'bg-amber-500/10'}`}>
-            <ShieldAlert className={`size-5 ${severeAlerts.length > 0 ? 'text-red-600' : 'text-amber-600'}`} />
+          <div className={`flex size-10 items-center justify-center rounded-lg ${severeAlerts.length > 0 ? 'bg-negative/10' : 'bg-warning/10'}`}>
+            <ShieldAlert className={`size-5 ${severeAlerts.length > 0 ? 'text-negative' : 'text-warning'}`} />
           </div>
         </div>
       </CardHeader>
@@ -56,7 +56,7 @@ export function CreditAlertWidget() {
           const severe = alert.scoreChange <= -20;
           return (
             <Link key={alert.clientId} to={`/clients/${alert.clientId}`} className="block">
-              <div className={`flex items-center justify-between rounded-lg border p-2.5 transition-colors hover:bg-muted/50 ${severe ? 'border-red-200' : ''}`}>
+              <div className={`flex items-center justify-between rounded-lg border p-2.5 transition-colors hover:bg-muted/50 ${severe ? 'border-negative/30' : ''}`}>
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{alert.clientName}</p>
                   <p className="text-xs text-muted-foreground">
@@ -64,11 +64,11 @@ export function CreditAlertWidget() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 ml-2">
-                  <span className={`text-sm font-bold tabular-nums ${alert.currentScore < 50 ? 'text-red-600' : 'text-amber-600'}`}>
+                  <span className={`text-sm font-bold tabular-nums ${alert.currentScore < 50 ? 'text-negative' : 'text-warning'}`}>
                     {alert.currentScore}
                   </span>
                   {alert.scoreChange < 0 && (
-                    <Badge className={`text-xs ${severe ? 'bg-red-500/10 text-red-600 border-red-200' : 'bg-amber-500/10 text-amber-600 border-amber-200'}`}>
+                    <Badge className={`text-xs ${severe ? 'bg-negative/10 text-negative border-negative/30' : 'bg-warning/10 text-warning border-warning/30'}`}>
                       <TrendingDown className="size-3 mr-0.5" />
                       {alert.scoreChange}
                     </Badge>

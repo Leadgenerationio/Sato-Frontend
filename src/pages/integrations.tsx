@@ -77,7 +77,7 @@ function formatRelative(iso: string | null): string {
 function StatusPill({ status }: { status: CardStatus }) {
   if (status === 'live') {
     return (
-      <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
+      <Badge className="bg-positive/10 text-positive border-positive/30">
         <CheckCircle2 className="size-3 mr-1" /> Live
       </Badge>
     );
@@ -89,7 +89,7 @@ function StatusPill({ status }: { status: CardStatus }) {
     // word "Mock" misleads (Sam read it as "we faked the data"). Renamed
     // to "Degraded" — same amber pill, accurate copy.
     return (
-      <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
+      <Badge className="bg-warning/10 text-warning border-warning/30">
         <AlertCircle className="size-3 mr-1" /> Degraded
       </Badge>
     );
@@ -198,7 +198,7 @@ function LeadByteSkippedCampaigns({ skipped }: { skipped: SkippedCampaign[] }) {
           aria-expanded={open}
         >
           <div className="flex items-center gap-2">
-            <AlertCircle className="size-4 text-amber-600" />
+            <AlertCircle className="size-4 text-warning" />
             <span className="text-sm font-medium">
               LeadByte — Multi-buyer campaigns skipped ({skipped.length})
             </span>
@@ -473,7 +473,7 @@ export function IntegrationsPage() {
               <p className="text-2xl font-bold tabular-nums">{liveCount}</p>
               <p className="text-xs text-muted-foreground">Live</p>
             </div>
-            <CheckCircle2 className="size-6 text-emerald-500" />
+            <CheckCircle2 className="size-6 text-positive" />
           </CardContent>
         </Card>
         <Card className="gap-2 py-4">
@@ -482,7 +482,7 @@ export function IntegrationsPage() {
               <p className="text-2xl font-bold tabular-nums">{mockCount}</p>
               <p className="text-xs text-muted-foreground">Degraded / probe failed</p>
             </div>
-            <AlertCircle className="size-6 text-amber-500" />
+            <AlertCircle className="size-6 text-warning" />
           </CardContent>
         </Card>
         <Card className="gap-2 py-4">

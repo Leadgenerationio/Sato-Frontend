@@ -54,8 +54,8 @@ interface PlacedField {
 }
 
 const FIELD_DEFAULTS: Record<FieldType, { widthPct: number; heightPct: number; label: string; icon: typeof PenLine; color: string }> = {
-  signature:    { widthPct: 0.25, heightPct: 0.05, label: 'Signature',    icon: PenLine,  color: 'border-blue-400 bg-blue-50/70 text-blue-700' },
-  date_signed:  { widthPct: 0.14, heightPct: 0.035, label: 'Date signed', icon: Calendar, color: 'border-amber-400 bg-amber-50/70 text-amber-700' },
+  signature:    { widthPct: 0.25, heightPct: 0.05, label: 'Signature',    icon: PenLine,  color: 'border-info/30 bg-info/70 text-info' },
+  date_signed:  { widthPct: 0.14, heightPct: 0.035, label: 'Date signed', icon: Calendar, color: 'border-warning/30 bg-warning/70 text-warning' },
   text:         { widthPct: 0.20, heightPct: 0.035, label: 'Text',        icon: Type,     color: 'border-neutral-400 bg-neutral-50/80 text-neutral-700' },
 };
 
@@ -195,7 +195,7 @@ export function AgreementEditorPage() {
         </div>
         <Card>
           <CardContent className="flex items-center gap-3 p-6 text-sm">
-            <AlertTriangle className="size-5 text-red-600 shrink-0" />
+            <AlertTriangle className="size-5 text-negative shrink-0" />
             <p className="text-muted-foreground">{pdfError}</p>
           </CardContent>
         </Card>
@@ -265,7 +265,7 @@ export function AgreementEditorPage() {
               file={pdfUrl}
               onLoadSuccess={({ numPages: n }) => setNumPages(n)}
               loading={<div className="text-sm text-muted-foreground py-12">Rendering PDF...</div>}
-              error={<div className="text-sm text-red-600 py-12">Couldn't render the PDF — it may be corrupt or password-protected.</div>}
+              error={<div className="text-sm text-negative py-12">Couldn't render the PDF — it may be corrupt or password-protected.</div>}
             >
               {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) => (
                 <div
@@ -319,7 +319,7 @@ export function AgreementEditorPage() {
 
       {/* Empty-state hint */}
       {pdfUrl && fields.length === 0 && (
-        <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/40 p-3 text-xs text-amber-700 inline-flex items-center gap-2">
+        <div className="rounded-lg border border-dashed border-warning/30 bg-warning/40 p-3 text-xs text-warning inline-flex items-center gap-2">
           <Trash2 className="size-3.5 opacity-0" />
           Pick a field type from the toolbar, then click on the PDF to drop it. You can drag fields to reposition.
         </div>

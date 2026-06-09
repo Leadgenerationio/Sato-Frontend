@@ -260,7 +260,7 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-medium">{u.name}</p>
                       {isAdmin ? (
-                        <Badge className="bg-amber-500/10 text-amber-700 border-amber-200 text-xs">
+                        <Badge className="bg-warning/10 text-warning border-warning/30 text-xs">
                           <Crown className="size-3 mr-1" /> Client admin
                         </Badge>
                       ) : (
@@ -269,7 +269,7 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                         </Badge>
                       )}
                       {u.isActive ? (
-                        <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-200 text-xs">
+                        <Badge className="bg-positive/10 text-positive border-positive/30 text-xs">
                           <ShieldCheck className="size-3 mr-1" /> Active
                         </Badge>
                       ) : (
@@ -403,7 +403,7 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
               </div>
             </div>
             {addError && (
-              <p className="text-sm text-red-600">{addError}</p>
+              <p className="text-sm text-negative">{addError}</p>
             )}
           </div>
 

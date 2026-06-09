@@ -93,13 +93,13 @@ export function FileUpload({
       </Button>
       {uploaded && !isUploading && !hasError && (
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <CheckCircle2 className="size-3.5 text-emerald-600" />
+          <CheckCircle2 className="size-3.5 text-positive" />
           <FileText className="size-3.5" />
           <span className="truncate max-w-[360px]" title={uploaded.name}>{uploaded.name}</span>
         </div>
       )}
       {hasError && !isUploading && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-red-600">
+        <div className="mt-2 flex items-center gap-2 text-xs text-negative">
           <XCircle className="size-3.5" />
           <span>Upload failed — please retry.</span>
         </div>

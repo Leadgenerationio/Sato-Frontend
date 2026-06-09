@@ -65,9 +65,9 @@ type ArchiveView = 'today' | 'archive' | 'all';
 
 const statusColors: Record<string, string> = {
   todo: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  in_progress: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  on_hold: 'bg-amber-500/10 text-amber-700 border-amber-200',
-  completed: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  in_progress: 'bg-info/10 text-info border-info/30',
+  on_hold: 'bg-warning/10 text-warning border-warning/30',
+  completed: 'bg-positive/10 text-positive border-positive/30',
 };
 
 const statusLabels: Record<string, string> = {
@@ -79,9 +79,9 @@ const statusLabels: Record<string, string> = {
 };
 
 const priorityColors: Record<string, string> = {
-  urgent: 'bg-red-500/10 text-red-600 border-red-200',
-  high: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  medium: 'bg-blue-500/10 text-blue-600 border-blue-200',
+  urgent: 'bg-negative/10 text-negative border-negative/30',
+  high: 'bg-warning/10 text-warning border-warning/30',
+  medium: 'bg-info/10 text-info border-info/30',
   low: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
@@ -128,9 +128,9 @@ function matchesTimeFilter(t: TaskSummary, time: string): boolean {
 
 const BOARD_COLUMNS = [
   { key: 'todo', label: 'To Do', color: 'bg-neutral-500', dotColor: 'bg-neutral-400' },
-  { key: 'in_progress', label: 'In Progress', color: 'bg-blue-500', dotColor: 'bg-blue-500' },
-  { key: 'on_hold', label: 'On Hold', color: 'bg-amber-500', dotColor: 'bg-amber-500' },
-  { key: 'completed', label: 'Completed', color: 'bg-emerald-500', dotColor: 'bg-emerald-500' },
+  { key: 'in_progress', label: 'In Progress', color: 'bg-info', dotColor: 'bg-info' },
+  { key: 'on_hold', label: 'On Hold', color: 'bg-warning', dotColor: 'bg-warning' },
+  { key: 'completed', label: 'Completed', color: 'bg-positive', dotColor: 'bg-positive' },
 ] as const;
 
 // Sam-Loom (jam-video #5) — draggable card. dnd-kit handles the pointer/
@@ -186,7 +186,7 @@ function DraggableCard({
                 onClick={(e) => { e.stopPropagation(); onDelete(task.id, task.title); }}
                 disabled={deleting}
               >
-                <Trash2 className="size-3.5 text-red-600" />
+                <Trash2 className="size-3.5 text-negative" />
               </Button>
             )}
           </div>
@@ -367,7 +367,7 @@ function SubtaskFolderRows({ taskId, depth }: { taskId: string; depth: number })
                 className="shrink-0 text-muted-foreground hover:text-foreground"
               >
                 {s.isDone
-                  ? <CheckSquare className="size-4 text-emerald-600" />
+                  ? <CheckSquare className="size-4 text-positive" />
                   : <Square className="size-4" />}
               </button>
               <span className={`truncate ${s.isDone ? 'line-through text-muted-foreground' : ''}`}>
@@ -584,8 +584,8 @@ export function TasksPage() {
           <Card className="gap-3 py-5">
             <CardContent>
               <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
-                  <Clock className="size-5 text-blue-600" />
+                <div className="flex size-10 items-center justify-center rounded-lg bg-info/10">
+                  <Clock className="size-5 text-info" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold tabular-nums">{stats.inProgress}</p>
@@ -597,8 +597,8 @@ export function TasksPage() {
           <Card className="gap-3 py-5">
             <CardContent>
               <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                  <CheckSquare className="size-5 text-emerald-600" />
+                <div className="flex size-10 items-center justify-center rounded-lg bg-positive/10">
+                  <CheckSquare className="size-5 text-positive" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold tabular-nums">{stats.completedToday}</p>
@@ -610,8 +610,8 @@ export function TasksPage() {
           <Card className="gap-3 py-5">
             <CardContent>
               <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-red-500/10">
-                  <AlertTriangle className="size-5 text-red-600" />
+                <div className="flex size-10 items-center justify-center rounded-lg bg-negative/10">
+                  <AlertTriangle className="size-5 text-negative" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold tabular-nums">{stats.overdue}</p>
@@ -872,7 +872,7 @@ export function TasksPage() {
                             onClick={() => handleDelete(t.id, t.title)}
                             disabled={deleteTask.isPending}
                           >
-                            <Trash2 className="size-4 text-red-600" />
+                            <Trash2 className="size-4 text-negative" />
                           </Button>
                         )}
                       </TableCell>

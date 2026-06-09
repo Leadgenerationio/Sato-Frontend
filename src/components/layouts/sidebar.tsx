@@ -130,8 +130,8 @@ export function Sidebar() {
               key={item.key}
               onClick={toggleSidebar}
               className={cn(
-                'flex items-center justify-center rounded-lg px-3 py-2 text-sm transition-colors',
-                groupActive ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                'flex items-center justify-center rounded-[11px] px-3 py-2 text-sm transition-colors',
+                groupActive ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
               )}
               title={item.label}
             >
@@ -145,8 +145,8 @@ export function Sidebar() {
             <button
               onClick={() => toggleGroup(item.key)}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                groupActive ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                'flex items-center gap-3 rounded-[11px] px-3 py-2.5 text-[14.5px] font-medium transition-colors',
+                groupActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
               )}
             >
               <item.icon className="h-5 w-5 shrink-0" />
@@ -154,7 +154,7 @@ export function Sidebar() {
               <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} />
             </button>
             {expanded && (
-              <div className="mt-1 ml-4 flex flex-col gap-1 border-l border-border pl-3">
+              <div className="mt-1 ml-[22px] flex flex-col gap-px border-l-[1.5px] border-sidebar-border pl-3">
                 {item.children.map((child) => {
                   const active = isLeafActive(location.pathname, child.href);
                   return (
@@ -163,11 +163,11 @@ export function Sidebar() {
                       to={child.href}
                       onClick={onClick}
                       className={cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-colors',
-                        active ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                        'flex items-center gap-3 rounded-[9px] px-3 py-2 text-[13.5px] transition-colors',
+                        active ? 'bg-sidebar-primary text-sidebar-primary-foreground font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                       )}
                     >
-                      <child.icon className="h-4 w-4 shrink-0" />
+                      <child.icon className={cn('h-4 w-4 shrink-0', active && 'text-[var(--sidebar-active-icon)]')} />
                       <span>{child.label}</span>
                     </Link>
                   );
@@ -185,13 +185,13 @@ export function Sidebar() {
           to={item.href}
           onClick={onClick}
           className={cn(
-            'flex items-center rounded-lg px-3 py-2 text-sm transition-colors',
+            'flex items-center rounded-[11px] px-3 py-2.5 text-[14.5px] font-medium transition-colors',
             compact ? 'justify-center' : 'gap-3',
-            active ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+            active ? 'bg-sidebar-primary text-sidebar-primary-foreground font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
           )}
           title={compact ? item.label : undefined}
         >
-          <item.icon className="h-5 w-5 shrink-0" />
+          <item.icon className={cn('h-5 w-5 shrink-0', active && 'text-[var(--sidebar-active-icon)]')} />
           {!compact && <span>{item.label}</span>}
         </Link>
       );
@@ -221,7 +221,7 @@ export function Sidebar() {
         {user && (
           <div className="shrink-0 border-t px-3 py-3">
             <div className="flex items-center gap-2 px-3">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <ShieldCheck className="h-4 w-4 shrink-0 text-brand-green-500" />
               <span className="truncate text-xs capitalize text-muted-foreground">{user.role.replace('_', ' ')}</span>
             </div>
           </div>
@@ -257,7 +257,7 @@ export function Sidebar() {
           )}>
             {sidebarOpen ? (
               <div className="flex items-center gap-2 px-3">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <ShieldCheck className="h-4 w-4 shrink-0 text-brand-green-500" />
                 <span className="truncate text-xs capitalize text-muted-foreground">{user.role.replace('_', ' ')}</span>
               </div>
             ) : (
@@ -265,7 +265,7 @@ export function Sidebar() {
                 className="flex items-center justify-center"
                 title={user.role.replace('_', ' ')}
               >
-                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <ShieldCheck className="h-4 w-4 text-brand-green-500" />
               </div>
             )}
           </div>

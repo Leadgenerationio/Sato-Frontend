@@ -50,13 +50,11 @@ const FALLBACK_REVENUE: Array<{ month: string; revenue: number; expenses: number
 const FALLBACK_INVOICES: Array<{ month: string; paid: number; overdue: number; pending: number; isPartial: boolean }> =
   EMPTY_MONTHS_6.map((month) => ({ month, paid: 0, overdue: 0, pending: 0, isPartial: false }));
 
-// 12-colour palette so 10+ vertical slices stay visually distinct. Greys
-// (matching the rest of the dashboard) take the lead colours; muted accents
-// fill in the long tail so a 14-slice pie doesn't have two adjacent
-// identical-looking wedges.
+// Statto brand palette — ink → lime → green ramp, then muted greens/greys so a
+// 14-slice pie keeps 10+ adjacent wedges distinct without going off-brand rainbow.
 const PIE_PALETTE = [
-  '#171717', '#404040', '#525252', '#737373', '#a3a3a3', '#d4d4d4',
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4',
+  '#062F28', '#84D451', '#2E5249', '#9FE870', '#6E9089', '#123F36',
+  '#B6ED8E', '#5C5C60', '#C6D8D3', '#A9A9AF', '#66B534', '#CDF2AC',
 ];
 
 const FALLBACK_LEADS_BY_DAY = [
@@ -88,13 +86,13 @@ function formatRelativeTime(iso: string): string {
 function StatCard({ title, value, change, trend, icon: Icon }: { title: string; value: string; change: string | null; trend: 'up' | 'down' | 'neutral'; icon: React.ElementType }) {
   // Neutral trend → the `change` string is a label (e.g. data source) not a
   // delta; render grey with no arrow so the user doesn't read it as up/down.
-  const colorClass = trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-red-500' : 'text-neutral-500';
+  const colorClass = trend === 'up' ? 'text-positive' : trend === 'down' ? 'text-negative' : 'text-muted-foreground';
   return (
     <Card className="gap-3 py-5">
       <CardContent>
         <div className="flex items-center justify-between gap-2">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
-            <Icon className="size-5 text-neutral-700" />
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-muted">
+            <Icon className="size-5 text-statto-ink" />
           </div>
           {change !== null && (
             <div className={`flex min-w-0 items-center gap-1 text-xs font-medium ${colorClass}`}>
@@ -105,8 +103,8 @@ function StatCard({ title, value, change, trend, icon: Icon }: { title: string; 
           )}
         </div>
         <div className="mt-3">
-          <p className="truncate text-2xl font-bold tabular-nums text-neutral-900">{value}</p>
-          <p className="mt-0.5 truncate text-sm text-neutral-500">{title}</p>
+          <p className="truncate text-[34px] font-semibold leading-none tracking-[-0.025em] tabular-nums text-statto-ink">{value}</p>
+          <p className="mt-2 truncate text-sm text-muted-foreground">{title}</p>
         </div>
       </CardContent>
     </Card>
@@ -131,7 +129,7 @@ function formatDate(iso: string) {
 }
 
 const tooltipStyle = {
-  contentStyle: { backgroundColor: '#fff', border: '1px solid #e5e5e5', borderRadius: '8px', fontSize: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' },
+  contentStyle: { backgroundColor: '#fff', border: '1px solid #E3E3E6', borderRadius: '12px', fontSize: '12px', fontFamily: 'Poppins, sans-serif', boxShadow: '0 6px 20px rgba(6,47,40,0.06)' },
 };
 
 // ─── Page ───
@@ -426,8 +424,8 @@ export function DashboardPage() {
                     culled by minTickGap on narrow widths. */}
                 <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#171717" stopOpacity={0.15} /><stop offset="100%" stopColor="#171717" stopOpacity={0} /></linearGradient>
-                    <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a3a3a3" stopOpacity={0.1} /><stop offset="100%" stopColor="#a3a3a3" stopOpacity={0} /></linearGradient>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#062F28" stopOpacity={0.15} /><stop offset="100%" stopColor="#062F28" stopOpacity={0} /></linearGradient>
+                    <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#84D451" stopOpacity={0.18} /><stop offset="100%" stopColor="#84D451" stopOpacity={0} /></linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
                   <XAxis
@@ -454,8 +452,8 @@ export function DashboardPage() {
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
                   {/* connectNulls=false → expenses line breaks for pre-Catchr months
                       (rather than drawing a misleading flat-zero floor). */}
-                  <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#171717" strokeWidth={2} fill="url(#revenueGrad)" />
-                  <Area type="monotone" dataKey="expenses" name="Ad Spend" stroke="#a3a3a3" strokeWidth={2} fill="url(#expenseGrad)" connectNulls={false} />
+                  <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#062F28" strokeWidth={2} fill="url(#revenueGrad)" />
+                  <Area type="monotone" dataKey="expenses" name="Ad Spend" stroke="#84D451" strokeWidth={2} fill="url(#expenseGrad)" connectNulls={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -485,7 +483,7 @@ export function DashboardPage() {
                   />
                   <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
                   <Tooltip {...tooltipStyle} />
-                  <Bar dataKey="leads" name="Leads" fill="#171717" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="leads" name="Leads" fill="#062F28" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -598,9 +596,9 @@ export function DashboardPage() {
                   At least one stays on (guarded in toggleStatus). */}
               <div className="flex flex-wrap items-center gap-2">
                 {([
-                  { key: 'paid', label: 'Paid', dot: '#171717' },
+                  { key: 'paid', label: 'Paid', dot: '#062F28' },
                   { key: 'pending', label: 'Pending', dot: '#a3a3a3' },
-                  { key: 'overdue', label: 'Overdue', dot: '#ef4444' },
+                  { key: 'overdue', label: 'Overdue', dot: '#E5575B' },
                 ] as const).map(({ key, label, dot }) => {
                   const on = invoiceStatusFilter[key];
                   return (
@@ -653,9 +651,9 @@ export function DashboardPage() {
                     }}
                   />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
-                  {invoiceStatusFilter.paid && <Bar dataKey="paid" name="Paid" stackId="a" fill="#171717" />}
+                  {invoiceStatusFilter.paid && <Bar dataKey="paid" name="Paid" stackId="a" fill="#062F28" />}
                   {invoiceStatusFilter.pending && <Bar dataKey="pending" name="Pending" stackId="a" fill="#a3a3a3" />}
-                  {invoiceStatusFilter.overdue && <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />}
+                  {invoiceStatusFilter.overdue && <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#E5575B" radius={[4, 4, 0, 0]} />}
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -21,9 +21,9 @@ function formatDate(iso: string) {
 
 function clientStatusColour(status: AutoInvoiceClientDetail['status']): string {
   switch (status) {
-    case 'invoiced': return 'bg-emerald-500/10 text-emerald-600 border-emerald-200';
-    case 'failed': return 'bg-red-500/10 text-red-600 border-red-200';
-    case 'no_lead_price': return 'bg-amber-500/10 text-amber-600 border-amber-200';
+    case 'invoiced': return 'bg-positive/10 text-positive border-positive/30';
+    case 'failed': return 'bg-negative/10 text-negative border-negative/30';
+    case 'no_lead_price': return 'bg-warning/10 text-warning border-warning/30';
     case 'no_deliveries': return 'bg-neutral-500/10 text-neutral-500 border-neutral-200';
     default: return '';
   }
@@ -64,14 +64,14 @@ export function AutoInvoiceRunDetailPage() {
       </div>
 
       {run.error && (
-        <Card className="border-red-200">
+        <Card className="border-negative/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base text-red-600">
+            <CardTitle className="flex items-center gap-2 text-base text-negative">
               <AlertCircle className="size-4" /> Run error
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="whitespace-pre-wrap text-sm text-red-700">{run.error}</pre>
+            <pre className="whitespace-pre-wrap text-sm text-negative">{run.error}</pre>
           </CardContent>
         </Card>
       )}

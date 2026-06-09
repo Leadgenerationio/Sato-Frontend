@@ -54,9 +54,9 @@ function looksLikeCron(s: string): boolean {
 }
 
 const priorityColors: Record<string, string> = {
-  urgent: 'bg-red-500/10 text-red-600 border-red-200',
-  high: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  medium: 'bg-blue-500/10 text-blue-600 border-blue-200',
+  urgent: 'bg-negative/10 text-negative border-negative/30',
+  high: 'bg-warning/10 text-warning border-warning/30',
+  medium: 'bg-info/10 text-info border-info/30',
   low: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
@@ -203,7 +203,7 @@ export function TaskCreatePage() {
             onClick={() => setAiOpen(true)}
             className="gap-1.5"
           >
-            <Sparkles className="size-4 text-violet-500" />
+            <Sparkles className="size-4 text-lime-600" />
             Generate with AI
           </Button>
         </PageHeader>
@@ -214,7 +214,7 @@ export function TaskCreatePage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="size-5 text-violet-500" />
+              <Sparkles className="size-5 text-lime-600" />
               Generate task from a sentence
             </DialogTitle>
             <DialogDescription>
@@ -401,7 +401,7 @@ export function TaskCreatePage() {
                     <p className="text-xs text-muted-foreground">
                       5-field cron: minute hour day-of-month month day-of-week.
                       {customCron.trim() && !looksLikeCron(customCron) && (
-                        <span className="text-red-600"> Need 5 space-separated fields.</span>
+                        <span className="text-negative"> Need 5 space-separated fields.</span>
                       )}
                     </p>
                   </div>
@@ -425,10 +425,10 @@ export function TaskCreatePage() {
             {/* AI-suggested subtasks preview (#91) — shown only when AI
                 filled them; user can drop any line by clicking ✕ */}
             {pendingSubtasks.length > 0 && (
-              <Card className="border-violet-200 bg-violet-50/50">
+              <Card className="border-lime-300 bg-lime-50/50">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="size-4 text-violet-500" />
+                    <Sparkles className="size-4 text-lime-600" />
                     AI-suggested subtasks
                   </CardTitle>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -443,7 +443,7 @@ export function TaskCreatePage() {
                         type="button"
                         onClick={() => setPendingSubtasks((prev) => prev.filter((_, idx) => idx !== i))}
                         aria-label="Remove subtask"
-                        className="text-muted-foreground hover:text-red-600 text-xs"
+                        className="text-muted-foreground hover:text-negative text-xs"
                       >
                         ✕
                       </button>

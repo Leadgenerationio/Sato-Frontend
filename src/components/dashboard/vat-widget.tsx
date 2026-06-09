@@ -95,8 +95,8 @@ export function VatWidget() {
             <CardTitle className="text-base">VAT Liability</CardTitle>
             <CardDescription>HMRC quarter view, live from Xero</CardDescription>
           </div>
-          <div className={`flex size-10 items-center justify-center rounded-lg ${prevIsOwed ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
-            <Receipt className={`size-5 ${prevIsOwed ? 'text-amber-600' : 'text-emerald-600'}`} />
+          <div className={`flex size-10 items-center justify-center rounded-lg ${prevIsOwed ? 'bg-warning/10' : 'bg-positive/10'}`}>
+            <Receipt className={`size-5 ${prevIsOwed ? 'text-warning' : 'text-positive'}`} />
           </div>
         </div>
       </CardHeader>
@@ -123,7 +123,7 @@ export function VatWidget() {
 
         {!isLoading && data?.configured && !anyError && notVatRegistered && (
           <div className="rounded-lg border border-dashed py-6 text-center">
-            <p className="text-2xl font-bold tabular-nums text-emerald-600">
+            <p className="text-2xl font-bold tabular-nums text-positive">
               {formatCurrency(0, currency)}
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
@@ -139,7 +139,7 @@ export function VatWidget() {
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Due to HMRC</p>
                 <p className="text-xs text-muted-foreground">{formatRange(prev)}</p>
               </div>
-              <p className={`mt-1 text-3xl font-bold tabular-nums ${prevIsOwed ? 'text-amber-600' : 'text-emerald-600'}`}>
+              <p className={`mt-1 text-3xl font-bold tabular-nums ${prevIsOwed ? 'text-warning' : 'text-positive'}`}>
                 {formatCurrency(Math.abs(prevOwed), currency)}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
@@ -187,7 +187,7 @@ export function VatWidget() {
                     <div key={`${h.fromDate}-${h.toDate}`} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{formatRange(h)}</span>
                       {h.error ? (
-                        <span className="text-amber-600">unavailable</span>
+                        <span className="text-warning">unavailable</span>
                       ) : (
                         <span className="tabular-nums font-medium">{formatCurrency(Math.abs(toMoney(h.owed)), currency)}</span>
                       )}

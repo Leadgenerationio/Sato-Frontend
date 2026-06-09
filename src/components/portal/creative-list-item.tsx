@@ -25,15 +25,15 @@ function iconFor(type: string) {
 
 function StatusChip({ status }: { status: CreativeApprovalState['status'] }) {
   if (status === 'approved') {
-    return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[10px] h-5"><Check className="size-2.5 mr-0.5" />Approved</Badge>;
+    return <Badge className="bg-positive/10 text-positive border-positive/30 text-[10px] h-5"><Check className="size-2.5 mr-0.5" />Approved</Badge>;
   }
   if (status === 'rejected') {
-    return <Badge className="bg-rose-500/10 text-rose-600 border-rose-200 text-[10px] h-5"><X className="size-2.5 mr-0.5" />Rejected</Badge>;
+    return <Badge className="bg-negative/10 text-negative border-negative/30 text-[10px] h-5"><X className="size-2.5 mr-0.5" />Rejected</Badge>;
   }
   if (status === 'changes_requested') {
-    return <Badge className="bg-orange-500/10 text-orange-600 border-orange-200 text-[10px] h-5">Changes</Badge>;
+    return <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px] h-5">Changes</Badge>;
   }
-  return <Badge className="bg-amber-500/10 text-amber-600 border-amber-200 text-[10px] h-5"><Clock className="size-2.5 mr-0.5" />Pending</Badge>;
+  return <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px] h-5"><Clock className="size-2.5 mr-0.5" />Pending</Badge>;
 }
 
 interface Props {
@@ -84,7 +84,7 @@ export function CreativeListItem({ item, selected, onSelect, metricsLine }: Prop
             Surface the approver + date on the row itself so the audit info is
             visible at a glance, not buried in the detail panel. */}
         {item.approval.status === 'approved' && item.approval.decidedByName && (
-          <p className="truncate text-[11px] text-emerald-700 dark:text-emerald-400">
+          <p className="truncate text-[11px] text-positive dark:text-positive">
             Signed off by <span className="font-medium">{item.approval.decidedByName}</span>
             {item.approval.decidedAt && (
               <> · {new Date(item.approval.decidedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</>

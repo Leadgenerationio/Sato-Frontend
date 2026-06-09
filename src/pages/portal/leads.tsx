@@ -368,7 +368,7 @@ export function PortalLeadsPage() {
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                     <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
                     <Tooltip />
-                    <Area type="monotone" dataKey="leads" stroke="#171717" fill="#171717" fillOpacity={0.15} name="Leads" />
+                    <Area type="monotone" dataKey="leads" stroke="#062F28" fill="#062F28" fillOpacity={0.15} name="Leads" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

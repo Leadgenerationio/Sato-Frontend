@@ -16,15 +16,15 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
 
   return (
     <div className={`flex items-center gap-2.5 ${className || ''}`}>
-      <div className={`${s.icon} flex items-center justify-center rounded-lg bg-neutral-900`}>
+      <div className={`${s.icon} flex items-center justify-center rounded-[10px] bg-statto-ink`}>
         <div className={`flex items-end ${s.gap}`}>
-          <div className={`${s.barW} ${s.bar1} rounded-full bg-white`} />
-          <div className={`${s.barW} ${s.bar2} rounded-full bg-white`} />
-          <div className={`${s.barW} ${s.bar3} rounded-full bg-white`} />
+          <div className={`${s.barW} ${s.bar1} rounded-full bg-statto-lime`} />
+          <div className={`${s.barW} ${s.bar2} rounded-full bg-statto-lime`} />
+          <div className={`${s.barW} ${s.bar3} rounded-full bg-statto-lime`} />
         </div>
       </div>
       {showText && (
-        <span className={`${s.text} font-bold tracking-tight text-neutral-900`}>
+        <span className={`${s.text} font-bold tracking-tight text-statto-ink`}>
           Stato
         </span>
       )}
@@ -37,11 +37,11 @@ export function LogoWhite({ size = 'md', showText = true, className }: LogoProps
 
   return (
     <div className={`flex items-center gap-2.5 ${className || ''}`}>
-      <div className={`${s.icon} flex items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/20`}>
+      <div className={`${s.icon} flex items-center justify-center rounded-[10px] bg-white/10 backdrop-blur-sm border border-white/20`}>
         <div className={`flex items-end ${s.gap}`}>
-          <div className={`${s.barW} ${s.bar1} rounded-full bg-white`} />
-          <div className={`${s.barW} ${s.bar2} rounded-full bg-white`} />
-          <div className={`${s.barW} ${s.bar3} rounded-full bg-white`} />
+          <div className={`${s.barW} ${s.bar1} rounded-full bg-statto-lime`} />
+          <div className={`${s.barW} ${s.bar2} rounded-full bg-statto-lime`} />
+          <div className={`${s.barW} ${s.bar3} rounded-full bg-statto-lime`} />
         </div>
       </div>
       {showText && (

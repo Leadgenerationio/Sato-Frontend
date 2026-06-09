@@ -55,7 +55,7 @@ export function PortalLayout() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top nav bar */}
-      <header className="sticky top-0 z-40 border-b bg-background">
+      <header className="sticky top-0 z-40 border-b bg-card/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-6">
             <Logo size="sm" />
@@ -83,7 +83,7 @@ export function PortalLayout() {
           <div className="flex items-center gap-3 sm:gap-4 sm:border-l sm:pl-4">
             <div className="hidden sm:flex items-center gap-2 min-w-0">
               <div
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-statto-ink text-xs font-semibold text-statto-lime"
                 aria-hidden="true"
               >
                 {getInitials(user?.name)}

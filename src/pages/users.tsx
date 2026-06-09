@@ -283,8 +283,8 @@ export function UsersManagement() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-neutral-100"><Users className="size-5 text-neutral-700" /></div><div><p className="text-2xl font-bold">{stats.total}</p><p className="text-sm text-muted-foreground">Total Users</p></div></div></CardContent></Card>
-          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-emerald-50"><UserCheck className="size-5 text-emerald-600" /></div><div><p className="text-2xl font-bold">{stats.active}</p><p className="text-sm text-muted-foreground">Active Users</p></div></div></CardContent></Card>
-          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-amber-50"><Crown className="size-5 text-amber-600" /></div><div><p className="text-2xl font-bold">{stats.owners}</p><p className="text-sm text-muted-foreground">Owners</p></div></div></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-positive/10"><UserCheck className="size-5 text-positive" /></div><div><p className="text-2xl font-bold">{stats.active}</p><p className="text-sm text-muted-foreground">Active Users</p></div></div></CardContent></Card>
+          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-warning/10"><Crown className="size-5 text-warning" /></div><div><p className="text-2xl font-bold">{stats.owners}</p><p className="text-sm text-muted-foreground">Owners</p></div></div></CardContent></Card>
         </div>
       )}
 
@@ -445,7 +445,7 @@ export function UsersManagement() {
             <DialogDescription>Create a new user account with a specific role</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {addError && <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600"><div className="size-1.5 rounded-full bg-red-500 shrink-0" />{addError}</div>}
+            {addError && <div className="flex items-center gap-2 rounded-lg border border-negative/30 bg-negative/10 p-3 text-sm text-negative"><div className="size-1.5 rounded-full bg-negative shrink-0" />{addError}</div>}
             <div className="space-y-2">
               <Label>Full Name</Label>
               <Input value={addForm.name} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} placeholder="John Smith" />
@@ -493,7 +493,7 @@ export function UsersManagement() {
             <DialogDescription>Update {editUser?.name}'s details and role</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {editError && <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600"><div className="size-1.5 rounded-full bg-red-500 shrink-0" />{editError}</div>}
+            {editError && <div className="flex items-center gap-2 rounded-lg border border-negative/30 bg-negative/10 p-3 text-sm text-negative"><div className="size-1.5 rounded-full bg-negative shrink-0" />{editError}</div>}
             <div className="space-y-2">
               <Label>Email</Label>
               <Input value={editUser?.email || ''} disabled />
@@ -544,9 +544,9 @@ export function UsersManagement() {
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">New Role</span><Badge className="capitalize">{getRoleLabel(confirmAction.newRole)}</Badge></div>
               </div>
               {confirmAction.newRole === 'owner' && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <AlertTriangle className="size-4 text-amber-600 mt-0.5 shrink-0" />
-                  <p className="text-sm text-amber-800">Granting <strong>Owner</strong> role gives full system access including user management.</p>
+                <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+                  <AlertTriangle className="size-4 text-warning mt-0.5 shrink-0" />
+                  <p className="text-sm text-warning">Granting <strong>Owner</strong> role gives full system access including user management.</p>
                 </div>
               )}
               <DialogFooter>
@@ -559,7 +559,7 @@ export function UsersManagement() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  {confirmAction.isActive ? <UserX className="size-5 text-red-500" /> : <UserCheck className="size-5 text-emerald-500" />}
+                  {confirmAction.isActive ? <UserX className="size-5 text-negative" /> : <UserCheck className="size-5 text-positive" />}
                   {confirmAction.isActive ? 'Deactivate User' : 'Activate User'}
                 </DialogTitle>
                 <DialogDescription>

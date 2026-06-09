@@ -22,9 +22,9 @@ function formatDate(dateStr: string) {
 }
 
 const staffStatusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  on_leave: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  terminated: 'bg-red-500/10 text-red-600 border-red-200',
+  active: 'bg-positive/10 text-positive border-positive/30',
+  on_leave: 'bg-warning/10 text-warning border-warning/30',
+  terminated: 'bg-negative/10 text-negative border-negative/30',
 };
 
 const staffStatusLabels: Record<string, string> = {
@@ -34,20 +34,20 @@ const staffStatusLabels: Record<string, string> = {
 };
 
 const departmentColors: Record<string, string> = {
-  'Content Team': 'bg-purple-500/10 text-purple-600 border-purple-200',
-  'Operations': 'bg-blue-500/10 text-blue-600 border-blue-200',
+  'Content Team': 'bg-lime-400/10 text-lime-600 border-lime-300',
+  'Operations': 'bg-info/10 text-info border-info/30',
 };
 
 const holidayTypeColors: Record<string, string> = {
-  annual: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  sick: 'bg-red-500/10 text-red-600 border-red-200',
-  personal: 'bg-amber-500/10 text-amber-600 border-amber-200',
+  annual: 'bg-info/10 text-info border-info/30',
+  sick: 'bg-negative/10 text-negative border-negative/30',
+  personal: 'bg-warning/10 text-warning border-warning/30',
 };
 
 const holidayStatusColors: Record<string, string> = {
-  pending: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  approved: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  rejected: 'bg-red-500/10 text-red-600 border-red-200',
+  pending: 'bg-warning/10 text-warning border-warning/30',
+  approved: 'bg-positive/10 text-positive border-positive/30',
+  rejected: 'bg-negative/10 text-negative border-negative/30',
 };
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {

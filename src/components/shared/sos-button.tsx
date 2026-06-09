@@ -58,7 +58,7 @@ export function SosButton() {
         <button
           type="button"
           aria-label="Get help"
-          className="fixed bottom-5 right-5 z-50 flex h-12 items-center gap-2 rounded-full bg-red-600 px-4 text-sm font-medium text-white shadow-lg transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+          className="fixed bottom-5 right-5 z-50 flex h-12 items-center gap-2 rounded-full bg-negative px-4 text-sm font-medium text-white shadow-lg transition-colors hover:bg-negative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-negative/30"
         >
           <LifeBuoy className="size-5" />
           <span className="hidden sm:inline">SOS</span>

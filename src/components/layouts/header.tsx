@@ -28,7 +28,7 @@ export function Header() {
 
   return (
     <header className={cn(
-      'fixed top-0 right-0 z-30 flex h-16 items-center border-b bg-background px-4 sm:px-6 transition-all duration-300',
+      'fixed top-0 right-0 z-30 flex h-16 items-center border-b bg-card/85 backdrop-blur-md px-4 sm:px-6 transition-all duration-300',
       'left-0 md:left-16',
       sidebarOpen && 'md:left-64',
     )}>
@@ -62,7 +62,7 @@ export function Header() {
         </Badge>
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-statto-ink text-xs font-semibold text-statto-lime">{initials}</AvatarFallback>
           </Avatar>
           <span className="hidden text-sm font-medium sm:inline-block">{user.name}</span>
         </div>

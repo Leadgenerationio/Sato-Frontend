@@ -275,7 +275,7 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
             <p className="truncate text-xs text-muted-foreground">{tx.description}</p>
           )}
         </TableCell>
-        <TableCell className={`whitespace-nowrap text-right text-sm font-medium tabular-nums ${isOut ? 'text-red-600' : 'text-emerald-600'}`}>
+        <TableCell className={`whitespace-nowrap text-right text-sm font-medium tabular-nums ${isOut ? 'text-negative' : 'text-positive'}`}>
           {formatCurrency(amountNum, tx.currency)}
         </TableCell>
         <TableCell>

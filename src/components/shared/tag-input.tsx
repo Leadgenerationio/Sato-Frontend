@@ -53,7 +53,7 @@ export function TagInput({ value, onChange, suggestions = [], placeholder, maxTa
             <button
               type="button"
               onClick={() => remove(tag)}
-              className="hover:text-red-600"
+              className="hover:text-negative"
               aria-label={`Remove ${tag}`}
             >
               <X className="size-3" />

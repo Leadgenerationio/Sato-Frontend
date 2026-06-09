@@ -10,11 +10,11 @@ import { useSop, loomEmbedUrl } from '@/lib/hooks/use-sops';
 import { useUploadUrl } from '@/lib/hooks/use-uploads';
 
 const categoryColors: Record<string, string> = {
-  Operations: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  Finance: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  Onboarding: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  Compliance: 'bg-purple-500/10 text-purple-600 border-purple-200',
-  Campaigns: 'bg-rose-500/10 text-rose-600 border-rose-200',
+  Operations: 'bg-info/10 text-info border-info/30',
+  Finance: 'bg-positive/10 text-positive border-positive/30',
+  Onboarding: 'bg-warning/10 text-warning border-warning/30',
+  Compliance: 'bg-lime-400/10 text-lime-600 border-lime-300',
+  Campaigns: 'bg-negative/10 text-negative border-negative/30',
 };
 
 function formatDate(dateStr: string) {

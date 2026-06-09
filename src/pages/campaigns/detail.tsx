@@ -74,8 +74,8 @@ function windowRange(win: DeliveryWindow): { start: Date; end: Date } {
 }
 
 const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  paused: 'bg-amber-500/10 text-amber-600 border-amber-200',
+  active: 'bg-positive/10 text-positive border-positive/30',
+  paused: 'bg-warning/10 text-warning border-warning/30',
   inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
 };
 
@@ -107,7 +107,7 @@ function StatCard({ label, value, icon: Icon, trend }: {
             <Icon className="size-5 text-muted-foreground" />
           </div>
           {trend && (
-            <span className={`flex items-center gap-1 text-xs font-medium ${trend.positive ? 'text-emerald-600' : 'text-destructive'}`}>
+            <span className={`flex items-center gap-1 text-xs font-medium ${trend.positive ? 'text-positive' : 'text-destructive'}`}>
               {trend.positive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
               {trend.value}
             </span>
@@ -266,7 +266,7 @@ export function CampaignDetailPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                   <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
                   <Tooltip />
-                  <Area type="monotone" dataKey="leads" stroke="#171717" fill="#171717" fillOpacity={0.15} name="Leads" />
+                  <Area type="monotone" dataKey="leads" stroke="#062F28" fill="#062F28" fillOpacity={0.15} name="Leads" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -347,8 +347,8 @@ export function CampaignDetailPage() {
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} className="text-muted-foreground" />
                 <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, '']} />
                 <Legend />
-                <Area type="monotone" dataKey="revenue" stroke="#171717" fill="#171717" fillOpacity={0.1} name="Revenue" />
-                <Area type="monotone" dataKey="cost" stroke="#a3a3a3" fill="#a3a3a3" fillOpacity={0.1} name="Cost" />
+                <Area type="monotone" dataKey="revenue" stroke="#062F28" fill="#062F28" fillOpacity={0.1} name="Revenue" />
+                <Area type="monotone" dataKey="cost" stroke="#84D451" fill="#84D451" fillOpacity={0.12} name="Cost" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -370,7 +370,7 @@ export function CampaignDetailPage() {
                   <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} className="text-muted-foreground" />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={140} className="text-muted-foreground" />
                   <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, 'CPL']} />
-                  <Bar dataKey="cpl" fill="#171717" radius={[0, 4, 4, 0]} name="CPL" />
+                  <Bar dataKey="cpl" fill="#062F28" radius={[0, 4, 4, 0]} name="CPL" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -730,7 +730,7 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
                     <TableCell className="text-right tabular-nums">{s.totalLeads.toLocaleString()}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(s.cpl)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(s.revenue)}</TableCell>
-                    <TableCell className={`text-right tabular-nums font-medium ${s.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <TableCell className={`text-right tabular-nums font-medium ${s.netProfit >= 0 ? 'text-positive' : 'text-negative'}`}>
                       {formatCurrency(s.netProfit)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -739,7 +739,7 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
                           <Pencil className="size-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id, s.name)} aria-label="Delete">
-                          <Trash2 className="size-4 text-red-600" />
+                          <Trash2 className="size-4 text-negative" />
                         </Button>
                       </div>
                     </TableCell>
@@ -950,10 +950,10 @@ function EditSourceRow({
 // (the migration backfill default).
 const STATUS_PILL: Record<CreativeStatus, { label: string; className: string }> = {
   draft: { label: 'Draft', className: 'bg-neutral-200/60 text-neutral-700 border-neutral-300' },
-  sent_for_approval: { label: 'Sent', className: 'bg-sky-500/10 text-sky-600 border-sky-200' },
-  approved: { label: 'Approved', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },
-  rejected: { label: 'Rejected', className: 'bg-red-500/10 text-red-600 border-red-200' },
-  changes_requested: { label: 'Changes requested', className: 'bg-amber-500/10 text-amber-600 border-amber-200' },
+  sent_for_approval: { label: 'Sent', className: 'bg-info/10 text-info border-info/30' },
+  approved: { label: 'Approved', className: 'bg-positive/10 text-positive border-positive/30' },
+  rejected: { label: 'Rejected', className: 'bg-negative/10 text-negative border-negative/30' },
+  changes_requested: { label: 'Changes requested', className: 'bg-warning/10 text-warning border-warning/30' },
 };
 
 function statusPill(status: CreativeStatus | undefined) {
@@ -1330,7 +1330,7 @@ function LinkedClientsCard({
                     disabled={unlink.isPending}
                     aria-label={`Remove ${c.clientName} from campaign`}
                   >
-                    <Trash2 className="size-3.5 text-red-600" />
+                    <Trash2 className="size-3.5 text-negative" />
                   </Button>
                 </div>
               </div>

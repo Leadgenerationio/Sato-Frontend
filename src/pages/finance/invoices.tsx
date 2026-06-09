@@ -20,10 +20,10 @@ const STATUS_TABS = ['all', 'draft', 'sent', 'authorised', 'paid', 'overdue'] as
 
 const statusColors: Record<string, string> = {
   draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  authorised: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
-  paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  overdue: 'bg-red-500/10 text-red-600 border-red-200',
+  sent: 'bg-info/10 text-info border-info/30',
+  authorised: 'bg-info/10 text-info border-info/30',
+  paid: 'bg-positive/10 text-positive border-positive/30',
+  overdue: 'bg-negative/10 text-negative border-negative/30',
 };
 
 function formatCurrency(value: number, currency = 'GBP') {
@@ -250,7 +250,7 @@ export function InvoiceListPage() {
                             {inv.daysOverdue > 0 && ` (${inv.daysOverdue}d)`}
                           </Badge>
                           {inv.xeroInvoiceId && (
-                            <Badge className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Xero</Badge>
+                            <Badge className="text-xs bg-info/10 text-info border-info/30">Xero</Badge>
                           )}
                         </div>
                       </TableCell>

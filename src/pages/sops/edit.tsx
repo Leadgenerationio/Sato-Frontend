@@ -134,10 +134,10 @@ export function SopEditPage() {
                   value={loomUrl}
                   onChange={(e) => setLoomUrl(e.target.value)}
                   placeholder="https://www.loom.com/share/…"
-                  className={loomUrl && !loomValid ? 'border-red-300' : ''}
+                  className={loomUrl && !loomValid ? 'border-negative/30' : ''}
                 />
                 {loomUrl && !loomValid && (
-                  <p className="text-xs text-red-600">Expected a loom.com/share/&lt;id&gt; URL</p>
+                  <p className="text-xs text-negative">Expected a loom.com/share/&lt;id&gt; URL</p>
                 )}
                 {embed && (
                   <div className="relative w-full overflow-hidden rounded-md border" style={{ paddingBottom: '56.25%' }}>

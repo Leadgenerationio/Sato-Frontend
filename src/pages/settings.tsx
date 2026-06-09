@@ -93,7 +93,7 @@ function XeroIntegration() {
             </div>
           </div>
           {status?.connected ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
+            <Badge className="bg-positive/10 text-positive border-positive/30">
               <CheckCircle2 className="size-3 mr-1" />
               Connected
             </Badge>
@@ -215,12 +215,12 @@ function LeadByteIntegration() {
             </div>
           </div>
           {hasApiKey ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
+            <Badge className="bg-positive/10 text-positive border-positive/30">
               <CheckCircle2 className="size-3 mr-1" />
               Connected
             </Badge>
           ) : (
-            <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
+            <Badge className="bg-warning/10 text-warning border-warning/30">
               Mock mode
             </Badge>
           )}
@@ -317,12 +317,12 @@ function CreditCheckIntegration() {
             </div>
           </div>
           {isLive ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
+            <Badge className="bg-positive/10 text-positive border-positive/30">
               <CheckCircle2 className="size-3 mr-1" />
               Connected
             </Badge>
           ) : (
-            <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
+            <Badge className="bg-warning/10 text-warning border-warning/30">
               Mock mode
             </Badge>
           )}
@@ -408,12 +408,12 @@ function SimpleIntegrationCard<T extends { configured: boolean }>({
             </div>
           </div>
           {isConnected ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
+            <Badge className="bg-positive/10 text-positive border-positive/30">
               <CheckCircle2 className="size-3 mr-1" />
               Connected
             </Badge>
           ) : (
-            <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
+            <Badge className="bg-warning/10 text-warning border-warning/30">
               <XCircle className="size-3 mr-1" />
               Not configured
             </Badge>
@@ -528,8 +528,8 @@ function BankingIntegration() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10">
-              <span className="text-lg font-bold text-emerald-600">£</span>
+            <div className="flex size-10 items-center justify-center rounded-lg bg-positive/10">
+              <span className="text-lg font-bold text-positive">£</span>
             </div>
             <div>
               <CardTitle className="text-base">Banking</CardTitle>
