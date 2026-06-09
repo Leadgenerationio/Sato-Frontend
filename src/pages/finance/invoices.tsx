@@ -19,11 +19,11 @@ import { ErrorState } from '@/components/shared/error-state';
 const STATUS_TABS = ['all', 'draft', 'sent', 'authorised', 'paid', 'overdue'] as const;
 
 const statusColors: Record<string, string> = {
-  draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-info/10 text-info border-info/30',
-  authorised: 'bg-info/10 text-info border-info/30',
-  paid: 'bg-positive/10 text-positive border-positive/30',
-  overdue: 'bg-negative/10 text-negative border-negative/30',
+  draft: 'bg-muted text-muted-foreground border-border',
+  sent: 'bg-info-bg text-info border-info/30',
+  authorised: 'bg-info-bg text-info border-info/30',
+  paid: 'bg-positive-bg text-positive border-positive/30',
+  overdue: 'bg-negative-bg text-negative border-negative/30',
 };
 
 function formatCurrency(value: number, currency = 'GBP') {
@@ -250,7 +250,7 @@ export function InvoiceListPage() {
                             {inv.daysOverdue > 0 && ` (${inv.daysOverdue}d)`}
                           </Badge>
                           {inv.xeroInvoiceId && (
-                            <Badge className="text-xs bg-info/10 text-info border-info/30">Xero</Badge>
+                            <Badge className="text-xs bg-info-bg text-info border-info/30">Xero</Badge>
                           )}
                         </div>
                       </TableCell>

@@ -221,7 +221,7 @@ export function PortalLeadsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Leads</h1>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-statto-ink">Leads</h1>
         <p className="text-muted-foreground">Lead breakdown by campaign for the selected date range</p>
       </div>
 
@@ -368,7 +368,7 @@ export function PortalLeadsPage() {
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                     <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
                     <Tooltip />
-                    <Area type="monotone" dataKey="leads" stroke="#062F28" fill="#062F28" fillOpacity={0.15} name="Leads" />
+                    <Area type="monotone" dataKey="leads" stroke="#84D451" fill="#9FE870" fillOpacity={0.25} name="Leads" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

@@ -53,8 +53,8 @@ const FALLBACK_INVOICES: Array<{ month: string; paid: number; overdue: number; p
 // Statto brand palette — ink → lime → green ramp, then muted greens/greys so a
 // 14-slice pie keeps 10+ adjacent wedges distinct without going off-brand rainbow.
 const PIE_PALETTE = [
-  '#062F28', '#84D451', '#2E5249', '#9FE870', '#6E9089', '#123F36',
-  '#B6ED8E', '#5C5C60', '#C6D8D3', '#A9A9AF', '#66B534', '#CDF2AC',
+  '#062F28', '#123F36', '#2E5249', '#6E9089', '#A9A9AF', '#C9C9CD',
+  '#2A6FDB', '#66B534', '#E8A13A', '#E5575B', '#7A5AE0', '#3E7E8C',
 ];
 
 const FALLBACK_LEADS_BY_DAY = [
@@ -306,12 +306,12 @@ export function DashboardPage() {
             they're context views rather than period KPIs.
             Default 'last_year' keeps first-paint numbers close to the
             prior dashboard (~£734k revenue / -4.1% margin). */}
-        <label className="flex items-center gap-2 text-xs text-neutral-500">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="hidden sm:inline">Time range:</span>
           <select
             value={leadsWindow}
             onChange={(e) => setLeadsWindow(e.target.value as DashboardWindow)}
-            className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs font-medium text-neutral-700 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-300"
+            className="rounded-md border border-border bg-white px-2 py-1 text-xs font-medium text-foreground focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-300"
           >
             {DASHBOARD_WINDOW_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -483,7 +483,7 @@ export function DashboardPage() {
                   />
                   <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
                   <Tooltip {...tooltipStyle} />
-                  <Bar dataKey="leads" name="Leads" fill="#062F28" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="leads" name="Leads" fill="#9FE870" radius={[7, 7, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -572,8 +572,8 @@ export function DashboardPage() {
                       onMouseLeave={() => setActivePieIndex(null)}
                     >
                       <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="truncate text-xs text-neutral-600" title={item.name}>{item.name}</span>
-                      <span className="ml-auto text-xs font-medium tabular-nums text-neutral-900 whitespace-nowrap">{item.value}%</span>
+                      <span className="truncate text-xs text-muted-foreground" title={item.name}>{item.name}</span>
+                      <span className="ml-auto text-xs font-medium tabular-nums text-foreground whitespace-nowrap">{item.value}%</span>
                     </div>
                   ))}
                 </div>
@@ -610,7 +610,7 @@ export function DashboardPage() {
                       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
                         on
                           ? 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800'
-                          : 'border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50'
+                          : 'border-border bg-white text-muted-foreground hover:bg-neutral-50'
                       }`}
                     >
                       <span className="size-2 rounded-full" style={{ backgroundColor: dot, opacity: on ? 1 : 0.4 }} />
@@ -720,7 +720,7 @@ export function DashboardPage() {
                   const Icon = ACTIVITY_ICON[item.category] ?? Activity;
                   return (
                     <div key={item.id} className="flex items-start gap-3">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 mt-0.5"><Icon className="size-4 text-neutral-600" /></div>
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted mt-0.5"><Icon className="size-4 text-muted-foreground" /></div>
                       <div className="flex-1 min-w-0"><p className="text-sm font-medium leading-none">{item.user}</p><p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{item.action}</p></div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap mt-0.5">{formatRelativeTime(item.timestamp)}</span>
                     </div>

@@ -24,11 +24,11 @@ import { EmptyState } from '@/components/shared/empty-state';
 
 import { logError } from '../../lib/log';
 const statusColors: Record<string, string> = {
-  draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-info/10 text-info border-info/30',
-  authorised: 'bg-info/10 text-info border-info/30',
-  paid: 'bg-positive/10 text-positive border-positive/30',
-  overdue: 'bg-negative/10 text-negative border-negative/30',
+  draft: 'bg-muted text-muted-foreground border-border',
+  sent: 'bg-info-bg text-info border-info/30',
+  authorised: 'bg-info-bg text-info border-info/30',
+  paid: 'bg-positive-bg text-positive border-positive/30',
+  overdue: 'bg-negative-bg text-negative border-negative/30',
 };
 
 // Escape any user-provided string before interpolating into the print-window HTML.
@@ -177,7 +177,7 @@ export function InvoiceDetailPage() {
                 Download PDF
               </Button>
               {invoice.xeroInvoiceId ? (
-                <Badge className="bg-info/10 text-info border-info/30">
+                <Badge className="bg-info-bg text-info border-info/30">
                   <Check className="size-3 mr-1" />
                   In Xero
                 </Badge>

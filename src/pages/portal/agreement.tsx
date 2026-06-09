@@ -33,7 +33,7 @@ export function PortalAgreementPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Agreement</h1>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-statto-ink">Agreement</h1>
         <p className="text-muted-foreground">Your lead generation service agreement</p>
       </div>
 
@@ -41,7 +41,7 @@ export function PortalAgreementPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`flex size-10 items-center justify-center rounded-lg ${isSigned ? 'bg-positive/10' : 'bg-warning/10'}`}>
+              <div className={`flex size-10 items-center justify-center rounded-lg ${isSigned ? 'bg-positive-bg' : 'bg-warning-bg'}`}>
                 {isSigned ? <CheckCircle2 className="size-5 text-positive" /> : <Clock className="size-5 text-warning" />}
               </div>
               <div>
@@ -49,7 +49,7 @@ export function PortalAgreementPage() {
                 <p className="text-sm text-muted-foreground">{agreement.clientName}</p>
               </div>
             </div>
-            <Badge className={isSigned ? 'bg-positive/10 text-positive border-positive/30' : 'bg-warning/10 text-warning border-warning/30'}>
+            <Badge className={isSigned ? 'bg-positive-bg text-positive border-positive/30' : 'bg-warning-bg text-warning border-warning/30'}>
               {isSigned ? 'Signed' : 'Pending'}
             </Badge>
           </div>

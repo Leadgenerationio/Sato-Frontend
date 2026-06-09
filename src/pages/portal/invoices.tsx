@@ -10,11 +10,11 @@ import { toMoney } from '@/lib/hooks/use-invoices';
 import { EmptyState } from '@/components/shared/empty-state';
 
 const statusColors: Record<string, string> = {
-  draft: 'bg-neutral-500/10 text-neutral-500',
-  sent: 'bg-info/10 text-info',
-  authorised: 'bg-info/10 text-info',
-  paid: 'bg-positive/10 text-positive',
-  overdue: 'bg-negative/10 text-negative',
+  draft: 'bg-muted text-muted-foreground',
+  sent: 'bg-info-bg text-info',
+  authorised: 'bg-info-bg text-info',
+  paid: 'bg-positive-bg text-positive',
+  overdue: 'bg-negative-bg text-negative',
 };
 
 // Sam T8 (2026-05-20): client-facing label map. Xero's raw "authorised"
@@ -108,7 +108,7 @@ export function PortalInvoicesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Invoices</h1>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-statto-ink">Invoices</h1>
         <p className="text-muted-foreground">Your invoices and payment status</p>
       </div>
 

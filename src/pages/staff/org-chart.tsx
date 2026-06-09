@@ -10,7 +10,7 @@ import { useStaffList, type StaffMember } from '@/lib/hooks/use-staff';
 
 const departmentColors: Record<string, string> = {
   'Content Team': 'bg-lime-400/10 text-lime-600 border-lime-300',
-  'Operations': 'bg-info/10 text-info border-info/30',
+  'Operations': 'bg-info-bg text-info border-info/30',
 };
 
 const statusIndicator: Record<string, string> = {
@@ -35,7 +35,7 @@ function OrgNode({ member, isHead }: { member: StaffMember; isHead?: boolean }) 
             {member.name.split(' ').map((n) => n[0]).join('')}
           </div>
           <span
-            className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-background ${statusIndicator[member.status] || 'bg-neutral-400'}`}
+            className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-background ${statusIndicator[member.status] || 'bg-muted-foreground'}`}
           />
         </div>
         <div className="min-w-0 flex-1">

@@ -110,7 +110,7 @@ export function SosAdminPage() {
       {/* Summary card */}
       <Card>
         <CardContent className="flex items-center gap-4 p-5">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-negative/10">
+          <div className="flex size-11 items-center justify-center rounded-lg bg-negative-bg">
             <LifeBuoy className="size-5 text-negative" />
           </div>
           <div>
@@ -223,11 +223,11 @@ export function SosAdminPage() {
                       </TableCell>
                       <TableCell>
                         {r.resolvedAt ? (
-                          <Badge className="bg-positive/10 text-positive border-positive/30 text-xs">
+                          <Badge className="bg-positive-bg text-positive border-positive/30 text-xs">
                             Resolved {formatDateTime(r.resolvedAt)}
                           </Badge>
                         ) : (
-                          <Badge className="bg-negative/10 text-negative border-negative/30 text-xs">
+                          <Badge className="bg-negative-bg text-negative border-negative/30 text-xs">
                             Open
                           </Badge>
                         )}

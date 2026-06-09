@@ -77,7 +77,7 @@ function formatRelative(iso: string | null): string {
 function StatusPill({ status }: { status: CardStatus }) {
   if (status === 'live') {
     return (
-      <Badge className="bg-positive/10 text-positive border-positive/30">
+      <Badge className="bg-positive-bg text-positive border-positive/30">
         <CheckCircle2 className="size-3 mr-1" /> Live
       </Badge>
     );
@@ -89,7 +89,7 @@ function StatusPill({ status }: { status: CardStatus }) {
     // word "Mock" misleads (Sam read it as "we faked the data"). Renamed
     // to "Degraded" — same amber pill, accurate copy.
     return (
-      <Badge className="bg-warning/10 text-warning border-warning/30">
+      <Badge className="bg-warning-bg text-warning border-warning/30">
         <AlertCircle className="size-3 mr-1" /> Degraded
       </Badge>
     );
@@ -107,7 +107,7 @@ function IntegrationCard({ spec }: { spec: CardSpec }) {
     <Card className="relative overflow-hidden">
       <div
         className="absolute top-0 left-0 h-1 w-full"
-        style={{ background: spec.status === 'live' ? '#10b981' : spec.status === 'mock' ? '#f59e0b' : '#737373' }}
+        style={{ background: spec.status === 'live' ? '#66B534' : spec.status === 'mock' ? '#E8A13A' : '#A9A9AF' }}
       />
       <CardContent className="p-6 space-y-4">
         <div className="flex items-start justify-between gap-3">

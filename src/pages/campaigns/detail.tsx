@@ -74,9 +74,9 @@ function windowRange(win: DeliveryWindow): { start: Date; end: Date } {
 }
 
 const statusColors: Record<string, string> = {
-  active: 'bg-positive/10 text-positive border-positive/30',
-  paused: 'bg-warning/10 text-warning border-warning/30',
-  inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  active: 'bg-positive-bg text-positive border-positive/30',
+  paused: 'bg-warning-bg text-warning border-warning/30',
+  inactive: 'bg-muted text-muted-foreground border-border',
 };
 
 function formatCurrency(value: number, currency = 'GBP') {
@@ -266,7 +266,7 @@ export function CampaignDetailPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
                   <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
                   <Tooltip />
-                  <Area type="monotone" dataKey="leads" stroke="#062F28" fill="#062F28" fillOpacity={0.15} name="Leads" />
+                  <Area type="monotone" dataKey="leads" stroke="#84D451" fill="#9FE870" fillOpacity={0.25} name="Leads" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -949,11 +949,11 @@ function EditSourceRow({
 // rows without a status arrive as undefined → treated as already-submitted
 // (the migration backfill default).
 const STATUS_PILL: Record<CreativeStatus, { label: string; className: string }> = {
-  draft: { label: 'Draft', className: 'bg-neutral-200/60 text-neutral-700 border-neutral-300' },
-  sent_for_approval: { label: 'Sent', className: 'bg-info/10 text-info border-info/30' },
-  approved: { label: 'Approved', className: 'bg-positive/10 text-positive border-positive/30' },
-  rejected: { label: 'Rejected', className: 'bg-negative/10 text-negative border-negative/30' },
-  changes_requested: { label: 'Changes requested', className: 'bg-warning/10 text-warning border-warning/30' },
+  draft: { label: 'Draft', className: 'bg-neutral-200/60 text-foreground border-border' },
+  sent_for_approval: { label: 'Sent', className: 'bg-info-bg text-info border-info/30' },
+  approved: { label: 'Approved', className: 'bg-positive-bg text-positive border-positive/30' },
+  rejected: { label: 'Rejected', className: 'bg-negative-bg text-negative border-negative/30' },
+  changes_requested: { label: 'Changes requested', className: 'bg-warning-bg text-warning border-warning/30' },
 };
 
 function statusPill(status: CreativeStatus | undefined) {

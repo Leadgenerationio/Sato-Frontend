@@ -25,10 +25,10 @@ export function TaskSummaryWidget() {
   // Sam — 27 May 2026: On Hold added to mirror the board's 4 columns.
   // Order matches the board left→right: In Progress · On Hold · Completed Today · Overdue.
   const items = [
-    { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-info', bg: 'bg-info/10' },
-    { label: 'On Hold', value: stats.onHold, icon: PauseCircle, color: 'text-warning', bg: 'bg-warning/10' },
-    { label: 'Completed Today', value: stats.completedToday, icon: CheckCircle2, color: 'text-positive', bg: 'bg-positive/10' },
-    { label: 'Overdue', value: stats.overdue, icon: AlertTriangle, color: 'text-negative', bg: 'bg-negative/10' },
+    { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-info', bg: 'bg-info-bg' },
+    { label: 'On Hold', value: stats.onHold, icon: PauseCircle, color: 'text-warning', bg: 'bg-warning-bg' },
+    { label: 'Completed Today', value: stats.completedToday, icon: CheckCircle2, color: 'text-positive', bg: 'bg-positive-bg' },
+    { label: 'Overdue', value: stats.overdue, icon: AlertTriangle, color: 'text-negative', bg: 'bg-negative-bg' },
   ];
 
   return (

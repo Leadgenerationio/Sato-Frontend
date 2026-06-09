@@ -50,22 +50,22 @@ import { EditClientButton } from '@/components/clients/edit-client-dialog';
 
 import { logError } from '../../lib/log';
 const contactTypeColors: Record<string, string> = {
-  primary: 'bg-info/10 text-info border-info/30',
-  billing: 'bg-positive/10 text-positive border-positive/30',
+  primary: 'bg-info-bg text-info border-info/30',
+  billing: 'bg-positive-bg text-positive border-positive/30',
   compliance: 'bg-lime-400/10 text-lime-600 border-lime-300',
-  other: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  other: 'bg-muted text-muted-foreground border-border',
 };
 
 // Sam Loom #31 (13 May response) — only 3 statuses surfaced. 'prospect'
 // and 'paused' kept in the color map for back-compat in case a legacy row
 // slipped through 0022; would render with the closest visual.
 const statusColors: Record<string, string> = {
-  onboarding: 'bg-info/10 text-info border-info/30',
-  active:     'bg-positive/10 text-positive border-positive/30',
-  churned:    'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  onboarding: 'bg-info-bg text-info border-info/30',
+  active:     'bg-positive-bg text-positive border-positive/30',
+  churned:    'bg-muted text-muted-foreground border-border',
   // Legacy fallbacks — should be empty post-migration but kept for safety.
-  prospect:   'bg-info/10 text-info border-info/30',
-  paused:     'bg-warning/10 text-warning border-warning/30',
+  prospect:   'bg-info-bg text-info border-info/30',
+  paused:     'bg-warning-bg text-warning border-warning/30',
 };
 
 /**
@@ -238,7 +238,7 @@ export function ClientDetailPage() {
         banner so the next step is obvious instead of inferred.
       */}
       {!client.xeroContactId && (
-        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning-bg px-4 py-3 text-sm">
           <Link2 className="size-4 mt-0.5 shrink-0 text-warning" />
           <div className="flex-1">
             <p className="font-medium text-warning">Not linked to Xero yet</p>
@@ -455,7 +455,7 @@ export function ClientDetailPage() {
                   {creditHistory.map((entry) => (
                     <div key={entry.id} className="flex items-center justify-between rounded-lg border p-3">
                       <div className="flex items-center gap-3">
-                        <div className={`flex size-10 items-center justify-center rounded-lg ${entry.creditScore >= 65 ? 'bg-positive/10' : entry.creditScore >= 50 ? 'bg-warning/10' : 'bg-negative/10'}`}>
+                        <div className={`flex size-10 items-center justify-center rounded-lg ${entry.creditScore >= 65 ? 'bg-positive-bg' : entry.creditScore >= 50 ? 'bg-warning-bg' : 'bg-negative-bg'}`}>
                           <span className={`text-sm font-bold tabular-nums ${entry.creditScore >= 65 ? 'text-positive' : entry.creditScore >= 50 ? 'text-warning' : 'text-negative'}`}>
                             {entry.creditScore}
                           </span>
@@ -630,7 +630,7 @@ export function OnboardingProgress({
                         isDone
                           ? 'bg-positive text-white'
                           : isCurrent
-                            ? 'border-2 border-positive/30 bg-positive/10 text-positive'
+                            ? 'border-2 border-positive/30 bg-positive-bg text-positive'
                             : 'border border-muted-foreground/30 bg-muted text-muted-foreground'
                       }`}
                       title={step.hint}
@@ -661,10 +661,10 @@ export function OnboardingProgress({
 // Remove button per row and an Add Campaign button that opens a dialog.
 
 const campaignStatusColors: Record<string, string> = {
-  active:   'bg-positive/10 text-positive border-positive/30',
-  paused:   'bg-warning/10 text-warning border-warning/30',
-  inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  archived: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  active:   'bg-positive-bg text-positive border-positive/30',
+  paused:   'bg-warning-bg text-warning border-warning/30',
+  inactive: 'bg-muted text-muted-foreground border-border',
+  archived: 'bg-muted text-muted-foreground border-border',
 };
 
 function CampaignsTab({ clientId }: { clientId: string }) {
@@ -765,11 +765,11 @@ function CampaignsTab({ clientId }: { clientId: string }) {
 // /api/v1/clients/:id/invoices and renders a proper table.
 
 const invoiceStatusColors: Record<string, string> = {
-  draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-info/10 text-info border-info/30',
-  authorised: 'bg-info/10 text-info border-info/30',
-  paid: 'bg-positive/10 text-positive border-positive/30',
-  overdue: 'bg-negative/10 text-negative border-negative/30',
+  draft: 'bg-muted text-muted-foreground border-border',
+  sent: 'bg-info-bg text-info border-info/30',
+  authorised: 'bg-info-bg text-info border-info/30',
+  paid: 'bg-positive-bg text-positive border-positive/30',
+  overdue: 'bg-negative-bg text-negative border-negative/30',
 };
 
 // ─── Filter / sort options for the per-client Invoices tab ────────────────
@@ -976,7 +976,7 @@ export function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
                       Show an inline Overdue badge when the invoice is past due AND still
                       has an authorised (not paid) status, so Sam sees it at a glance. */}
                   {inv.status === 'authorised' && new Date(inv.dueDate).getTime() < Date.now() && (
-                    <Badge className="bg-negative/10 text-negative border-negative/30 text-xs">Overdue</Badge>
+                    <Badge className="bg-negative-bg text-negative border-negative/30 text-xs">Overdue</Badge>
                   )}
                 </div>
               </td>
@@ -986,7 +986,7 @@ export function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
               </td>
               <td className="py-3 px-3 text-right">
                 {inv.daysOverdue > 0 ? (
-                  <Badge className="bg-negative/10 text-negative border-negative/30 text-xs">
+                  <Badge className="bg-negative-bg text-negative border-negative/30 text-xs">
                     {inv.daysOverdue}d
                   </Badge>
                 ) : (
@@ -1256,7 +1256,7 @@ function EmailsTab({ clientId }: { clientId: string }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
-                      e.direction === 'inbound' ? 'bg-positive/10 text-positive' : 'bg-info/10 text-info'
+                      e.direction === 'inbound' ? 'bg-positive-bg text-positive' : 'bg-info-bg text-info'
                     }`}>
                       {e.direction === 'inbound' ? <Inbox className="size-4" /> : <Send className="size-4" />}
                     </div>
@@ -1271,7 +1271,7 @@ function EmailsTab({ clientId }: { clientId: string }) {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Badge className={`text-xs capitalize ${
-                      e.direction === 'inbound' ? 'bg-positive/10 text-positive border-positive/30' : 'bg-info/10 text-info border-info/30'
+                      e.direction === 'inbound' ? 'bg-positive-bg text-positive border-positive/30' : 'bg-info-bg text-info border-info/30'
                     }`}>{e.direction}</Badge>
                     <Button variant="ghost" size="sm" onClick={() => handleDelete(e)} aria-label="Remove from thread">
                       <Trash2 className="size-4 text-negative" />

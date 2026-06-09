@@ -131,12 +131,12 @@ export function PortalCompliancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Compliance</h1>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-statto-ink">Compliance</h1>
         <p className="text-muted-foreground">Review and approve creatives used in your campaigns</p>
       </div>
 
       {pendingCount > 0 && (
-        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-warning dark:bg-warning/30 dark:text-warning">
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning-bg p-4 text-warning dark:bg-warning/30 dark:text-warning">
           <AlertTriangle className="size-5 shrink-0" />
           <div className="text-sm">
             <p className="font-medium">{pendingCount} creative{pendingCount === 1 ? '' : 's'} need your review</p>

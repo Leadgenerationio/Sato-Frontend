@@ -25,9 +25,9 @@ const TYPE_TABS = [
 ] as const;
 
 const statusColors: Record<string, string> = {
-  active: 'bg-positive/10 text-positive border-positive/30',
-  paused: 'bg-warning/10 text-warning border-warning/30',
-  inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  active: 'bg-positive-bg text-positive border-positive/30',
+  paused: 'bg-warning-bg text-warning border-warning/30',
+  inactive: 'bg-muted text-muted-foreground border-border',
 };
 
 const campaignTypeLabels: Record<string, string> = {
@@ -439,7 +439,7 @@ function UnlinkedSpendCard() {
       <CardContent className="p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-warning/10">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-warning-bg">
               <AlertTriangle className="size-5 text-warning" />
             </div>
             <div>

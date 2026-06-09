@@ -9,7 +9,7 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.02em] text-foreground">{title}</h1>
-        {description && <p className="mt-0.5 italic text-muted-foreground">{description}</p>}
+        {description && <p className="mt-0.5 text-muted-foreground">{description}</p>}
       </div>
       {children && (
         <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:shrink-0">

@@ -93,7 +93,7 @@ function XeroIntegration() {
             </div>
           </div>
           {status?.connected ? (
-            <Badge className="bg-positive/10 text-positive border-positive/30">
+            <Badge className="bg-positive-bg text-positive border-positive/30">
               <CheckCircle2 className="size-3 mr-1" />
               Connected
             </Badge>
@@ -215,12 +215,12 @@ function LeadByteIntegration() {
             </div>
           </div>
           {hasApiKey ? (
-            <Badge className="bg-positive/10 text-positive border-positive/30">
+            <Badge className="bg-positive-bg text-positive border-positive/30">
               <CheckCircle2 className="size-3 mr-1" />
               Connected
             </Badge>
           ) : (
-            <Badge className="bg-warning/10 text-warning border-warning/30">
+            <Badge className="bg-warning-bg text-warning border-warning/30">
               Mock mode
             </Badge>
           )}
@@ -300,7 +300,7 @@ function CreditCheckIntegration() {
   const creditChecksRun = status?.checksRun ?? 0;
 
   const providerLabel = provider === 'creditsafe' ? 'Creditsafe' : provider === 'endole' ? 'Endole' : 'Mock';
-  const providerColor = provider === 'creditsafe' ? '#1f6feb' : provider === 'endole' ? '#2D3748' : '#737373';
+  const providerColor = provider === 'creditsafe' ? '#1f6feb' : provider === 'endole' ? '#2D3748' : '#A9A9AF';
   const isLive = provider !== 'mock';
 
   return (
@@ -317,12 +317,12 @@ function CreditCheckIntegration() {
             </div>
           </div>
           {isLive ? (
-            <Badge className="bg-positive/10 text-positive border-positive/30">
+            <Badge className="bg-positive-bg text-positive border-positive/30">
               <CheckCircle2 className="size-3 mr-1" />
               Connected
             </Badge>
           ) : (
-            <Badge className="bg-warning/10 text-warning border-warning/30">
+            <Badge className="bg-warning-bg text-warning border-warning/30">
               Mock mode
             </Badge>
           )}
@@ -408,12 +408,12 @@ function SimpleIntegrationCard<T extends { configured: boolean }>({
             </div>
           </div>
           {isConnected ? (
-            <Badge className="bg-positive/10 text-positive border-positive/30">
+            <Badge className="bg-positive-bg text-positive border-positive/30">
               <CheckCircle2 className="size-3 mr-1" />
               Connected
             </Badge>
           ) : (
-            <Badge className="bg-warning/10 text-warning border-warning/30">
+            <Badge className="bg-warning-bg text-warning border-warning/30">
               <XCircle className="size-3 mr-1" />
               Not configured
             </Badge>
@@ -528,7 +528,7 @@ function BankingIntegration() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-positive/10">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-positive-bg">
               <span className="text-lg font-bold text-positive">£</span>
             </div>
             <div>

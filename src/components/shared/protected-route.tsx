@@ -17,10 +17,10 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         <Logo size="lg" />
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="size-5 rounded-full border-2 border-neutral-200" />
+            <div className="size-5 rounded-full border-2 border-border" />
             <div className="absolute inset-0 size-5 rounded-full border-2 border-neutral-900 border-t-transparent animate-spin" />
           </div>
-          <p className="text-sm text-neutral-500">Loading...</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );

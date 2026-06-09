@@ -56,7 +56,7 @@ interface PlacedField {
 const FIELD_DEFAULTS: Record<FieldType, { widthPct: number; heightPct: number; label: string; icon: typeof PenLine; color: string }> = {
   signature:    { widthPct: 0.25, heightPct: 0.05, label: 'Signature',    icon: PenLine,  color: 'border-info/30 bg-info/70 text-info' },
   date_signed:  { widthPct: 0.14, heightPct: 0.035, label: 'Date signed', icon: Calendar, color: 'border-warning/30 bg-warning/70 text-warning' },
-  text:         { widthPct: 0.20, heightPct: 0.035, label: 'Text',        icon: Type,     color: 'border-neutral-400 bg-neutral-50/80 text-neutral-700' },
+  text:         { widthPct: 0.20, heightPct: 0.035, label: 'Text',        icon: Type,     color: 'border-neutral-400 bg-neutral-50/80 text-foreground' },
 };
 
 function genId(): string {

@@ -136,11 +136,11 @@ export function LeadByteDeliveriesPage() {
                         <TableCell className="font-mono text-xs">{d.reference ?? d.id}</TableCell>
                         <TableCell>{d.campaign?.name ?? '—'}</TableCell>
                         <TableCell>{d.deliver_to ?? '—'}</TableCell>
-                        <TableCell>{d.buyer?.name ?? '—'} {d.buyer?.bid && <span className="text-neutral-400">({d.buyer.bid})</span>}</TableCell>
+                        <TableCell>{d.buyer?.name ?? '—'} {d.buyer?.bid && <span className="text-muted-foreground">({d.buyer.bid})</span>}</TableCell>
                         <TableCell>
                           <span
                             title={capsView.tooltip}
-                            className={d.caps ? 'tabular-nums' : 'text-neutral-400'}
+                            className={d.caps ? 'tabular-nums' : 'text-muted-foreground'}
                           >
                             {capsView.primary}
                           </span>

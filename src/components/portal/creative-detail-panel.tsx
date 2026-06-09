@@ -39,15 +39,15 @@ function formatDateTime(iso: string) {
 
 function StatusBadge({ status }: { status: CreativeApprovalState['status'] }) {
   if (status === 'approved') {
-    return <Badge className="bg-positive/10 text-positive border-positive/30"><Check className="size-3 mr-1" />Approved</Badge>;
+    return <Badge className="bg-positive-bg text-positive border-positive/30"><Check className="size-3 mr-1" />Approved</Badge>;
   }
   if (status === 'rejected') {
-    return <Badge className="bg-negative/10 text-negative border-negative/30"><X className="size-3 mr-1" />Rejected</Badge>;
+    return <Badge className="bg-negative-bg text-negative border-negative/30"><X className="size-3 mr-1" />Rejected</Badge>;
   }
   if (status === 'changes_requested') {
-    return <Badge className="bg-warning/10 text-warning border-warning/30">Changes requested</Badge>;
+    return <Badge className="bg-warning-bg text-warning border-warning/30">Changes requested</Badge>;
   }
-  return <Badge className="bg-warning/10 text-warning border-warning/30"><Clock className="size-3 mr-1" />Pending review</Badge>;
+  return <Badge className="bg-warning-bg text-warning border-warning/30"><Clock className="size-3 mr-1" />Pending review</Badge>;
 }
 
 export interface CampaignMetrics {
@@ -209,7 +209,7 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
               {ap.decidedAt && <> on {formatDateTime(ap.decidedAt)}</>}
             </p>
             {ap.feedback && !/^(na|n\/a|none|-|nil)$/i.test(ap.feedback.trim()) && (
-              <p className="rounded-md bg-negative/10 dark:bg-negative/30 p-2 text-foreground">
+              <p className="rounded-md bg-negative-bg dark:bg-negative/30 p-2 text-foreground">
                 <span className="font-medium">Feedback:</span> {ap.feedback}
               </p>
             )}

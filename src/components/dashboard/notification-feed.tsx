@@ -22,15 +22,15 @@ const typeIcons: Record<NotificationType, React.ElementType> = {
 };
 
 const typeColors: Record<NotificationType, string> = {
-  invoice_overdue: 'bg-negative/10 text-negative',
-  credit_alert: 'bg-negative/10 text-negative',
-  workflow_complete: 'bg-warning/10 text-warning',
-  payment_received: 'bg-positive/10 text-positive',
-  onboarding_update: 'bg-info/10 text-info',
-  lead_delivery: 'bg-positive/10 text-positive',
-  vat_shortfall: 'bg-negative/10 text-negative',
-  agreement_signed: 'bg-positive/10 text-positive',
-  system_error: 'bg-neutral-500/10 text-neutral-500',
+  invoice_overdue: 'bg-negative-bg text-negative',
+  credit_alert: 'bg-negative-bg text-negative',
+  workflow_complete: 'bg-warning-bg text-warning',
+  payment_received: 'bg-positive-bg text-positive',
+  onboarding_update: 'bg-info-bg text-info',
+  lead_delivery: 'bg-positive-bg text-positive',
+  vat_shortfall: 'bg-negative-bg text-negative',
+  agreement_signed: 'bg-positive-bg text-positive',
+  system_error: 'bg-muted text-muted-foreground',
 };
 
 function relativeTime(iso: string): string {

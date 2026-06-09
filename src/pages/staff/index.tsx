@@ -36,9 +36,9 @@ function formatDate(dateStr: string) {
 }
 
 const staffStatusColors: Record<string, string> = {
-  active: 'bg-positive/10 text-positive border-positive/30',
-  on_leave: 'bg-warning/10 text-warning border-warning/30',
-  terminated: 'bg-negative/10 text-negative border-negative/30',
+  active: 'bg-positive-bg text-positive border-positive/30',
+  on_leave: 'bg-warning-bg text-warning border-warning/30',
+  terminated: 'bg-negative-bg text-negative border-negative/30',
 };
 
 const staffStatusLabels: Record<string, string> = {
@@ -49,19 +49,19 @@ const staffStatusLabels: Record<string, string> = {
 
 const departmentColors: Record<string, string> = {
   'Content Team': 'bg-lime-400/10 text-lime-600 border-lime-300',
-  'Operations': 'bg-info/10 text-info border-info/30',
+  'Operations': 'bg-info-bg text-info border-info/30',
 };
 
 const holidayTypeColors: Record<string, string> = {
-  annual: 'bg-info/10 text-info border-info/30',
-  sick: 'bg-negative/10 text-negative border-negative/30',
-  personal: 'bg-warning/10 text-warning border-warning/30',
+  annual: 'bg-info-bg text-info border-info/30',
+  sick: 'bg-negative-bg text-negative border-negative/30',
+  personal: 'bg-warning-bg text-warning border-warning/30',
 };
 
 const holidayStatusColors: Record<string, string> = {
-  pending: 'bg-warning/10 text-warning border-warning/30',
-  approved: 'bg-positive/10 text-positive border-positive/30',
-  rejected: 'bg-negative/10 text-negative border-negative/30',
+  pending: 'bg-warning-bg text-warning border-warning/30',
+  approved: 'bg-positive-bg text-positive border-positive/30',
+  rejected: 'bg-negative-bg text-negative border-negative/30',
 };
 
 const PIPELINE_STAGES: Applicant['stage'][] = ['applied', 'screening', 'interview', 'offer', 'hired'];
@@ -94,9 +94,9 @@ function StatsCards() {
 
   const cards = [
     { label: 'Total Staff', value: stats.totalStaff, icon: Users, bg: 'bg-muted', iconColor: 'text-muted-foreground' },
-    { label: 'Active Staff', value: stats.activeStaff, icon: UserCheck, bg: 'bg-positive/10', iconColor: 'text-positive' },
-    { label: 'Open Positions', value: stats.openPositions, icon: Briefcase, bg: 'bg-info/10', iconColor: 'text-info' },
-    { label: 'Pending Holidays', value: stats.pendingHolidays, icon: Calendar, bg: 'bg-warning/10', iconColor: 'text-warning' },
+    { label: 'Active Staff', value: stats.activeStaff, icon: UserCheck, bg: 'bg-positive-bg', iconColor: 'text-positive' },
+    { label: 'Open Positions', value: stats.openPositions, icon: Briefcase, bg: 'bg-info-bg', iconColor: 'text-info' },
+    { label: 'Pending Holidays', value: stats.pendingHolidays, icon: Calendar, bg: 'bg-warning-bg', iconColor: 'text-warning' },
   ];
 
   return (
@@ -486,7 +486,7 @@ function JobPostingCard({ job }: { job: JobPosting }) {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground tabular-nums">{job.applicantCount} applicants</span>
-            <Badge className={`text-xs capitalize ${job.status === 'open' ? 'bg-positive/10 text-positive border-positive/30' : 'bg-neutral-500/10 text-neutral-500 border-neutral-200'}`}>
+            <Badge className={`text-xs capitalize ${job.status === 'open' ? 'bg-positive-bg text-positive border-positive/30' : 'bg-muted text-muted-foreground border-border'}`}>
               {job.status}
             </Badge>
           </div>

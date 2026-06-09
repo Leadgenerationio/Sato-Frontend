@@ -26,18 +26,18 @@ import {
 
 const FILTER_TABS = ['all', 'unread'] as const;
 
-const defaultTypeConfig = { icon: Bell, color: 'text-neutral-600', bg: 'bg-neutral-500/10' };
+const defaultTypeConfig = { icon: Bell, color: 'text-muted-foreground', bg: 'bg-muted' };
 
 const typeConfig: Record<NotificationType, { icon: React.ElementType; color: string; bg: string }> = {
-  invoice_overdue: { icon: FileWarning, color: 'text-negative', bg: 'bg-negative/10' },
-  credit_alert: { icon: ShieldAlert, color: 'text-warning', bg: 'bg-warning/10' },
-  workflow_complete: { icon: CheckCircle2, color: 'text-positive', bg: 'bg-positive/10' },
-  payment_received: { icon: CreditCard, color: 'text-info', bg: 'bg-info/10' },
-  onboarding_update: { icon: UserPlus, color: 'text-info', bg: 'bg-info/10' },
+  invoice_overdue: { icon: FileWarning, color: 'text-negative', bg: 'bg-negative-bg' },
+  credit_alert: { icon: ShieldAlert, color: 'text-warning', bg: 'bg-warning-bg' },
+  workflow_complete: { icon: CheckCircle2, color: 'text-positive', bg: 'bg-positive-bg' },
+  payment_received: { icon: CreditCard, color: 'text-info', bg: 'bg-info-bg' },
+  onboarding_update: { icon: UserPlus, color: 'text-info', bg: 'bg-info-bg' },
   lead_delivery: { icon: Send, color: 'text-lime-600', bg: 'bg-lime-400/10' },
-  vat_shortfall: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10' },
-  agreement_signed: { icon: FileSignature, color: 'text-positive', bg: 'bg-positive/10' },
-  system_error: { icon: ServerCrash, color: 'text-neutral-600', bg: 'bg-neutral-500/10' },
+  vat_shortfall: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning-bg' },
+  agreement_signed: { icon: FileSignature, color: 'text-positive', bg: 'bg-positive-bg' },
+  system_error: { icon: ServerCrash, color: 'text-muted-foreground', bg: 'bg-muted' },
 };
 
 function formatTimestamp(iso: string) {

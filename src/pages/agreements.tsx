@@ -26,11 +26,11 @@ import { useAgreementTemplates, usePreviewAgreementTemplate } from '@/lib/hooks/
 
 function statusBadge(status: AgreementStatus) {
   const map: Record<AgreementStatus, { label: string; classes: string; icon: React.ElementType }> = {
-    sent: { label: 'Sent', classes: 'bg-info/10 text-info border-info/30', icon: Send },
-    delivered: { label: 'Delivered', classes: 'bg-info/10 text-info border-info/30', icon: Clock },
-    completed: { label: 'Completed', classes: 'bg-positive/10 text-positive border-positive/30', icon: CheckCircle2 },
-    signed: { label: 'Signed', classes: 'bg-positive/10 text-positive border-positive/30', icon: CheckCircle2 },
-    declined: { label: 'Declined', classes: 'bg-negative/10 text-negative border-negative/30', icon: XCircle },
+    sent: { label: 'Sent', classes: 'bg-info-bg text-info border-info/30', icon: Send },
+    delivered: { label: 'Delivered', classes: 'bg-info-bg text-info border-info/30', icon: Clock },
+    completed: { label: 'Completed', classes: 'bg-positive-bg text-positive border-positive/30', icon: CheckCircle2 },
+    signed: { label: 'Signed', classes: 'bg-positive-bg text-positive border-positive/30', icon: CheckCircle2 },
+    declined: { label: 'Declined', classes: 'bg-negative-bg text-negative border-negative/30', icon: XCircle },
     voided: { label: 'Voided', classes: 'bg-muted text-muted-foreground border-muted', icon: AlertCircle },
   };
   const { label, classes, icon: Icon } = map[status] ?? map.sent;

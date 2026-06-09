@@ -10,9 +10,9 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { toast } from 'sonner';
 
 const statusColors: Record<string, string> = {
-  active: 'bg-positive/10 text-positive border-positive/30',
-  paused: 'bg-warning/10 text-warning border-warning/30',
-  draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  active: 'bg-positive-bg text-positive border-positive/30',
+  paused: 'bg-warning-bg text-warning border-warning/30',
+  draft: 'bg-muted text-muted-foreground border-border',
 };
 
 const statusIcons: Record<string, React.ElementType> = {

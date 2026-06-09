@@ -23,9 +23,9 @@ import { EmptyState } from '@/components/shared/empty-state';
 const STATUS_TABS = ['all', 'onboarding', 'active', 'churned'] as const;
 
 const statusColors: Record<string, string> = {
-  onboarding: 'bg-info/10 text-info border-info/30',
-  active:     'bg-positive/10 text-positive border-positive/30',
-  churned:    'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  onboarding: 'bg-info-bg text-info border-info/30',
+  active:     'bg-positive-bg text-positive border-positive/30',
+  churned:    'bg-muted text-muted-foreground border-border',
 };
 
 const statusLabels: Record<string, string> = {

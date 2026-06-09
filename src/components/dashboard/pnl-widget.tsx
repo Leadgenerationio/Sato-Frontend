@@ -174,7 +174,7 @@ export function PnlWidget() {
             </span>
           </div>
           {data.unattributedSpendRows && data.unattributedSpendRows > 0 ? (
-            <div className="flex items-start gap-1.5 rounded border border-warning/30 bg-warning/10 p-1.5 text-[11px] text-warning">
+            <div className="flex items-start gap-1.5 rounded border border-warning/30 bg-warning-bg p-1.5 text-[11px] text-warning">
               <AlertCircle className="size-3 mt-0.5 shrink-0" />
               <span>
                 {data.unattributedSpendRows} Catchr row{data.unattributedSpendRows === 1 ? '' : 's'} unmapped — not counted in this P&amp;L. Map them in Integrations → Catchr.

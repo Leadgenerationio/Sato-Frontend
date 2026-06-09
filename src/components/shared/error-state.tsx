@@ -46,7 +46,7 @@ export function ErrorState({
     >
       <div
         className={cn(
-          'flex items-center justify-center rounded-full bg-negative/10 text-negative',
+          'flex items-center justify-center rounded-full bg-negative-bg text-negative',
           iconWrap,
         )}
       >

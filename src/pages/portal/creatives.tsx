@@ -172,7 +172,7 @@ export function PortalCreativesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Creatives</h1>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-statto-ink">Creatives</h1>
         <p className="text-muted-foreground">
           Approved assets currently running on your campaigns.
         </p>

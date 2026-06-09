@@ -12,9 +12,9 @@ import { useWorkflow, useToggleWorkflowStatus, useExecuteWorkflow } from '@/lib/
 
 import { logError } from '../../lib/log';
 const statusColors: Record<string, string> = {
-  active: 'bg-positive/10 text-positive border-positive/30',
-  paused: 'bg-warning/10 text-warning border-warning/30',
-  draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  active: 'bg-positive-bg text-positive border-positive/30',
+  paused: 'bg-warning-bg text-warning border-warning/30',
+  draft: 'bg-muted text-muted-foreground border-border',
 };
 
 const execStatusColors: Record<string, string> = {
@@ -35,7 +35,7 @@ const stepStatusColors: Record<string, string> = {
   completed: 'bg-positive text-white',
   failed: 'bg-negative text-white',
   pending: 'bg-muted text-muted-foreground',
-  skipped: 'bg-neutral-300 text-neutral-500',
+  skipped: 'bg-neutral-300 text-muted-foreground',
 };
 
 function formatDate(iso: string) {
@@ -165,7 +165,7 @@ export function WorkflowDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-xs">{exec.stepsCompleted}/{exec.stepsTotal}</Badge>
-                    <Badge className={`text-xs capitalize ${exec.status === 'completed' ? 'bg-positive/10 text-positive' : exec.status === 'failed' ? 'bg-negative/10 text-negative' : 'bg-info/10 text-info'}`}>
+                    <Badge className={`text-xs capitalize ${exec.status === 'completed' ? 'bg-positive-bg text-positive' : exec.status === 'failed' ? 'bg-negative-bg text-negative' : 'bg-info-bg text-info'}`}>
                       {exec.status}
                     </Badge>
                   </div>

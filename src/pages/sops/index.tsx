@@ -24,11 +24,11 @@ const categoryLabels: Record<string, string> = {
 };
 
 const categoryColors: Record<string, string> = {
-  Operations: 'bg-info/10 text-info border-info/30',
-  Finance: 'bg-positive/10 text-positive border-positive/30',
-  Onboarding: 'bg-warning/10 text-warning border-warning/30',
+  Operations: 'bg-info-bg text-info border-info/30',
+  Finance: 'bg-positive-bg text-positive border-positive/30',
+  Onboarding: 'bg-warning-bg text-warning border-warning/30',
   Compliance: 'bg-lime-400/10 text-lime-600 border-lime-300',
-  Campaigns: 'bg-negative/10 text-negative border-negative/30',
+  Campaigns: 'bg-negative-bg text-negative border-negative/30',
 };
 
 function formatDate(dateStr: string) {

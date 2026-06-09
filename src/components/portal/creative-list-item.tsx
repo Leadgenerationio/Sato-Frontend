@@ -25,15 +25,15 @@ function iconFor(type: string) {
 
 function StatusChip({ status }: { status: CreativeApprovalState['status'] }) {
   if (status === 'approved') {
-    return <Badge className="bg-positive/10 text-positive border-positive/30 text-[10px] h-5"><Check className="size-2.5 mr-0.5" />Approved</Badge>;
+    return <Badge className="bg-positive-bg text-positive border-positive/30 text-[10px] h-5"><Check className="size-2.5 mr-0.5" />Approved</Badge>;
   }
   if (status === 'rejected') {
-    return <Badge className="bg-negative/10 text-negative border-negative/30 text-[10px] h-5"><X className="size-2.5 mr-0.5" />Rejected</Badge>;
+    return <Badge className="bg-negative-bg text-negative border-negative/30 text-[10px] h-5"><X className="size-2.5 mr-0.5" />Rejected</Badge>;
   }
   if (status === 'changes_requested') {
-    return <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px] h-5">Changes</Badge>;
+    return <Badge className="bg-warning-bg text-warning border-warning/30 text-[10px] h-5">Changes</Badge>;
   }
-  return <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px] h-5"><Clock className="size-2.5 mr-0.5" />Pending</Badge>;
+  return <Badge className="bg-warning-bg text-warning border-warning/30 text-[10px] h-5"><Clock className="size-2.5 mr-0.5" />Pending</Badge>;
 }
 
 interface Props {

@@ -240,9 +240,9 @@ export function ClientImportPage() {
                     >
                       <Badge
                         className={`text-xs capitalize ${
-                          r.status === 'created' ? 'bg-positive/10 text-positive border-positive/30'
-                          : r.status === 'skipped' ? 'bg-warning/10 text-warning border-warning/30'
-                          : 'bg-negative/10 text-negative border-negative/30'
+                          r.status === 'created' ? 'bg-positive-bg text-positive border-positive/30'
+                          : r.status === 'skipped' ? 'bg-warning-bg text-warning border-warning/30'
+                          : 'bg-negative-bg text-negative border-negative/30'
                         }`}
                       >
                         {r.status}

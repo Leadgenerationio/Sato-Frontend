@@ -25,9 +25,9 @@ function formatCurrency(value: number, currency = 'GBP') {
 }
 
 function severityColor(days: number) {
-  if (days > 7) return 'bg-negative/10 text-negative border-negative/30';
-  if (days > 0) return 'bg-warning/10 text-warning border-warning/30';
-  return 'bg-info/10 text-info border-info/30';
+  if (days > 7) return 'bg-negative-bg text-negative border-negative/30';
+  if (days > 0) return 'bg-warning-bg text-warning border-warning/30';
+  return 'bg-info-bg text-info border-info/30';
 }
 
 const BUCKETS: { id: Bucket; label: string; buttonLabel: string; viewAllPath: string }[] = [
@@ -64,7 +64,7 @@ export function InvoicesOwedWidget() {
               {isLoading ? 'Loading…' : `${count} invoice${count !== 1 ? 's' : ''} awaiting payment`}
             </CardDescription>
           </div>
-          <div className="flex size-10 items-center justify-center rounded-lg bg-info/10">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-info-bg">
             <Wallet className="size-5 text-info" />
           </div>
         </div>

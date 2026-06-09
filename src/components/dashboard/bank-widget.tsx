@@ -94,7 +94,7 @@ export function BankWidget() {
         )}
 
         {!isLoading && configured && !isError && accounts.length === 0 && apiError && (
-          <div className="rounded-lg border border-warning/30 bg-warning/10 py-6 px-4 text-center text-sm text-warning dark:border-warning/40 dark:bg-warning/10 dark:text-warning">
+          <div className="rounded-lg border border-warning/30 bg-warning-bg py-6 px-4 text-center text-sm text-warning dark:border-warning/40 dark:bg-warning/10 dark:text-warning">
             {explainApiError(apiError)}
           </div>
         )}

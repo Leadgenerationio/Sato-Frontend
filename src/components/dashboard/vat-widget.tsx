@@ -95,7 +95,7 @@ export function VatWidget() {
             <CardTitle className="text-base">VAT Liability</CardTitle>
             <CardDescription>HMRC quarter view, live from Xero</CardDescription>
           </div>
-          <div className={`flex size-10 items-center justify-center rounded-lg ${prevIsOwed ? 'bg-warning/10' : 'bg-positive/10'}`}>
+          <div className={`flex size-10 items-center justify-center rounded-lg ${prevIsOwed ? 'bg-warning-bg' : 'bg-positive-bg'}`}>
             <Receipt className={`size-5 ${prevIsOwed ? 'text-warning' : 'text-positive'}`} />
           </div>
         </div>

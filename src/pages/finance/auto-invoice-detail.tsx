@@ -21,10 +21,10 @@ function formatDate(iso: string) {
 
 function clientStatusColour(status: AutoInvoiceClientDetail['status']): string {
   switch (status) {
-    case 'invoiced': return 'bg-positive/10 text-positive border-positive/30';
-    case 'failed': return 'bg-negative/10 text-negative border-negative/30';
-    case 'no_lead_price': return 'bg-warning/10 text-warning border-warning/30';
-    case 'no_deliveries': return 'bg-neutral-500/10 text-neutral-500 border-neutral-200';
+    case 'invoiced': return 'bg-positive-bg text-positive border-positive/30';
+    case 'failed': return 'bg-negative-bg text-negative border-negative/30';
+    case 'no_lead_price': return 'bg-warning-bg text-warning border-warning/30';
+    case 'no_deliveries': return 'bg-muted text-muted-foreground border-border';
     default: return '';
   }
 }

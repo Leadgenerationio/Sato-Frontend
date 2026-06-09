@@ -69,10 +69,10 @@ function describeRecurrence(cron: string | null | undefined): string {
 }
 
 const statusColors: Record<string, string> = {
-  todo: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  in_progress: 'bg-info/10 text-info border-info/30',
-  completed: 'bg-positive/10 text-positive border-positive/30',
-  blocked: 'bg-negative/10 text-negative border-negative/30',
+  todo: 'bg-muted text-muted-foreground border-border',
+  in_progress: 'bg-info-bg text-info border-info/30',
+  completed: 'bg-positive-bg text-positive border-positive/30',
+  blocked: 'bg-negative-bg text-negative border-negative/30',
 };
 
 const statusLabels: Record<string, string> = {
@@ -83,10 +83,10 @@ const statusLabels: Record<string, string> = {
 };
 
 const priorityColors: Record<string, string> = {
-  urgent: 'bg-negative/10 text-negative border-negative/30',
-  high: 'bg-warning/10 text-warning border-warning/30',
-  medium: 'bg-info/10 text-info border-info/30',
-  low: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+  urgent: 'bg-negative-bg text-negative border-negative/30',
+  high: 'bg-warning-bg text-warning border-warning/30',
+  medium: 'bg-info-bg text-info border-info/30',
+  low: 'bg-muted text-muted-foreground border-border',
 };
 
 // STATUS_TRANSITIONS removed 27 May 2026 — the Actions section now uses

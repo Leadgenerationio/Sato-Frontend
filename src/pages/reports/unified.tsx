@@ -182,7 +182,7 @@ export function UnifiedReportPage() {
         title="Reports"
         description="One unified view — revenue from LeadByte, cost from Catchr ad spend (NOT LeadByte supplier payout), profit + margin per supplier."
       >
-        <Badge className="bg-positive/10 text-positive border-positive/30">
+        <Badge className="bg-positive-bg text-positive border-positive/30">
           <Sparkles className="size-3 mr-1" />New
         </Badge>
       </PageHeader>
