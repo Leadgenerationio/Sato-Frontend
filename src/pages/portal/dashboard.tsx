@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,12 +27,12 @@ function StatCard({
       <CardContent>
         <div className="flex items-center justify-between gap-2">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-muted">
-            <Icon className="size-5 text-statto-ink" />
+            <Icon className="size-5 text-foreground" />
           </div>
           {badge && <Badge variant={badge.variant} className="text-xs">{badge.text}</Badge>}
         </div>
         <div className="mt-3">
-          <p className="truncate text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-statto-ink">{value}</p>
+          <p className="truncate text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-foreground">{value}</p>
           <p className="mt-1.5 truncate text-sm text-muted-foreground">{label}</p>
         </div>
       </CardContent>
@@ -46,9 +47,12 @@ function StatCard({
 }
 
 // Statto brand dots for the ad-spend platform rows (ink → lime → green → grey).
-const PLATFORM_COLORS = ['#062F28', '#9FE870', '#6E9089', '#84D451', '#A9A9AF', '#123F36'];
-
+// The leading "ink" entry flips to a light tone in dark mode so the first
+// platform's dot/bar stays visible on the dark-green card.
 function AdSpendByPlatform({ platforms, totalLeads }: { platforms: PortalAdSpendPlatform[]; totalLeads: number }) {
+  const { resolvedTheme } = useTheme();
+  const ink = resolvedTheme === 'dark' ? '#EAF3EF' : '#062F28';
+  const palette = [ink, '#9FE870', '#6E9089', '#84D451', '#A9A9AF', '#123F36'];
   const total = platforms.reduce((s, p) => s + p.spend, 0);
   const max = Math.max(...platforms.map((p) => p.spend), 1);
   const avgCpl = totalLeads > 0 ? total / totalLeads : 0;
@@ -63,7 +67,7 @@ function AdSpendByPlatform({ platforms, totalLeads }: { platforms: PortalAdSpend
           {/* Summary */}
           <div className="flex flex-col gap-1 md:border-r md:border-border md:pr-6">
             <span className="text-sm text-muted-foreground">Total ad spend</span>
-            <span className="text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-statto-ink">{formatCurrency(total)}</span>
+            <span className="text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-foreground">{formatCurrency(total)}</span>
             <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
               <span className="tabular-nums">{totalLeads.toLocaleString()} leads</span>
               {avgCpl > 0 && (
@@ -78,17 +82,17 @@ function AdSpendByPlatform({ platforms, totalLeads }: { platforms: PortalAdSpend
           <div className="flex flex-col gap-3">
             {platforms.map((p, i) => {
               const pct = total > 0 ? Math.round((p.spend / total) * 100) : 0;
-              const color = PLATFORM_COLORS[i % PLATFORM_COLORS.length];
+              const color = palette[i % palette.length];
               return (
                 <div key={p.platform} className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[160px_1fr_auto_44px]">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="size-2.5 shrink-0 rounded-full" style={{ background: color }} />
-                    <span className="truncate text-sm font-medium text-statto-ink">{p.platform}</span>
+                    <span className="truncate text-sm font-medium text-foreground">{p.platform}</span>
                   </div>
                   <div className="order-3 col-span-2 h-2 overflow-hidden rounded-full bg-muted sm:order-none sm:col-span-1">
                     <span className="block h-full rounded-full" style={{ width: `${(p.spend / max) * 100}%`, background: color }} />
                   </div>
-                  <span className="text-right text-sm font-semibold tabular-nums text-statto-ink">{formatCurrency(p.spend)}</span>
+                  <span className="text-right text-sm font-semibold tabular-nums text-foreground">{formatCurrency(p.spend)}</span>
                   <span className="hidden text-right text-sm text-muted-foreground tabular-nums sm:block">{pct}%</span>
                 </div>
               );
@@ -118,12 +122,12 @@ function Snap({
       <Card className="h-full gap-3 py-5 transition-colors hover:bg-accent/40">
         <CardContent className="flex h-full flex-col">
           <div className="flex items-center gap-2">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-statto-ink">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
               <Icon className="size-[18px]" />
             </span>
-            <span className="text-[15px] font-semibold text-statto-ink">{title}</span>
+            <span className="text-[15px] font-semibold text-foreground">{title}</span>
             {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
-            <ArrowUpRight className="ml-auto size-4 text-muted-foreground transition-colors group-hover:text-statto-ink" />
+            <ArrowUpRight className="ml-auto size-4 text-muted-foreground transition-colors group-hover:text-foreground" />
           </div>
           <div className="mt-3">{children}</div>
         </CardContent>
@@ -158,7 +162,7 @@ export function PortalDashboardPage() {
     <div className="space-y-6">
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-[26px] font-bold leading-tight tracking-[-0.02em] text-statto-ink">{data.companyName}</h1>
+          <h1 className="text-[26px] font-bold leading-tight tracking-[-0.02em] text-foreground">{data.companyName}</h1>
           {data.clientType === 'managed' && (
             <Badge variant="success" className="text-xs">Managed</Badge>
           )}
@@ -220,14 +224,14 @@ export function PortalDashboardPage() {
 
       {/* Your account at a glance */}
       <div>
-        <h2 className="mb-3 text-[15px] font-semibold text-statto-ink">Your account at a glance</h2>
+        <h2 className="mb-3 text-[15px] font-semibold text-foreground">Your account at a glance</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Snap icon={BarChart3} title="Leads" hint={`${data.totalLeadsThisMonth.toLocaleString()} this month`} href="/portal/leads">
             <p className="text-sm text-muted-foreground">{data.totalLeadsAllTime.toLocaleString()} delivered all-time across {data.activeCampaigns} active campaign{data.activeCampaigns === 1 ? '' : 's'}.</p>
           </Snap>
 
           <Snap icon={FileText} title="Invoices" href="/portal/invoices">
-            <div className="text-[22px] font-semibold tabular-nums text-statto-ink">{formatCurrency(data.totalOutstanding)}</div>
+            <div className="text-[22px] font-semibold tabular-nums text-foreground">{formatCurrency(data.totalOutstanding)}</div>
             <div className="mt-1 text-sm text-muted-foreground">Outstanding</div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {data.overdueInvoices > 0 && <Badge variant="destructive" className="text-xs">{data.overdueInvoices} overdue</Badge>}

@@ -108,7 +108,7 @@ export function PortalInvoicesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-statto-ink">Invoices</h1>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-foreground">Invoices</h1>
         <p className="text-muted-foreground">Your invoices and payment status</p>
       </div>
 

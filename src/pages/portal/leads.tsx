@@ -221,7 +221,7 @@ export function PortalLeadsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-statto-ink">Leads</h1>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-foreground">Leads</h1>
         <p className="text-muted-foreground">Lead breakdown by campaign for the selected date range</p>
       </div>
 

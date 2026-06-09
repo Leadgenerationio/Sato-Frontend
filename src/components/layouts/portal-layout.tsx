@@ -114,7 +114,7 @@ export function PortalLayout() {
             onClick={signOut}
             title="Sign out"
             aria-label="Sign out"
-            className="ml-1 flex size-10 items-center justify-center rounded-full bg-card text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-statto-ink"
+            className="ml-1 flex size-10 items-center justify-center rounded-full bg-card text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground"
           >
             <LogOut className="size-[19px]" />
           </button>

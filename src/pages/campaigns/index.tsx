@@ -462,7 +462,7 @@ function UnlinkedSpendCard() {
           </Button>
         </div>
         {expanded && (
-          <div className="mt-3 overflow-x-auto rounded-md border border-warning/30 bg-white">
+          <div className="mt-3 overflow-x-auto rounded-md border border-warning/30 bg-card">
             <Table>
               <TableHeader>
                 <TableRow>

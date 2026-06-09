@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTheme } from 'next-themes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -124,6 +125,8 @@ function StatCard({ label, value, icon: Icon, trend }: {
 
 export function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { resolvedTheme } = useTheme();
+  const inkSeries = resolvedTheme === 'dark' ? '#EAF3EF' : '#062F28';
   const { data: campaign, isLoading, error } = useCampaign(id!);
   const { data: deliveries, isLoading: deliveriesLoading } = useCampaignDeliveries(id);
   const [window, setWindow] = useState<DeliveryWindow>('this_month');
@@ -347,7 +350,7 @@ export function CampaignDetailPage() {
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} className="text-muted-foreground" />
                 <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, '']} />
                 <Legend />
-                <Area type="monotone" dataKey="revenue" stroke="#062F28" fill="#062F28" fillOpacity={0.1} name="Revenue" />
+                <Area type="monotone" dataKey="revenue" stroke={inkSeries} fill={inkSeries} fillOpacity={0.1} name="Revenue" />
                 <Area type="monotone" dataKey="cost" stroke="#84D451" fill="#84D451" fillOpacity={0.12} name="Cost" />
               </AreaChart>
             </ResponsiveContainer>
@@ -370,7 +373,7 @@ export function CampaignDetailPage() {
                   <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} className="text-muted-foreground" />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={140} className="text-muted-foreground" />
                   <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, 'CPL']} />
-                  <Bar dataKey="cpl" fill="#062F28" radius={[0, 4, 4, 0]} name="CPL" />
+                  <Bar dataKey="cpl" fill={inkSeries} radius={[0, 4, 4, 0]} name="CPL" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

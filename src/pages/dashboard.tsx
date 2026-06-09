@@ -93,7 +93,7 @@ function StatCard({ title, value, change, trend, icon: Icon }: { title: string; 
       <CardContent>
         <div className="flex items-center justify-between gap-2">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-muted">
-            <Icon className="size-5 text-statto-ink" />
+            <Icon className="size-5 text-foreground" />
           </div>
           {change !== null && (
             <div className={`flex min-w-0 items-center gap-1 text-xs font-medium ${colorClass}`}>
@@ -104,7 +104,7 @@ function StatCard({ title, value, change, trend, icon: Icon }: { title: string; 
           )}
         </div>
         <div className="mt-3">
-          <p className="truncate text-[34px] font-semibold leading-none tracking-[-0.025em] tabular-nums text-statto-ink">{value}</p>
+          <p className="truncate text-[34px] font-semibold leading-none tracking-[-0.025em] tabular-nums text-foreground">{value}</p>
           <p className="mt-2 truncate text-sm text-muted-foreground">{title}</p>
         </div>
       </CardContent>
@@ -129,9 +129,20 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-const tooltipStyle = {
-  contentStyle: { backgroundColor: '#fff', border: '1px solid #E3E3E6', borderRadius: '12px', fontSize: '12px', fontFamily: 'Poppins, sans-serif', boxShadow: '0 6px 20px rgba(6,47,40,0.06)' },
-};
+function tooltipStyleFor(dark: boolean) {
+  const fg = dark ? '#EAF3EF' : '#062F28';
+  return {
+    contentStyle: {
+      backgroundColor: dark ? '#123F36' : '#fff',
+      border: `1px solid ${dark ? '#2E5249' : '#E3E3E6'}`,
+      borderRadius: '12px', fontSize: '12px', fontFamily: 'Poppins, sans-serif',
+      color: fg,
+      boxShadow: dark ? '0 6px 20px rgba(0,0,0,0.45)' : '0 6px 20px rgba(6,47,40,0.06)',
+    },
+    labelStyle: { color: fg },
+    itemStyle: { color: fg },
+  };
+}
 
 // ─── Page ───
 
@@ -141,6 +152,10 @@ export function DashboardPage() {
   // dark mode or it vanishes against the dark-green card.
   const { resolvedTheme } = useTheme();
   const inkSeries = resolvedTheme === 'dark' ? '#EAF3EF' : '#062F28';
+  const tooltipStyle = tooltipStyleFor(resolvedTheme === 'dark');
+  // Donut: the leading ink wedge flips to a light tone in dark mode so the
+  // largest slice doesn't vanish against the dark-green card.
+  const piePalette = resolvedTheme === 'dark' ? ['#EAF3EF', ...PIE_PALETTE.slice(1)] : PIE_PALETTE;
   // Top-of-dashboard window filter. Drives the Leads tile + its trend chip
   // server-side (BE swaps the date range based on this key). Other tiles
   // (Total Revenue, Net Profit, Margin, Campaigns, Bank/VAT/etc widgets)
@@ -287,7 +302,7 @@ export function DashboardPage() {
           name,
           leads,
           value: Math.round((leads / totalLeadsByVertical) * 1000) / 10,
-          color: PIE_PALETTE[i % PIE_PALETTE.length],
+          color: piePalette[i % piePalette.length],
         }))
     : [
         { name: 'No data', leads: 0, value: 100, color: '#e5e5e5' },
@@ -316,7 +331,7 @@ export function DashboardPage() {
           <select
             value={leadsWindow}
             onChange={(e) => setLeadsWindow(e.target.value as DashboardWindow)}
-            className="rounded-md border border-border bg-white px-2 py-1 text-xs font-medium text-foreground focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-300"
+            className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
           >
             {DASHBOARD_WINDOW_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -615,7 +630,7 @@ export function DashboardPage() {
                       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
                         on
                           ? 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800'
-                          : 'border-border bg-white text-muted-foreground hover:bg-neutral-50'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
                       }`}
                     >
                       <span className="size-2 rounded-full" style={{ backgroundColor: dot, opacity: on ? 1 : 0.4 }} />

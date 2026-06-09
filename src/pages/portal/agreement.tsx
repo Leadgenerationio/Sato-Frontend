@@ -33,7 +33,7 @@ export function PortalAgreementPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-statto-ink">Agreement</h1>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-foreground">Agreement</h1>
         <p className="text-muted-foreground">Your lead generation service agreement</p>
       </div>
 

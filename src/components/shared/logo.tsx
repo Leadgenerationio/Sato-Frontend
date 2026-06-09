@@ -24,7 +24,7 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
         </div>
       </div>
       {showText && (
-        <span className={`${s.text} font-bold tracking-tight text-statto-ink`}>
+        <span className={`${s.text} font-bold tracking-tight text-foreground`}>
           Stato
         </span>
       )}
