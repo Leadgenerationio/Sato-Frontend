@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ProtectedRoute } from '@/components/shared/protected-route';
@@ -98,6 +99,7 @@ function RouteFallback() {
 
 export default function App() {
   return (
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange storageKey="stato-theme">
     <QueryProvider>
     <BrowserRouter>
       <AuthProvider>
@@ -397,5 +399,6 @@ export default function App() {
       </AuthProvider>
     </BrowserRouter>
     </QueryProvider>
+    </ThemeProvider>
   );
 }

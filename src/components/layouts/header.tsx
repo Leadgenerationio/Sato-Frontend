@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Bell, LogOut, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/shared/logo';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -45,6 +46,7 @@ export function Header() {
         <Logo size="sm" />
       </div>
       <div className="ml-auto flex items-center gap-3">
+        <ThemeToggle />
         {/* Notification Bell */}
         <Link to="/notifications" className="relative inline-flex items-center justify-center size-9 rounded-lg hover:bg-muted transition-colors">
           <Bell className="size-5" />

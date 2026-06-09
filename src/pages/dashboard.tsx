@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/layouts/page-header';
 import { DashboardSkeleton } from '@/components/shared/loading-skeleton';
@@ -136,6 +137,10 @@ const tooltipStyle = {
 
 export function DashboardPage() {
   const { user } = useAuth();
+  // Ink chart series (revenue line, paid bar) must flip to a light colour in
+  // dark mode or it vanishes against the dark-green card.
+  const { resolvedTheme } = useTheme();
+  const inkSeries = resolvedTheme === 'dark' ? '#EAF3EF' : '#062F28';
   // Top-of-dashboard window filter. Drives the Leads tile + its trend chip
   // server-side (BE swaps the date range based on this key). Other tiles
   // (Total Revenue, Net Profit, Margin, Campaigns, Bank/VAT/etc widgets)
@@ -424,7 +429,7 @@ export function DashboardPage() {
                     culled by minTickGap on narrow widths. */}
                 <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#062F28" stopOpacity={0.15} /><stop offset="100%" stopColor="#062F28" stopOpacity={0} /></linearGradient>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={inkSeries} stopOpacity={0.15} /><stop offset="100%" stopColor={inkSeries} stopOpacity={0} /></linearGradient>
                     <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#84D451" stopOpacity={0.18} /><stop offset="100%" stopColor="#84D451" stopOpacity={0} /></linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
@@ -452,7 +457,7 @@ export function DashboardPage() {
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
                   {/* connectNulls=false → expenses line breaks for pre-Catchr months
                       (rather than drawing a misleading flat-zero floor). */}
-                  <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#062F28" strokeWidth={2} fill="url(#revenueGrad)" />
+                  <Area type="monotone" dataKey="revenue" name="Revenue" stroke={inkSeries} strokeWidth={2} fill="url(#revenueGrad)" />
                   <Area type="monotone" dataKey="expenses" name="Ad Spend" stroke="#84D451" strokeWidth={2} fill="url(#expenseGrad)" connectNulls={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -596,7 +601,7 @@ export function DashboardPage() {
                   At least one stays on (guarded in toggleStatus). */}
               <div className="flex flex-wrap items-center gap-2">
                 {([
-                  { key: 'paid', label: 'Paid', dot: '#062F28' },
+                  { key: 'paid', label: 'Paid', dot: inkSeries },
                   { key: 'pending', label: 'Pending', dot: '#a3a3a3' },
                   { key: 'overdue', label: 'Overdue', dot: '#E5575B' },
                 ] as const).map(({ key, label, dot }) => {
@@ -651,7 +656,7 @@ export function DashboardPage() {
                     }}
                   />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
-                  {invoiceStatusFilter.paid && <Bar dataKey="paid" name="Paid" stackId="a" fill="#062F28" />}
+                  {invoiceStatusFilter.paid && <Bar dataKey="paid" name="Paid" stackId="a" fill={inkSeries} />}
                   {invoiceStatusFilter.pending && <Bar dataKey="pending" name="Pending" stackId="a" fill="#a3a3a3" />}
                   {invoiceStatusFilter.overdue && <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#E5575B" radius={[4, 4, 0, 0]} />}
                 </BarChart>

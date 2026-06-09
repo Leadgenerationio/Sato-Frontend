@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import {
   LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone, BarChart3,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 import type { User, PortalTabSlug } from '@/types';
 
 // Sam (2026-05-27 jam-video #2): the portal is *display-only* for clients.
@@ -96,6 +97,7 @@ export function PortalLayout() {
       <div className="ml-20 min-w-0 flex-1">
         {/* Top-right user strip */}
         <div className="flex items-center justify-end gap-3 px-4 pt-6 sm:px-10">
+          <ThemeToggle />
           <span
             className="flex size-11 shrink-0 items-center justify-center rounded-full bg-statto-ink text-sm font-semibold text-statto-lime"
             aria-hidden="true"
