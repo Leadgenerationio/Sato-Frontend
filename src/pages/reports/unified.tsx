@@ -1,11 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronDown, ExternalLink, Info, Sparkles, TrendingUp } from 'lucide-react';
+import { ChevronDown, Check, ExternalLink, Info, Sparkles, TrendingUp } from 'lucide-react';
 
 // Shared explanation for the cost-concept column tooltips. "Spend" on this
 // report is Catchr ad-spend (what Sam pays Meta / Google / TikTok / Taboola
@@ -59,6 +54,19 @@ export function formatTileNumber(value: number) {
     return new Intl.NumberFormat('en-GB', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
   }
   return value.toLocaleString();
+}
+
+// Map a profit/margin number to the design's pos / neg / zero colour class.
+const pmCls = (value: number) => (value > 0 ? 'rpt-pos' : value < 0 ? 'rpt-neg' : 'rpt-zero');
+// Margin keeps the original three-tier semantics (healthy ≥50 / review ≥30 /
+// loss). pos & neg map to the design colour classes; the middle "review" band
+// uses the Statto warning token inline since the report stylesheet has no
+// amber margin class. Returns { className, style } to spread onto the <td>.
+function marginProps(margin: number): { className: string; style?: React.CSSProperties } {
+  if (margin >= 50) return { className: 'r mono rpt-pos' };
+  if (margin >= 30) return { className: 'r mono', style: { color: 'var(--warning)', fontWeight: 600 } };
+  if (margin === 0) return { className: 'r mono rpt-zero' };
+  return { className: 'r mono rpt-neg' };
 }
 
 export function UnifiedReportPage() {
@@ -177,28 +185,33 @@ export function UnifiedReportPage() {
   }, [rows]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Reports"
-        description="One unified view — revenue from LeadByte, cost from Catchr ad spend (NOT LeadByte supplier payout), profit + margin per supplier."
-      >
-        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
-          <Sparkles className="size-3 mr-1" />New
-        </Badge>
-      </PageHeader>
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Reports</h1>
+          <p className="ahead-sub">
+            One unified view — revenue from LeadByte, cost from Catchr ad spend (NOT LeadByte supplier payout), profit + margin per supplier.
+          </p>
+        </div>
+        <span className="rpt-new"><Sparkles className="size-[13px]" /> New</span>
+      </div>
 
       {/* Window selector */}
-      <Tabs value={reportWindow} onValueChange={(v) => setReportWindow(v as DeliveryWindow)}>
-        <TabsList className="flex-wrap gap-1">
-          {WINDOW_OPTIONS.map((opt) => (
-            <TabsTrigger key={opt.value} value={opt.value}>{opt.label}</TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="rpt-tabs">
+        {WINDOW_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            className={'rpt-tab' + (reportWindow === opt.value ? ' on' : '')}
+            onClick={() => setReportWindow(opt.value as DeliveryWindow)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
 
       {/* Filters — dropdowns drawn from the unfiltered window so the option
           lists stay stable while picking. Both default to "All". */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="rpt-filters">
         <FilterSelect
           value={supplier}
           onChange={setSupplier}
@@ -217,7 +230,7 @@ export function UnifiedReportPage() {
 
       {/* Totals strip */}
       {totals && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="rpt-kpi-row">
           <TotalCard
             label="Leads"
             value={formatTileNumber(totals.leads)}
@@ -228,6 +241,7 @@ export function UnifiedReportPage() {
             value={formatTileCurrency(totals.spend)}
             fullValue={formatCurrency(totals.spend)}
             hint={SPEND_HINT}
+            neg
           />
           <TotalCard
             label="Revenue"
@@ -238,244 +252,202 @@ export function UnifiedReportPage() {
             label="Profit"
             value={formatTileCurrency(totals.profit)}
             fullValue={formatCurrency(totals.profit)}
-            valueClassName={totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}
+            neg={totals.profit < 0}
             hint={MARGIN_HINT}
           />
           <TotalCard
             label="Margin"
             value={`${totals.margin}%`}
-            valueClassName={
-              totals.margin >= 50 ? 'text-emerald-600' :
-              totals.margin >= 30 ? 'text-amber-600' : 'text-red-600'
-            }
+            neg={totals.margin < 30}
             hint={MARGIN_HINT}
           />
         </div>
       )}
 
       {/* Main table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">
-            {rows.length === 0 ? 'No matching rows' : `${rows.length} row${rows.length === 1 ? '' : 's'}`}
-          </CardTitle>
-          <CardDescription>
-            One row per (campaign × supplier). Revenue allocated by lead share — sum across
-            suppliers equals each campaign's total.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-9 w-full" />
-              ))}
-            </div>
-          ) : error ? (
-            <ErrorState title="Couldn't load report" error={error} onRetry={() => refetch()} />
-          ) : rows.length === 0 ? (
-            <EmptyState
-              icon={TrendingUp}
-              title={supplier || campaign ? 'No matches for these filters' : 'No data for this window'}
-              description={
-                supplier || campaign
-                  ? 'Try widening or clearing the supplier / campaign filters.'
-                  : 'LeadByte returned nothing for this window. Try a wider window or wait for the next hourly sync.'
-              }
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b text-left text-xs text-muted-foreground">
-                  <tr>
-                    <th className="py-2.5 pl-4 pr-3 font-medium">Campaign</th>
-                    <th className="py-2.5 px-3 font-medium">Vertical</th>
-                    <th className="py-2.5 px-3 font-medium">Client</th>
-                    <th className="py-2.5 px-3 font-medium">Supplier</th>
-                    <th className="py-2.5 px-3 font-medium">Catchr NCP</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Leads</th>
-                    <th className="py-2.5 px-3 font-medium text-right">
-                      <span className="inline-flex items-center justify-end gap-1">
-                        Spend
-                        <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
-                          <Info className="h-3 w-3" />
-                        </span>
+      <div className="card pad acard">
+        <h3 className="statto-title">
+          {rows.length === 0 ? 'No matching rows' : `${rows.length} row${rows.length === 1 ? '' : 's'}`}
+        </h3>
+        <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>
+          One row per (campaign × supplier). Revenue allocated by lead share — sum across
+          suppliers equals each campaign's total.
+        </p>
+        {isLoading ? (
+          <p className="ac-sub">Loading report…</p>
+        ) : error ? (
+          <ErrorState title="Couldn't load report" error={error} onRetry={() => refetch()} />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={TrendingUp}
+            title={supplier || campaign ? 'No matches for these filters' : 'No data for this window'}
+            description={
+              supplier || campaign
+                ? 'Try widening or clearing the supplier / campaign filters.'
+                : 'LeadByte returned nothing for this window. Try a wider window or wait for the next hourly sync.'
+            }
+          />
+        ) : (
+          <div className="table-scroll">
+            <table className="inv-table rpt-table">
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th>Vertical</th>
+                  <th>Client</th>
+                  <th>Supplier</th>
+                  <th>Catchr NCP</th>
+                  <th className="r">Leads</th>
+                  <th className="r">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      Spend
+                      <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
+                        <Info className="h-3 w-3" />
                       </span>
-                    </th>
-                    <th className="py-2.5 px-3 font-medium text-right">CPL</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Revenue</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Profit</th>
-                    <th className="py-2.5 pl-3 pr-4 font-medium text-right">
-                      <span className="inline-flex items-center justify-end gap-1">
-                        Margin
-                        <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
-                          <Info className="h-3 w-3" />
-                        </span>
+                    </span>
+                  </th>
+                  <th className="r">CPL</th>
+                  <th className="r">Revenue</th>
+                  <th className="r">Profit</th>
+                  <th className="r">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      Margin
+                      <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
+                        <Info className="h-3 w-3" />
                       </span>
-                    </th>
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={`${r.campaignName}-${r.supplier}-${i}`}>
+                    <td className="rpt-camp">{r.campaignName}</td>
+                    <td><span className="rpt-vert">{r.vertical}</span></td>
+                    <td className="rpt-client">
+                      {/* OCT-42: render multi-buyer rows as "Multiple (N)" with all names in the tooltip. */}
+                      {(() => {
+                        const names = r.clientNames && r.clientNames.length > 0 ? r.clientNames : [r.clientName];
+                        if (names.length <= 1) {
+                          return <span title={names[0]}>{names[0]}</span>;
+                        }
+                        return (
+                          <span className="cursor-help" title={names.join('\n')}>
+                            Multiple ({names.length})
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td>
+                      <span className="rpt-supplier">{r.supplier}</span>
+                      {r.supplierPlatform && (
+                        <span className="rpt-ncp" style={{ marginLeft: 6, textTransform: 'capitalize' }}>{r.supplierPlatform}</span>
+                      )}
+                    </td>
+                    <td>
+                      {r.catchrUrl ? (
+                        <a
+                          href={r.catchrUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rpt-ncp inline-flex items-center gap-1 underline-offset-2 hover:underline"
+                          title={r.catchrUrl}
+                        >
+                          <ExternalLink className="size-3 shrink-0" />
+                          <span>Linked</span>
+                        </a>
+                      ) : (
+                        <span className="rpt-ncp">Not linked</span>
+                      )}
+                    </td>
+                    <td className="r mono">{r.leads.toLocaleString()}</td>
+                    <td className="r mono">{formatCurrency(r.spend)}</td>
+                    <td className="r mono">{formatCurrency(r.cpl)}</td>
+                    <td className="r mono">{formatCurrency(r.revenue)}</td>
+                    <td className={'r mono ' + pmCls(r.profit)}>{formatCurrency(r.profit)}</td>
+                    <td {...marginProps(r.margin)}>{r.margin}%</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r, i) => (
-                    <tr key={`${r.campaignName}-${r.supplier}-${i}`} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="py-3 pl-4 pr-3 font-medium max-w-[180px]">
-                        <div className="truncate" title={r.campaignName}>{r.campaignName}</div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <Badge variant="secondary" className="text-xs">{r.vertical}</Badge>
-                      </td>
-                      <td className="py-3 px-3 text-muted-foreground max-w-[160px]">
-                        {/* OCT-42: render multi-buyer rows as "Multiple (N)" with all names in the tooltip. */}
-                        {(() => {
-                          const names = r.clientNames && r.clientNames.length > 0 ? r.clientNames : [r.clientName];
-                          if (names.length <= 1) {
-                            return <div className="truncate" title={names[0]}>{names[0]}</div>;
-                          }
-                          return (
-                            <div className="truncate cursor-help" title={names.join('\n')}>
-                              Multiple ({names.length})
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="text-sm">{r.supplier}</span>
-                        {r.supplierPlatform && (
-                          <Badge variant="outline" className="text-xs ml-1.5 capitalize">{r.supplierPlatform}</Badge>
-                        )}
-                      </td>
-                      <td className="py-3 px-3">
-                        {r.catchrUrl ? (
-                          <a
-                            href={r.catchrUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline"
-                            title={r.catchrUrl}
-                          >
-                            <ExternalLink className="size-3 shrink-0" />
-                            <span>Linked</span>
-                          </a>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Not linked</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-right tabular-nums">{r.leads.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(r.spend)}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(r.cpl)}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(r.revenue)}</td>
-                      <td className={`py-3 px-3 text-right tabular-nums font-medium ${r.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {formatCurrency(r.profit)}
-                      </td>
-                      <td className={`py-3 pl-3 pr-4 text-right tabular-nums font-medium ${
-                        r.margin >= 50 ? 'text-emerald-600' :
-                        r.margin >= 30 ? 'text-amber-600' : 'text-red-600'
-                      }`}>
-                        {r.margin}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                ))}
                 {totals && (
-                  <tfoot className="border-t bg-muted/30 text-sm font-semibold">
-                    <tr>
-                      <td colSpan={5} className="py-3 pl-4 pr-3">Totals · {reportWindow.replace('_', ' ')}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{totals.leads.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.spend)}</td>
-                      <td className="py-3 px-3"></td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
-                      <td className={`py-3 px-3 text-right tabular-nums ${totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {formatCurrency(totals.profit)}
-                      </td>
-                      <td className={`py-3 pl-3 pr-4 text-right tabular-nums ${
-                        totals.margin >= 50 ? 'text-emerald-600' :
-                        totals.margin >= 30 ? 'text-amber-600' : 'text-red-600'
-                      }`}>
-                        {totals.margin}%
-                      </td>
-                    </tr>
-                  </tfoot>
+                  <tr className="rpt-totals">
+                    <td colSpan={5}>Totals · {reportWindow.replace('_', ' ')}</td>
+                    <td className="r mono">{totals.leads.toLocaleString()}</td>
+                    <td className="r mono">{formatCurrency(totals.spend)}</td>
+                    <td></td>
+                    <td className="r mono">{formatCurrency(totals.revenue)}</td>
+                    <td className={'r mono ' + pmCls(totals.profit)}>{formatCurrency(totals.profit)}</td>
+                    <td {...marginProps(totals.margin)}>{totals.margin}%</td>
+                  </tr>
                 )}
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* By-campaign roll-up (mental-model affordance for Sam) */}
       {byCampaign.length > 1 && (
-        <Card data-testid="by-campaign-rollup">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">By campaign · roll-up</CardTitle>
-            <CardDescription>
-              Same numbers, aggregated per campaign so you can scan the verticals quickly.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b text-left text-xs text-muted-foreground">
-                  <tr>
-                    <th className="py-2.5 pl-4 pr-3 font-medium">Campaign</th>
-                    <th className="py-2.5 px-3 font-medium">Vertical</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Suppliers</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Leads</th>
-                    <th className="py-2.5 px-3 font-medium text-right">
-                      <span className="inline-flex items-center justify-end gap-1">
-                        Spend
-                        <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
-                          <Info className="h-3 w-3" />
-                        </span>
+        <div className="card pad acard" data-testid="by-campaign-rollup">
+          <h3 className="statto-title">By campaign · roll-up</h3>
+          <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>
+            Same numbers, aggregated per campaign so you can scan the verticals quickly.
+          </p>
+          <div className="table-scroll">
+            <table className="inv-table rpt-table">
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th>Vertical</th>
+                  <th className="r">Suppliers</th>
+                  <th className="r">Leads</th>
+                  <th className="r">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      Spend
+                      <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
+                        <Info className="h-3 w-3" />
                       </span>
-                    </th>
-                    <th className="py-2.5 px-3 font-medium text-right">Revenue</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Profit</th>
-                    <th className="py-2.5 pl-3 pr-4 font-medium text-right">
-                      <span className="inline-flex items-center justify-end gap-1">
-                        Margin
-                        <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
-                          <Info className="h-3 w-3" />
-                        </span>
+                    </span>
+                  </th>
+                  <th className="r">Revenue</th>
+                  <th className="r">Profit</th>
+                  <th className="r">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      Margin
+                      <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
+                        <Info className="h-3 w-3" />
                       </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {byCampaign.map((g) => {
-                    const subLeads = g.rows.reduce((s, r) => s + r.leads, 0);
-                    const subSpend = g.rows.reduce((s, r) => s + r.spend, 0);
-                    const subRevenue = g.rows.reduce((s, r) => s + r.revenue, 0);
-                    const subProfit = subRevenue - subSpend;
-                    const subMargin = subRevenue > 0 ? Math.round(((subRevenue - subSpend) / subRevenue) * 1000) / 10 : 0;
-                    return (
-                      <tr key={g.name} className="border-b last:border-0">
-                        <td className="py-3 pl-4 pr-3 font-medium max-w-[200px]">
-                          <Link to={`/campaigns?search=${encodeURIComponent(g.name)}`} className="underline-offset-2 hover:underline">
-                            <span className="truncate" title={g.name}>{g.name}</span>
-                          </Link>
-                        </td>
-                        <td className="py-3 px-3"><Badge variant="secondary" className="text-xs">{g.vertical}</Badge></td>
-                        <td className="py-3 px-3 text-right tabular-nums">{g.rows.length}</td>
-                        <td className="py-3 px-3 text-right tabular-nums">{subLeads.toLocaleString()}</td>
-                        <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(subSpend)}</td>
-                        <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(subRevenue)}</td>
-                        <td className={`py-3 px-3 text-right tabular-nums font-medium ${subProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {formatCurrency(subProfit)}
-                        </td>
-                        <td className={`py-3 pl-3 pr-4 text-right tabular-nums font-medium ${
-                          subMargin >= 50 ? 'text-emerald-600' :
-                          subMargin >= 30 ? 'text-amber-600' : 'text-red-600'
-                        }`}>
-                          {subMargin}%
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {byCampaign.map((g) => {
+                  const subLeads = g.rows.reduce((s, r) => s + r.leads, 0);
+                  const subSpend = g.rows.reduce((s, r) => s + r.spend, 0);
+                  const subRevenue = g.rows.reduce((s, r) => s + r.revenue, 0);
+                  const subProfit = subRevenue - subSpend;
+                  const subMargin = subRevenue > 0 ? Math.round(((subRevenue - subSpend) / subRevenue) * 1000) / 10 : 0;
+                  return (
+                    <tr key={g.name}>
+                      <td className="rpt-camp">
+                        <Link to={`/campaigns?search=${encodeURIComponent(g.name)}`} className="underline-offset-2 hover:underline" title={g.name}>
+                          {g.name}
+                        </Link>
+                      </td>
+                      <td><span className="rpt-vert">{g.vertical}</span></td>
+                      <td className="r mono">{g.rows.length}</td>
+                      <td className="r mono">{subLeads.toLocaleString()}</td>
+                      <td className="r mono">{formatCurrency(subSpend)}</td>
+                      <td className="r mono">{formatCurrency(subRevenue)}</td>
+                      <td className={'r mono ' + pmCls(subProfit)}>{formatCurrency(subProfit)}</td>
+                      <td {...marginProps(subMargin)}>{subMargin}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* By-source roll-up — Sam (2026-05-15 meeting #10): "Facebook spend →
@@ -484,103 +456,83 @@ export function UnifiedReportPage() {
           supplier) tooltips above so the cost-concept disambiguation is
           identical everywhere. */}
       {bySource.length > 0 && (
-        <Card data-testid="by-source-rollup">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">By source · profitability</CardTitle>
-            <CardDescription>
-              Aggregated per platform — same numbers, summed across campaigns so you can
-              scan source-level performance.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b text-left text-xs text-muted-foreground">
-                  <tr>
-                    <th className="py-2.5 pl-4 pr-3 font-medium">Platform</th>
-                    <th className="py-2.5 px-3 font-medium">Catchr NCP</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Leads</th>
-                    <th className="py-2.5 px-3 font-medium text-right">
-                      <span className="inline-flex items-center justify-end gap-1">
-                        Spend
-                        <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
-                          <Info className="h-3 w-3" />
-                        </span>
+        <div className="card pad acard" data-testid="by-source-rollup">
+          <h3 className="statto-title">By source · profitability</h3>
+          <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>
+            Aggregated per platform — same numbers, summed across campaigns so you can
+            scan source-level performance.
+          </p>
+          <div className="table-scroll">
+            <table className="inv-table rpt-table">
+              <thead>
+                <tr>
+                  <th>Platform</th>
+                  <th>Catchr NCP</th>
+                  <th className="r">Leads</th>
+                  <th className="r">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      Spend
+                      <span title={SPEND_HINT} aria-label={SPEND_HINT} className="cursor-help">
+                        <Info className="h-3 w-3" />
                       </span>
-                    </th>
-                    <th className="py-2.5 px-3 font-medium text-right">CPL</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Revenue</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Profit</th>
-                    <th className="py-2.5 pl-3 pr-4 font-medium text-right">
-                      <span className="inline-flex items-center justify-end gap-1">
-                        Margin
-                        <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
-                          <Info className="h-3 w-3" />
-                        </span>
+                    </span>
+                  </th>
+                  <th className="r">CPL</th>
+                  <th className="r">Revenue</th>
+                  <th className="r">Profit</th>
+                  <th className="r">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      Margin
+                      <span title={MARGIN_HINT} aria-label={MARGIN_HINT} className="cursor-help">
+                        <Info className="h-3 w-3" />
                       </span>
-                    </th>
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {bySource.map((p) => (
+                  <tr key={p.platform}>
+                    <td className="rpt-camp" style={{ textTransform: 'capitalize' }}>{p.platform}</td>
+                    <td>
+                      {p.catchrUrl ? (
+                        <a
+                          href={p.catchrUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rpt-ncp inline-flex items-center gap-1 underline-offset-2 hover:underline"
+                          title={p.catchrUrl}
+                        >
+                          <ExternalLink className="size-3 shrink-0" />
+                          <span>Linked</span>
+                        </a>
+                      ) : (
+                        <span className="rpt-ncp">Not linked</span>
+                      )}
+                    </td>
+                    <td className="r mono">{p.leads.toLocaleString()}</td>
+                    <td className="r mono">{formatCurrency(p.spend)}</td>
+                    <td className="r mono">{formatCurrency(p.cpl)}</td>
+                    <td className="r mono">{formatCurrency(p.revenue)}</td>
+                    <td className={'r mono ' + pmCls(p.profit)}>{formatCurrency(p.profit)}</td>
+                    <td {...marginProps(p.margin)}>{p.margin}%</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {bySource.map((p) => (
-                    <tr key={p.platform} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="py-3 pl-4 pr-3 font-medium capitalize">{p.platform}</td>
-                      <td className="py-3 px-3">
-                        {p.catchrUrl ? (
-                          <a
-                            href={p.catchrUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline"
-                            title={p.catchrUrl}
-                          >
-                            <ExternalLink className="size-3 shrink-0" />
-                            <span>Linked</span>
-                          </a>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Not linked</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-right tabular-nums">{p.leads.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.spend)}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.cpl)}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(p.revenue)}</td>
-                      <td className={`py-3 px-3 text-right tabular-nums font-medium ${p.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {formatCurrency(p.profit)}
-                      </td>
-                      <td className={`py-3 pl-3 pr-4 text-right tabular-nums font-medium ${
-                        p.margin >= 50 ? 'text-emerald-600' :
-                        p.margin >= 30 ? 'text-amber-600' : 'text-red-600'
-                      }`}>
-                        {p.margin}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                ))}
                 {totals && (
-                  <tfoot className="border-t bg-muted/30 text-sm font-semibold">
-                    <tr>
-                      <td colSpan={2} className="py-3 pl-4 pr-3">Totals · {reportWindow.replace('_', ' ')}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{totals.leads.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.spend)}</td>
-                      <td className="py-3 px-3"></td>
-                      <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
-                      <td className={`py-3 px-3 text-right tabular-nums ${totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {formatCurrency(totals.profit)}
-                      </td>
-                      <td className={`py-3 pl-3 pr-4 text-right tabular-nums ${
-                        totals.margin >= 50 ? 'text-emerald-600' :
-                        totals.margin >= 30 ? 'text-amber-600' : 'text-red-600'
-                      }`}>
-                        {totals.margin}%
-                      </td>
-                    </tr>
-                  </tfoot>
+                  <tr className="rpt-totals">
+                    <td colSpan={2}>Totals · {reportWindow.replace('_', ' ')}</td>
+                    <td className="r mono">{totals.leads.toLocaleString()}</td>
+                    <td className="r mono">{formatCurrency(totals.spend)}</td>
+                    <td></td>
+                    <td className="r mono">{formatCurrency(totals.revenue)}</td>
+                    <td className={'r mono ' + pmCls(totals.profit)}>{formatCurrency(totals.profit)}</td>
+                    <td {...marginProps(totals.margin)}>{totals.margin}%</td>
+                  </tr>
                 )}
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -595,52 +547,69 @@ function FilterSelect({
   options: string[];
   disabled?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+  const label = value === '' ? allLabel : value;
+  const select = (next: string) => { onChange(next); setOpen(false); };
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+    <div className="rpt-filter" ref={ref}>
+      <button
+        type="button"
+        className="rpt-filter-btn"
         disabled={disabled}
-        className="flex h-9 w-full appearance-none rounded-md border border-input bg-transparent pl-3 pr-9 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+        onClick={() => setOpen((o) => !o)}
       >
-        <option value="">{allLabel}</option>
-        {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <span>{label}</span>
+        <ChevronDown className="size-[15px]" />
+      </button>
+      {open && !disabled && (
+        <div className="rpt-menu">
+          <button type="button" className="rpt-menu-opt" onClick={() => select('')}>
+            <span className="rpt-check">{value === '' ? <Check className="size-[14px]" /> : null}</span>
+            {allLabel}
+          </button>
+          {options.map((o) => (
+            <button type="button" key={o} className="rpt-menu-opt" onClick={() => select(o)}>
+              <span className="rpt-check">{value === o ? <Check className="size-[14px]" /> : null}</span>
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 function TotalCard({
-  label, value, fullValue, valueClassName, hint,
+  label, value, fullValue, neg, hint,
 }: {
   label: string;
   value: string;
   fullValue?: string;
-  valueClassName?: string;
+  neg?: boolean;
   /** Optional clarification shown as a native tooltip on a small Info icon next to the label. */
   hint?: string;
 }) {
   return (
-    <Card className="gap-3 py-4">
-      <CardContent>
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          {label}
-          {hint && (
-            <span title={hint} aria-label={hint} className="cursor-help">
-              <Info className="h-3 w-3" />
-            </span>
-          )}
-        </p>
-        <p
-          className={`mt-1 text-xl font-bold tabular-nums whitespace-nowrap ${valueClassName ?? ''}`}
-          title={fullValue ?? value}
-        >
-          {value}
-        </p>
-      </CardContent>
-    </Card>
+    <div className="card rpt-kpi">
+      <div className="rpt-kpi-l">
+        {label}
+        {hint && (
+          <span title={hint} aria-label={hint} className="cursor-help">
+            <Info className="size-[13px]" />
+          </span>
+        )}
+      </div>
+      <div className={'rpt-kpi-v mono' + (neg ? ' neg' : '')} title={fullValue ?? value}>
+        {value}
+      </div>
+    </div>
   );
 }

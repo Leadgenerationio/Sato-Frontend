@@ -1,33 +1,39 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { api } from '@/lib/api';
-import { PageHeader } from '@/components/layouts/page-header';
 import { ProfileSkeleton } from '@/components/shared/loading-skeleton';
-import {
-  Card, CardContent, CardHeader, CardTitle, CardDescription,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Mail, Shield, Building, Calendar, LogOut, Loader2, CheckCircle2, XCircle, RefreshCw, Send, FileSignature, HardDrive } from 'lucide-react';
 import { toast } from 'sonner';
 import { UsersManagement } from '@/pages/users';
 
 import { logError, logWarn } from '../lib/log';
+
+const SETTINGS_TABS = ['profile', 'account', 'integrations', 'users'] as const;
+type SettingsTab = (typeof SETTINGS_TABS)[number];
+const TAB_LABELS: Record<SettingsTab, string> = {
+  profile: 'Profile',
+  account: 'Account',
+  integrations: 'Integrations',
+  users: 'User Management',
+};
+
 function ProfileField({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-4 py-3">
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-        <Icon className="size-4 text-muted-foreground" />
+    <div className="set-field">
+      <span className="set-field-ic"><Icon className="size-[18px]" /></span>
+      <div>
+        <div className="set-field-l">{label}</div>
+        <div className="set-field-v">{value}</div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium truncate">{value}</p>
-      </div>
+    </div>
+  );
+}
+
+// Loading shell shared by the integration cards while their status fetches.
+function IntegrationLoading() {
+  return (
+    <div className="card pad acard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
+      <Loader2 className="size-5 animate-spin" style={{ color: 'var(--fg3)' }} />
     </div>
   );
 }
@@ -69,77 +75,53 @@ function XeroIntegration() {
     fetchStatus();
   }, []);
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
+  if (loading) return <IntegrationLoading />;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-[#13B5EA]/10">
-              <span className="text-lg font-bold text-[#13B5EA]">X</span>
-            </div>
-            <div>
-              <CardTitle className="text-base">Xero</CardTitle>
-              <CardDescription>Accounting and invoicing · Custom Connection</CardDescription>
-            </div>
-          </div>
-          {status?.connected ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
-              <CheckCircle2 className="size-3 mr-1" />
-              Connected
-            </Badge>
-          ) : (
-            <Badge variant="secondary">
-              <XCircle className="size-3 mr-1" />
-              Not connected
-            </Badge>
-          )}
+    <div className="card pad acard">
+      <div className="set-intg-head">
+        <span className="set-intg-ic blue">X</span>
+        <div className="set-intg-name-wrap">
+          <div className="set-intg-name">Xero</div>
+          <div className="set-intg-desc">Accounting and invoicing · Custom Connection</div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!status?.configured ? (
-          isOwner ? (
-            <p className="text-sm text-muted-foreground">
-              Xero credentials are not configured on the server. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_ID</code> and <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_SECRET</code> in the backend environment.
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Xero credentials are not configured on the server. Ask your administrator to add the Xero Custom Connection credentials to the backend configuration.
-            </p>
-          )
-        ) : status?.connected ? (
-          <>
-            {status.tenantName && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Building className="size-4" />
-                <span>Organisation: <span className="font-medium text-foreground">{status.tenantName}</span></span>
-              </div>
-            )}
-            {status.tenantId && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="text-xs">Tenant ID: <code className="rounded bg-muted px-1 py-0.5 text-xs">{status.tenantId}</code></span>
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Connected via Xero Custom Connection (server-to-server). Tokens renew automatically every 30 minutes.
-            </p>
-          </>
+        {status?.connected ? (
+          <span className="pill p-pos set-intg-status"><CheckCircle2 className="size-3" strokeWidth={2.4} /> Connected</span>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            Xero credentials are set but authentication failed. Check the backend log for details.
-          </p>
+          <span className="pill p-gray set-intg-status"><XCircle className="size-3" strokeWidth={2.4} /> Not connected</span>
         )}
-      </CardContent>
-    </Card>
+      </div>
+      {!status?.configured ? (
+        isOwner ? (
+          <p className="set-intg-note">
+            Xero credentials are not configured on the server. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_ID</code> and <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_SECRET</code> in the backend environment.
+          </p>
+        ) : (
+          <p className="set-intg-note">
+            Xero credentials are not configured on the server. Ask your administrator to add the Xero Custom Connection credentials to the backend configuration.
+          </p>
+        )
+      ) : status?.connected ? (
+        <>
+          {status.tenantName && (
+            <div className="set-intg-row">
+              <Building className="size-4" />
+              Organisation: <strong>{status.tenantName}</strong>
+            </div>
+          )}
+          {status.tenantId && (
+            <div className="set-intg-tenant">Tenant ID: <code>{status.tenantId}</code></div>
+          )}
+          <p className="set-intg-note">
+            Connected via Xero Custom Connection (server-to-server). Tokens renew automatically every 30 minutes.
+          </p>
+        </>
+      ) : (
+        <p className="set-intg-note">
+          Xero credentials are set but authentication failed. Check the backend log for details.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -188,77 +170,56 @@ function LeadByteIntegration() {
     }
   }
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
+  if (loading) return <IntegrationLoading />;
 
   const hasApiKey = status?.configured ?? false;
   const lastSync = status?.lastSyncAt ?? null;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-[#FF6B35]/10">
-              <span className="text-lg font-bold text-[#FF6B35]">L</span>
-            </div>
-            <div>
-              <CardTitle className="text-base">LeadByte</CardTitle>
-              <CardDescription>Lead management and distribution</CardDescription>
-            </div>
-          </div>
-          {hasApiKey ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
-              <CheckCircle2 className="size-3 mr-1" />
-              Connected
-            </Badge>
-          ) : (
-            <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
-              Mock mode
-            </Badge>
-          )}
+    <div className="card pad acard">
+      <div className="set-intg-head">
+        <span className="set-intg-ic orange">L</span>
+        <div className="set-intg-name-wrap">
+          <div className="set-intg-name">LeadByte</div>
+          <div className="set-intg-desc">Lead management and distribution</div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
         {hasApiKey ? (
-          <>
-            {lastSync ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="size-4" />
-                <span>Last sync: {new Date(lastSync).toLocaleString()}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="size-4" />
-                <span>No sync run yet</span>
-              </div>
-            )}
-            <p className="text-sm text-muted-foreground">
-              Leads are synced hourly from LeadByte via API.
-            </p>
-            <Button size="sm" variant="outline" onClick={handleRefreshNow} disabled={syncing}>
-              {syncing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-              Refresh Now
-            </Button>
-          </>
-        ) : isOwner ? (
-          <p className="text-sm text-muted-foreground">
-            Running in mock mode with sample data. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">LEADBYTE_API_KEY</code> in the backend environment to connect to LeadByte and enable hourly lead sync.
-          </p>
+          <span className="pill p-pos set-intg-status"><CheckCircle2 className="size-3" strokeWidth={2.4} /> Connected</span>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            Running in mock mode with sample data. Ask your administrator to add the LeadByte API key to the backend configuration to connect LeadByte and enable hourly lead sync.
-          </p>
+          <span className="pill p-warn set-intg-status">Mock mode</span>
         )}
-      </CardContent>
-    </Card>
+      </div>
+      {hasApiKey ? (
+        <>
+          {lastSync ? (
+            <div className="set-intg-row">
+              <Calendar className="size-4" />
+              Last sync: {new Date(lastSync).toLocaleString()}
+            </div>
+          ) : (
+            <div className="set-intg-row">
+              <Calendar className="size-4" />
+              No sync run yet
+            </div>
+          )}
+          <p className="set-intg-note">
+            Leads are synced hourly from LeadByte via API.
+          </p>
+          <button className="btn b-ghost b-sm" style={{ marginTop: 14 }} onClick={handleRefreshNow} disabled={syncing}>
+            {syncing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-[15px]" />}
+            Refresh Now
+          </button>
+        </>
+      ) : isOwner ? (
+        <p className="set-intg-note">
+          Running in mock mode with sample data. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">LEADBYTE_API_KEY</code> in the backend environment to connect to LeadByte and enable hourly lead sync.
+        </p>
+      ) : (
+        <p className="set-intg-note">
+          Running in mock mode with sample data. Ask your administrator to add the LeadByte API key to the backend configuration to connect LeadByte and enable hourly lead sync.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -286,66 +247,44 @@ function CreditCheckIntegration() {
     })();
   }, []);
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
+  if (loading) return <IntegrationLoading />;
 
   const provider = status?.provider ?? 'mock';
   const creditChecksRun = status?.checksRun ?? 0;
 
   const providerLabel = provider === 'creditsafe' ? 'Creditsafe' : provider === 'endole' ? 'Endole' : 'Mock';
-  const providerColor = provider === 'creditsafe' ? '#1f6feb' : provider === 'endole' ? '#2D3748' : '#737373';
   const isLive = provider !== 'mock';
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg" style={{ background: `${providerColor}15` }}>
-              <span className="text-lg font-bold" style={{ color: providerColor }}>{providerLabel[0]}</span>
-            </div>
-            <div>
-              <CardTitle className="text-base">Credit Checks — {providerLabel}</CardTitle>
-              <CardDescription>Company credit scoring and CCJ data</CardDescription>
-            </div>
-          </div>
-          {isLive ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
-              <CheckCircle2 className="size-3 mr-1" />
-              Connected
-            </Badge>
-          ) : (
-            <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
-              Mock mode
-            </Badge>
-          )}
+    <div className="card pad acard">
+      <div className="set-intg-head">
+        <span className="set-intg-ic purple">{providerLabel[0]}</span>
+        <div className="set-intg-name-wrap">
+          <div className="set-intg-name">Credit Checks — {providerLabel}</div>
+          <div className="set-intg-desc">Company credit scoring and CCJ data</div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
         {isLive ? (
-          <>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Shield className="size-4" />
-              <span>Credit checks run: <strong>{creditChecksRun}</strong></span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {providerLabel} API is active. Credit checks are performed on demand for buyer verification.
-            </p>
-          </>
+          <span className="pill p-pos set-intg-status"><CheckCircle2 className="size-3" strokeWidth={2.4} /> Connected</span>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            Running in mock mode. Auto-selects provider on backend: <code className="rounded bg-muted px-1 py-0.5 text-xs">CREDITSAFE_API_KEY</code> (preferred) or <code className="rounded bg-muted px-1 py-0.5 text-xs">ENDOLE_API_KEY</code>.
-          </p>
+          <span className="pill p-warn set-intg-status">Mock mode</span>
         )}
-      </CardContent>
-    </Card>
+      </div>
+      {isLive ? (
+        <>
+          <div className="set-intg-row">
+            <Shield className="size-4" />
+            Credit checks run: <strong>{creditChecksRun}</strong>
+          </div>
+          <p className="set-intg-note">
+            {providerLabel} API is active. Credit checks are performed on demand for buyer verification.
+          </p>
+        </>
+      ) : (
+        <p className="set-intg-note">
+          Running in mock mode. Auto-selects provider on backend: <code className="rounded bg-muted px-1 py-0.5 text-xs">CREDITSAFE_API_KEY</code> (preferred) or <code className="rounded bg-muted px-1 py-0.5 text-xs">ENDOLE_API_KEY</code>.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -354,13 +293,19 @@ interface SignNowStatus { configured: boolean; baseUrl: string | null; username:
 interface R2Status { configured: boolean; bucket: string | null; publicBaseUrl: string | null; }
 interface CatchrStatus { configured: boolean; mcpUrl: string | null; lastSyncAt: string | null; }
 
+// `.set-intg-ic` ships blue/orange/purple in admin-screens.css; green is
+// applied inline so SignNow / Banking get the positive tint without a new
+// CSS rule.
+type SetIntgTint = 'blue' | 'orange' | 'purple' | 'green';
+const greenTintStyle = { background: 'var(--positive-bg)', color: 'var(--positive)' };
+
 function SimpleIntegrationCard<T extends { configured: boolean }>({
-  title, description, icon: Icon, iconColor, endpoint, envHint, renderDetails,
+  title, description, icon: Icon, tint, endpoint, envHint, renderDetails,
 }: {
   title: string;
   description: string;
   icon: React.ElementType;
-  iconColor: string;
+  tint: SetIntgTint;
   endpoint: string;
   envHint: string;
   renderDetails?: (data: T) => React.ReactNode;
@@ -382,53 +327,31 @@ function SimpleIntegrationCard<T extends { configured: boolean }>({
     })();
   }, [endpoint]);
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
+  if (loading) return <IntegrationLoading />;
 
   const isConnected = data?.configured ?? false;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg" style={{ background: `${iconColor}15` }}>
-              <Icon className="size-5" style={{ color: iconColor }} />
-            </div>
-            <div>
-              <CardTitle className="text-base">{title}</CardTitle>
-              <CardDescription>{description}</CardDescription>
-            </div>
-          </div>
-          {isConnected ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
-              <CheckCircle2 className="size-3 mr-1" />
-              Connected
-            </Badge>
-          ) : (
-            <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
-              <XCircle className="size-3 mr-1" />
-              Not configured
-            </Badge>
-          )}
+    <div className="card pad acard">
+      <div className="set-intg-head">
+        <span className={`set-intg-ic ${tint}`} style={tint === 'green' ? greenTintStyle : undefined}><Icon className="size-5" /></span>
+        <div className="set-intg-name-wrap">
+          <div className="set-intg-name">{title}</div>
+          <div className="set-intg-desc">{description}</div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {isConnected && data && renderDetails?.(data)}
-        {!isConnected && (
-          <p className="text-sm text-muted-foreground">
-            Add <code className="rounded bg-muted px-1 py-0.5 text-xs">{envHint}</code> to the backend environment to enable this integration.
-          </p>
+        {isConnected ? (
+          <span className="pill p-pos set-intg-status"><CheckCircle2 className="size-3" strokeWidth={2.4} /> Connected</span>
+        ) : (
+          <span className="pill p-warn set-intg-status"><XCircle className="size-3" strokeWidth={2.4} /> Not configured</span>
         )}
-      </CardContent>
-    </Card>
+      </div>
+      {isConnected && data && renderDetails?.(data)}
+      {!isConnected && (
+        <p className="set-intg-note">
+          Add <code className="rounded bg-muted px-1 py-0.5 text-xs">{envHint}</code> to the backend environment to enable this integration.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -438,17 +361,17 @@ function ResendIntegration() {
       title="Resend"
       description="Transactional email (invoices, notifications)"
       icon={Send}
-      iconColor="#6366f1"
+      tint="purple"
       endpoint="/api/v1/integrations/resend/status"
       envHint="RESEND_API_KEY"
       renderDetails={(d) => (
-        <div className="space-y-1 text-sm text-muted-foreground">
+        <>
           {d.fromEmail && (
-            <div className="flex items-center gap-2"><Mail className="size-4" />Sender: <code className="rounded bg-muted px-1 py-0.5 text-xs">{d.fromEmail}</code></div>
+            <div className="set-intg-row"><Mail className="size-4" />Sender: <code>{d.fromEmail}</code></div>
           )}
-          {d.fromName && <div className="text-xs">Display name: {d.fromName}</div>}
-          <p className="text-xs">Domain must be verified in Resend (SPF/DKIM records).</p>
-        </div>
+          {d.fromName && <div className="set-intg-tenant">Display name: {d.fromName}</div>}
+          <p className="set-intg-note">Domain must be verified in Resend (SPF/DKIM records).</p>
+        </>
       )}
     />
   );
@@ -460,17 +383,17 @@ function SignNowIntegration() {
       title="SignNow"
       description="E-signature for client service agreements"
       icon={FileSignature}
-      iconColor="#22c55e"
+      tint="green"
       endpoint="/api/v1/integrations/signnow/status"
       envHint="SIGNNOW_CLIENT_ID + SIGNNOW_CLIENT_SECRET + SIGNNOW_USERNAME + SIGNNOW_PASSWORD"
       renderDetails={(d) => (
-        <div className="space-y-1 text-sm text-muted-foreground">
+        <>
           {d.username && (
-            <div className="flex items-center gap-2"><Shield className="size-4" />Service account: <code className="rounded bg-muted px-1 py-0.5 text-xs">{d.username}</code></div>
+            <div className="set-intg-row"><Shield className="size-4" />Service account: <code>{d.username}</code></div>
           )}
-          {d.baseUrl && <div className="text-xs">API host: {d.baseUrl}{d.sandbox && ' (sandbox)'}</div>}
-          <p className="text-xs">OAuth2 password grant; access tokens cached and refreshed automatically.</p>
-        </div>
+          {d.baseUrl && <div className="set-intg-tenant">API host: {d.baseUrl}{d.sandbox && ' (sandbox)'}</div>}
+          <p className="set-intg-note">OAuth2 password grant; access tokens cached and refreshed automatically.</p>
+        </>
       )}
     />
   );
@@ -482,19 +405,19 @@ function CatchrIntegration() {
       title="Catchr"
       description="Multi-platform ad-spend (Google Ads, Facebook, LinkedIn, Bing, TikTok)"
       icon={HardDrive}
-      iconColor="#0ea5e9"
+      tint="blue"
       endpoint="/api/v1/integrations/catchr/status"
       envHint="CATCHR_API_KEY + CATCHR_MCP_URL"
       renderDetails={(d) => (
-        <div className="space-y-1 text-sm text-muted-foreground">
+        <>
           {d.mcpUrl && (
-            <div className="flex items-center gap-2"><Mail className="size-4" />MCP URL: <code className="rounded bg-muted px-1 py-0.5 text-xs">{d.mcpUrl}</code></div>
+            <div className="set-intg-row"><Mail className="size-4" />MCP URL: <code>{d.mcpUrl}</code></div>
           )}
           {d.lastSyncAt && (
-            <div className="text-xs">Last sync: {new Date(d.lastSyncAt).toLocaleString('en-GB')}</div>
+            <div className="set-intg-tenant">Last sync: {new Date(d.lastSyncAt).toLocaleString('en-GB')}</div>
           )}
-          <p className="text-xs">Backend pulls fresh spend hourly at minute 5; data feeds Reports → Ad Spend.</p>
-        </div>
+          <p className="set-intg-note">Backend pulls fresh spend hourly at minute 5; data feeds Reports → Ad Spend.</p>
+        </>
       )}
     />
   );
@@ -506,17 +429,17 @@ function R2Integration() {
       title="Cloudflare R2"
       description="File storage (agreements, creatives, invoices)"
       icon={HardDrive}
-      iconColor="#f6821f"
+      tint="orange"
       endpoint="/api/v1/integrations/r2/status"
       envHint="R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY + R2_BUCKET + R2_ACCOUNT_ID"
       renderDetails={(d) => (
-        <div className="space-y-1 text-sm text-muted-foreground">
+        <>
           {d.bucket && (
-            <div className="flex items-center gap-2"><HardDrive className="size-4" />Bucket: <code className="rounded bg-muted px-1 py-0.5 text-xs">{d.bucket}</code></div>
+            <div className="set-intg-row"><HardDrive className="size-4" />Bucket: <code>{d.bucket}</code></div>
           )}
-          {d.publicBaseUrl && <div className="text-xs truncate">Public base URL: {d.publicBaseUrl}</div>}
-          <p className="text-xs">Signed upload/download URLs expire after 15 minutes / 1 hour respectively.</p>
-        </div>
+          {d.publicBaseUrl && <div className="set-intg-tenant">Public base URL: {d.publicBaseUrl}</div>}
+          <p className="set-intg-note">Signed upload/download URLs expire after 15 minutes / 1 hour respectively.</p>
+        </>
       )}
     />
   );
@@ -524,36 +447,26 @@ function R2Integration() {
 
 function BankingIntegration() {
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10">
-              <span className="text-lg font-bold text-emerald-600">£</span>
-            </div>
-            <div>
-              <CardTitle className="text-base">Banking</CardTitle>
-              <CardDescription>Bank balances via Xero bank feed</CardDescription>
-            </div>
-          </div>
-          <Badge variant="secondary">
-            <CheckCircle2 className="size-3 mr-1" />
-            Via Xero
-          </Badge>
+    <div className="card pad acard">
+      <div className="set-intg-head">
+        <span className="set-intg-ic green" style={greenTintStyle}>£</span>
+        <div className="set-intg-name-wrap">
+          <div className="set-intg-name">Banking</div>
+          <div className="set-intg-desc">Bank balances via Xero bank feed</div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Phase 1 uses Xero's bank feed for balances and transactions — no separate Open Banking integration required. Direct Open Banking (e.g., TrueLayer) is deferred to Phase 2.
-        </p>
-      </CardContent>
-    </Card>
+        <span className="pill p-pos set-intg-status"><CheckCircle2 className="size-3" strokeWidth={2.4} /> Via Xero</span>
+      </div>
+      <p className="set-intg-note">
+        Phase 1 uses Xero's bank feed for balances and transactions — no separate Open Banking integration required. Direct Open Banking (e.g., TrueLayer) is deferred to Phase 2.
+      </p>
+    </div>
   );
 }
 
 export function SettingsPage() {
   const { user, logout, updateUser } = useAuth();
   const [pageLoading, setPageLoading] = useState(true);
+  const [tab, setTab] = useState<SettingsTab>('profile');
 
   const [profileName, setProfileName] = useState(user?.name ?? '');
   const [profileSaving, setProfileSaving] = useState(false);
@@ -627,6 +540,9 @@ export function SettingsPage() {
   if (!user) return null;
 
   const isOwner = user.role === 'owner';
+  // Hide owner-only tabs for non-owners; keep `tab` from landing on one.
+  const visibleTabs = SETTINGS_TABS.filter((t) => isOwner || (t !== 'integrations' && t !== 'users'));
+  const activeTab = visibleTabs.includes(tab) ? tab : 'profile';
 
   const initials = user.name
     .split(' ')
@@ -636,162 +552,141 @@ export function SettingsPage() {
     .slice(0, 2);
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Settings" description="Manage your account and preferences" />
-
-      <Tabs defaultValue="profile" className="w-full">
-        {/* T3 slice 3 (OCT-37): owner sees 4 tabs, "User Management" alone
-            is ~135px wide — overflows 375px viewports. Wrap in a scroll
-            shell so the tab bar stays usable without changing desktop. */}
-        <div className="-mx-1 overflow-x-auto px-1">
-          <TabsList className="max-w-full">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
-            {isOwner && <TabsTrigger value="integrations">Integrations</TabsTrigger>}
-            {isOwner && <TabsTrigger value="users">User Management</TabsTrigger>}
-          </TabsList>
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Settings</h1>
+          <p className="ahead-sub">Manage your account and preferences</p>
         </div>
+      </div>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="mt-6 space-y-6">
-          {pageLoading ? <ProfileSkeleton /> : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile</CardTitle>
-              <CardDescription>Your personal information</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                <Avatar size="lg" className="size-20">
-                  <AvatarFallback className="text-xl">{initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-center sm:text-left">
-                  <h3 className="text-lg font-semibold">{user.name}</h3>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
-                  <Badge variant="secondary" className="mt-2 capitalize">
-                    {user.role.replace('_', ' ')}
-                  </Badge>
-                </div>
+      <div className="seg set-seg">
+        {visibleTabs.map((t) => (
+          <button
+            key={t}
+            className={'seg-btn' + (activeTab === t ? ' on' : '')}
+            onClick={() => setTab(t)}
+          >
+            {TAB_LABELS[t]}
+          </button>
+        ))}
+      </div>
+
+      {/* Profile Tab */}
+      {activeTab === 'profile' && (
+        pageLoading ? <ProfileSkeleton /> : (
+          <div className="card pad acard">
+            <h3 className="statto-title">Profile</h3>
+            <p className="ac-sub" style={{ marginTop: 4 }}>Your personal information</p>
+            <div className="set-id">
+              <span className="set-avatar">{initials}</span>
+              <div>
+                <div className="set-id-name">{user.name}</div>
+                <div className="set-id-email">{user.email}</div>
+                <span className="set-id-role" style={{ textTransform: 'capitalize' }}>{user.role.replace('_', ' ')}</span>
               </div>
-              <Separator className="my-6" />
-              <div className="space-y-1">
-                <ProfileField icon={User} label="Full Name" value={user.name} />
-                <Separator />
-                <ProfileField icon={Mail} label="Email Address" value={user.email} />
-                <Separator />
-                <ProfileField icon={Shield} label="Role" value={user.role.replace('_', ' ')} />
-                <Separator />
-                <ProfileField icon={Building} label="Business ID" value={user.businessId || 'Not assigned'} />
-                <Separator />
-                <ProfileField icon={Calendar} label="Account Status" value={user.isActive ? 'Active' : 'Inactive'} />
+            </div>
+            <div className="set-fields">
+              <ProfileField icon={User} label="Full Name" value={user.name} />
+              <ProfileField icon={Mail} label="Email Address" value={user.email} />
+              <ProfileField icon={Shield} label="Role" value={user.role.replace('_', ' ')} />
+              <ProfileField icon={Building} label="Business ID" value={user.businessId || 'Not assigned'} />
+              <ProfileField icon={Calendar} label="Account Status" value={user.isActive ? 'Active' : 'Inactive'} />
+            </div>
+          </div>
+        )
+      )}
+
+      {/* Account Tab */}
+      {activeTab === 'account' && (
+        <>
+          <div className="card pad acard">
+            <h3 className="statto-title">Update Profile</h3>
+            <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>Change your display name</p>
+            <div className="nc-grid2">
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="name">Name</label>
+                <input
+                  id="name"
+                  className="nc-input"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  disabled={profileSaving}
+                />
               </div>
-            </CardContent>
-          </Card>
-          )}
-        </TabsContent>
-
-        {/* Account Tab */}
-        <TabsContent value="account" className="mt-6 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Update Profile</CardTitle>
-              <CardDescription>Change your display name</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" defaultValue={user.email} disabled />
-                </div>
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="email">Email</label>
+                <input id="email" className="nc-input" defaultValue={user.email} disabled />
               </div>
-              <Button size="sm" onClick={handleSaveProfile} disabled={profileSaving}>
-                {profileSaving ? <Loader2 className="size-4 animate-spin" /> : null}
-                Save Changes
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+            <button className="btn b-dark b-sm" onClick={handleSaveProfile} disabled={profileSaving}>
+              {profileSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+              Save Changes
+            </button>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-              <CardDescription>Update your account password</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    autoComplete="current-password"
-                    disabled={passwordSaving}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    autoComplete="new-password"
-                    disabled={passwordSaving}
-                  />
-                </div>
+          <div className="card pad acard">
+            <h3 className="statto-title">Change Password</h3>
+            <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>Update your account password</p>
+            <div className="nc-grid2">
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="current-password">Current Password</label>
+                <input
+                  id="current-password"
+                  className="nc-input"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  autoComplete="current-password"
+                  disabled={passwordSaving}
+                />
               </div>
-              <Button size="sm" onClick={handleChangePassword} disabled={passwordSaving}>
-                {passwordSaving ? <Loader2 className="size-4 animate-spin" /> : null}
-                Update Password
-              </Button>
-            </CardContent>
-          </Card>
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="new-password">New Password</label>
+                <input
+                  id="new-password"
+                  className="nc-input"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                  disabled={passwordSaving}
+                />
+              </div>
+            </div>
+            <button className="btn b-dark b-sm" onClick={handleChangePassword} disabled={passwordSaving}>
+              {passwordSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+              Update Password
+            </button>
+          </div>
 
-          <Card className="border-destructive/50">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>Sign out of your account</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="destructive" onClick={() => { logout(); toast.info('Signed out'); }}>
-                <LogOut className="size-4" />
-                Sign Out
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <div className="card pad acard set-danger">
+            <h3 className="statto-title set-danger-h">Danger Zone</h3>
+            <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>Sign out of your account</p>
+            <button className="btn set-signout" onClick={() => { logout(); toast.info('Signed out'); }}>
+              <LogOut className="size-4" />
+              Sign Out
+            </button>
+          </div>
+        </>
+      )}
 
-        {/* Integrations Tab — owner only */}
-        {isOwner && (
-          <TabsContent value="integrations" className="mt-6 space-y-6">
-            <XeroIntegration />
-            <LeadByteIntegration />
-            <CreditCheckIntegration />
-            <ResendIntegration />
-            <SignNowIntegration />
-            <CatchrIntegration />
-            <R2Integration />
-            <BankingIntegration />
-          </TabsContent>
-        )}
+      {/* Integrations Tab — owner only */}
+      {isOwner && activeTab === 'integrations' && (
+        <div className="set-intg-list">
+          <XeroIntegration />
+          <LeadByteIntegration />
+          <CreditCheckIntegration />
+          <ResendIntegration />
+          <SignNowIntegration />
+          <CatchrIntegration />
+          <R2Integration />
+          <BankingIntegration />
+        </div>
+      )}
 
-        {/* User Management Tab — owner only */}
-        {isOwner && (
-          <TabsContent value="users" className="mt-6">
-            <UsersManagement />
-          </TabsContent>
-        )}
-      </Tabs>
+      {/* User Management Tab — owner only */}
+      {isOwner && activeTab === 'users' && <UsersManagement />}
     </div>
   );
 }

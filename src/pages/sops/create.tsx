@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader2, Sparkles, Image as ImageIcon, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Image as ImageIcon, X, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useCreateSop,
@@ -83,83 +78,82 @@ export function SopCreatePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to="/sops"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <PageHeader title="Create SOP" description="Add a new standard operating procedure" />
+    <div className="screen-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/sops" className="nc-back" title="Back to SOPs"><ArrowLeft className="size-5" /></Link>
+          <div>
+            <h1 className="ahead-title">Create SOP</h1>
+            <p className="ahead-sub">Add a new standard operating procedure</p>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="size-4" /> Generate from a Loom (optional)
-          </CardTitle>
-          <CardDescription>
-            Paste a Loom share URL and the recording's transcript ("Show transcript" in Loom). The AI drafts a structured SOP — review and edit before saving.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="sop-loom-wiz">Loom URL</Label>
-            <Input
-              id="sop-loom-wiz"
-              type="url"
-              value={loomUrl}
-              onChange={(e) => setLoomUrl(e.target.value)}
-              placeholder="https://www.loom.com/share/…"
-              className={loomUrl && !loomValid ? 'border-red-300' : ''}
-            />
-          </div>
-          {embed && (
-            <div className="relative w-full overflow-hidden rounded-md border" style={{ paddingBottom: '56.25%' }}>
-              <iframe src={embed} title="Loom preview" allowFullScreen className="absolute inset-0 h-full w-full" />
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="sop-transcript">Transcript</Label>
-            <textarea
-              id="sop-transcript"
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Paste the Loom transcript here (Loom share page → 'Show transcript' → copy)…"
-              rows={6}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-          </div>
-          <Button type="button" onClick={handleGenerate} disabled={!canGenerate || generate.isPending}>
-            {generate.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Sparkles className="size-4 mr-1.5" />}
-            {generate.isPending ? 'Generating…' : 'Generate SOP draft'}
-          </Button>
-        </CardContent>
-      </Card>
-
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader><CardTitle className="text-base">SOP Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Title</Label>
-                <Input
+        <div className="ct-layout">
+          <div className="csop-main">
+            <div className="card pad acard">
+              <h3 className="statto-title csop-loom"><Sparkles className="size-[18px]" /> Generate from a Loom <span className="csop-opt">(optional)</span></h3>
+              <p className="ac-sub" style={{ marginTop: 6, marginBottom: 18 }}>
+                Paste a Loom share URL and the recording's transcript ("Show transcript" in Loom). The AI drafts a structured SOP — review and edit before saving.
+              </p>
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="sop-loom-wiz">Loom URL</label>
+                <input
+                  id="sop-loom-wiz"
+                  className="nc-input"
+                  type="url"
+                  value={loomUrl}
+                  onChange={(e) => setLoomUrl(e.target.value)}
+                  placeholder="https://www.loom.com/share/…"
+                  style={loomUrl && !loomValid ? { borderColor: 'var(--negative)' } : undefined}
+                />
+              </div>
+              {embed && (
+                <div style={{ position: 'relative', width: '100%', overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)', paddingBottom: '56.25%', marginBottom: 18 }}>
+                  <iframe src={embed} title="Loom preview" allowFullScreen style={{ position: 'absolute', inset: 0, height: '100%', width: '100%' }} />
+                </div>
+              )}
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="sop-transcript">Transcript</label>
+                <textarea
+                  id="sop-transcript"
+                  className="nc-textarea csop-transcript"
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  placeholder="Paste the Loom transcript here (Loom share page → 'Show transcript' → copy)…"
+                />
+              </div>
+              <button type="button" className="btn b-sm csop-gen" onClick={handleGenerate} disabled={!canGenerate || generate.isPending}>
+                {generate.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Sparkles className="size-[15px]" />}
+                {generate.isPending ? 'Generating…' : 'Generate SOP draft'}
+              </button>
+            </div>
+
+            <div className="card pad acard">
+              <h3 className="statto-title nc-h">SOP Details</h3>
+              <div className="nc-field">
+                <label className="nc-label">Title</label>
+                <input
+                  className="nc-input"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., New Client Onboarding Procedure"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+              <div className="nc-field">
+                <label className="nc-label">Category</label>
+                <div className="nc-select-wrap">
+                  <select className="nc-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="size-[15px]" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Tags</Label>
+              <div className="nc-field">
+                <label className="nc-label">Tags</label>
                 <TagInput
                   value={tags}
                   onChange={setTags}
@@ -167,82 +161,57 @@ export function SopCreatePage() {
                   placeholder="Add a tag (e.g. software, creative, solar)…"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Content</Label>
+              <div className="nc-field">
+                <label className="nc-label">Content</label>
                 <textarea
+                  className="nc-textarea csop-content"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Write the SOP content here. Use separate paragraphs for each section..."
-                  rows={16}
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Screenshots</Label>
+              <div className="nc-field">
+                <label className="nc-label">Screenshots</label>
                 <ScreenshotList
                   items={screenshots}
                   onRemove={(key) => setScreenshots(screenshots.filter((s) => s.key !== key))}
                 />
-                <FileUpload
-                  folder="sops"
-                  accept="image/*"
-                  maxSizeMB={10}
-                  label="Upload screenshot"
-                  onUploaded={(result, file) => {
-                    setScreenshots((prev) => [
-                      ...prev,
-                      {
-                        key: result.key,
-                        name: file.name,
-                        size: file.size,
-                        contentType: file.type,
-                        uploadedAt: new Date().toISOString(),
-                        uploadedBy: user?.email,
-                      },
-                    ]);
-                  }}
-                />
               </div>
-            </CardContent>
-          </Card>
+              <FileUpload
+                folder="sops"
+                accept="image/*"
+                maxSizeMB={10}
+                label="Upload screenshot"
+                onUploaded={(result, file) => {
+                  setScreenshots((prev) => [
+                    ...prev,
+                    {
+                      key: result.key,
+                      name: file.name,
+                      size: file.size,
+                      contentType: file.type,
+                      uploadedAt: new Date().toISOString(),
+                      uploadedBy: user?.email,
+                    },
+                  ]);
+                }}
+              />
+            </div>
+          </div>
 
-          <div className="space-y-6">
-            <Button type="submit" className="w-full" disabled={createSop.isPending}>
-              {createSop.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+          <div className="ct-side csop-side">
+            <button type="submit" className="btn b-dark b-block ct-submit" disabled={createSop.isPending}>
+              {createSop.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
               Create SOP
-            </Button>
+            </button>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setStatus('draft')}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                      status === 'draft'
-                        ? 'bg-background text-foreground shadow-sm border'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Draft
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatus('published')}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                      status === 'published'
-                        ? 'bg-background text-foreground shadow-sm border'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Published
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <h3 className="statto-title csop-status-h">Status</h3>
+              <div className="seg csop-status">
+                <button type="button" className={'seg-btn' + (status === 'draft' ? ' on' : '')} onClick={() => setStatus('draft')}>Draft</button>
+                <button type="button" className={'seg-btn' + (status === 'published' ? ' on' : '')} onClick={() => setStatus('published')}>Published</button>
+              </div>
+            </div>
           </div>
         </div>
       </form>
@@ -253,14 +222,14 @@ export function SopCreatePage() {
 function ScreenshotList({ items, onRemove }: { items: SopScreenshot[]; onRemove: (key: string) => void }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-md border border-dashed py-4 text-center text-xs text-muted-foreground">
-        <ImageIcon className="mx-auto mb-1 size-4" />
-        No screenshots yet
+      <div className="csop-drop">
+        <ImageIcon className="size-[26px]" />
+        <span>No screenshots yet</span>
       </div>
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
       {items.map((s) => (
         <ScreenshotThumb key={s.key} screenshot={s} onRemove={() => onRemove(s.key)} />
       ))}
@@ -271,16 +240,16 @@ function ScreenshotList({ items, onRemove }: { items: SopScreenshot[]; onRemove:
 function ScreenshotThumb({ screenshot, onRemove }: { screenshot: SopScreenshot; onRemove: () => void }) {
   const { data: url } = useUploadUrl(screenshot.key);
   return (
-    <div className="group relative aspect-video overflow-hidden rounded-md border bg-muted">
+    <div className="group" style={{ position: 'relative', aspectRatio: '16 / 9', overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--gray-50)' }}>
       {url ? (
-        <img src={url} alt={screenshot.name} className="h-full w-full object-cover" />
+        <img src={url} alt={screenshot.name} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
       ) : (
-        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading…</div>
+        <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--fg2)' }}>Loading…</div>
       )}
       <button
         type="button"
         onClick={onRemove}
-        className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+        style={{ position: 'absolute', right: 4, top: 4, borderRadius: 999, background: 'rgba(0,0,0,.7)', padding: 4, color: '#fff', border: 'none', cursor: 'pointer', display: 'inline-flex' }}
         aria-label={`Remove ${screenshot.name}`}
       >
         <X className="size-3" />

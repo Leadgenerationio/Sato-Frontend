@@ -1,16 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   Users, UserCheck, Briefcase, Calendar, ChevronDown, ChevronRight, Check, X, Plus, Loader2, Pencil, Network,
@@ -26,7 +15,6 @@ import {
 } from '@/lib/hooks/use-staff';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
-import { EmptyState } from '@/components/shared/empty-state';
 
 import { logError } from '../../lib/log';
 // ─── Helpers ───
@@ -35,10 +23,11 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const staffStatusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  on_leave: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  terminated: 'bg-red-500/10 text-red-600 border-red-200',
+// Statto pill variant per staff status.
+const staffStatusPill: Record<string, string> = {
+  active: 'pos',
+  on_leave: 'warn',
+  terminated: 'neg',
 };
 
 const staffStatusLabels: Record<string, string> = {
@@ -47,21 +36,16 @@ const staffStatusLabels: Record<string, string> = {
   terminated: 'Terminated',
 };
 
-const departmentColors: Record<string, string> = {
-  'Content Team': 'bg-purple-500/10 text-purple-600 border-purple-200',
-  'Operations': 'bg-blue-500/10 text-blue-600 border-blue-200',
+const holidayTypePill: Record<string, string> = {
+  annual: 'infosoft',
+  sick: 'neg',
+  personal: 'warn',
 };
 
-const holidayTypeColors: Record<string, string> = {
-  annual: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  sick: 'bg-red-500/10 text-red-600 border-red-200',
-  personal: 'bg-amber-500/10 text-amber-600 border-amber-200',
-};
-
-const holidayStatusColors: Record<string, string> = {
-  pending: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  approved: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  rejected: 'bg-red-500/10 text-red-600 border-red-200',
+const holidayStatusPill: Record<string, string> = {
+  pending: 'warn',
+  approved: 'pos',
+  rejected: 'neg',
 };
 
 const PIPELINE_STAGES: Applicant['stage'][] = ['applied', 'screening', 'interview', 'offer', 'hired'];
@@ -75,6 +59,15 @@ const stageLabels: Record<string, string> = {
   rejected: 'Rejected',
 };
 
+const STAFF_TABS = ['team', 'recruitment', 'holidays', 'documents'] as const;
+type StaffTab = typeof STAFF_TABS[number];
+const staffTabLabels: Record<StaffTab, string> = {
+  team: 'Team',
+  recruitment: 'Recruitment',
+  holidays: 'Holidays',
+  documents: 'Documents',
+};
+
 // ─── Sub-components ───
 
 function StatsCards() {
@@ -82,9 +75,12 @@ function StatsCards() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="tk-stat-row">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
+          <div key={i} className="tk-stat" style={{ opacity: 0.5 }}>
+            <span className="tk-stat-ic plain" />
+            <div><div className="tk-stat-v">—</div><div className="tk-stat-l">Loading…</div></div>
+          </div>
         ))}
       </div>
     );
@@ -93,28 +89,22 @@ function StatsCards() {
   if (!stats) return null;
 
   const cards = [
-    { label: 'Total Staff', value: stats.totalStaff, icon: Users, bg: 'bg-muted', iconColor: 'text-muted-foreground' },
-    { label: 'Active Staff', value: stats.activeStaff, icon: UserCheck, bg: 'bg-emerald-500/10', iconColor: 'text-emerald-600' },
-    { label: 'Open Positions', value: stats.openPositions, icon: Briefcase, bg: 'bg-blue-500/10', iconColor: 'text-blue-600' },
-    { label: 'Pending Holidays', value: stats.pendingHolidays, icon: Calendar, bg: 'bg-amber-500/10', iconColor: 'text-amber-600' },
+    { label: 'Total Staff', value: stats.totalStaff, icon: Users, tint: 'plain' },
+    { label: 'Active Staff', value: stats.activeStaff, icon: UserCheck, tint: 'pos' },
+    { label: 'Open Positions', value: stats.openPositions, icon: Briefcase, tint: 'info' },
+    { label: 'Pending Holidays', value: stats.pendingHolidays, icon: Calendar, tint: 'warn' },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="tk-stat-row">
       {cards.map((c) => (
-        <Card key={c.label}>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <div className={`flex size-10 items-center justify-center rounded-lg ${c.bg}`}>
-                <c.icon className={`size-5 ${c.iconColor}`} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold tabular-nums">{c.value}</p>
-                <p className="text-sm text-muted-foreground">{c.label}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div key={c.label} className="tk-stat">
+          <span className={`tk-stat-ic ${c.tint}`}><c.icon className="size-5" /></span>
+          <div>
+            <div className="tk-stat-v">{c.value}</div>
+            <div className="tk-stat-l">{c.label}</div>
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -144,33 +134,32 @@ function AddStaffDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button size="sm"><Plus className="size-4 mr-1.5" />Add Staff</Button></DialogTrigger>
+      <DialogTrigger asChild><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> Add Staff</button></DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Add Staff Member</DialogTitle></DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></div>
-            <div className="space-y-1"><Label>Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@company.com" /></div>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1"><Label>Role</Label><Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g., Content Writer" /></div>
-            <div className="space-y-1"><Label>Department</Label>
+        <div className="nc-grid2" style={{ marginTop: 8 }}>
+          <div className="nc-field"><label className="nc-label">Name</label><input className="nc-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></div>
+          <div className="nc-field"><label className="nc-label">Email</label><input className="nc-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@company.com" /></div>
+          <div className="nc-field"><label className="nc-label">Role</label><input className="nc-input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g., Content Writer" /></div>
+          <div className="nc-field"><label className="nc-label">Department</label>
+            <div className="nc-select-wrap">
               <select
+                className="nc-select"
                 value={form.department}
                 onChange={(e) => {
                   const v = e.target.value;
                   if (v === 'Content Team' || v === 'Operations') setForm({ ...form, department: v });
                 }}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
               >
                 <option value="Content Team">Content Team</option><option value="Operations">Operations</option>
               </select>
+              <ChevronDown className="size-[15px]" />
             </div>
           </div>
-          <Button onClick={handleSubmit} className="w-full" disabled={createStaff.isPending}>
-            {createStaff.isPending && <Loader2 className="size-4 animate-spin mr-1.5" />}Add Staff Member
-          </Button>
         </div>
+        <button className="btn b-dark b-block" onClick={handleSubmit} disabled={createStaff.isPending}>
+          {createStaff.isPending && <Loader2 className="size-4 animate-spin" />}Add Staff Member
+        </button>
       </DialogContent>
     </Dialog>
   );
@@ -194,45 +183,49 @@ function EditStaffDialog({ member }: { member: StaffMember }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="ghost" size="icon" className="size-7"><Pencil className="size-3.5" /></Button></DialogTrigger>
+      <DialogTrigger asChild><button className="inv-open" title="Edit"><Pencil className="size-4" /></button></DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Edit {member.name}</DialogTitle></DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="space-y-1"><Label>Role</Label><Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Department</Label>
+        <div className="nc-grid2" style={{ marginTop: 8 }}>
+          <div className="nc-field"><label className="nc-label">Name</label><input className="nc-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="nc-field"><label className="nc-label">Email</label><input className="nc-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+        </div>
+        <div className="nc-grid3">
+          <div className="nc-field"><label className="nc-label">Role</label><input className="nc-input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} /></div>
+          <div className="nc-field"><label className="nc-label">Department</label>
+            <div className="nc-select-wrap">
               <select
+                className="nc-select"
                 value={form.department}
                 onChange={(e) => {
                   const v = e.target.value;
                   if (v === 'Content Team' || v === 'Operations') setForm({ ...form, department: v });
                 }}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
               >
                 <option value="Content Team">Content Team</option><option value="Operations">Operations</option>
               </select>
+              <ChevronDown className="size-[15px]" />
             </div>
-            <div className="space-y-1"><Label>Status</Label>
+          </div>
+          <div className="nc-field"><label className="nc-label">Status</label>
+            <div className="nc-select-wrap">
               <select
+                className="nc-select"
                 value={form.status}
                 onChange={(e) => {
                   const v = e.target.value;
                   if (v === 'active' || v === 'on_leave' || v === 'terminated') setForm({ ...form, status: v });
                 }}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
               >
                 <option value="active">Active</option><option value="on_leave">On Leave</option><option value="terminated">Terminated</option>
               </select>
+              <ChevronDown className="size-[15px]" />
             </div>
           </div>
-          <Button onClick={handleSubmit} className="w-full" disabled={updateStaff.isPending}>
-            {updateStaff.isPending && <Loader2 className="size-4 animate-spin mr-1.5" />}Save Changes
-          </Button>
         </div>
+        <button className="btn b-dark b-block" onClick={handleSubmit} disabled={updateStaff.isPending}>
+          {updateStaff.isPending && <Loader2 className="size-4 animate-spin" />}Save Changes
+        </button>
       </DialogContent>
     </Dialog>
   );
@@ -255,20 +248,23 @@ function CreateJobDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button size="sm"><Plus className="size-4 mr-1.5" />New Job</Button></DialogTrigger>
+      <DialogTrigger asChild><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> New Job</button></DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Create Job Posting</DialogTitle></DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="space-y-1"><Label>Job Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g., Senior Content Writer" /></div>
-          <div className="space-y-1"><Label>Department</Label>
-            <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
-              <option value="Content Team">Content Team</option><option value="Operations">Operations</option>
-            </select>
+        <div style={{ marginTop: 8 }}>
+          <div className="nc-field"><label className="nc-label">Job Title</label><input className="nc-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g., Senior Content Writer" /></div>
+          <div className="nc-field"><label className="nc-label">Department</label>
+            <div className="nc-select-wrap">
+              <select className="nc-select" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}>
+                <option value="Content Team">Content Team</option><option value="Operations">Operations</option>
+              </select>
+              <ChevronDown className="size-[15px]" />
+            </div>
           </div>
-          <Button onClick={handleSubmit} className="w-full" disabled={createJob.isPending}>
-            {createJob.isPending && <Loader2 className="size-4 animate-spin mr-1.5" />}Post Job
-          </Button>
         </div>
+        <button className="btn b-dark b-block" onClick={handleSubmit} disabled={createJob.isPending}>
+          {createJob.isPending && <Loader2 className="size-4 animate-spin" />}Post Job
+        </button>
       </DialogContent>
     </Dialog>
   );
@@ -293,31 +289,37 @@ function RequestHolidayDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button size="sm"><Plus className="size-4 mr-1.5" />Request Holiday</Button></DialogTrigger>
+      <DialogTrigger asChild><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> Request Holiday</button></DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Request Holiday</DialogTitle></DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="space-y-1"><Label>Staff Member</Label>
-            <select value={form.staffId} onChange={(e) => {
-              const s = staff?.find((m) => m.id === e.target.value);
-              setForm({ ...form, staffId: e.target.value, staffName: s?.name || '' });
-            }} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
-              {staff?.filter((s) => s.status === 'active').map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+        <div style={{ marginTop: 8 }}>
+          <div className="nc-field"><label className="nc-label">Staff Member</label>
+            <div className="nc-select-wrap">
+              <select className="nc-select" value={form.staffId} onChange={(e) => {
+                const s = staff?.find((m) => m.id === e.target.value);
+                setForm({ ...form, staffId: e.target.value, staffName: s?.name || '' });
+              }}>
+                {staff?.filter((s) => s.status === 'active').map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <ChevronDown className="size-[15px]" />
+            </div>
           </div>
-          <div className="space-y-1"><Label>Type</Label>
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as any })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
-              <option value="annual">Annual Leave</option><option value="sick">Sick Leave</option><option value="personal">Personal</option>
-            </select>
+          <div className="nc-field"><label className="nc-label">Type</label>
+            <div className="nc-select-wrap">
+              <select className="nc-select" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as any })}>
+                <option value="annual">Annual Leave</option><option value="sick">Sick Leave</option><option value="personal">Personal</option>
+              </select>
+              <ChevronDown className="size-[15px]" />
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1"><Label>Start Date</Label><input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" /></div>
-            <div className="space-y-1"><Label>End Date</Label><input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" /></div>
+          <div className="nc-grid2">
+            <div className="nc-field"><label className="nc-label">Start Date</label><input className="nc-input" type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></div>
+            <div className="nc-field"><label className="nc-label">End Date</label><input className="nc-input" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></div>
           </div>
-          <Button onClick={handleSubmit} className="w-full" disabled={createHoliday.isPending}>
-            {createHoliday.isPending && <Loader2 className="size-4 animate-spin mr-1.5" />}Submit Request
-          </Button>
         </div>
+        <button className="btn b-dark b-block" onClick={handleSubmit} disabled={createHoliday.isPending}>
+          {createHoliday.isPending && <Loader2 className="size-4 animate-spin" />}Submit Request
+        </button>
       </DialogContent>
     </Dialog>
   );
@@ -327,78 +329,54 @@ function TeamTab() {
   const { data: staff, isLoading, error } = useStaffList();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <StatsCards />
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex gap-4">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-5 w-20" />
-                  <Skeleton className="h-5 w-16" />
-                </div>
-              ))}
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <Users className="size-8" />
-              <p className="text-sm">Failed to load staff</p>
-            </div>
-          ) : !staff?.length ? (
-            <EmptyState
-              icon={Users}
-              title="No staff members yet"
-              description="Add your team to track roles, departments, holidays, and documents."
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Holidays Left</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staff.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-medium">
-                        <Link to={`/staff/${s.id}`} className="text-primary hover:underline">
-                          {s.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{s.email}</TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs ${departmentColors[s.department] || ''}`}>
-                          {s.department}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{s.role}</TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs capitalize ${staffStatusColors[s.status] || ''}`}>
-                          {staffStatusLabels[s.status] || s.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{s.holidaysRemaining}</TableCell>
-                      <TableCell><EditStaffDialog member={s} /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="card acard inv-card">
+        {isLoading ? (
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--fg2)' }}>Loading staff…</div>
+        ) : error ? (
+          <div className="ph-screen">
+            <span className="ph-screen-ic"><Users className="size-[26px]" /></span>
+            <strong>Failed to load staff</strong>
+            <p>Something went wrong reaching the server. Try refreshing the page.</p>
+          </div>
+        ) : !staff?.length ? (
+          <div className="ph-screen">
+            <span className="ph-screen-ic"><Users className="size-[26px]" /></span>
+            <strong>No staff members yet</strong>
+            <p>Add your team to track roles, departments, holidays, and documents.</p>
+          </div>
+        ) : (
+          <div className="table-scroll">
+            <table className="inv-table staff-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th className="r">Holidays Left</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {staff.map((s) => (
+                  <tr key={s.id}>
+                    <td className="staff-name"><Link to={`/staff/${s.id}`}>{s.name}</Link></td>
+                    <td className="ag-email">{s.email}</td>
+                    <td><span className="staff-dept">{s.department}</span></td>
+                    <td className="staff-role">{s.role}</td>
+                    <td><span className={'pill p-' + (staffStatusPill[s.status] || 'gray')}>{staffStatusLabels[s.status] || s.status}</span></td>
+                    <td className="r staff-hol">{s.holidaysRemaining}</td>
+                    <td className="r"><EditStaffDialog member={s} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -407,17 +385,16 @@ function ApplicantPipeline({ jobId }: { jobId: string }) {
   const { data: applicants, isLoading } = useApplicants(jobId);
 
   if (isLoading) {
-    return <div className="p-4"><Skeleton className="h-20 w-full" /></div>;
+    return <div style={{ padding: 16, color: 'var(--fg2)' }}>Loading applicants…</div>;
   }
 
   if (!applicants?.length) {
     return (
-      <EmptyState
-        icon={Users}
-        title="No applicants yet"
-        description="When someone applies to this job posting, they'll appear here in the pipeline."
-        size="compact"
-      />
+      <div className="ph-screen" style={{ margin: 16 }}>
+        <span className="ph-screen-ic"><Users className="size-[26px]" /></span>
+        <strong>No applicants yet</strong>
+        <p>When someone applies to this job posting, they'll appear here in the pipeline.</p>
+      </div>
     );
   }
 
@@ -425,21 +402,21 @@ function ApplicantPipeline({ jobId }: { jobId: string }) {
   const pipeline = applicants.filter((a) => a.stage !== 'rejected');
 
   return (
-    <div className="p-4 space-y-4">
+    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Pipeline stages */}
-      <div className="flex gap-2 overflow-x-auto">
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
         {PIPELINE_STAGES.map((stage) => {
           const stageApplicants = pipeline.filter((a) => a.stage === stage);
           return (
-            <div key={stage} className="min-w-[150px] flex-1 rounded-lg border bg-muted/30 p-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+            <div key={stage} style={{ minWidth: 150, flex: 1, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--gray-50)', padding: 12 }}>
+              <p style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--fg2)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>
                 {stageLabels[stage]} ({stageApplicants.length})
               </p>
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {stageApplicants.map((a) => (
-                  <div key={a.id} className="rounded-md border bg-background p-2">
-                    <p className="text-sm font-medium">{a.name}</p>
-                    <p className="text-xs text-muted-foreground">Score: {a.score}</p>
+                  <div key={a.id} style={{ borderRadius: 10, border: '1px solid var(--border)', background: '#fff', padding: 8 }}>
+                    <p style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--fg1)' }}>{a.name}</p>
+                    <p style={{ fontSize: 12, color: 'var(--fg2)' }}>Score: {a.score}</p>
                   </div>
                 ))}
               </div>
@@ -450,14 +427,14 @@ function ApplicantPipeline({ jobId }: { jobId: string }) {
       {/* Rejected */}
       {rejected.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+          <p style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--fg2)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>
             Rejected ({rejected.length})
           </p>
-          <div className="flex gap-2 flex-wrap">
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {rejected.map((a) => (
-              <div key={a.id} className="rounded-md border border-red-200 bg-red-500/5 p-2">
-                <p className="text-sm font-medium text-red-600">{a.name}</p>
-                <p className="text-xs text-muted-foreground">Score: {a.score}</p>
+              <div key={a.id} style={{ borderRadius: 10, border: '1px solid var(--negative-bg)', background: 'var(--negative-bg)', padding: 8 }}>
+                <p style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--negative)' }}>{a.name}</p>
+                <p style={{ fontSize: 12, color: 'var(--fg2)' }}>Score: {a.score}</p>
               </div>
             ))}
           </div>
@@ -471,29 +448,25 @@ function JobPostingCard({ job }: { job: JobPosting }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <Card>
-      <CardHeader
-        className="cursor-pointer"
+    <div className="card acard">
+      <button
         onClick={() => setExpanded(!expanded)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%', padding: 20, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {expanded ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
-            <div>
-              <CardTitle className="text-base">{job.title}</CardTitle>
-              <p className="text-sm text-muted-foreground">{job.department}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground tabular-nums">{job.applicantCount} applicants</span>
-            <Badge className={`text-xs capitalize ${job.status === 'open' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-neutral-500/10 text-neutral-500 border-neutral-200'}`}>
-              {job.status}
-            </Badge>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {expanded ? <ChevronDown className="size-4" style={{ color: 'var(--fg2)' }} /> : <ChevronRight className="size-4" style={{ color: 'var(--fg2)' }} />}
+          <div>
+            <h3 className="statto-title">{job.title}</h3>
+            <p className="ac-sub">{job.department}</p>
           </div>
         </div>
-      </CardHeader>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 13.5, color: 'var(--fg2)' }}>{job.applicantCount} applicants</span>
+          <span className={'pill p-' + (job.status === 'open' ? 'pos' : 'gray')} style={{ textTransform: 'capitalize' }}>{job.status}</span>
+        </div>
+      </button>
       {expanded && <ApplicantPipeline jobId={job.id} />}
-    </Card>
+    </div>
   );
 }
 
@@ -501,37 +474,31 @@ function RecruitmentTab() {
   const { data: jobs, isLoading, error } = useJobPostings();
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
-        ))}
-      </div>
-    );
+    return <div style={{ padding: 32, textAlign: 'center', color: 'var(--fg2)' }}>Loading job postings…</div>;
   }
 
   if (error) {
     return (
-      <EmptyState
-        icon={Briefcase}
-        title="Couldn't load job postings"
-        description="Something went wrong reaching the server. Try refreshing the page."
-      />
+      <div className="ph-screen">
+        <span className="ph-screen-ic"><Briefcase className="size-[26px]" /></span>
+        <strong>Couldn't load job postings</strong>
+        <p>Something went wrong reaching the server. Try refreshing the page.</p>
+      </div>
     );
   }
 
   if (!jobs?.length) {
     return (
-      <EmptyState
-        icon={Briefcase}
-        title="No job postings yet"
-        description="Post a job to start recruiting and tracking applicants through your hiring pipeline."
-      />
+      <div className="ph-screen">
+        <span className="ph-screen-ic"><Briefcase className="size-[26px]" /></span>
+        <strong>No job postings yet</strong>
+        <p>Post a job to start recruiting and tracking applicants through your hiring pipeline.</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {jobs.map((job) => (
         <JobPostingCard key={job.id} job={job} />
       ))}
@@ -546,146 +513,120 @@ function HolidaysTab() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6 space-y-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-4">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-5 w-20" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <div className="card acard inv-card">
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--fg2)' }}>Loading holiday requests…</div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <EmptyState
-        icon={Calendar}
-        title="Couldn't load holiday requests"
-        description="Something went wrong reaching the server. Try refreshing the page."
-      />
+      <div className="ph-screen">
+        <span className="ph-screen-ic"><Calendar className="size-[26px]" /></span>
+        <strong>Couldn't load holiday requests</strong>
+        <p>Something went wrong reaching the server. Try refreshing the page.</p>
+      </div>
     );
   }
 
   if (!holidays?.length) {
     return (
-      <EmptyState
-        icon={Calendar}
-        title="No holiday requests"
-        description="When a staff member submits a holiday request, it will appear here for approval."
-      />
+      <div className="ph-screen">
+        <span className="ph-screen-ic"><Calendar className="size-[26px]" /></span>
+        <strong>No holiday requests</strong>
+        <p>When a staff member submits a holiday request, it will appear here for approval.</p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Staff Member</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {holidays.map((h) => (
-                <TableRow key={h.id}>
-                  <TableCell className="font-medium">{h.staffName}</TableCell>
-                  <TableCell>
-                    <Badge className={`text-xs capitalize ${holidayTypeColors[h.type] || ''}`}>
-                      {h.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground tabular-nums">{formatDate(h.startDate)}</TableCell>
-                  <TableCell className="text-muted-foreground tabular-nums">{formatDate(h.endDate)}</TableCell>
-                  <TableCell>
-                    <Badge className={`text-xs capitalize ${holidayStatusColors[h.status] || ''}`}>
-                      {h.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {h.status === 'pending' && (
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
-                          onClick={() => approveMutation.mutate(h.id)}
-                          disabled={approveMutation.isPending}
-                        >
-                          <Check className="size-3.5 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-red-600 hover:bg-red-500/10 hover:text-red-700"
-                          onClick={() => rejectMutation.mutate(h.id)}
-                          disabled={rejectMutation.isPending}
-                        >
-                          <X className="size-3.5 mr-1" />
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="card acard inv-card">
+      <div className="table-scroll">
+        <table className="inv-table">
+          <thead>
+            <tr>
+              <th>Staff Member</th>
+              <th>Type</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Status</th>
+              <th className="r">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {holidays.map((h) => (
+              <tr key={h.id}>
+                <td className="staff-name">{h.staffName}</td>
+                <td><span className={'pill p-' + (holidayTypePill[h.type] || 'gray')} style={{ textTransform: 'capitalize' }}>{h.type}</span></td>
+                <td className="inv-num">{formatDate(h.startDate)}</td>
+                <td className="inv-num">{formatDate(h.endDate)}</td>
+                <td><span className={'pill p-' + (holidayStatusPill[h.status] || 'gray')} style={{ textTransform: 'capitalize' }}>{h.status}</span></td>
+                <td className="r">
+                  {h.status === 'pending' && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        className="btn b-ghost b-xs"
+                        onClick={() => approveMutation.mutate(h.id)}
+                        disabled={approveMutation.isPending}
+                      >
+                        <Check className="size-[14px]" /> Approve
+                      </button>
+                      <button
+                        className="btn b-ghost b-xs"
+                        onClick={() => rejectMutation.mutate(h.id)}
+                        disabled={rejectMutation.isPending}
+                      >
+                        <X className="size-[14px]" /> Reject
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
 // ─── Main Page ───
 
 export function StaffPage() {
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Staff" description="Manage your team, recruitment and holidays">
-        <Link to="/staff/org-chart">
-          <Button variant="outline" size="sm">
-            <Network className="size-4 mr-1.5" />
-            View Org Chart
-          </Button>
-        </Link>
-      </PageHeader>
+  const [tab, setTab] = useState<StaffTab>('team');
 
-      <Tabs defaultValue="team">
-        <TabsList>
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="recruitment">Recruitment</TabsTrigger>
-          <TabsTrigger value="holidays">Holidays</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-        </TabsList>
-        <TabsContent value="team">
-          <div className="flex justify-end mb-4"><AddStaffDialog /></div>
-          <TeamTab />
-        </TabsContent>
-        <TabsContent value="recruitment">
-          <div className="flex justify-end mb-4"><CreateJobDialog /></div>
-          <RecruitmentTab />
-        </TabsContent>
-        <TabsContent value="holidays">
-          <div className="flex justify-end mb-4"><RequestHolidayDialog /></div>
-          <HolidaysTab />
-        </TabsContent>
-        <TabsContent value="documents">
-          <DocumentsTab />
-        </TabsContent>
-      </Tabs>
+  const tabAction =
+    tab === 'team' ? <AddStaffDialog /> :
+    tab === 'recruitment' ? <CreateJobDialog /> :
+    tab === 'holidays' ? <RequestHolidayDialog /> : null;
+
+  return (
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Staff</h1>
+          <p className="ahead-sub">Manage your team, recruitment and holidays</p>
+        </div>
+        <div className="page-actions">
+          <Link to="/staff/org-chart">
+            <button className="btn b-ghost b-sm"><Network className="size-[15px]" /> View Org Chart</button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="staff-bar">
+        <div className="seg staff-seg">
+          {STAFF_TABS.map((t) => (
+            <button key={t} className={'seg-btn' + (tab === t ? ' on' : '')} onClick={() => setTab(t)}>{staffTabLabels[t]}</button>
+          ))}
+        </div>
+        {tabAction}
+      </div>
+
+      {tab === 'team' && <TeamTab />}
+      {tab === 'recruitment' && <RecruitmentTab />}
+      {tab === 'holidays' && <HolidaysTab />}
+      {tab === 'documents' && <DocumentsTab />}
     </div>
   );
 }
@@ -717,55 +658,48 @@ export function StaffDocumentsTab({ staffId }: { staffId: string }) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <div className="card pad acard">
+      <div className="ac-head">
         <div>
-          <CardTitle className="text-base">Staff documents</CardTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Contracts, NDAs, payslips. Stored in Cloudflare R2.
-          </p>
+          <h3 className="statto-title">Staff documents</h3>
+          <p className="ac-sub">Contracts, NDAs, payslips. Stored in Cloudflare R2.</p>
         </div>
         <FileUpload folder="misc" maxSizeMB={50} label="Upload document" onUploaded={handleUploaded} />
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2 py-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
-        ) : documents.length === 0 ? (
-          <EmptyState
-            icon={FileText}
-            title="No documents"
-            description="Upload contracts, NDAs, payslips, or certifications using the button above."
-            size="compact"
-          />
-        ) : (
-          <div className="space-y-2">
-            {documents.map((d) => (
-              <div key={d.key} className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <FileText className="size-4 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium" title={d.name}>{d.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(d.size / 1024).toFixed(1)} KB · {new Date(d.uploadedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => handleDownload(d.key)} aria-label="Download">
-                    <Download className="size-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleRemove(d.key)} aria-label="Remove">
-                    <Trash2 className="size-4" />
-                  </Button>
+      </div>
+      {isLoading ? (
+        <p className="ac-sub" style={{ paddingTop: 8 }}>Loading documents…</p>
+      ) : documents.length === 0 ? (
+        <div className="ph-screen" style={{ padding: '40px 24px' }}>
+          <span className="ph-screen-ic"><FileText className="size-[26px]" /></span>
+          <strong>No documents</strong>
+          <p>Upload contracts, NDAs, payslips, or certifications using the button above.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {documents.map((d) => (
+            <div key={d.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderRadius: 12, border: '1px solid var(--border)', padding: 12 }}>
+              <div style={{ display: 'flex', minWidth: 0, alignItems: 'center', gap: 12 }}>
+                <span className="tk-stat-ic plain" style={{ width: 36, height: 36, borderRadius: 10 }}><FileText className="size-4" /></span>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--fg1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d.name}>{d.name}</p>
+                  <p style={{ fontSize: 12, color: 'var(--fg2)' }}>
+                    {(d.size / 1024).toFixed(1)} KB · {new Date(d.uploadedAt).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <div style={{ display: 'flex', flexShrink: 0, alignItems: 'center', gap: 4 }}>
+                <button className="inv-open" onClick={() => handleDownload(d.key)} aria-label="Download">
+                  <Download className="size-4" />
+                </button>
+                <button className="inv-open" onClick={() => handleRemove(d.key)} aria-label="Remove">
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -774,26 +708,31 @@ function DocumentsTab() {
   const [selectedId, setSelectedId] = useState(staffList[0]?.id ?? '');
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="staff-select">Staff member</Label>
-        <select
-          id="staff-select"
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="flex h-9 w-full max-w-xs rounded-md border border-input bg-background px-3 text-sm"
-        >
-          <option value="">Select a staff member…</option>
-          {staffList.map((s) => (
-            <option key={s.id} value={s.id}>{s.name} — {s.role}</option>
-          ))}
-        </select>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="nc-field" style={{ maxWidth: 360, marginBottom: 0 }}>
+        <label className="nc-label" htmlFor="staff-select">Staff member</label>
+        <div className="nc-select-wrap">
+          <select
+            id="staff-select"
+            className="nc-select"
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+          >
+            <option value="">Select a staff member…</option>
+            {staffList.map((s) => (
+              <option key={s.id} value={s.id}>{s.name} — {s.role}</option>
+            ))}
+          </select>
+          <ChevronDown className="size-[15px]" />
+        </div>
       </div>
       {selectedId ? (
         <StaffDocumentsTab staffId={selectedId} />
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Pick a staff member above to manage their documents.
+        <div className="ph-screen">
+          <span className="ph-screen-ic"><FileText className="size-[26px]" /></span>
+          <strong>No staff member selected</strong>
+          <p>Pick a staff member above to manage their documents.</p>
         </div>
       )}
     </div>

@@ -1,20 +1,12 @@
 import { useState } from 'react';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import { Pagination } from '@/components/ui/pagination';
-import { EmptyState } from '@/components/shared/empty-state';
-import { Banknote, RefreshCw, Plus, Loader2, Search, AlertTriangle, Sparkles } from 'lucide-react';
+import { Banknote, RefreshCw, Plus, Loader2, Search, AlertTriangle, Sparkles, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useBankTransactions,
@@ -100,140 +92,127 @@ export function BankFeedPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Bank Feed"
-        description={
-          syncStatus?.lastSyncAt
-            ? `Categorise costs from your Xero bank feed · last synced ${formatRelativeTime(syncStatus.lastSyncAt)}`
-            : 'Categorise costs from your Xero bank feed · auto-syncs hourly'
-        }
-      >
-        <CategoryDialog />
-        <Button size="sm" onClick={handleSync} disabled={sync.isPending}>
-          {sync.isPending
-            ? <Loader2 className="size-4 animate-spin" />
-            : <RefreshCw className="size-4" />}
-          Sync from Xero
-        </Button>
-      </PageHeader>
-
-      <div className="flex flex-col gap-3">
-        {/* Row 1: bucket tabs — own row so they're never squeezed by the
-            filter + search controls (Sam screenshot 2026-05-14). */}
-        <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-          {BUCKET_TABS.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => { setBucket(tab); setCategoryFilter(''); setPage(1); }}
-              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                bucket === tab && !categoryFilter
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {bucketLabels[tab]}
-            </button>
-          ))}
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Bank Feed</h1>
+          <p className="ahead-sub">
+            {syncStatus?.lastSyncAt
+              ? `Categorise costs from your Xero bank feed · last synced ${formatRelativeTime(syncStatus.lastSyncAt)}`
+              : 'Categorise costs from your Xero bank feed · auto-syncs hourly'}
+          </p>
         </div>
-        {/* Row 2: category filter + search */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="category-filter" className="whitespace-nowrap text-xs font-medium text-muted-foreground">
-              Filter by category
-            </Label>
-            <select
-              id="category-filter"
-              aria-label="Filter by category"
-              value={categoryFilter}
-              onChange={(e) => {
-                // A specific category overrides the bucket tabs — reset bucket
-                // back to "all" so users don't see an empty list from a
-                // bucket+category mismatch.
-                setCategoryFilter(e.target.value);
-                if (e.target.value) setBucket('all');
-                setPage(1);
-              }}
-              className="h-9 w-full sm:w-56 rounded-md border border-input bg-background px-2 text-sm shadow-sm"
-            >
-              <option value="">All categories</option>
-              {(categories ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.bucket === 'fixed' ? 'fixed' : c.bucket === 'one_off' ? 'one-off' : 'advertising'})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Search vendor or description..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="pl-9"
-            />
-          </div>
+        <div className="page-actions">
+          <CategoryDialog />
+          <button className="btn b-dark b-sm" onClick={handleSync} disabled={sync.isPending}>
+            {sync.isPending
+              ? <Loader2 className="size-[15px] animate-spin" />
+              : <RefreshCw className="size-[15px]" />}
+            Sync from Xero
+          </button>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {isLoading && (
-            <div className="space-y-2 p-6">
-              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-            </div>
-          )}
+      {/* Bucket tabs — own row so they're never squeezed by the
+          filter + search controls (Sam screenshot 2026-05-14). */}
+      <div className="bf-tabs">
+        {BUCKET_TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => { setBucket(tab); setCategoryFilter(''); setPage(1); }}
+            className={'bf-tab' + (bucket === tab && !categoryFilter ? ' on' : '')}
+          >
+            {bucketLabels[tab]}
+          </button>
+        ))}
+      </div>
 
-          {!isLoading && error && (
-            <EmptyState
-              icon={AlertTriangle}
-              title="Couldn't load transactions"
-              description="Something went wrong reaching the server. Try refreshing the page."
-            />
-          )}
+      {/* Category filter + search */}
+      <div className="bf-filters">
+        <span className="bf-filter-lab">Filter by category</span>
+        <div className="bf-select-wrap">
+          <select
+            aria-label="Filter by category"
+            className="bf-select"
+            value={categoryFilter}
+            onChange={(e) => {
+              // A specific category overrides the bucket tabs — reset bucket
+              // back to "all" so users don't see an empty list from a
+              // bucket+category mismatch.
+              setCategoryFilter(e.target.value);
+              if (e.target.value) setBucket('all');
+              setPage(1);
+            }}
+          >
+            <option value="">All categories</option>
+            {(categories ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.bucket === 'fixed' ? 'fixed' : c.bucket === 'one_off' ? 'one-off' : 'advertising'})
+              </option>
+            ))}
+          </select>
+          <span className="lic"><ChevronDown className="size-[15px]" /></span>
+        </div>
+        <div className="inv-search">
+          <span className="lic"><Search className="size-4" /></span>
+          <input
+            placeholder="Search vendor or description…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+        </div>
+      </div>
 
-          {!isLoading && !error && data?.transactions.length === 0 && (
-            <EmptyState
-              icon={Banknote}
-              title={search || bucket !== 'all' ? 'No matching transactions' : 'No transactions yet'}
-              description={
-                search || bucket !== 'all'
-                  ? 'Try a different search or tab.'
-                  : 'Click "Sync from Xero" to pull in the last 90 days of bank-feed transactions.'
-              }
-            />
-          )}
+      <div className="card acard inv-card">
+        {isLoading && (
+          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        )}
 
-          {!isLoading && !error && data && data.transactions.length > 0 && (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Vendor / Description</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Category</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.transactions.map((tx) => (
-                    <TransactionRow key={tx.id} tx={tx} categories={categories ?? []} />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+        {!isLoading && error && (
+          <div className="inv-empty">
+            <AlertTriangle className="size-5" style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} />
+            Couldn't load transactions — something went wrong reaching the server. Try refreshing the page.
+          </div>
+        )}
 
-          {data && data.total > 0 && (
-            <Pagination
-              page={data.page}
-              pageSize={data.pageSize}
-              total={data.total}
-              onPageChange={setPage}
-            />
-          )}
-        </CardContent>
-      </Card>
+        {!isLoading && !error && data?.transactions.length === 0 && (
+          <div className="inv-empty">
+            <Banknote className="size-5" style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} />
+            {search || bucket !== 'all'
+              ? 'No transactions match your filters.'
+              : 'No transactions yet — click "Sync from Xero" to pull in the last 90 days of bank-feed transactions.'}
+          </div>
+        )}
+
+        {!isLoading && !error && data && data.transactions.length > 0 && (
+          <table className="inv-table bf-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vendor / Description</th>
+                <th className="r">Amount</th>
+                <th>Category</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.transactions.map((tx) => (
+                <TransactionRow key={tx.id} tx={tx} categories={categories ?? []} />
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {data && data.total > 0 && (
+          <Pagination
+            page={data.page}
+            pageSize={data.pageSize}
+            total={data.total}
+            onPageChange={setPage}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -265,53 +244,52 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
 
   return (
     <>
-      <TableRow>
-        <TableCell className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
-          {formatDate(tx.date)}
-        </TableCell>
-        <TableCell className="max-w-[180px] sm:max-w-[320px]">
-          <p className="truncate text-sm font-medium">{tx.vendorName ?? '(no vendor)'}</p>
-          {tx.description && (
-            <p className="truncate text-xs text-muted-foreground">{tx.description}</p>
-          )}
-        </TableCell>
-        <TableCell className={`whitespace-nowrap text-right text-sm font-medium tabular-nums ${isOut ? 'text-red-600' : 'text-emerald-600'}`}>
+      <tr>
+        <td className="inv-date">{formatDate(tx.date)}</td>
+        <td style={{ maxWidth: 320 }}>
+          <div className="bf-vendor">{tx.vendorName ?? '(no vendor)'}</div>
+          {tx.description && <div className="bf-desc">{tx.description}</div>}
+        </td>
+        <td className={'r mono bf-amt ' + (isOut ? 'neg' : 'pos')}>
           {formatCurrency(amountNum, tx.currency)}
-        </TableCell>
-        <TableCell>
-          <div className="flex items-center gap-2">
-            <select
-              value={tx.categoryId ?? ''}
-              onChange={(e) => {
-                const next = e.target.value;
-                if (next === '') {
-                  // Uncategorise: skip the confirm dialog (no rule-learning
-                  // decision needed) — the old code routed this through the
-                  // dialog which never opened because its open prop was
-                  // pendingCategoryId !== null, silently dropping the action.
-                  void applyCategory(null, false, false);
-                  return;
-                }
-                setPendingCategoryId(next);
-              }}
-              disabled={categorize.isPending}
-              className="flex h-8 w-full max-w-[200px] rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
-            >
-              <option value="">— Uncategorised —</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.bucket === 'fixed' ? 'fixed' : c.bucket === 'one_off' ? 'one-off' : 'advertising'})
-                </option>
-              ))}
-            </select>
+        </td>
+        <td>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="bf-select-wrap cell">
+              <select
+                className={'bf-select' + (tx.categoryId ? '' : ' muted')}
+                value={tx.categoryId ?? ''}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (next === '') {
+                    // Uncategorise: skip the confirm dialog (no rule-learning
+                    // decision needed) — the old code routed this through the
+                    // dialog which never opened because its open prop was
+                    // pendingCategoryId !== null, silently dropping the action.
+                    void applyCategory(null, false, false);
+                    return;
+                  }
+                  setPendingCategoryId(next);
+                }}
+                disabled={categorize.isPending}
+              >
+                <option value="">— Uncategorised —</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.bucket === 'fixed' ? 'fixed' : c.bucket === 'one_off' ? 'one-off' : 'advertising'})
+                  </option>
+                ))}
+              </select>
+              <span className="lic"><ChevronDown className="size-[15px]" /></span>
+            </div>
             {tx.isAutoCategorized && (
-              <Badge variant="secondary" className="text-[10px]" title="Auto-tagged by a vendor rule">
+              <span className="pill p-soft" title="Auto-tagged by a vendor rule">
                 <Sparkles className="size-3" /> auto
-              </Badge>
+              </span>
             )}
           </div>
-        </TableCell>
-      </TableRow>
+        </td>
+      </tr>
 
       {/* Confirmation dialog for changes */}
       <Dialog open={pendingCategoryId !== null} onOpenChange={(open) => !open && setPendingCategoryId(null)}>
@@ -329,27 +307,28 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
             </p>
           </div>
           <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
+            <button
+              className="btn b-ghost b-sm"
               onClick={() => applyCategory(pendingCategoryId, false, false)}
               disabled={categorize.isPending}
             >
               Just this one
-            </Button>
-            <Button
-              variant="outline"
+            </button>
+            <button
+              className="btn b-ghost b-sm"
               onClick={() => applyCategory(pendingCategoryId, true, false)}
               disabled={categorize.isPending}
             >
               Remember vendor
-            </Button>
-            <Button
+            </button>
+            <button
+              className="btn b-dark b-sm"
               onClick={() => applyCategory(pendingCategoryId, true, true)}
               disabled={categorize.isPending}
             >
               {categorize.isPending && <Loader2 className="size-4 animate-spin" />}
               Remember + apply to past
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -385,10 +364,9 @@ function CategoryDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Plus className="size-4" />
-          New category
-        </Button>
+        <button className="btn b-ghost b-sm">
+          <Plus className="size-[15px]" /> New category
+        </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -426,13 +404,13 @@ function CategoryDialog() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={create.isPending}>
+          <button className="btn b-ghost b-sm" onClick={() => setOpen(false)} disabled={create.isPending}>
             Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={create.isPending}>
+          </button>
+          <button className="btn b-dark b-sm" onClick={handleSubmit} disabled={create.isPending}>
             {create.isPending && <Loader2 className="size-4 animate-spin" />}
             Add category
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

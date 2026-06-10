@@ -1,14 +1,5 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import {
   ArrowLeft, User, Mail, Briefcase, Building, CalendarDays, Shield, TreePalm, ExternalLink,
 } from 'lucide-react';
@@ -21,10 +12,10 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const staffStatusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  on_leave: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  terminated: 'bg-red-500/10 text-red-600 border-red-200',
+const staffStatusPill: Record<string, string> = {
+  active: 'pos',
+  on_leave: 'warn',
+  terminated: 'neg',
 };
 
 const staffStatusLabels: Record<string, string> = {
@@ -33,30 +24,34 @@ const staffStatusLabels: Record<string, string> = {
   terminated: 'Terminated',
 };
 
-const departmentColors: Record<string, string> = {
-  'Content Team': 'bg-purple-500/10 text-purple-600 border-purple-200',
-  'Operations': 'bg-blue-500/10 text-blue-600 border-blue-200',
+const holidayTypePill: Record<string, string> = {
+  annual: 'infosoft',
+  sick: 'neg',
+  personal: 'warn',
 };
 
-const holidayTypeColors: Record<string, string> = {
-  annual: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  sick: 'bg-red-500/10 text-red-600 border-red-200',
-  personal: 'bg-amber-500/10 text-amber-600 border-amber-200',
+const holidayStatusPill: Record<string, string> = {
+  pending: 'warn',
+  approved: 'pos',
+  rejected: 'neg',
 };
 
-const holidayStatusColors: Record<string, string> = {
-  pending: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  approved: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  rejected: 'bg-red-500/10 text-red-600 border-red-200',
+const DETAIL_TABS = ['profile', 'tasks', 'holidays', 'documents'] as const;
+type DetailTab = typeof DETAIL_TABS[number];
+const detailTabLabels: Record<DetailTab, string> = {
+  profile: 'Profile',
+  tasks: 'Tasks',
+  holidays: 'Holidays',
+  documents: 'Documents',
 };
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 py-2">
-      <Icon className="size-4 text-muted-foreground shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium truncate">{value}</p>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--gray-100)' }}>
+      <Icon className="size-4" style={{ color: 'var(--fg3)', flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 12, color: 'var(--fg2)' }}>{label}</p>
+        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</p>
       </div>
     </div>
   );
@@ -68,178 +63,131 @@ export function StaffDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: member, isLoading, error } = useStaffMember(id!);
   const { data: allHolidays, isLoading: holidaysLoading } = useHolidayRequests();
+  const [tab, setTab] = useState<DetailTab>('profile');
 
   const memberHolidays = allHolidays?.filter((h) => h.staffId === id) ?? [];
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-96" />
+      <div className="screen-page">
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--fg2)' }}>Loading staff member…</div>
       </div>
     );
   }
 
   if (error || !member) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 text-muted-foreground">
-        <p>Staff member not found</p>
-        <Link to="/staff">
-          <Button variant="outline">
-            <ArrowLeft className="size-4 mr-2" />Back to staff
-          </Button>
-        </Link>
+      <div className="screen-page">
+        <div className="ph-screen">
+          <span className="ph-screen-ic"><User className="size-[26px]" /></span>
+          <strong>Staff member not found</strong>
+          <Link to="/staff"><button className="btn b-ghost b-sm"><ArrowLeft className="size-[15px]" /> Back to staff</button></Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/staff">
-          <Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button>
-        </Link>
-        <div className="flex-1">
-          <PageHeader title={member.name} description={member.role}>
-            <Badge className={`text-xs ${departmentColors[member.department] || ''}`}>
-              {member.department}
-            </Badge>
-            <Badge className={`text-xs capitalize ${staffStatusColors[member.status] || ''}`}>
-              {staffStatusLabels[member.status] || member.status}
-            </Badge>
-          </PageHeader>
+    <div className="screen-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/staff" className="nc-back" title="Back to staff"><ArrowLeft className="size-5" /></Link>
+          <div>
+            <h1 className="ahead-title">{member.name}</h1>
+            <p className="ahead-sub">{member.role}</p>
+          </div>
+        </div>
+        <div className="page-actions">
+          <span className="staff-dept">{member.department}</span>
+          <span className={'pill p-' + (staffStatusPill[member.status] || 'gray')}>{staffStatusLabels[member.status] || member.status}</span>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="profile">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="holidays">Holidays</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-        </TabsList>
+      <div className="seg staff-seg" style={{ alignSelf: 'flex-start' }}>
+        {DETAIL_TABS.map((t) => (
+          <button key={t} className={'seg-btn' + (tab === t ? ' on' : '')} onClick={() => setTab(t)}>{detailTabLabels[t]}</button>
+        ))}
+      </div>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="mt-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Personal Information</CardTitle></CardHeader>
-              <CardContent className="space-y-1">
-                <InfoRow icon={User} label="Full Name" value={member.name} />
-                <Separator />
-                <InfoRow icon={Mail} label="Email" value={member.email} />
-                <Separator />
-                <InfoRow icon={Briefcase} label="Role" value={member.role} />
-                <Separator />
-                <InfoRow icon={Building} label="Department" value={member.department} />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Employment</CardTitle></CardHeader>
-              <CardContent className="space-y-1">
-                <InfoRow icon={CalendarDays} label="Start Date" value={formatDate(member.startDate)} />
-                <Separator />
-                <InfoRow icon={Shield} label="Status" value={staffStatusLabels[member.status] || member.status} />
-                <Separator />
-                <InfoRow icon={TreePalm} label="Holidays Remaining" value={`${member.holidaysRemaining} days`} />
-                <Separator />
-                <InfoRow icon={TreePalm} label="Holidays Taken" value={`${member.holidaysTaken} days`} />
-              </CardContent>
-            </Card>
+      {/* Profile Tab */}
+      {tab === 'profile' && (
+        <div className="grid-2-1" style={{ gridTemplateColumns: '1fr 1fr' }}>
+          <div className="card pad acard">
+            <h3 className="statto-title nc-h">Personal Information</h3>
+            <InfoRow icon={User} label="Full Name" value={member.name} />
+            <InfoRow icon={Mail} label="Email" value={member.email} />
+            <InfoRow icon={Briefcase} label="Role" value={member.role} />
+            <InfoRow icon={Building} label="Department" value={member.department} />
           </div>
-        </TabsContent>
+          <div className="card pad acard">
+            <h3 className="statto-title nc-h">Employment</h3>
+            <InfoRow icon={CalendarDays} label="Start Date" value={formatDate(member.startDate)} />
+            <InfoRow icon={Shield} label="Status" value={staffStatusLabels[member.status] || member.status} />
+            <InfoRow icon={TreePalm} label="Holidays Remaining" value={`${member.holidaysRemaining} days`} />
+            <InfoRow icon={TreePalm} label="Holidays Taken" value={`${member.holidaysTaken} days`} />
+          </div>
+        </div>
+      )}
 
-        {/* Tasks Tab */}
-        <TabsContent value="tasks" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Tasks</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <ExternalLink className="size-5 text-muted-foreground" />
-                <p className="text-sm">
-                  View tasks assigned to {member.name} on the{' '}
-                  <Link
-                    to={`/tasks?assignee=${encodeURIComponent(member.name)}`}
-                    className="text-primary underline"
-                  >
-                    Tasks page
-                  </Link>.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {/* Tasks Tab */}
+      {tab === 'tasks' && (
+        <div className="card pad acard">
+          <h3 className="statto-title nc-h">Tasks</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ExternalLink className="size-5" style={{ color: 'var(--fg3)' }} />
+            <p style={{ fontSize: 14, color: 'var(--fg1)' }}>
+              View tasks assigned to {member.name} on the{' '}
+              <Link to={`/tasks?assignee=${encodeURIComponent(member.name)}`} style={{ color: 'var(--statto-ink)', textDecoration: 'underline' }}>
+                Tasks page
+              </Link>.
+            </p>
+          </div>
+        </div>
+      )}
 
-        {/* Documents Tab — per-staff documents (contracts, NDAs, payslips).
-            Reuses the same StaffDocumentsTab as the global Staff page so the
-            FileUpload + add/remove mutation hooks stay in one place. */}
-        <TabsContent value="documents" className="mt-6">
-          <StaffDocumentsTab staffId={id!} />
-        </TabsContent>
+      {/* Documents Tab — per-staff documents (contracts, NDAs, payslips).
+          Reuses the same StaffDocumentsTab as the global Staff page so the
+          FileUpload + add/remove mutation hooks stay in one place. */}
+      {tab === 'documents' && <StaffDocumentsTab staffId={id!} />}
 
-        {/* Holidays Tab */}
-        <TabsContent value="holidays" className="mt-6">
-          <Card>
-            <CardContent className="p-0">
-              {holidaysLoading ? (
-                <div className="p-6 space-y-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12" />
+      {/* Holidays Tab */}
+      {tab === 'holidays' && (
+        <div className="card acard inv-card">
+          {holidaysLoading ? (
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--fg2)' }}>Loading holidays…</div>
+          ) : !memberHolidays.length ? (
+            <div className="ph-screen">
+              <span className="ph-screen-ic"><TreePalm className="size-[26px]" /></span>
+              <strong>No holiday requests for this staff member</strong>
+            </div>
+          ) : (
+            <div className="table-scroll">
+              <table className="inv-table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Status</th>
+                    <th>Approved By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {memberHolidays.map((h) => (
+                    <tr key={h.id}>
+                      <td><span className={'pill p-' + (holidayTypePill[h.type] || 'gray')} style={{ textTransform: 'capitalize' }}>{h.type}</span></td>
+                      <td className="inv-num">{formatDate(h.startDate)}</td>
+                      <td className="inv-num">{formatDate(h.endDate)}</td>
+                      <td><span className={'pill p-' + (holidayStatusPill[h.status] || 'gray')} style={{ textTransform: 'capitalize' }}>{h.status}</span></td>
+                      <td className="inv-num">{h.approvedBy || '—'}</td>
+                    </tr>
                   ))}
-                </div>
-              ) : !memberHolidays.length ? (
-                <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-                  <TreePalm className="size-8" />
-                  <p className="text-sm">No holiday requests for this staff member</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Start Date</TableHead>
-                        <TableHead>End Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Approved By</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {memberHolidays.map((h) => (
-                        <TableRow key={h.id}>
-                          <TableCell>
-                            <Badge className={`text-xs capitalize ${holidayTypeColors[h.type] || ''}`}>
-                              {h.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground tabular-nums">
-                            {formatDate(h.startDate)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground tabular-nums">
-                            {formatDate(h.endDate)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`text-xs capitalize ${holidayStatusColors[h.status] || ''}`}>
-                              {h.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {h.approvedBy || '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

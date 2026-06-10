@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Save, Variable, PenTool, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
@@ -60,24 +57,27 @@ export function TemplateEditorPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 h-screen">
-      <div className="flex items-center gap-4">
-        <Link to="/agreements/templates"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <div className="flex-1">
-          <PageHeader title={template.name} description={template.description ?? 'Drag fields onto the PDF'}>
-            <Button onClick={handleSave} disabled={update.isPending}>
-              <Save className="size-4 mr-1.5" /> Save Template
-            </Button>
-          </PageHeader>
+    <div className="screen-page h-screen">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/agreements/templates" className="nc-back" title="Back to templates"><ArrowLeft className="size-5" /></Link>
+          <div>
+            <h1 className="ahead-title">{template.name}</h1>
+            <p className="ahead-sub">{template.description ?? 'Drag fields onto the PDF'}</p>
+          </div>
+        </div>
+        <div className="page-actions">
+          <button type="button" className="btn b-dark b-sm" onClick={handleSave} disabled={update.isPending}>
+            <Save className="size-[15px]" /> Save Template
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-12 gap-4 flex-1 min-h-0">
         <div className="col-span-3 overflow-y-auto">
-          <Card>
-            <CardContent className="p-4 space-y-2">
-              <h3 className="font-semibold text-sm flex items-center gap-2"><Variable className="size-4" /> Variables</h3>
-              <p className="text-xs text-muted-foreground">Click to add to page 0 at a default position.</p>
+          <div className="card pad acard space-y-2">
+              <h3 className="statto-title flex items-center gap-2" style={{ fontSize: 15 }}><Variable className="size-4" /> Variables</h3>
+              <p className="ac-sub">Click to add to page 0 at a default position.</p>
               <div className="space-y-1">
                 {VARIABLES.map((v) => (
                   <button
@@ -104,11 +104,11 @@ export function TemplateEditorPage() {
 
               <hr className="my-3" />
 
-              <h3 className="font-semibold text-sm flex items-center gap-2"><PenTool className="size-4" /> Signer fields</h3>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full justify-start"
+              <h3 className="statto-title flex items-center gap-2" style={{ fontSize: 15 }}><PenTool className="size-4" /> Signer fields</h3>
+              <button
+                type="button"
+                className="btn b-ghost b-sm b-block"
+                style={{ justifyContent: 'flex-start' }}
                 onClick={() => addField({
                   id: `f-${Date.now()}-sig`,
                   type: 'signature',
@@ -119,12 +119,12 @@ export function TemplateEditorPage() {
                   heightPct: 0.05,
                 })}
               >
-                <PenTool className="size-3.5 mr-1.5" /> Add signature box
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full justify-start"
+                <PenTool className="size-[15px]" /> Add signature box
+              </button>
+              <button
+                type="button"
+                className="btn b-ghost b-sm b-block"
+                style={{ justifyContent: 'flex-start' }}
                 onClick={() => addField({
                   id: `f-${Date.now()}-date`,
                   type: 'date_signed',
@@ -135,23 +135,21 @@ export function TemplateEditorPage() {
                   heightPct: 0.03,
                 })}
               >
-                <Calendar className="size-3.5 mr-1.5" /> Add date_signed
-              </Button>
-            </CardContent>
-          </Card>
+                <Calendar className="size-[15px]" /> Add date_signed
+              </button>
+          </div>
         </div>
 
         <div className="col-span-9 overflow-y-auto">
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold text-sm mb-2">PDF preview</h3>
-              <p className="text-sm text-muted-foreground mb-3">
+          <div className="card pad acard">
+              <h3 className="statto-title mb-2" style={{ fontSize: 15 }}>PDF preview</h3>
+              <p className="ac-sub mb-3">
                 {layout.length} field{layout.length === 1 ? '' : 's'} placed.
                 Full drag-onto-PDF canvas extends #47-50 in a polish PR; v1 ships list mode.
               </p>
               <div className="space-y-1 text-sm">
                 {layout.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between p-2 border rounded">
+                  <div key={f.id} className="flex items-center justify-between p-2 border rounded-[10px]">
                     <span className="font-mono text-xs">
                       {f.type === 'variable' && `{{${f.variableKey}}}`}
                       {f.type === 'text' && `"${f.text}"`}
@@ -159,12 +157,11 @@ export function TemplateEditorPage() {
                       {f.type === 'date_signed' && '📅 date_signed'}
                       {' — page '}{f.page}{' @ '}({f.xPct.toFixed(2)}, {f.yPct.toFixed(2)})
                     </span>
-                    <Button size="sm" variant="ghost" onClick={() => removeField(f.id)}>Remove</Button>
+                    <button type="button" className="btn b-ghost b-xs" onClick={() => removeField(f.id)}>Remove</button>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
       </div>
     </div>

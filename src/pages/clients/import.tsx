@@ -1,23 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
-  ArrowLeft, Search, Download, CheckCircle2, AlertTriangle, Loader2, ChevronRight,
+  ArrowLeft, Search, Download, CheckCircle2, AlertTriangle, Loader2, ChevronRight, TriangleAlert,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useBrowseAttio, useImportFromAttio,
   type ImportResult,
 } from '@/lib/hooks/use-attio-import';
-import { EmptyState } from '@/components/shared/empty-state';
 
 // #39 Attio bulk import. Page flow:
 //   1. Browse Attio companies (search + cursor pagination).
@@ -72,198 +62,174 @@ export function ClientImportPage() {
   const visible = browse.data?.companies ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to="/clients">
-          <Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button>
-        </Link>
-        <PageHeader
-          title="Import clients from Attio"
-          description="Pick companies in your Attio CRM to bring in as Stato clients."
-        />
+    <div className="screen-page nc-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <button className="nc-back" onClick={() => navigate('/clients')} title="Back to clients"><ArrowLeft className="size-5" /></button>
+          <div>
+            <h1 className="ahead-title">Import clients from Attio</h1>
+            <p className="ahead-sub">Pick companies in your Attio CRM to bring in as Stato clients.</p>
+          </div>
+        </div>
       </div>
 
       {notConfigured ? (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              icon={AlertTriangle}
-              title="Attio not configured"
-              description="Add ATTIO_API_KEY to the backend environment to enable importing. Once set, this page reads your Attio companies directly."
-            />
-          </CardContent>
-        </Card>
+        <div className="card pad acard attio-card">
+          <div className="attio-empty">
+            <span className="attio-ic"><TriangleAlert className="size-[30px]" /></span>
+            <h3>Attio not configured</h3>
+            <p>Add <code>ATTIO_API_KEY</code> to the backend environment to enable importing. Once set, this page reads your Attio companies directly.</p>
+          </div>
+        </div>
       ) : (
         <>
           {/* Search + import bar */}
-          <Card>
-            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-              <form onSubmit={handleSearch} className="flex flex-1 gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Search company name in Attio…"
-                    className="pl-9"
-                  />
-                </div>
-                <Button type="submit" variant="outline">Search</Button>
+          <div className="card pad acard">
+            <div className="cl-inv-filters" style={{ marginTop: 0 }}>
+              <form onSubmit={handleSearch} className="inv-search" style={{ flex: 1 }}>
+                <Search className="size-4" />
+                <input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search company name in Attio…"
+                />
               </form>
-              <Button
+              <button type="button" className="btn b-ghost b-sm" onClick={handleSearch}>Search</button>
+              <button
+                type="button"
+                className="btn b-dark b-sm"
                 onClick={handleImport}
                 disabled={selected.size === 0 || importMutation.isPending}
               >
                 {importMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin mr-1.5" />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Download className="size-4 mr-1.5" />
+                  <Download className="size-4" />
                 )}
                 Import {selected.size > 0 ? selected.size : ''} compan{selected.size === 1 ? 'y' : 'ies'}
-              </Button>
-            </CardContent>
-          </Card>
+              </button>
+            </div>
+          </div>
 
           {/* Companies table */}
           {browse.isLoading ? (
-            <Card>
-              <CardContent className="p-6 space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <div style={{ padding: 16, textAlign: 'center', color: 'var(--fg2)' }}>Loading companies from Attio…</div>
+            </div>
           ) : browse.error && !notConfigured ? (
-            <Card>
-              <CardContent className="p-0">
-                <EmptyState
-                  icon={AlertTriangle}
-                  title="Couldn't reach Attio"
-                  description={browse.error instanceof Error ? browse.error.message : 'Try refreshing the page.'}
-                />
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <div className="ph-screen">
+                <span className="ph-screen-ic"><AlertTriangle className="size-[26px]" /></span>
+                <strong>Couldn't reach Attio</strong>
+                <p>{browse.error instanceof Error ? browse.error.message : 'Try refreshing the page.'}</p>
+              </div>
+            </div>
           ) : visible.length === 0 ? (
-            <Card>
-              <CardContent className="p-0">
-                <EmptyState
-                  icon={Search}
-                  title={search ? 'No companies match your search' : 'No companies in Attio'}
-                  description={search ? 'Try a different search term.' : 'Add companies in Attio first, then come back here.'}
-                />
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <div className="ph-screen">
+                <span className="ph-screen-ic"><Search className="size-[26px]" /></span>
+                <strong>{search ? 'No companies match your search' : 'No companies in Attio'}</strong>
+                <p>{search ? 'Try a different search term.' : 'Add companies in Attio first, then come back here.'}</p>
+              </div>
+            </div>
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10"></TableHead>
-                        <TableHead>Company</TableHead>
-                        <TableHead>Domain</TableHead>
-                        <TableHead>Industry</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {visible.map((c) => {
-                        const isImported = !!c.existingClientId;
-                        const isSelected = selected.has(c.recordId);
-                        return (
-                          <TableRow
-                            key={c.recordId}
-                            className={isImported ? 'opacity-60' : ''}
-                          >
-                            <TableCell>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                disabled={isImported}
-                                onChange={() => toggleSelect(c.recordId)}
-                                aria-label={`Select ${c.name ?? c.recordId}`}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">{c.name || '(unnamed)'}</TableCell>
-                            <TableCell className="text-muted-foreground">{c.domain || '—'}</TableCell>
-                            <TableCell className="text-muted-foreground">{c.industry || '—'}</TableCell>
-                            <TableCell>
-                              {isImported ? (
-                                <Link
-                                  to={`/clients/${c.existingClientId}`}
-                                  className="inline-flex items-center text-xs text-emerald-600 hover:underline"
-                                >
-                                  Already imported
-                                  <ChevronRight className="size-3 ml-0.5" />
-                                </Link>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">Importable</Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
+            <div className="card acard inv-card">
+              <div className="table-scroll">
+                <table className="inv-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40 }}></th>
+                      <th>Company</th>
+                      <th>Domain</th>
+                      <th>Industry</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visible.map((c) => {
+                      const isImported = !!c.existingClientId;
+                      const isSelected = selected.has(c.recordId);
+                      return (
+                        <tr key={c.recordId} style={isImported ? { opacity: 0.6 } : undefined}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={isImported}
+                              onChange={() => toggleSelect(c.recordId)}
+                              aria-label={`Select ${c.name ?? c.recordId}`}
+                            />
+                          </td>
+                          <td className="cl-company">{c.name || '(unnamed)'}</td>
+                          <td className="rpt-ncp">{c.domain || '—'}</td>
+                          <td className="rpt-ncp">{c.industry || '—'}</td>
+                          <td>
+                            {isImported ? (
+                              <Link
+                                to={`/clients/${c.existingClientId}`}
+                                className="cl-contact-email"
+                                style={{ textDecoration: 'none' }}
+                              >
+                                Already imported
+                                <ChevronRight className="size-3" />
+                              </Link>
+                            ) : (
+                              <span className="pill p-infosoft">Importable</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
               {browse.data?.nextCursor && (
-                <CardContent className="border-t flex items-center justify-between p-3">
-                  <p className="text-xs text-muted-foreground">{visible.length} on this page</p>
-                  <Button variant="outline" size="sm" onClick={() => setCursor(browse.data!.nextCursor ?? undefined)}>
+                <div className="bf-pager">
+                  <span className="bf-count">{visible.length} on this page</span>
+                  <button className="btn b-ghost b-sm" onClick={() => setCursor(browse.data!.nextCursor ?? undefined)}>
                     Next page
-                  </Button>
-                </CardContent>
+                  </button>
+                </div>
               )}
-            </Card>
+            </div>
           )}
 
           {/* Results panel after import */}
           {lastResult && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                  Last import — {lastResult.created} created, {lastResult.skipped} skipped, {lastResult.errors} errored
-                </CardTitle>
-                <CardDescription>
-                  {lastResult.created > 0
-                    ? 'Click any "created" row to open the new client and fill in contact + billing details.'
-                    : 'No new clients created — see per-row reasons below.'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1.5">
-                  {lastResult.rows.map((r) => (
-                    <div
-                      key={r.attioCompanyId}
-                      className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm"
-                    >
-                      <Badge
-                        className={`text-xs capitalize ${
-                          r.status === 'created' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200'
-                          : r.status === 'skipped' ? 'bg-amber-500/10 text-amber-600 border-amber-200'
-                          : 'bg-red-500/10 text-red-600 border-red-200'
-                        }`}
+            <div className="card pad acard">
+              <h3 className="statto-title cl-sec-h">
+                <CheckCircle2 className="size-[18px]" style={{ color: 'var(--positive)' }} />
+                Last import — {lastResult.created} created, {lastResult.skipped} skipped, {lastResult.errors} errored
+              </h3>
+              <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>
+                {lastResult.created > 0
+                  ? 'Click any "created" row to open the new client and fill in contact + billing details.'
+                  : 'No new clients created — see per-row reasons below.'}
+              </p>
+              <div className="set-fields" style={{ gap: 8 }}>
+                {lastResult.rows.map((r) => (
+                  <div
+                    key={r.attioCompanyId}
+                    className="cl-contact-card"
+                  >
+                    <span className={'pill p-' + (r.status === 'created' ? 'pos' : r.status === 'skipped' ? 'warn' : 'neg')} style={{ textTransform: 'capitalize' }}>
+                      {r.status}
+                    </span>
+                    <span className="cl-contact-name" style={{ flex: 1 }}>{r.attioName || r.attioCompanyId}</span>
+                    {r.reason && <span className="cl-email">{r.reason}</span>}
+                    {r.clientId && (
+                      <button
+                        className="btn b-ghost b-sm"
+                        onClick={() => navigate(`/clients/${r.clientId}`)}
                       >
-                        {r.status}
-                      </Badge>
-                      <span className="flex-1 truncate">{r.attioName || r.attioCompanyId}</span>
-                      {r.reason && <span className="text-xs text-muted-foreground">{r.reason}</span>}
-                      {r.clientId && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/clients/${r.clientId}`)}
-                        >
-                          Open
-                          <ChevronRight className="size-4 ml-1" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                        Open
+                        <ChevronRight className="size-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </>
       )}

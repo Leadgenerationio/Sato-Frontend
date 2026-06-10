@@ -1,17 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  ArrowLeft, Building, Mail, Phone, MapPin, Shield, FileText, Megaphone,
-  CreditCard, ClipboardCheck, Loader2, TrendingDown, TrendingUp, AlertTriangle, Link2,
-  Download, Trash2, FileSignature, Users, RefreshCw,
-  Activity as ActivityIcon, Inbox, Send, Plus,
+  ArrowLeft, Building2, Mail, Phone, MapPin, Shield, FileText, Megaphone,
+  PoundSterling, Calendar, ReceiptText, Tag, Workflow, ClipboardCheck, Loader2,
+  TrendingDown, TrendingUp, AlertTriangle, Link2, Download, Trash2, FileSignature,
+  Users, RefreshCw, Activity as ActivityIcon, Inbox, Send, Plus, ExternalLink,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -28,44 +22,36 @@ import {
 } from '@/lib/hooks/use-client-campaigns';
 import { AddCampaignDialog } from '@/components/clients/add-campaign-dialog';
 import { PortalUsersCard } from '@/components/clients/portal-users-card';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table';
 import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import {
   useClientActivity, useClientEmails, useLogClientEmail, useDeleteClientEmail,
   type ClientActivityEvent, type ClientEmail,
 } from '@/lib/hooks/use-client-activity';
-import { Input } from '@/components/ui/input';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type UploadFolder } from '@/lib/hooks/use-uploads';
-import { EmptyState } from '@/components/shared/empty-state';
 import { SendAgreementDialog } from '@/pages/agreements';
 import { EditClientButton } from '@/components/clients/edit-client-dialog';
 
 import { logError } from '../../lib/log';
-const contactTypeColors: Record<string, string> = {
-  primary: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  billing: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  compliance: 'bg-purple-500/10 text-purple-600 border-purple-200',
-  other: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+
+// Statto pill variant per contact type.
+const contactTypePill: Record<string, string> = {
+  primary: 'infosoft',
+  billing: 'pos',
+  compliance: 'soft',
+  other: 'gray',
 };
 
 // Sam Loom #31 (13 May response) — only 3 statuses surfaced. 'prospect'
-// and 'paused' kept in the color map for back-compat in case a legacy row
+// and 'paused' kept in the map for back-compat in case a legacy row
 // slipped through 0022; would render with the closest visual.
-const statusColors: Record<string, string> = {
-  onboarding: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  active:     'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  churned:    'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+const statusPill: Record<string, string> = {
+  onboarding: 'infosoft',
+  active: 'pos',
+  churned: 'gray',
   // Legacy fallbacks — should be empty post-migration but kept for safety.
-  prospect:   'bg-blue-500/10 text-blue-600 border-blue-200',
-  paused:     'bg-amber-500/10 text-amber-600 border-amber-200',
+  prospect: 'infosoft',
+  paused: 'warn',
 };
 
 /**
@@ -124,15 +110,25 @@ function formatAddress(c: {
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 py-2">
-      <Icon className="size-4 text-muted-foreground shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium truncate">{value}</p>
+    <div className="set-field">
+      <span className="set-field-ic"><Icon className="size-[18px]" /></span>
+      <div>
+        <div className="set-field-l">{label}</div>
+        <div className="set-field-v">{value}</div>
       </div>
     </div>
   );
 }
+
+const CLIENT_TABS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'campaigns', label: 'Campaigns' },
+  { value: 'invoices', label: 'Invoices' },
+  { value: 'credit', label: 'Credit' },
+  { value: 'documents', label: 'Documents' },
+  { value: 'emails', label: 'Emails' },
+  { value: 'activity', label: 'Activity' },
+] as const;
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -144,6 +140,7 @@ export function ClientDetailPage() {
   // copy inside DocumentsTab so we're not double-fetching.
   const { data: docsForStage } = useClientDocuments(id!);
   const runCheck = useRunCreditCheck();
+  const [tab, setTab] = useState<(typeof CLIENT_TABS)[number]['value']>('overview');
   // Sam (27 May 2026 portal meeting): "this client is an existing client,
   // we've already signed an agreement, just not within this platform" —
   // admin override to flip agreementSigned without going through SignNow.
@@ -172,14 +169,21 @@ export function ClientDetailPage() {
   }, [searchParams, client, setSearchParams]);
 
   if (isLoading) {
-    return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-64" /><Skeleton className="h-96" /></div>;
+    return (
+      <div className="screen-page">
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--fg2)' }}>Loading client…</div>
+      </div>
+    );
   }
 
   if (error || !client) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 text-muted-foreground">
-        <p>Client not found</p>
-        <Link to="/clients"><Button variant="outline"><ArrowLeft className="size-4 mr-2" />Back to clients</Button></Link>
+      <div className="screen-page">
+        <div className="ph-screen">
+          <span className="ph-screen-ic"><AlertTriangle className="size-[26px]" /></span>
+          <strong>Client not found</strong>
+          <Link to="/clients"><button className="btn b-ghost b-sm"><ArrowLeft className="size-4" /> Back to clients</button></Link>
+        </div>
       </div>
     );
   }
@@ -195,36 +199,34 @@ export function ClientDetailPage() {
     }
   }
 
+  const displayed = resolveDisplayedStatus(client.status, client.agreementSigned, docsForStage?.length ?? 0);
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to="/clients"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <div className="flex-1">
-          <PageHeader title={client.companyName} description={`${client.contactName} · ${client.companyNumber}`}>
-            <div className="flex items-center gap-3">
-              {(() => {
-                const displayed = resolveDisplayedStatus(client.status, client.agreementSigned, docsForStage?.length ?? 0);
-                return (
-                  <Badge className={statusColors[displayed] || ''}>{statusLabels[displayed] ?? displayed}</Badge>
-                );
-              })()}
-              <EditClientButton client={client} />
-              <Button size="sm" variant="default" onClick={() => setAgreementDialogOpen(true)}>
-                <FileSignature className="size-4 mr-1.5" />
-                Create Agreement
-              </Button>
-              <SendAgreementDialog
-                lockClient
-                prefill={{
-                  clientId: client.id,
-                  signerName: client.contactName,
-                  signerEmail: client.contactEmail,
-                }}
-                open={agreementDialogOpen}
-                onOpenChange={setAgreementDialogOpen}
-              />
-            </div>
-          </PageHeader>
+    <div className="screen-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/clients"><button className="nc-back" title="Back to clients"><ArrowLeft className="size-5" /></button></Link>
+          <div>
+            <h1 className="ahead-title">{client.companyName}</h1>
+            <p className="ahead-sub">{client.contactName} · {client.companyNumber}</p>
+          </div>
+        </div>
+        <div className="page-actions">
+          <span className={'pill p-' + (statusPill[displayed] ?? 'gray') + ' cl-status-pill'}>{statusLabels[displayed] ?? displayed}</span>
+          <EditClientButton client={client} />
+          <button className="btn b-dark b-sm" onClick={() => setAgreementDialogOpen(true)}>
+            <FileSignature className="size-[15px]" /> Create Agreement
+          </button>
+          <SendAgreementDialog
+            lockClient
+            prefill={{
+              clientId: client.id,
+              signerName: client.contactName,
+              signerEmail: client.contactEmail,
+            }}
+            open={agreementDialogOpen}
+            onOpenChange={setAgreementDialogOpen}
+          />
         </div>
       </div>
 
@@ -238,11 +240,11 @@ export function ClientDetailPage() {
         banner so the next step is obvious instead of inferred.
       */}
       {!client.xeroContactId && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-          <Link2 className="size-4 mt-0.5 shrink-0 text-amber-600" />
-          <div className="flex-1">
-            <p className="font-medium text-amber-900">Not linked to Xero yet</p>
-            <p className="text-amber-800/90">
+        <div className="card pad acard" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, borderColor: 'var(--warning)' }}>
+          <Link2 className="size-4" style={{ marginTop: 2, flexShrink: 0, color: 'var(--warning)' }} />
+          <div style={{ flex: 1 }}>
+            <p className="statto-title" style={{ fontSize: 14 }}>Not linked to Xero yet</p>
+            <p className="ac-sub" style={{ marginTop: 4 }}>
               Invoices, revenue and Amount Owed will populate once a Xero contact is bound.
               Click <strong>Create Agreement</strong> above to auto-link on signature,
               or open <strong>Edit</strong> to paste a Xero Contact ID manually.
@@ -259,249 +261,187 @@ export function ClientDetailPage() {
         markAgreementPending={updateClient.isPending}
       />
 
-      <Tabs defaultValue="overview">
-        {/* T3 slice 3 (OCT-37): 7 tab triggers overflow 375px viewports, so
-            wrap in a horizontally scrollable shell on small screens. The
-            scroll container only ever clips when there's no room — desktop
-            keeps the original look. */}
-        <div className="-mx-1 overflow-x-auto px-1">
-          <TabsList className="max-w-full">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-            <TabsTrigger value="invoices">Invoices</TabsTrigger>
-            <TabsTrigger value="credit">Credit</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="emails">Emails</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-          </TabsList>
-        </div>
+      <div className="seg cl-detail-seg">
+        {CLIENT_TABS.map((t) => (
+          <button key={t.value} className={'seg-btn' + (tab === t.value ? ' on' : '')} onClick={() => setTab(t.value)}>{t.label}</button>
+        ))}
+      </div>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="mt-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Company Details</CardTitle></CardHeader>
-              <CardContent className="space-y-1">
-                <InfoRow icon={Building} label="Company" value={client.companyName} />
-                <Separator />
-                <InfoRow icon={Mail} label="Email" value={client.contactEmail} />
-                <Separator />
-                <InfoRow icon={Phone} label="Phone" value={client.contactPhone} />
-                <Separator />
-                <InfoRow icon={MapPin} label="Address" value={formatAddress(client)} />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Billing</CardTitle></CardHeader>
-              <CardContent className="space-y-1">
-                <InfoRow icon={CreditCard} label="Currency" value={client.currency} />
-                <Separator />
-                <InfoRow icon={FileText} label="Payment Terms" value={`${client.paymentTermsDays} days`} />
-                <Separator />
-                <InfoRow icon={Shield} label="VAT Registered" value={client.vatRegistered ? 'Yes' : 'No'} />
-                {client.vatRegistered && (
-                  <>
-                    <Separator />
-                    <InfoRow icon={Shield} label="VAT Number" value={client.vatNumber || '—'} />
-                    <Separator />
-                    <InfoRow icon={Shield} label="VAT Rate" value={`${client.vatRate}%`} />
-                  </>
-                )}
-                <Separator />
-                <InfoRow icon={CreditCard} label="Lead Price" value={formatCurrency(client.leadPrice, client.currency)} />
-                <Separator />
-                <InfoRow icon={ClipboardCheck} label="Billing Workflow" value={client.billingWorkflow.replace('_', ' ')} />
-              </CardContent>
-            </Card>
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base">External System IDs</CardTitle>
-                <CardDescription>How this client maps to LeadByte, the credit provider, and Xero</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                {client.leadbyteClientId && (
-                  <>
-                    <InfoRow icon={Link2} label="LeadByte Client ID" value={client.leadbyteClientId} />
-                    <Separator />
-                  </>
-                )}
-                <InfoRow icon={Link2} label="Companies House number" value={client.endoleCompanyId || 'Not linked'} />
-                <Separator />
-                <InfoRow icon={Link2} label="Xero Contact ID" value={client.xeroContactId || 'Not linked'} />
-              </CardContent>
-            </Card>
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="size-4" />
-                  Contacts
-                </CardTitle>
-                <CardDescription>
-                  {client.contacts.length} contact{client.contacts.length !== 1 ? 's' : ''}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {client.contacts.length === 0 ? (
-                  <EmptyState
-                    icon={Users}
-                    title="No contacts"
-                    description="No contacts have been added to this client yet."
-                    size="compact"
-                  />
-                ) : (
-                  <div className="space-y-3">
-                    {client.contacts.map((c) => (
-                      <div key={c.id} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-medium">{c.name}</p>
-                            <Badge className={`capitalize text-xs ${contactTypeColors[c.contactType] || ''}`}>{c.contactType}</Badge>
-                          </div>
-                          {c.role && <p className="text-xs text-muted-foreground mt-0.5">{c.role}</p>}
-                        </div>
-                        <div className="flex flex-col items-end text-right text-xs text-muted-foreground">
-                          {c.email && <span className="flex items-center gap-1"><Mail className="size-3" />{c.email}</span>}
-                          {c.phone && <span className="flex items-center gap-1 mt-0.5"><Phone className="size-3" />{c.phone}</span>}
-                        </div>
+      {tab === 'overview' && (
+        <div className="cl-overview">
+          <div className="card pad acard">
+            <h3 className="statto-title" style={{ marginBottom: 18 }}>Company Details</h3>
+            <div className="set-fields">
+              <InfoRow icon={Building2} label="Company" value={client.companyName} />
+              <InfoRow icon={Mail} label="Email" value={client.contactEmail} />
+              <InfoRow icon={Phone} label="Phone" value={client.contactPhone || '—'} />
+              <InfoRow icon={MapPin} label="Address" value={formatAddress(client)} />
+            </div>
+          </div>
+          <div className="card pad acard">
+            <h3 className="statto-title" style={{ marginBottom: 18 }}>Billing</h3>
+            <div className="set-fields">
+              <InfoRow icon={PoundSterling} label="Currency" value={client.currency} />
+              <InfoRow icon={Calendar} label="Payment Terms" value={`${client.paymentTermsDays} days`} />
+              <InfoRow icon={ReceiptText} label="VAT Registered" value={client.vatRegistered ? 'Yes' : 'No'} />
+              {client.vatRegistered && (
+                <>
+                  <InfoRow icon={ReceiptText} label="VAT Number" value={client.vatNumber || '—'} />
+                  <InfoRow icon={ReceiptText} label="VAT Rate" value={`${client.vatRate}%`} />
+                </>
+              )}
+              <InfoRow icon={Tag} label="Lead Price" value={formatCurrency(client.leadPrice, client.currency)} />
+              <InfoRow icon={Workflow} label="Billing Workflow" value={client.billingWorkflow.replace('_', ' ')} />
+            </div>
+          </div>
+
+          <div className="card pad acard cl-ov-wide">
+            <h3 className="statto-title">External System IDs</h3>
+            <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>How this client maps to LeadByte, the credit provider, and Xero</p>
+            <div className="set-fields">
+              {client.leadbyteClientId && (
+                <InfoRow icon={Link2} label="LeadByte Client ID" value={client.leadbyteClientId} />
+              )}
+              <InfoRow icon={Link2} label="Companies House number" value={client.endoleCompanyId || 'Not linked'} />
+              <InfoRow icon={Link2} label="Xero Contact ID" value={client.xeroContactId || 'Not linked'} />
+            </div>
+          </div>
+
+          <div className="card pad acard cl-ov-wide">
+            <h3 className="statto-title cl-sec-h"><Users className="size-[18px]" /> Contacts</h3>
+            <p className="ac-sub" style={{ marginTop: 4, marginBottom: 18 }}>
+              {client.contacts.length} contact{client.contacts.length !== 1 ? 's' : ''}
+            </p>
+            {client.contacts.length === 0 ? (
+              <div className="cl-tab-empty">
+                <span className="ph-screen-ic"><Users className="size-[26px]" /></span>
+                <strong>No contacts</strong>
+                <p>No contacts have been added to this client yet.</p>
+              </div>
+            ) : (
+              <div className="set-fields" style={{ gap: 12 }}>
+                {client.contacts.map((c) => (
+                  <div key={c.id} className="cl-contact-card">
+                    <div className="cl-contact-meta">
+                      <div className="cl-contact-top">
+                        <span className="cl-contact-name">{c.name}</span>
+                        <span className={'pill p-' + (contactTypePill[c.contactType] ?? 'gray')} style={{ textTransform: 'capitalize' }}>{c.contactType}</span>
                       </div>
-                    ))}
+                      {c.role && <div className="cl-contact-role">{c.role}</div>}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      {c.email && <span className="cl-contact-email"><Mail className="size-[15px]" /> {c.email}</span>}
+                      {c.phone && <span className="cl-contact-email"><Phone className="size-[15px]" /> {c.phone}</span>}
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-            {/* Sam (27 May 2026 meeting): "we have multiple people that we
-                need to provide access to this account." Adds the portal
-                users management card to every client detail Overview tab. */}
-            <PortalUsersCard clientId={client.id} clientName={client.companyName} />
-            {client.notes && (
-              <Card className="lg:col-span-2">
-                <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
-                <CardContent><p className="text-sm text-muted-foreground">{client.notes}</p></CardContent>
-              </Card>
+                ))}
+              </div>
             )}
           </div>
-        </TabsContent>
 
-        {/* Campaigns Tab */}
-        <TabsContent value="campaigns" className="mt-6">
-          <CampaignsTab clientId={id!} />
-        </TabsContent>
+          {/* Sam (27 May 2026 meeting): "we have multiple people that we
+              need to provide access to this account." Adds the portal
+              users management card to every client detail Overview tab. */}
+          <PortalUsersCard clientId={client.id} clientName={client.companyName} />
 
-        {/* Invoices Tab */}
-        <TabsContent value="invoices" className="mt-6">
-          <InvoicesTab clientId={id!} clientCurrency={client.currency} totalRevenue={client.totalRevenue} />
-        </TabsContent>
+          {client.notes && (
+            <div className="card pad acard cl-ov-wide">
+              <h3 className="statto-title" style={{ marginBottom: 12 }}>Notes</h3>
+              <p className="ac-sub">{client.notes}</p>
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* Credit Tab */}
-        <TabsContent value="credit" className="mt-6 space-y-6">
-          <div className="flex items-center justify-between">
+      {tab === 'campaigns' && <CampaignsTab clientId={id!} />}
+      {tab === 'invoices' && <InvoicesTab clientId={id!} clientCurrency={client.currency} totalRevenue={client.totalRevenue} />}
+
+      {tab === 'credit' && (
+        <div className="screen-page" style={{ gap: 20 }}>
+          <div className="cl-tab-head" style={{ padding: '0 2px' }}>
             <div>
-              <h3 className="text-lg font-semibold">Credit Score</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="statto-title">Credit Score</h3>
+              <p className="ac-sub" style={{ marginTop: 4 }}>
                 {client.creditLastChecked ? `Last checked: ${formatDate(client.creditLastChecked)}` : 'Never checked'}
               </p>
             </div>
-            <Button size="sm" onClick={handleCreditCheck} disabled={runCheck.isPending}>
-              {runCheck.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Shield className="size-4 mr-1.5" />}
+            <button className="btn b-dark b-sm" onClick={handleCreditCheck} disabled={runCheck.isPending}>
+              {runCheck.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Shield className="size-[15px]" />}
               Run Credit Check
-            </Button>
+            </button>
           </div>
 
           {client.creditScore !== null && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Card className="gap-3 py-5">
-                <CardContent className="text-center">
-                  <p className={`text-4xl font-bold tabular-nums ${client.creditScore >= 65 ? 'text-emerald-600' : client.creditScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                    {client.creditScore}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">Credit Score</p>
-                </CardContent>
-              </Card>
-              <Card className="gap-3 py-5">
-                <CardContent className="text-center">
-                  <p className={`text-lg font-semibold capitalize ${riskColors[client.creditRiskRating || ''] || ''}`}>
-                    {(client.creditRiskRating || '').replace('_', ' ')}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">Risk Rating</p>
-                </CardContent>
-              </Card>
-              <Card className="gap-3 py-5">
-                <CardContent className="text-center">
-                  <p className="text-lg font-semibold">{client.activeCampaigns}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Active Campaigns</p>
-                </CardContent>
-              </Card>
+            <div className="grid-3">
+              <div className="card pad acard" style={{ textAlign: 'center' }}>
+                <p className={`text-4xl font-bold tabular-nums ${client.creditScore >= 65 ? 'text-emerald-600' : client.creditScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                  {client.creditScore}
+                </p>
+                <p className="ac-sub" style={{ marginTop: 4 }}>Credit Score</p>
+              </div>
+              <div className="card pad acard" style={{ textAlign: 'center' }}>
+                <p className={`text-lg font-semibold capitalize ${riskColors[client.creditRiskRating || ''] || ''}`}>
+                  {(client.creditRiskRating || '').replace('_', ' ')}
+                </p>
+                <p className="ac-sub" style={{ marginTop: 4 }}>Risk Rating</p>
+              </div>
+              <div className="card pad acard" style={{ textAlign: 'center' }}>
+                <p className="text-lg font-semibold">{client.activeCampaigns}</p>
+                <p className="ac-sub" style={{ marginTop: 4 }}>Active Campaigns</p>
+              </div>
             </div>
           )}
 
-          {/* Credit History Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Credit History</CardTitle>
-              <CardDescription>Score changes over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {creditLoading ? (
-                <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
-              ) : !creditHistory?.length ? (
-                <EmptyState
-                  icon={Shield}
-                  title="No credit history"
-                  description='Run a credit check (button above) to record this client&apos;s score and track changes over time.'
-                  size="compact"
-                />
-              ) : (
-                <div className="space-y-3">
-                  {creditHistory.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex size-10 items-center justify-center rounded-lg ${entry.creditScore >= 65 ? 'bg-emerald-500/10' : entry.creditScore >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'}`}>
+          <div className="card pad acard">
+            <h3 className="statto-title">Credit History</h3>
+            <p className="ac-sub" style={{ marginTop: 4 }}>Score changes over time</p>
+            {creditLoading ? (
+              <div style={{ padding: 16, color: 'var(--fg2)' }}>Loading…</div>
+            ) : !creditHistory?.length ? (
+              <div className="cl-tab-empty">
+                <span className="ph-screen-ic"><Shield className="size-[26px]" /></span>
+                <strong>No credit history</strong>
+                <p>Run a credit check (button above) to record this client&apos;s score and track changes over time.</p>
+              </div>
+            ) : (
+              <div className="set-fields" style={{ gap: 12, marginTop: 16 }}>
+                {creditHistory.map((entry) => (
+                  <div key={entry.id} className="cl-contact-card">
+                    <div className="cl-contact-meta">
+                      <div className="cl-contact-top">
+                        <span className={`flex size-10 items-center justify-center rounded-lg ${entry.creditScore >= 65 ? 'bg-emerald-500/10' : entry.creditScore >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'}`}>
                           <span className={`text-sm font-bold tabular-nums ${entry.creditScore >= 65 ? 'text-emerald-600' : entry.creditScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                             {entry.creditScore}
                           </span>
-                        </div>
+                        </span>
                         <div>
-                          <p className={`text-sm font-medium capitalize ${riskColors[entry.riskRating] || ''}`}>{entry.riskRating.replace('_', ' ')} risk</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(entry.checkedAt)}</p>
+                          <div className={`cl-contact-name capitalize ${riskColors[entry.riskRating] || ''}`}>{entry.riskRating.replace('_', ' ')} risk</div>
+                          <div className="cl-contact-role">{formatDate(entry.checkedAt)}</div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {entry.ccjCount > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            <AlertTriangle className="size-3 mr-1" />
-                            {entry.ccjCount} CCJ
-                          </Badge>
-                        )}
-                        {entry.scoreChange !== null && (
-                          <span className={`flex items-center gap-1 text-xs font-medium ${entry.scoreChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {entry.scoreChange >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
-                            {entry.scoreChange > 0 ? '+' : ''}{entry.scoreChange}
-                          </span>
-                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {entry.ccjCount > 0 && (
+                        <span className="pill p-neg"><AlertTriangle className="size-3" /> {entry.ccjCount} CCJ</span>
+                      )}
+                      {entry.scoreChange !== null && (
+                        <span className={'pill p-' + (entry.scoreChange >= 0 ? 'pos' : 'neg')}>
+                          {entry.scoreChange >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                          {entry.scoreChange > 0 ? '+' : ''}{entry.scoreChange}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-        {/* Documents Tab */}
-        <TabsContent value="documents" className="mt-6">
-          <DocumentsTab clientId={id!} />
-        </TabsContent>
-
-        {/* L #33 — Emails tab */}
-        <TabsContent value="emails" className="mt-6">
-          <EmailsTab clientId={id!} />
-        </TabsContent>
-
-        {/* L #38 — Activity tab */}
-        <TabsContent value="activity" className="mt-6">
-          <ActivityTab clientId={id!} />
-        </TabsContent>
-      </Tabs>
+      {tab === 'documents' && <DocumentsTab clientId={id!} />}
+      {tab === 'emails' && <EmailsTab clientId={id!} />}
+      {tab === 'activity' && <ActivityTab clientId={id!} />}
     </div>
   );
 }
@@ -575,82 +515,55 @@ export function OnboardingProgress({
   const currentIdx = resolveActualStage(onboardingStatus, agreementSigned, documentsCount);
 
   return (
-    <Card>
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Onboarding
-            </p>
-            <p className="text-sm font-medium">
-              Stage {currentIdx + 1} of {ONBOARDING_STEPS.length} · {ONBOARDING_STEPS[currentIdx]?.label ?? 'Unknown'}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <ClipboardCheck className={`size-4 ${agreementSigned ? 'text-emerald-600' : 'text-muted-foreground'}`} />
-            <span className="text-muted-foreground">Agreement:</span>
-            <span className={`font-medium ${agreementSigned ? 'text-emerald-600' : ''}`}>
-              {agreementSigned ? 'Signed' : 'Not signed'}
-            </span>
-            {/* Sam (27 May 2026): admin override for clients who signed
-                outside Stato — flips agreementSigned=true without going
-                through SignNow. Only renders when not signed + a handler
-                is provided. */}
-            {!agreementSigned && onMarkAgreementSigned && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={onMarkAgreementSigned}
-                disabled={markAgreementPending}
-              >
-                {markAgreementPending
-                  ? <Loader2 className="size-3 mr-1 animate-spin" />
-                  : <ClipboardCheck className="size-3 mr-1" />}
-                Mark as signed (external)
-              </Button>
-            )}
+    <div className="card pad acard">
+      <div className="cl-ob-head">
+        <div>
+          <div className="cl-ob-lab">ONBOARDING</div>
+          <div className="cl-ob-stage">
+            Stage {currentIdx + 1} of {ONBOARDING_STEPS.length} · {ONBOARDING_STEPS[currentIdx]?.label ?? 'Unknown'}
           </div>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span className="cl-ob-agreement">
+            <ClipboardCheck className="size-4" style={agreementSigned ? { color: 'var(--positive)' } : undefined} />
+            Agreement: <strong>{agreementSigned ? 'Signed' : 'Not signed'}</strong>
+          </span>
+          {/* Sam (27 May 2026): admin override for clients who signed
+              outside Stato — flips agreementSigned=true without going
+              through SignNow. Only renders when not signed + a handler
+              is provided. */}
+          {!agreementSigned && onMarkAgreementSigned && (
+            <button
+              className="btn b-ghost b-sm"
+              onClick={onMarkAgreementSigned}
+              disabled={markAgreementPending}
+            >
+              {markAgreementPending
+                ? <Loader2 className="size-3 animate-spin" />
+                : <ClipboardCheck className="size-3" />}
+              Mark as signed (external)
+            </button>
+          )}
+        </div>
+      </div>
 
-        <ol className="mt-4 flex items-start gap-1 overflow-x-auto pb-1">
-          {ONBOARDING_STEPS.map((step, i) => {
-            const isDone = i < currentIdx;
-            const isCurrent = i === currentIdx;
-            const isLast = i === ONBOARDING_STEPS.length - 1;
-            return (
-              <li key={step.key} className="flex flex-1 items-start gap-1 min-w-[120px]">
-                <div className="flex flex-1 flex-col items-center gap-1.5">
-                  <div className="flex w-full items-center gap-1">
-                    {/* Trailing line before the dot — invisible on the first step so the
-                        row aligns left without a phantom segment. */}
-                    <div className={`h-0.5 flex-1 ${i === 0 ? 'invisible' : isDone || isCurrent ? 'bg-emerald-500' : 'bg-muted'}`} />
-                    <div
-                      className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                        isDone
-                          ? 'bg-emerald-500 text-white'
-                          : isCurrent
-                            ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
-                            : 'border border-muted-foreground/30 bg-muted text-muted-foreground'
-                      }`}
-                      title={step.hint}
-                    >
-                      {isDone ? '✓' : i + 1}
-                    </div>
-                    {/* Trailing line after the dot — invisible on the last step. */}
-                    <div className={`h-0.5 flex-1 ${isLast ? 'invisible' : isDone ? 'bg-emerald-500' : 'bg-muted'}`} />
-                  </div>
-                  <div className="text-center">
-                    <p className={`text-xs font-medium ${isDone || isCurrent ? '' : 'text-muted-foreground'}`}>{step.label}</p>
-                    <p className="text-[10px] leading-tight text-muted-foreground">{step.hint}</p>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      </CardContent>
-    </Card>
+      <div className="cl-stepper">
+        {ONBOARDING_STEPS.map((step, i) => {
+          const isDone = i < currentIdx;
+          const isCurrent = i === currentIdx;
+          return (
+            <div key={step.key} className="cl-step">
+              {i > 0 && <span className={'cl-step-line' + (isDone || isCurrent ? ' done' : '')} />}
+              <span className={'cl-step-dot' + (isCurrent ? ' current' : isDone ? ' done' : '')} title={step.hint}>
+                {isDone ? '✓' : i + 1}
+              </span>
+              <div className="cl-step-label">{step.label}</div>
+              <div className="cl-step-sub">{step.hint}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -660,11 +573,11 @@ export function OnboardingProgress({
 // linking off to /campaigns. Now shows the linked campaigns inline with a
 // Remove button per row and an Add Campaign button that opens a dialog.
 
-const campaignStatusColors: Record<string, string> = {
-  active:   'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  paused:   'bg-amber-500/10 text-amber-600 border-amber-200',
-  inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  archived: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+const campaignStatusPill: Record<string, string> = {
+  active: 'pos',
+  paused: 'warn',
+  inactive: 'gray',
+  archived: 'gray',
 };
 
 function CampaignsTab({ clientId }: { clientId: string }) {
@@ -683,75 +596,65 @@ function CampaignsTab({ clientId }: { clientId: string }) {
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-3">
+      <div className="card pad acard">
+        <div className="cl-tab-head">
           <div>
-            <CardTitle className="text-base">Campaigns</CardTitle>
-            <CardDescription>
+            <h3 className="statto-title">Campaigns</h3>
+            <p className="ac-sub" style={{ marginTop: 4 }}>
               {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''} linked to this client
-            </CardDescription>
+            </p>
           </div>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="size-4 mr-1.5" />
-            Add Campaign
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-            </div>
-          ) : campaigns.length === 0 ? (
-            <EmptyState
-              icon={Megaphone}
-              title="No campaigns linked"
-              description='No campaigns are linked to this client yet. Click "Add Campaign" above to link one.'
-              size="compact"
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Vertical</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Cost per lead</TableHead>
-                  <TableHead className="w-12" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <button className="btn b-dark b-sm" onClick={() => setAddOpen(true)}>
+            <Plus className="size-[15px]" /> Add Campaign
+          </button>
+        </div>
+        {isLoading ? (
+          <div style={{ padding: 16, color: 'var(--fg2)' }}>Loading…</div>
+        ) : campaigns.length === 0 ? (
+          <div className="cl-tab-empty">
+            <span className="ph-screen-ic"><Megaphone className="size-[26px]" /></span>
+            <strong>No campaigns linked</strong>
+            <p>No campaigns are linked to this client yet. Click "Add Campaign" above to link one.</p>
+          </div>
+        ) : (
+          <div className="table-scroll">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Vertical</th>
+                  <th>Status</th>
+                  <th className="r">Cost per lead</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
                 {campaigns.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-muted-foreground capitalize">{c.vertical}</TableCell>
-                    <TableCell>
-                      <Badge className={`capitalize text-xs ${campaignStatusColors[c.status] || ''}`}>
-                        {c.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {c.costPerLead != null
-                        ? formatCurrency(c.costPerLead)
-                        : <span className="text-muted-foreground text-xs">default</span>}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                  <tr key={c.id}>
+                    <td className="inv-id">{c.name}</td>
+                    <td className="rpt-ncp" style={{ textTransform: 'capitalize' }}>{c.vertical || '—'}</td>
+                    <td><span className={'pill p-' + (campaignStatusPill[c.status] ?? 'gray')} style={{ textTransform: 'capitalize' }}>{c.status}</span></td>
+                    <td className="r" style={{ color: 'var(--fg2)' }}>
+                      {c.costPerLead != null ? formatCurrency(c.costPerLead) : 'default'}
+                    </td>
+                    <td className="r">
+                      <button
+                        className="tk-del"
                         aria-label={`Remove ${c.name}`}
+                        title="Unlink"
                         disabled={unlink.isPending}
                         onClick={() => handleRemove(c)}
                       >
-                        <Trash2 className="size-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                        <Trash2 className="size-4" />
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       <AddCampaignDialog clientId={clientId} open={addOpen} onOpenChange={setAddOpen} />
     </>
@@ -764,12 +667,12 @@ function CampaignsTab({ clientId }: { clientId: string }) {
 // Before, this tab was a stub linking off to /finance/invoices. Now it pulls
 // /api/v1/clients/:id/invoices and renders a proper table.
 
-const invoiceStatusColors: Record<string, string> = {
-  draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  authorised: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
-  paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  overdue: 'bg-red-500/10 text-red-600 border-red-200',
+const invoiceStatusPill: Record<string, string> = {
+  draft: 'gray',
+  sent: 'infosoft',
+  authorised: 'soft',
+  paid: 'pos',
+  overdue: 'neg',
 };
 
 // ─── Filter / sort options for the per-client Invoices tab ────────────────
@@ -785,9 +688,6 @@ type InvoiceSortKey =
   | 'due_desc'
   | 'amount_desc'
   | 'amount_asc';
-
-const SELECT_CLASS =
-  'flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 export function applyFilterSort(
   invoices: InvoiceSummary[],
@@ -854,57 +754,52 @@ function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: str
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3">
+    <div className="card pad acard">
+      <div className="cl-tab-head">
         <div>
-          <CardTitle className="text-base">Invoices</CardTitle>
-          <CardDescription>
+          <h3 className="statto-title">Invoices</h3>
+          <p className="ac-sub" style={{ marginTop: 4 }}>
             {invoices.length === 0
               ? `Total revenue: ${formatCurrency(totalRevenue, clientCurrency)}`
               : `${invoices.length} invoice${invoices.length !== 1 ? 's' : ''} · Total revenue: ${formatCurrency(totalRevenue, clientCurrency)}`}
-          </CardDescription>
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleSync} disabled={sync.isPending}>
-            {sync.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <RefreshCw className="size-4 mr-1.5" />}
+        <div className="page-actions">
+          <button className="btn b-ghost b-sm" onClick={handleSync} disabled={sync.isPending}>
+            {sync.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <RefreshCw className="size-[15px]" />}
             Sync from Xero
-          </Button>
+          </button>
           <Link to={`/finance/invoices?client=${clientId}`}>
-            <Button variant="outline" size="sm">
-              <FileText className="size-4 mr-1.5" />
-              Open in invoices list
-            </Button>
+            <button className="btn b-ghost b-sm">
+              <ExternalLink className="size-[15px]" /> Open in invoices list
+            </button>
           </Link>
         </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-          </div>
-        ) : isError ? (
-          <EmptyState
-            icon={AlertTriangle}
-            title="Failed to load invoices"
-            description="There was a problem loading invoices for this client. Refresh the page to try again."
-            size="compact"
-          />
-        ) : invoices.length === 0 ? (
-          <EmptyState
-            icon={FileText}
-            title="No invoices yet"
-            description='No Stato invoices for this client. Click "Sync from Xero" above to pull invoices created directly in Xero, or "Open in invoices list" to create one.'
-            size="compact"
-          />
-        ) : (
-          <>
-            {/* P8 filter/sort controls */}
-            <div className="flex flex-wrap items-center gap-2 mb-4">
+      </div>
+      {isLoading ? (
+        <div style={{ padding: 16, color: 'var(--fg2)' }}>Loading…</div>
+      ) : isError ? (
+        <div className="cl-tab-empty">
+          <span className="ph-screen-ic"><AlertTriangle className="size-[26px]" /></span>
+          <strong>Failed to load invoices</strong>
+          <p>There was a problem loading invoices for this client. Refresh the page to try again.</p>
+        </div>
+      ) : invoices.length === 0 ? (
+        <div className="cl-tab-empty">
+          <span className="ph-screen-ic"><FileText className="size-[26px]" /></span>
+          <strong>No invoices yet</strong>
+          <p>No Stato invoices for this client. Click "Sync from Xero" above to pull invoices created directly in Xero, or "Open in invoices list" to create one.</p>
+        </div>
+      ) : (
+        <>
+          {/* P8 filter/sort controls */}
+          <div className="cl-inv-filters">
+            <div className="nc-select-wrap">
               <select
                 aria-label="Filter by status"
+                className="nc-select"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as InvoiceFilterStatus)}
-                className={SELECT_CLASS}
               >
                 <option value="all">All</option>
                 <option value="due">Due</option>
@@ -913,11 +808,14 @@ function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: str
                 <option value="paid">Paid</option>
                 <option value="draft">Draft</option>
               </select>
+              <ChevronDown className="size-[15px]" />
+            </div>
+            <div className="nc-select-wrap">
               <select
                 aria-label="Sort invoices"
+                className="nc-select"
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as InvoiceSortKey)}
-                className={SELECT_CLASS}
               >
                 <option value="issue_desc">Issue date (newest first)</option>
                 <option value="issue_asc">Issue date (oldest first)</option>
@@ -926,76 +824,69 @@ function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: str
                 <option value="amount_desc">Amount (high to low)</option>
                 <option value="amount_asc">Amount (low to high)</option>
               </select>
-              {filterStatus !== 'all' && (
-                <span className="text-xs text-muted-foreground">
-                  {visibleInvoices.length} of {invoices.length} shown
-                </span>
-              )}
+              <ChevronDown className="size-[15px]" />
             </div>
-            {visibleInvoices.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">No invoices match the selected filter.</p>
-            ) : (
-              <InvoicesTable invoices={visibleInvoices} />
+            {filterStatus !== 'all' && (
+              <span className="ac-sub">{visibleInvoices.length} of {invoices.length} shown</span>
             )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+          </div>
+          {visibleInvoices.length === 0 ? (
+            <p className="ac-sub" style={{ padding: 16, textAlign: 'center' }}>No invoices match the selected filter.</p>
+          ) : (
+            <InvoicesTable invoices={visibleInvoices} />
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
 export function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-b text-left text-xs text-muted-foreground">
+    <div className="table-scroll">
+      <table className="inv-table">
+        <thead>
           <tr>
-            <th className="py-2.5 pl-2 pr-3 font-medium">Number</th>
-            <th className="py-2.5 px-3 font-medium">Status</th>
-            <th className="py-2.5 px-3 font-medium">Due</th>
-            <th className="py-2.5 px-3 font-medium text-right tabular-nums">Amount</th>
-            <th className="py-2.5 px-3 font-medium text-right">Overdue</th>
-            <th className="py-2.5 pl-3 pr-2 w-12"></th>
+            <th>Number</th>
+            <th>Status</th>
+            <th>Due</th>
+            <th className="r">Amount</th>
+            <th className="r">Overdue</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {invoices.map((inv) => (
-            <tr key={inv.id} className="border-b last:border-0 hover:bg-muted/30">
-              <td className="py-3 pl-2 pr-3">
-                <Link to={`/finance/invoices/${inv.id}`} className="font-medium underline-offset-2 hover:underline">
+            <tr key={inv.id}>
+              <td>
+                <Link to={`/finance/invoices/${inv.id}`} className="inv-id" style={{ textDecoration: 'none' }}>
                   {inv.invoiceNumber || '—'}
                 </Link>
-                {inv.xeroInvoiceId && (
-                  <p className="text-xs text-muted-foreground mt-0.5">Synced from Xero</p>
-                )}
+                {inv.xeroInvoiceId && <div className="ri-date">Synced from Xero</div>}
               </td>
-              <td className="py-3 px-3">
-                <div className="flex flex-wrap items-center gap-1">
-                  <Badge className={`capitalize text-xs ${invoiceStatusColors[inv.status] || ''}`}>{inv.status}</Badge>
+              <td>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
+                  <span className={'pill p-' + (invoiceStatusPill[inv.status] ?? 'gray')} style={{ textTransform: 'capitalize' }}>{inv.status}</span>
                   {/* P8 — Sam's "this one's overdue but it says authorized" complaint.
                       Show an inline Overdue badge when the invoice is past due AND still
                       has an authorised (not paid) status, so Sam sees it at a glance. */}
                   {inv.status === 'authorised' && new Date(inv.dueDate).getTime() < Date.now() && (
-                    <Badge className="bg-red-500/10 text-red-600 border-red-200 text-xs">Overdue</Badge>
+                    <span className="pill p-neg">Overdue</span>
                   )}
                 </div>
               </td>
-              <td className="py-3 px-3 text-muted-foreground">{formatDate(inv.dueDate)}</td>
-              <td className="py-3 px-3 text-right tabular-nums font-medium">
-                {formatCurrency(toMoney(inv.total), inv.currency)}
-              </td>
-              <td className="py-3 px-3 text-right">
+              <td className="inv-date">{formatDate(inv.dueDate)}</td>
+              <td className="r mono inv-total">{formatCurrency(toMoney(inv.total), inv.currency)}</td>
+              <td className="r">
                 {inv.daysOverdue > 0 ? (
-                  <Badge className="bg-red-500/10 text-red-600 border-red-200 text-xs">
-                    {inv.daysOverdue}d
-                  </Badge>
+                  <span className="pill p-neg">{inv.daysOverdue}d</span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
+                  <span className="rpt-ncp">—</span>
                 )}
               </td>
-              <td className="py-3 pl-3 pr-2">
+              <td className="r">
                 <Link to={`/finance/invoices/${inv.id}`} aria-label="Open invoice">
-                  <Button variant="ghost" size="sm"><FileText className="size-4" /></Button>
+                  <button className="inv-open"><FileText className="size-4" /></button>
                 </Link>
               </td>
             </tr>
@@ -1066,13 +957,13 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <div className="card pad acard">
+      <div className="cl-tab-head">
         <div>
-          <CardTitle className="text-base">Client Documents</CardTitle>
-          <CardDescription>
+          <h3 className="statto-title">Client Documents</h3>
+          <p className="ac-sub" style={{ marginTop: 4 }}>
             Due-diligence documents, contracts, and other client files. Stored in Cloudflare R2.
-          </CardDescription>
+          </p>
         </div>
         <FileUpload
           folder="misc"
@@ -1080,60 +971,49 @@ export function DocumentsTab({ clientId }: { clientId: string }) {
           label="Upload document"
           onUploaded={handleUploaded}
         />
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
-          </div>
-        ) : docs.length === 0 ? (
-          <EmptyState
-            icon={FileText}
-            title="No documents"
-            description="Upload contracts, agreements, or compliance docs using the button above. Files are stored securely in Cloudflare R2."
-            size="compact"
-          />
-        ) : (
-          <div className="space-y-2">
-            {docs.map((d) => (
-              <div key={d.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <FileText className="size-4 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium" title={d.name}>{d.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatBytes(d.sizeBytes)} · uploaded {formatDate(d.createdAt)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDownload(d)}
-                    disabled={downloadingId === d.id}
-                    aria-label="Download"
-                  >
-                    {downloadingId === d.id ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemove(d)}
-                    disabled={removeDoc.isPending}
-                    aria-label="Remove from list"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+      </div>
+      {isLoading ? (
+        <div style={{ padding: 16, color: 'var(--fg2)' }}>Loading…</div>
+      ) : docs.length === 0 ? (
+        <div className="cl-tab-empty">
+          <span className="ph-screen-ic"><FileText className="size-[26px]" /></span>
+          <strong>No documents</strong>
+          <p>Upload contracts, agreements, or compliance docs using the button above. Files are stored securely in Cloudflare R2.</p>
+        </div>
+      ) : (
+        <div className="set-fields" style={{ gap: 8, marginTop: 16 }}>
+          {docs.map((d) => (
+            <div key={d.id} className="cl-contact-card">
+              <div className="cl-contact-meta" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <span className="set-field-ic"><FileText className="size-4" /></span>
+                <div>
+                  <div className="cl-contact-name" title={d.name}>{d.name}</div>
+                  <div className="cl-contact-role">{formatBytes(d.sizeBytes)} · uploaded {formatDate(d.createdAt)}</div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button
+                  className="inv-open"
+                  onClick={() => handleDownload(d)}
+                  disabled={downloadingId === d.id}
+                  aria-label="Download"
+                >
+                  {downloadingId === d.id ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                </button>
+                <button
+                  className="tk-del"
+                  onClick={() => handleRemove(d)}
+                  disabled={removeDoc.isPending}
+                  aria-label="Remove from list"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1184,110 +1064,90 @@ function EmailsTab({ clientId }: { clientId: string }) {
   };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+    <div className="screen-page" style={{ gap: 20 }}>
+      <div className="card pad acard">
+        <div className="cl-tab-head" style={{ marginBottom: formOpen ? 18 : 0 }}>
           <div>
-            <CardTitle className="text-base">Email thread</CardTitle>
-            <CardDescription>
+            <h3 className="statto-title">Email thread</h3>
+            <p className="ac-sub" style={{ marginTop: 4 }}>
               {emails?.length ?? 0} email{(emails?.length ?? 0) === 1 ? '' : 's'} on file ·
               outbound rows are auto-logged when Stato sends mail for this client.
-            </CardDescription>
+            </p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setFormOpen((v) => !v)}>
-            <Plus className="size-4 mr-1.5" />
-            Log inbound email
-          </Button>
-        </CardHeader>
+          <button className="btn b-ghost b-sm" onClick={() => setFormOpen((v) => !v)}>
+            <Plus className="size-[15px]" /> Log inbound email
+          </button>
+        </div>
         {formOpen && (
-          <CardContent>
-            <form onSubmit={handleLog} className="space-y-3 rounded-lg border bg-muted/30 p-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Input
-                  value={fromAddress}
-                  onChange={(e) => setFromAddress(e.target.value)}
-                  placeholder="From (sender email)"
-                />
-                <Input
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Subject"
-                />
+          <form onSubmit={handleLog} className="cl-email-form">
+            <div className="nc-grid2" style={{ marginBottom: 0 }}>
+              <div className="nc-field">
+                <input className="nc-input" value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} placeholder="From (sender email)" />
               </div>
+              <div className="nc-field">
+                <input className="nc-input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" />
+              </div>
+            </div>
+            <div className="nc-field">
               <textarea
+                className="nc-textarea"
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
-                placeholder="Paste the email body..."
+                placeholder="Paste the email body…"
                 rows={4}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setFormOpen(false)} disabled={logEmail.isPending}>
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" disabled={logEmail.isPending}>
-                  {logEmail.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
-                  Save
-                </Button>
-              </div>
-            </form>
-          </CardContent>
+            </div>
+            <div className="ag-modal-foot" style={{ marginTop: 4 }}>
+              <button type="button" className="btn b-ghost b-sm" onClick={() => setFormOpen(false)} disabled={logEmail.isPending}>Cancel</button>
+              <button type="submit" className="btn b-dark b-sm" disabled={logEmail.isPending}>
+                {logEmail.isPending ? <Loader2 className="size-[15px] animate-spin" /> : null}
+                Save
+              </button>
+            </div>
+          </form>
         )}
-      </Card>
+      </div>
 
       {isLoading ? (
-        <Card><CardContent className="p-6"><Skeleton className="h-32" /></CardContent></Card>
+        <div className="card pad acard"><div style={{ padding: 16, color: 'var(--fg2)' }}>Loading…</div></div>
       ) : !emails || emails.length === 0 ? (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              icon={Mail}
-              title="No emails yet"
-              description="Log an inbound email or wait for the next outbound Stato send to populate this thread."
-              size="compact"
-            />
-          </CardContent>
-        </Card>
+        <div className="card acard cl-tab-empty" style={{ padding: '56px 24px' }}>
+          <span className="ph-screen-ic"><Mail className="size-[26px]" /></span>
+          <strong>No emails yet</strong>
+          <p>Log an inbound email or wait for the next outbound Stato send to populate this thread.</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="set-fields" style={{ gap: 12 }}>
           {emails.map((e) => (
-            <Card key={e.id}>
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
-                      e.direction === 'inbound' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-600'
-                    }`}>
-                      {e.direction === 'inbound' ? <Inbox className="size-4" /> : <Send className="size-4" />}
+            <div key={e.id} className="card pad acard">
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+                  <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
+                    e.direction === 'inbound' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-600'
+                  }`}>
+                    {e.direction === 'inbound' ? <Inbox className="size-4" /> : <Send className="size-4" />}
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="cl-contact-name">{e.subject || '(no subject)'}</div>
+                    <div className="cl-contact-role">
+                      {e.direction === 'inbound' ? `From ${e.fromAddress || 'unknown'}` : `To ${e.toAddress || 'unknown'}`}
+                      {' · '}
+                      {new Date(e.occurredAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{e.subject || '(no subject)'}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {e.direction === 'inbound' ? `From ${e.fromAddress || 'unknown'}` : `To ${e.toAddress || 'unknown'}`}
-                        {' · '}
-                        {new Date(e.occurredAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Badge className={`text-xs capitalize ${
-                      e.direction === 'inbound' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-blue-500/10 text-blue-600 border-blue-200'
-                    }`}>{e.direction}</Badge>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(e)} aria-label="Remove from thread">
-                      <Trash2 className="size-4 text-red-600" />
-                    </Button>
                   </div>
                 </div>
-                {e.body && (
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-2 border-t pt-2">{e.body}</p>
-                )}
-                {e.resendEvent && (
-                  <p className="text-xs text-muted-foreground">
-                    Delivery: <span className="capitalize">{e.resendEvent}</span>
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <span className={'pill p-' + (e.direction === 'inbound' ? 'pos' : 'infosoft')} style={{ textTransform: 'capitalize' }}>{e.direction}</span>
+                  <button className="tk-del" onClick={() => handleDelete(e)} aria-label="Remove from thread"><Trash2 className="size-4" /></button>
+                </div>
+              </div>
+              {e.body && (
+                <p className="ac-sub" style={{ marginTop: 8, whiteSpace: 'pre-wrap', borderTop: '1px solid var(--line)', paddingTop: 8 }}>{e.body}</p>
+              )}
+              {e.resendEvent && (
+                <p className="ac-sub" style={{ marginTop: 4 }}>Delivery: <span style={{ textTransform: 'capitalize' }}>{e.resendEvent}</span></p>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -1328,39 +1188,32 @@ function ActivityTab({ clientId }: { clientId: string }) {
   const { data: events, isLoading } = useClientActivity(clientId, { limit: 100 });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <ActivityIcon className="size-4" />
-          Activity timeline
-        </CardTitle>
-        <CardDescription>Everything that happened to this client, newest first.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-40" />
-        ) : !events || events.length === 0 ? (
-          <EmptyState
-            icon={ActivityIcon}
-            title="No activity yet"
-            description="Events appear here as you create documents, agreements, credit checks, emails, and more."
-            size="compact"
-          />
-        ) : (
-          <ol className="relative space-y-3 border-l border-border pl-4">
-            {events.map((ev) => (
-              <li key={ev.id} className="relative">
-                <span className="absolute -left-[19px] top-1.5 size-2 rounded-full bg-muted-foreground/40" />
-                <p className="text-sm leading-tight">{describeClientActivity(ev)}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+    <div className="card pad acard">
+      <h3 className="statto-title cl-sec-h"><ActivityIcon className="size-[18px]" /> Activity timeline</h3>
+      <p className="ac-sub" style={{ marginTop: 4, marginBottom: 20 }}>Everything that happened to this client, newest first.</p>
+      {isLoading ? (
+        <div style={{ padding: 16, color: 'var(--fg2)' }}>Loading…</div>
+      ) : !events || events.length === 0 ? (
+        <div className="cl-tab-empty">
+          <span className="ph-screen-ic"><ActivityIcon className="size-[26px]" /></span>
+          <strong>No activity yet</strong>
+          <p>Events appear here as you create documents, agreements, credit checks, emails, and more.</p>
+        </div>
+      ) : (
+        <div className="cl-timeline">
+          {events.map((ev) => (
+            <div key={ev.id} className="cl-tl-item">
+              <span className="cl-tl-dot" />
+              <div className="cl-tl-body">
+                <div className="cl-tl-text">{describeClientActivity(ev)}</div>
+                <div className="cl-tl-time">
                   {new Date(ev.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </li>
-            ))}
-          </ol>
-        )}
-      </CardContent>
-    </Card>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
-

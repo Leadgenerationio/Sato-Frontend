@@ -2,14 +2,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api, unwrap } from '@/lib/api';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import {
   CheckCircle2, XCircle, AlertCircle, RefreshCw, ExternalLink,
   Building2, Database, Megaphone, FileSignature, HardDrive, Mail, ShieldCheck,
@@ -43,18 +35,21 @@ interface IntegrationsOverview {
 
 type CardStatus = 'live' | 'mock' | 'not_configured';
 
+// Maps an integration's brand accent to the Statto icon-tint class.
+type IconTint = 'blue' | 'orange' | 'green' | 'purple';
+
 interface CardSpec {
   key: string;
   title: string;
   description: string;
   icon: React.ElementType;
-  iconColor: string;
+  iconTint: IconTint;
   status: CardStatus;
   metricLabel: string;
   metricValue: string;
-  // Override the default `text-3xl font-bold tabular-nums` styling — used by
-  // cards whose metric is text rather than a big number (e.g. Resend sender).
-  metricValueClassName?: string;
+  // Override the default big-number styling — used by cards whose metric is
+  // text rather than a big number (e.g. Resend sender, AI status).
+  metricSize?: 'big' | 'med';
   detail?: string;
   lastSyncAt?: string | null;
   primaryAction?: { label: string; onClick: () => void; icon?: React.ElementType };
@@ -77,9 +72,9 @@ function formatRelative(iso: string | null): string {
 function StatusPill({ status }: { status: CardStatus }) {
   if (status === 'live') {
     return (
-      <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
-        <CheckCircle2 className="size-3 mr-1" /> Live
-      </Badge>
+      <span className="pill p-pos intg-live">
+        <CheckCircle2 className="size-3" strokeWidth={2.4} /> Live
+      </span>
     );
   }
   if (status === 'mock') {
@@ -89,82 +84,78 @@ function StatusPill({ status }: { status: CardStatus }) {
     // word "Mock" misleads (Sam read it as "we faked the data"). Renamed
     // to "Degraded" — same amber pill, accurate copy.
     return (
-      <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
-        <AlertCircle className="size-3 mr-1" /> Degraded
-      </Badge>
+      <span className="pill p-warn intg-live">
+        <AlertCircle className="size-3" strokeWidth={2.4} /> Degraded
+      </span>
     );
   }
   return (
-    <Badge variant="secondary">
-      <XCircle className="size-3 mr-1" /> Not configured
-    </Badge>
+    <span className="pill p-gray intg-live">
+      <XCircle className="size-3" strokeWidth={2.4} /> Not configured
+    </span>
   );
 }
 
 function IntegrationCard({ spec }: { spec: CardSpec }) {
   const Icon = spec.icon;
+  const accentColor =
+    spec.status === 'live' ? 'var(--positive)' : spec.status === 'mock' ? 'var(--warning)' : 'var(--fg3)';
   return (
-    <Card className="relative overflow-hidden">
-      <div
-        className="absolute top-0 left-0 h-1 w-full"
-        style={{ background: spec.status === 'live' ? '#10b981' : spec.status === 'mock' ? '#f59e0b' : '#737373' }}
-      />
-      <CardContent className="p-6 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex size-12 shrink-0 items-center justify-center rounded-xl"
-              style={{ background: `${spec.iconColor}15` }}
-            >
-              <Icon className="size-6" style={{ color: spec.iconColor }} />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-base font-semibold leading-tight">{spec.title}</h3>
-              <p className="text-xs text-muted-foreground line-clamp-1">{spec.description}</p>
-            </div>
+    <>
+      <div className="intg-accent" style={{ background: accentColor }} />
+      <div className="intg-body">
+        <div className="intg-head">
+          <span className={`intg-ic ${spec.iconTint}`}>
+            <Icon className="size-[22px]" />
+          </span>
+          <div className="intg-name-wrap">
+            <div className="intg-name">{spec.title}</div>
+            <div className="intg-desc">{spec.description}</div>
           </div>
           <StatusPill status={spec.status} />
         </div>
 
-        <div className="min-w-0">
-          <p
-            className={`leading-none truncate ${spec.metricValueClassName ?? 'text-3xl font-bold tabular-nums'}`}
-            title={spec.metricValue}
+        <div
+          className={'intg-value' + (spec.metricSize === 'big' ? ' big' : spec.metricSize === 'med' ? ' med' : '')}
+          title={spec.metricValue}
+        >
+          {spec.metricValue}
+        </div>
+        <div className="intg-sub">{spec.metricLabel}</div>
+
+        {spec.lastSyncAt !== undefined ? (
+          <div className="intg-meta">
+            <RefreshCw className="size-[13px]" /> Synced {formatRelative(spec.lastSyncAt)}
+          </div>
+        ) : spec.detail ? (
+          <div className="intg-note">{spec.detail}</div>
+        ) : null}
+
+        {spec.lastSyncAt !== undefined && spec.detail && <div className="intg-note">{spec.detail}</div>}
+
+        {spec.primaryAction && (
+          <span
+            className="intg-action dark"
+            onClick={(e) => {
+              e.stopPropagation();
+              spec.primaryAction!.onClick();
+            }}
           >
-            {spec.metricValue}
-          </p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{spec.metricLabel}</p>
-        </div>
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          {spec.lastSyncAt !== undefined ? (
-            <span className="flex items-center gap-1.5">
-              <RefreshCw className="size-3" />
-              Synced {formatRelative(spec.lastSyncAt)}
-            </span>
-          ) : (
-            <span className="truncate">{spec.detail ?? ' '}</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 pt-1">
-          {spec.primaryAction && (
-            <Button size="sm" variant="outline" onClick={spec.primaryAction.onClick}>
-              {spec.primaryAction.icon && <spec.primaryAction.icon className="size-4" />}
-              {spec.primaryAction.label}
-            </Button>
-          )}
-          {spec.secondaryAction && (
-            <Button size="sm" variant="ghost" asChild>
-              <a href={spec.secondaryAction.href}>
-                {spec.secondaryAction.label}
-                <ExternalLink className="size-3 ml-1" />
-              </a>
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            {spec.primaryAction.icon && <spec.primaryAction.icon className="size-[15px]" />}
+            {spec.primaryAction.label}
+          </span>
+        )}
+        {spec.secondaryAction && (
+          <a
+            className="intg-action"
+            href={spec.secondaryAction.href}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="size-[15px]" /> {spec.secondaryAction.label}
+          </a>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -189,59 +180,61 @@ function LeadByteSkippedCampaigns({ skipped }: { skipped: SkippedCampaign[] }) {
   const [open, setOpen] = useState(false);
   if (skipped.length === 0) return null;
   return (
-    <Card data-testid="leadbyte-skipped-section">
-      <CardContent className="p-4 space-y-3">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between gap-2 text-left"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-        >
-          <div className="flex items-center gap-2">
-            <AlertCircle className="size-4 text-amber-600" />
-            <span className="text-sm font-medium">
-              LeadByte — Multi-buyer campaigns skipped ({skipped.length})
-            </span>
-          </div>
-          {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-        </button>
-        <p
-          className="flex items-start gap-1.5 text-xs text-muted-foreground"
-          title="LeadByte's API does not provide per-buyer daily granularity for multi-buyer campaigns. Revenue attribution is paused until LeadByte adds this capability."
-        >
-          <Info className="mt-0.5 size-3 shrink-0" />
-          <span>
-            LeadByte's API does not provide per-buyer daily granularity for
-            multi-buyer campaigns. Revenue attribution is paused until
-            LeadByte adds this capability.
+    <div className="card pad acard" data-testid="leadbyte-skipped-section">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 text-left"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+      >
+        <div className="flex items-center gap-2">
+          <AlertCircle className="size-4" style={{ color: 'var(--warning)' }} />
+          <span className="statto-title" style={{ fontSize: 15 }}>
+            LeadByte — Multi-buyer campaigns skipped ({skipped.length})
           </span>
-        </p>
-        {open && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead className="text-right">Buyers</TableHead>
-                <TableHead className="text-right">Last skipped</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        </div>
+        {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+      </button>
+      <p
+        className="ac-sub"
+        style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 10 }}
+        title="LeadByte's API does not provide per-buyer daily granularity for multi-buyer campaigns. Revenue attribution is paused until LeadByte adds this capability."
+      >
+        <Info className="size-3 shrink-0" style={{ marginTop: 3 }} />
+        <span>
+          LeadByte's API does not provide per-buyer daily granularity for
+          multi-buyer campaigns. Revenue attribution is paused until
+          LeadByte adds this capability.
+        </span>
+      </p>
+      {open && (
+        <div className="table-scroll" style={{ marginTop: 14 }}>
+          <table className="inv-table">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th style={{ textAlign: 'right' }}>Buyers</th>
+                <th style={{ textAlign: 'right' }}>Last skipped</th>
+              </tr>
+            </thead>
+            <tbody>
               {skipped.map((s) => (
-                <TableRow key={`${s.campaignId}-${s.at}`}>
-                  <TableCell className="font-mono text-xs">
+                <tr key={`${s.campaignId}-${s.at}`}>
+                  <td style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>
                     {s.campaignName ?? s.campaignId}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{s.buyerCount}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
+                  </td>
+                  <td style={{ textAlign: 'right' }}>{s.buyerCount}</td>
+                  <td style={{ textAlign: 'right', color: 'var(--fg2)' }}>
                     {formatRelative(s.at)}
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -268,11 +261,16 @@ export function IntegrationsPage() {
 
   if (isLoading || !data) {
     return (
-      <div className="flex flex-col gap-6">
-        <PageHeader title="Integrations" description="Live status of every connected service" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="screen-page">
+        <div className="page-head">
+          <div>
+            <h1 className="ahead-title">Integrations</h1>
+            <p className="ahead-sub">Live status of every connected service</p>
+          </div>
+        </div>
+        <div className="intg-grid">
           {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-xl" />
+            <div key={i} className="card acard" style={{ minHeight: 240 }} />
           ))}
         </div>
       </div>
@@ -329,10 +327,11 @@ export function IntegrationsPage() {
         title: 'Xero',
         description: 'Accounting · invoices · bank balances',
         icon: Building2,
-        iconColor: '#13B5EA',
+        iconTint: 'blue' as const,
         status,
-        metricLabel: 'Organisation',
+        metricLabel: 'ORGANISATION',
         metricValue: data.xero.tenantName ?? (data.xero.configured ? 'Auth pending' : '—'),
+        metricSize: 'big' as const,
         detail: xeroAuthPending || xeroDataDegraded
           ? explainError(data.xero.lastError)
           : undefined,
@@ -346,9 +345,9 @@ export function IntegrationsPage() {
       title: 'LeadByte',
       description: 'Lead management · hourly sync',
       icon: Database,
-      iconColor: '#FF6B35',
+      iconTint: 'orange',
       status: statusFor(data.leadbyte.configured, data.leadbyte.configured),
-      metricLabel: 'Leads this month',
+      metricLabel: 'LEADS THIS MONTH',
       metricValue: data.leadbyte.leadsThisMonth.toLocaleString(),
       lastSyncAt: data.leadbyte.lastSyncAt,
       primaryAction: { label: 'Sync now', icon: RefreshCw, onClick: syncLeadByteNow },
@@ -358,13 +357,13 @@ export function IntegrationsPage() {
       title: 'Catchr',
       description: 'Multi-platform ad-spend aggregation',
       icon: Megaphone,
-      iconColor: '#0ea5e9',
+      iconTint: 'blue',
       // Card flips to "Mock" the moment the Catchr probe fails (expired
       // token, transient outage, zero connected platforms). The detail
       // line surfaces the actual error code so the operator doesn't have
       // to grep server logs — same self-diagnostic pattern as Xero.
       status: statusFor(data.catchr.configured, data.catchr.connected),
-      metricLabel: 'Ad spend · last 30 days',
+      metricLabel: 'AD SPEND · LAST 30 DAYS',
       metricValue: formatCurrency(data.catchr.adSpendLast30Days, data.catchr.currency),
       detail: data.catchr.configured && !data.catchr.connected
         ? data.catchr.lastError
@@ -383,9 +382,9 @@ export function IntegrationsPage() {
       title: 'SignNow',
       description: 'E-signature for service agreements',
       icon: FileSignature,
-      iconColor: '#22c55e',
+      iconTint: 'green',
       status: statusFor(data.signnow.configured, data.signnow.configured && !data.signnow.sandbox),
-      metricLabel: 'Agreements sent',
+      metricLabel: 'AGREEMENTS SENT',
       metricValue: data.signnow.agreementCount.toLocaleString(),
       detail: data.signnow.sandbox ? 'Sandbox mode — switch to production URL' : 'Production',
       secondaryAction: { label: 'View agreements', href: '/agreements' },
@@ -395,9 +394,9 @@ export function IntegrationsPage() {
       title: 'Cloudflare R2',
       description: 'File storage · creatives, agreements, invoices',
       icon: HardDrive,
-      iconColor: '#f6821f',
+      iconTint: 'orange',
       status: statusFor(data.r2.configured, data.r2.configured),
-      metricLabel: 'Files stored',
+      metricLabel: 'FILES STORED',
       metricValue: data.r2.fileCount.toLocaleString(),
       detail: data.r2.bucket ?? '—',
     },
@@ -406,9 +405,9 @@ export function IntegrationsPage() {
       title: 'Credit checks',
       description: data.creditCheck.provider === 'mock' ? 'No provider configured' : `Powered by ${data.creditCheck.provider === 'creditsafe' ? 'Creditsafe' : 'Endole'}`,
       icon: ShieldCheck,
-      iconColor: '#8b5cf6',
+      iconTint: 'purple',
       status: statusFor(true, data.creditCheck.configured && !data.creditCheck.sandbox),
-      metricLabel: 'Checks run',
+      metricLabel: 'CHECKS RUN',
       metricValue: data.creditCheck.checksRun.toLocaleString(),
       detail: data.creditCheck.sandbox
         ? 'SANDBOX — returns sample data, not real scores. Unset ENDOLE_SANDBOX to switch to production.'
@@ -419,13 +418,13 @@ export function IntegrationsPage() {
       title: 'Resend',
       description: 'Transactional email · invoices, alerts',
       icon: Mail,
-      iconColor: '#6366f1',
+      iconTint: 'purple',
       status: statusFor(data.resend.configured, data.resend.configured),
-      metricLabel: 'Sender',
+      metricLabel: 'SENDER',
       metricValue: data.resend.fromEmail ?? '—',
       // Email addresses don't fit the at-a-glance big-number treatment; demote
       // below the integration title so the hierarchy reads name → status → addr.
-      metricValueClassName: 'text-sm font-medium',
+      metricSize: 'med',
       detail: data.resend.fromEmail?.includes('resend.dev')
         ? 'Pending GoDaddy DNS to switch to verified domain'
         : 'Domain verified',
@@ -439,11 +438,11 @@ export function IntegrationsPage() {
       title: 'AI suggestions',
       description: 'Powers the AI new-task button',
       icon: Sparkles,
-      iconColor: '#d97706',
+      iconTint: 'orange',
       status: statusFor(data.anthropic?.configured ?? false, data.anthropic?.configured ?? false),
-      metricLabel: 'Status',
+      metricLabel: 'STATUS',
       metricValue: data.anthropic?.configured ? 'Configured' : 'Not configured',
-      metricValueClassName: 'text-sm font-medium',
+      metricSize: 'med',
       detail: data.anthropic?.configured
         ? 'Anthropic API key wired up — task suggestions live.'
         : 'Server is missing the Anthropic API key. Ask your administrator to add it to the backend configuration.',
@@ -454,54 +453,48 @@ export function IntegrationsPage() {
   const mockCount = cards.filter((c) => c.status === 'mock').length;
   const notConfiguredCount = cards.filter((c) => c.status === 'not_configured').length;
 
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Integrations"
-        description="Live status of every connected service. Click any card to drill in."
-      >
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={isFetching ? 'size-4 animate-spin' : 'size-4'} />
-          Refresh
-        </Button>
-      </PageHeader>
+  const summary = [
+    { value: liveCount, label: 'Live', icon: CheckCircle2, tint: 'pos' },
+    { value: mockCount, label: 'Degraded / probe failed', icon: AlertCircle, tint: 'warn' },
+    { value: notConfiguredCount, label: 'Not configured', icon: XCircle, tint: 'muted' },
+  ];
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Card className="gap-2 py-4">
-          <CardContent className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold tabular-nums">{liveCount}</p>
-              <p className="text-xs text-muted-foreground">Live</p>
-            </div>
-            <CheckCircle2 className="size-6 text-emerald-500" />
-          </CardContent>
-        </Card>
-        <Card className="gap-2 py-4">
-          <CardContent className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold tabular-nums">{mockCount}</p>
-              <p className="text-xs text-muted-foreground">Degraded / probe failed</p>
-            </div>
-            <AlertCircle className="size-6 text-amber-500" />
-          </CardContent>
-        </Card>
-        <Card className="gap-2 py-4">
-          <CardContent className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold tabular-nums">{notConfiguredCount}</p>
-              <p className="text-xs text-muted-foreground">Not configured</p>
-            </div>
-            <XCircle className="size-6 text-muted-foreground" />
-          </CardContent>
-        </Card>
+  return (
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Integrations</h1>
+          <p className="ahead-sub">Live status of every connected service. Click any card to drill in.</p>
+        </div>
+        <div className="page-actions">
+          <button className="btn b-ghost b-sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={isFetching ? 'size-[15px] animate-spin' : 'size-[15px]'} />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="intg-summary">
+        {summary.map((s) => {
+          const SIcon = s.icon;
+          return (
+            <div key={s.label} className="card acard intg-sum">
+              <div>
+                <div className="intg-sum-v">{s.value}</div>
+                <div className="intg-sum-l">{s.label}</div>
+              </div>
+              <span className={`intg-sum-ic ${s.tint}`}><SIcon className="size-[22px]" /></span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="intg-grid">
         {cards.map((spec) => (
           <button
             key={spec.key}
             type="button"
-            className="text-left"
+            className="card intg-card"
             onClick={() => navigate('/settings')}
           >
             <IntegrationCard spec={spec} />

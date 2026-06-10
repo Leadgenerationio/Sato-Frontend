@@ -3,6 +3,7 @@ import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { getThemeRoot } from "@/lib/theme-root"
 import { Button } from "@/components/ui/button"
 
 function Dialog({
@@ -54,7 +55,7 @@ function DialogContent({
   showCloseButton?: boolean
 }) {
   return (
-    <DialogPortal data-slot="dialog-portal">
+    <DialogPortal data-slot="dialog-portal" container={getThemeRoot()}>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"

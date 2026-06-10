@@ -2,23 +2,31 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { useUiStore } from '@/stores/ui-store';
-import { cn } from '@/lib/utils';
 import { SosButton } from '@/components/shared/sos-button';
 
+// Stato Admin shell — Statto green chrome (Admin Dashboard.html → dash-app.jsx).
+// Flex shell: sticky sidebar rail + main column (sticky top bar + scrolling
+// view). Collapse + mobile-drawer state come from the shared ui-store.
 export function DashboardLayout() {
-  const { sidebarOpen } = useUiStore();
+  const { sidebarOpen, mobileSidebarOpen } = useUiStore();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className={
+        'statto-admin aapp'
+        + (sidebarOpen ? '' : ' is-collapsed')
+        + (mobileSidebarOpen ? ' mobile-nav-open' : '')
+      }
+    >
       <Sidebar />
-      <Header />
-      <main className={cn(
-        'mt-16 p-4 sm:p-6 transition-all duration-300',
-        sidebarOpen ? 'md:ml-64' : 'md:ml-16',
-        'max-md:ml-0',
-      )}>
-        <Outlet />
-      </main>
+      <div className="amain">
+        <Header />
+        <div className="aview">
+          <div className="aview-inner">
+            <Outlet />
+          </div>
+        </div>
+      </div>
       <SosButton />
     </div>
   );

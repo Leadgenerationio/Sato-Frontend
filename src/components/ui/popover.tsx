@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
+import { getThemeRoot } from "@/lib/theme-root"
 
 const Popover = PopoverPrimitive.Root
 const PopoverTrigger = PopoverPrimitive.Trigger
@@ -10,7 +11,7 @@ const PopoverContent = React.forwardRef<
   React.ComponentRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
 >(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
-  <PopoverPrimitive.Portal>
+  <PopoverPrimitive.Portal container={getThemeRoot()}>
     <PopoverPrimitive.Content
       ref={ref}
       align={align}

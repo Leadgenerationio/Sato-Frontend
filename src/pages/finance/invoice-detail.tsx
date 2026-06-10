@@ -1,13 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
-} from '@/components/ui/table';
 import { ArrowLeft, Send, Download, Check, Loader2, FileText, Trash2, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -20,15 +12,16 @@ import {
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
-import { EmptyState } from '@/components/shared/empty-state';
 
 import { logError } from '../../lib/log';
-const statusColors: Record<string, string> = {
-  draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  authorised: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
-  paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  overdue: 'bg-red-500/10 text-red-600 border-red-200',
+
+// Map invoice status → Statto pill colour suffix.
+const statusPill: Record<string, string> = {
+  draft: 'gray',
+  sent: 'warn',
+  authorised: 'infosoft',
+  paid: 'pos',
+  overdue: 'neg',
 };
 
 // Escape any user-provided string before interpolating into the print-window HTML.
@@ -142,7 +135,7 @@ export function InvoiceDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="screen-page">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64" />
       </div>
@@ -151,159 +144,116 @@ export function InvoiceDetailPage() {
 
   if (error || !invoice) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 text-muted-foreground">
-        <p>Invoice not found</p>
-        <Link to="/finance/invoices"><Button variant="outline"><ArrowLeft className="size-4 mr-2" />Back to invoices</Button></Link>
+      <div className="screen-page">
+        <div className="ph-screen">
+          <h3>Invoice not found</h3>
+          <Link to="/finance/invoices">
+            <button className="btn b-ghost b-sm"><ArrowLeft className="size-4" /> Back to invoices</button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/finance/invoices">
-          <Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button>
-        </Link>
-        <div className="flex-1">
-          <PageHeader title={invoice.invoiceNumber} description={`${invoice.clientName}`}>
-            <div className="flex items-center gap-2">
-              <Badge className={`capitalize ${statusColors[invoice.status] || ''}`}>
-                {invoice.status}
-                {invoice.daysOverdue > 0 && ` (${invoice.daysOverdue} days overdue)`}
-              </Badge>
-              <Button size="sm" variant="outline" onClick={() => handleDownloadPdf(invoice)}>
-                <Download className="size-4 mr-1.5" />
-                Download PDF
-              </Button>
-              {invoice.xeroInvoiceId ? (
-                <Badge className="bg-blue-500/10 text-blue-600 border-blue-200">
-                  <Check className="size-3 mr-1" />
-                  In Xero
-                </Badge>
-              ) : (
-                <Button size="sm" onClick={handlePushToXero} disabled={pushToXero.isPending}>
-                  {pushToXero.isPending ? (
-                    <Loader2 className="size-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Send className="size-4 mr-1.5" />
-                  )}
-                  Push to Xero
-                </Button>
-              )}
-            </div>
-          </PageHeader>
+    <div className="screen-page nc-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/finance/invoices" className="nc-back" title="Back to invoices">
+            <ArrowLeft className="size-5" />
+          </Link>
+          <div>
+            <h1 className="ahead-title">{invoice.invoiceNumber}</h1>
+            <p className="ahead-sub">{invoice.clientName}</p>
+          </div>
+        </div>
+        <div className="page-actions">
+          <span className={'pill p-' + (statusPill[invoice.status] ?? 'gray')} style={{ textTransform: 'capitalize' }}>
+            {invoice.status}
+            {invoice.daysOverdue > 0 && ` (${invoice.daysOverdue} days overdue)`}
+          </span>
+          <button className="btn b-ghost b-sm" onClick={() => handleDownloadPdf(invoice)}>
+            <Download className="size-[15px]" /> Download PDF
+          </button>
+          {invoice.xeroInvoiceId ? (
+            <span className="pill p-xero"><Check className="size-3" /> In Xero</span>
+          ) : (
+            <button className="btn b-dark b-sm" onClick={handlePushToXero} disabled={pushToXero.isPending}>
+              {pushToXero.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Send className="size-[15px]" />}
+              Push to Xero
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Invoice Details */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Line Items</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoice.lineItems.map((item, i) => (
-                    <TableRow key={i}>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice, invoice.currency)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(item.amount, invoice.currency)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-                <TableFooter>
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</TableCell>
-                  </TableRow>
-                  {toMoney(invoice.vatAmount) > 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-right font-medium">VAT (20%)</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</TableCell>
-                    </TableRow>
-                  )}
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-right text-base font-bold">Total</TableCell>
-                    <TableCell className="text-right text-base font-bold tabular-nums">{formatCurrency(toMoney(invoice.total), invoice.currency)}</TableCell>
-                  </TableRow>
-                </TableFooter>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="ci-layout">
+        {/* Line Items */}
+        <div className="card acard inv-card">
+          <div className="ai-runs-head"><h3 className="statto-title">Line Items</h3></div>
+          <table className="inv-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th className="r">Qty</th>
+                <th className="r">Unit Price</th>
+                <th className="r">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoice.lineItems.map((item, i) => (
+                <tr key={i}>
+                  <td className="inv-client">{item.description}</td>
+                  <td className="r mono">{item.quantity}</td>
+                  <td className="r mono inv-num">{formatCurrency(item.unitPrice, invoice.currency)}</td>
+                  <td className="r mono inv-total">{formatCurrency(item.amount, invoice.currency)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ padding: '16px 16px 8px' }}>
+            <div className="ci-total-row"><span>Subtotal</span><span className="mono">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</span></div>
+            {toMoney(invoice.vatAmount) > 0 && (
+              <div className="ci-total-row"><span>VAT (20%)</span><span className="mono">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</span></div>
+            )}
+            <div className="ci-total-row grand"><span>Total</span><span className="mono">{formatCurrency(toMoney(invoice.total), invoice.currency)}</span></div>
+          </div>
+        </div>
 
         {/* Sidebar Info */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Client</span>
-                <span className="font-medium">{invoice.clientName}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Email</span>
-                <span className="font-medium">{invoice.clientEmail}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Currency</span>
-                <span className="font-medium">{invoice.currency}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">VAT</span>
-                <span className="font-medium">{invoice.vatRegistered ? 'Yes (20%)' : 'No'}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Due Date</span>
-                <span className="font-medium">{formatDate(invoice.dueDate)}</span>
-              </div>
-              {invoice.paidDate && (
-                <>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Paid Date</span>
-                    <span className="font-medium text-emerald-600">{formatDate(invoice.paidDate)}</span>
-                  </div>
-                </>
-              )}
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Created</span>
-                <span className="font-medium">{formatDate(invoice.createdAt)}</span>
-              </div>
-              {invoice.chaseCount > 0 && (
-                <>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Chase Count</span>
-                    <span className="font-medium text-red-600">{invoice.chaseCount}</span>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+        <div className="ci-side">
+          <div className="card pad acard">
+            <h3 className="statto-title nc-h">Details</h3>
+            <DetailRow label="Client" value={invoice.clientName} />
+            <DetailRow label="Email" value={invoice.clientEmail} />
+            <DetailRow label="Currency" value={invoice.currency} />
+            <DetailRow label="VAT" value={invoice.vatRegistered ? 'Yes (20%)' : 'No'} />
+            <DetailRow label="Due Date" value={formatDate(invoice.dueDate)} />
+            {invoice.paidDate && <DetailRow label="Paid Date" value={formatDate(invoice.paidDate)} valueClass="pos" />}
+            <DetailRow label="Created" value={formatDate(invoice.createdAt)} last={invoice.chaseCount === 0} />
+            {invoice.chaseCount > 0 && <DetailRow label="Chase Count" value={String(invoice.chaseCount)} valueClass="neg" last />}
+          </div>
         </div>
       </div>
 
       <InvoiceAttachments invoice={invoice} />
+    </div>
+  );
+}
+
+function DetailRow({ label, value, valueClass, last }: { label: string; value: string; valueClass?: string; last?: boolean }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: 12,
+        padding: '11px 0',
+        borderBottom: last ? 'none' : '1px solid var(--gray-100)',
+        fontSize: 13.5,
+      }}
+    >
+      <span className="inv-date">{label}</span>
+      <span className={valueClass ?? 'inv-id'} style={{ fontWeight: 600 }}>{value}</span>
     </div>
   );
 }
@@ -354,52 +304,55 @@ function InvoiceAttachments({ invoice }: { invoice: InvoiceDetail }) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <div className="card pad acard">
+      <div className="ac-head">
         <div>
-          <CardTitle className="text-base">Attachments</CardTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Receipts, proof of payment, supporting documents. Stored in Cloudflare R2.
-          </p>
+          <h3 className="statto-title">Attachments</h3>
+          <p className="ac-sub">Receipts, proof of payment, supporting documents. Stored in Cloudflare R2.</p>
         </div>
         <FileUpload folder="misc" maxSizeMB={50} label="Attach file" onUploaded={handleUploaded} />
-      </CardHeader>
-      <CardContent>
-        {invoice.attachments.length === 0 ? (
-          <EmptyState
-            icon={Paperclip}
-            title="No attachments"
-            description="Attach receipts, proof of payment, or supporting documents using the button above."
-            size="compact"
-          />
-        ) : (
-          <div className="space-y-2">
-            {invoice.attachments.map((a) => (
-              <div key={a.key} className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <FileText className="size-4 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium" title={a.name}>{a.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatBytes(a.size)} · {new Date(a.uploadedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => handleDownload(a.key)} aria-label="Download">
-                    <Download className="size-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleRemove(a.key)} aria-label="Remove">
-                    <Trash2 className="size-4" />
-                  </Button>
+      </div>
+      {invoice.attachments.length === 0 ? (
+        <div className="inv-empty">
+          <Paperclip className="size-5" style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} />
+          No attachments — attach receipts, proof of payment, or supporting documents using the button above.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+          {invoice.attachments.map((a) => (
+            <div
+              key={a.key}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: 12,
+              }}
+            >
+              <div style={{ display: 'flex', minWidth: 0, alignItems: 'center', gap: 12 }}>
+                <span style={{ width: 36, height: 36, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: 'var(--gray-50)', color: 'var(--statto-ink)' }}>
+                  <FileText className="size-4" />
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <p className="inv-id" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.name}>{a.name}</p>
+                  <p className="bf-desc">{formatBytes(a.size)} · {new Date(a.uploadedAt).toLocaleDateString()}</p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <div style={{ display: 'flex', flexShrink: 0, alignItems: 'center', gap: 4 }}>
+                <button className="inv-open" onClick={() => handleDownload(a.key)} aria-label="Download">
+                  <Download className="size-4" />
+                </button>
+                <button className="inv-open" onClick={() => handleRemove(a.key)} aria-label="Remove">
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,15 +1,8 @@
 import { useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LifeBuoy, CheckCircle2, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { useListSos, useResolveSos, type SosHelpRequest } from '@/lib/hooks/use-sos';
 import { EmptyState } from '@/components/shared/empty-state';
 
@@ -101,36 +94,32 @@ export function SosAdminPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="SOS help queue"
-        description="Requests submitted via the floating SOS button"
-      />
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">SOS help queue</h1>
+          <p className="ahead-sub">Requests submitted via the floating SOS button</p>
+        </div>
+      </div>
 
-      {/* Summary card */}
-      <Card>
-        <CardContent className="flex items-center gap-4 p-5">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-red-500/10">
-            <LifeBuoy className="size-5 text-red-600" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold tabular-nums">{openCount}</p>
-            <p className="text-sm text-muted-foreground">Open requests</p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Summary tile */}
+      <div className="card pad acard sos-stat">
+        <span className="sos-stat-ic"><LifeBuoy className="size-5" /></span>
+        <div>
+          <div className="sos-stat-v">{openCount}</div>
+          <div className="sos-stat-l">Open requests</div>
+        </div>
+      </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg bg-muted p-1 w-fit">
+      <div className="seg sos-seg">
         {(['open', 'resolved', 'all'] as const).map((t) => (
           <button
             key={t}
+            type="button"
             onClick={() => setTab(t)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-              tab === t
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={'seg-btn' + (tab === t ? ' on' : '')}
+            style={{ textTransform: 'capitalize' }}
           >
             {t}
           </button>
@@ -139,133 +128,116 @@ export function SosAdminPage() {
 
       {/* Table */}
       {isLoading ? (
-        <Card>
-          <CardContent className="p-6 space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-10" />
-            ))}
-          </CardContent>
-        </Card>
+        <div className="card pad acard" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10" />
+          ))}
+        </div>
       ) : error ? (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              icon={AlertTriangle}
-              title="Couldn't load the queue"
-              description="Something went wrong reaching the server. Try refreshing the page."
-            />
-          </CardContent>
-        </Card>
+        <div className="card acard">
+          <EmptyState
+            icon={AlertTriangle}
+            title="Couldn't load the queue"
+            description="Something went wrong reaching the server. Try refreshing the page."
+          />
+        </div>
       ) : visible.length === 0 ? (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              icon={CheckCircle2}
-              title={tab === 'open' ? 'Nothing to do — queue is empty' : 'No SOS requests yet'}
-              description={
-                tab === 'open'
-                  ? 'No one has hit the SOS button recently. The button sits bottom-right on every page.'
-                  : 'No requests match this filter.'
-              }
-            />
-          </CardContent>
-        </Card>
+        <div className="card acard">
+          <EmptyState
+            icon={CheckCircle2}
+            title={tab === 'open' ? 'Nothing to do — queue is empty' : 'No SOS requests yet'}
+            description={
+              tab === 'open'
+                ? 'No one has hit the SOS button recently. The button sits bottom-right on every page.'
+                : 'No requests match this filter.'
+            }
+          />
+        </div>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>When</TableHead>
-                    <TableHead>From</TableHead>
-                    <TableHead>Page</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visible.map((r) => (
-                    <TableRow key={r.id} className={r.resolvedAt ? 'opacity-60' : ''}>
-                      <TableCell className="text-muted-foreground tabular-nums whitespace-nowrap">
-                        {formatDateTime(r.createdAt)}
-                      </TableCell>
-                      <TableCell className="font-medium">{userLabel(r)}</TableCell>
-                      <TableCell>
-                        {/* Sam (27 May 2026): "Page should be a clickable
-                            link." Internal paths (starting with /) become
-                            react-router Link so the operator can jump
-                            straight to where the user was stuck. Anything
-                            else (absolute URLs, weird input) renders as
-                            plain code text to avoid broken navigation. */}
-                        {r.pagePath ? (
-                          r.pagePath.startsWith('/') ? (
-                            <Link
-                              to={r.pagePath}
-                              className="inline-block text-xs bg-muted px-1.5 py-0.5 rounded text-blue-600 underline underline-offset-2 hover:text-blue-700"
-                            >
-                              {r.pagePath}
-                            </Link>
-                          ) : (
-                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{r.pagePath}</code>
-                          )
+        <div className="card acard inv-card">
+          <div className="table-scroll">
+            <table className="inv-table sos-table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>From</th>
+                  <th>Page</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                  <th className="r">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((r) => (
+                  <tr key={r.id} style={r.resolvedAt ? { opacity: 0.6 } : undefined}>
+                    <td className="inv-date">{formatDateTime(r.createdAt)}</td>
+                    <td className="sos-from">{userLabel(r)}</td>
+                    <td>
+                      {/* Sam (27 May 2026): "Page should be a clickable
+                          link." Internal paths (starting with /) become
+                          react-router Link so the operator can jump
+                          straight to where the user was stuck. Anything
+                          else (absolute URLs, weird input) renders as
+                          plain code text to avoid broken navigation. */}
+                      {r.pagePath ? (
+                        r.pagePath.startsWith('/') ? (
+                          <Link to={r.pagePath} className="sos-page">
+                            {r.pagePath}
+                          </Link>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <code className="sos-page" style={{ textDecoration: 'none' }}>{r.pagePath}</code>
+                        )
+                      ) : (
+                        <span className="inv-date">—</span>
+                      )}
+                    </td>
+                    <td className="max-w-[360px]" style={{ whiteSpace: 'normal' }}>
+                      {r.message ? (
+                        <p className="sos-msg whitespace-pre-wrap">{renderMessageWithTaskLinks(r.message)}</p>
+                      ) : (
+                        <span className="sos-msg none">(no message)</span>
+                      )}
+                    </td>
+                    <td>
+                      {r.resolvedAt ? (
+                        <span className="pill p-pos">Resolved {formatDateTime(r.resolvedAt)}</span>
+                      ) : (
+                        <span className="pill p-neg">Open</span>
+                      )}
+                    </td>
+                    <td className="r">
+                      <div className="sos-actions">
+                        {extractFirstTaskId(r.message, r.pagePath) && (
+                          <Link to={`/tasks/${extractFirstTaskId(r.message, r.pagePath)}`}>
+                            <button type="button" className="btn b-ghost b-xs" aria-label="Open referenced task">
+                              <ExternalLink className="size-4" />
+                              Open task
+                            </button>
+                          </Link>
                         )}
-                      </TableCell>
-                      <TableCell className="max-w-[360px]">
-                        {r.message ? (
-                          <p className="text-sm whitespace-pre-wrap">{renderMessageWithTaskLinks(r.message)}</p>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">(no message)</span>
+                        {!r.resolvedAt && (
+                          <button
+                            type="button"
+                            className="btn b-ghost b-xs"
+                            onClick={() => handleResolve(r.id)}
+                            disabled={resolve.isPending}
+                          >
+                            {resolve.isPending && resolve.variables === r.id ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="size-4" />
+                            )}
+                            Mark resolved
+                          </button>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        {r.resolvedAt ? (
-                          <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 text-xs">
-                            Resolved {formatDateTime(r.resolvedAt)}
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-red-500/10 text-red-600 border-red-200 text-xs">
-                            Open
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {extractFirstTaskId(r.message, r.pagePath) && (
-                            <Link to={`/tasks/${extractFirstTaskId(r.message, r.pagePath)}`}>
-                              <Button variant="outline" size="sm" aria-label="Open referenced task">
-                                <ExternalLink className="size-4 mr-1.5" />
-                                Open task
-                              </Button>
-                            </Link>
-                          )}
-                          {!r.resolvedAt && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleResolve(r.id)}
-                              disabled={resolve.isPending}
-                            >
-                              {resolve.isPending && resolve.variables === r.id ? (
-                                <Loader2 className="size-4 animate-spin mr-1.5" />
-                              ) : (
-                                <CheckCircle2 className="size-4 mr-1.5" />
-                              )}
-                              Mark resolved
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );

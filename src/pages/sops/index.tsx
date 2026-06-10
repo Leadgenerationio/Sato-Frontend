@@ -1,16 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Plus, BookOpen, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useSops, type SopSummary } from '@/lib/hooks/use-sops';
 import { useDebounce } from '@/lib/hooks/use-debounce';
-import { EmptyState } from '@/components/shared/empty-state';
 
 const CATEGORY_TABS = ['all', 'operations', 'finance', 'onboarding', 'compliance', 'campaigns'] as const;
 
@@ -23,12 +16,13 @@ const categoryLabels: Record<string, string> = {
   campaigns: 'Campaigns',
 };
 
-const categoryColors: Record<string, string> = {
-  Operations: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  Finance: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  Onboarding: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  Compliance: 'bg-purple-500/10 text-purple-600 border-purple-200',
-  Campaigns: 'bg-rose-500/10 text-rose-600 border-rose-200',
+// Statto pill variant per SOP category.
+const categoryPill: Record<string, string> = {
+  Operations: 'infosoft',
+  Finance: 'pos',
+  Onboarding: 'soft',
+  Compliance: 'warn',
+  Campaigns: 'gray',
 };
 
 function formatDate(dateStr: string) {
@@ -55,109 +49,80 @@ export function SopsPage() {
   const handleSearchChange = (val: string) => { setSearch(val); };
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="SOPs" description="Standard Operating Procedures library">
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">SOPs</h1>
+          <p className="ahead-sub">Standard Operating Procedures library</p>
+        </div>
         {canWrite && (
-          <Link to="/sops/create">
-            <Button>
-              <Plus className="size-4 mr-1.5" />
-              New SOP
-            </Button>
-          </Link>
+          <div className="page-actions">
+            <Link to="/sops/create">
+              <button className="btn b-dark b-sm"><Plus className="size-[15px]" /> New SOP</button>
+            </Link>
+          </div>
         )}
-      </PageHeader>
+      </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 rounded-lg bg-muted p-1 overflow-x-auto">
+      <div className="inv-toolbar">
+        <div className="inv-tabs">
           {CATEGORY_TABS.map((tab) => (
             <button
               key={tab}
+              className={'inv-tab' + (categoryFilter === tab ? ' on' : '')}
               onClick={() => handleCategoryChange(tab)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
-                categoryFilter === tab
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
             >
               {categoryLabels[tab] || tab}
             </button>
           ))}
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search SOPs..."
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-9"
-          />
+        <div className="inv-search">
+          <Search className="size-4" />
+          <input placeholder="Search SOPs…" value={search} onChange={(e) => handleSearchChange(e.target.value)} />
         </div>
       </div>
 
       {/* SOP Cards Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="space-y-3">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-4 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--fg2)' }}>Loading SOPs…</div>
       ) : error ? (
-        <EmptyState
-          icon={AlertTriangle}
-          title="Couldn't load SOPs"
-          description="Something went wrong reaching the server. Try refreshing the page."
-        />
+        <div className="ph-screen">
+          <span className="ph-screen-ic"><AlertTriangle className="size-[26px]" /></span>
+          <strong>Couldn't load SOPs</strong>
+          <p>Something went wrong reaching the server. Try refreshing the page.</p>
+        </div>
       ) : !sops?.length ? (
-        <EmptyState
-          icon={BookOpen}
-          title={search || categoryFilter !== 'all' ? 'No matching SOPs' : 'No SOPs yet'}
-          description={
-            search || categoryFilter !== 'all'
+        <div className="ph-screen">
+          <span className="ph-screen-ic"><BookOpen className="size-[26px]" /></span>
+          <strong>{search || categoryFilter !== 'all' ? 'No matching SOPs' : 'No SOPs yet'}</strong>
+          <p>
+            {search || categoryFilter !== 'all'
               ? 'Try a different search or category filter.'
-              : 'Standard operating procedures help your team work consistently. Document your first one to get started.'
-          }
-          link={search || categoryFilter !== 'all' ? undefined : (canWrite ? { label: 'New SOP', to: '/sops/create', icon: Plus } : undefined)}
-        />
+              : 'Standard operating procedures help your team work consistently. Document your first one to get started.'}
+          </p>
+          {!(search || categoryFilter !== 'all') && canWrite && (
+            <Link to="/sops/create"><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> New SOP</button></Link>
+          )}
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="sop-grid">
           {sops.map((sop: SopSummary) => (
-            <Card
+            <button
               key={sop.id}
-              className="cursor-pointer transition-colors hover:bg-accent/50"
+              className="card pad acard sop-card"
               onClick={() => navigate(`/sops/${sop.id}`)}
             >
-              <CardContent>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-sm font-semibold leading-tight line-clamp-2">{sop.title}</h3>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge className={`text-xs ${categoryColors[sop.category] || ''}`}>
-                      {sop.category}
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      v{sop.version}
-                    </Badge>
-                    {sop.status === 'draft' && (
-                      <Badge variant="outline" className="text-xs text-muted-foreground">
-                        Draft
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{sop.author}</span>
-                    <span>{formatDate(sop.lastUpdated)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <h3 className="sop-title">{sop.title}</h3>
+              <div className="sop-tags">
+                <span className={'pill p-' + (categoryPill[sop.category] || 'gray')}>{sop.category}</span>
+                <span className="sop-ver">v{sop.version}</span>
+                {sop.status === 'draft' && <span className="pill p-gray">Draft</span>}
+              </div>
+              <div className="sop-foot">
+                <span className="sop-author">{sop.author}</span>
+                <span className="sop-date">{formatDate(sop.lastUpdated)}</span>
+              </div>
+            </button>
           ))}
         </div>
       )}

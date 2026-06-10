@@ -1,15 +1,8 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FileText, FileSignature, Loader2, RefreshCw, Send, CheckCircle2, XCircle, Clock, AlertCircle, PenLine } from 'lucide-react';
+import { FileText, FileSignature, Loader2, RefreshCw, Send, CheckCircle2, XCircle, Clock, AlertCircle, PenLine, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useAgreements,
@@ -24,21 +17,22 @@ import type { PresignedUpload } from '@/lib/hooks/use-uploads';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useAgreementTemplates, usePreviewAgreementTemplate } from '@/lib/hooks/use-agreement-templates';
 
+const STATUS_PILL: Record<AgreementStatus, { label: string; pill: string; icon: React.ElementType }> = {
+  sent: { label: 'Sent', pill: 'infosoft', icon: Send },
+  delivered: { label: 'Delivered', pill: 'infosoft', icon: Clock },
+  completed: { label: 'Completed', pill: 'pos', icon: CheckCircle2 },
+  signed: { label: 'Signed', pill: 'pos', icon: CheckCircle2 },
+  declined: { label: 'Declined', pill: 'neg', icon: XCircle },
+  voided: { label: 'Voided', pill: 'gray', icon: AlertCircle },
+};
+
 function statusBadge(status: AgreementStatus) {
-  const map: Record<AgreementStatus, { label: string; classes: string; icon: React.ElementType }> = {
-    sent: { label: 'Sent', classes: 'bg-sky-500/10 text-sky-700 border-sky-200', icon: Send },
-    delivered: { label: 'Delivered', classes: 'bg-indigo-500/10 text-indigo-700 border-indigo-200', icon: Clock },
-    completed: { label: 'Completed', classes: 'bg-emerald-500/10 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
-    signed: { label: 'Signed', classes: 'bg-emerald-500/10 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
-    declined: { label: 'Declined', classes: 'bg-red-500/10 text-red-700 border-red-200', icon: XCircle },
-    voided: { label: 'Voided', classes: 'bg-muted text-muted-foreground border-muted', icon: AlertCircle },
-  };
-  const { label, classes, icon: Icon } = map[status] ?? map.sent;
+  const { label, pill, icon: Icon } = STATUS_PILL[status] ?? STATUS_PILL.sent;
   return (
-    <Badge className={classes}>
-      <Icon className="size-3 mr-1" />
+    <span className={'pill p-' + pill}>
+      <Icon className="size-3" strokeWidth={2.4} />
       {label}
-    </Badge>
+    </span>
   );
 }
 
@@ -193,10 +187,10 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
       {!isControlled && (
         <DialogTrigger asChild>
           {trigger ?? (
-            <Button size="sm">
-              <FileSignature className="size-4" />
+            <button type="button" className="btn b-dark b-sm">
+              <FileSignature className="size-[15px]" />
               Send for signature
-            </Button>
+            </button>
           )}
         </DialogTrigger>
       )}
@@ -222,78 +216,85 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
               )}
             </div>
           )}
-          <div className="space-y-3 py-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="clientId">Client</Label>
-              <select
-                id="clientId"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                disabled={lockClient}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                required
-              >
-                <option value="">Select a client…</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.companyName}</option>
-                ))}
-              </select>
+          <div className="py-4">
+            <div className="nc-field">
+              <label className="nc-label" htmlFor="clientId">Client</label>
+              <div className="nc-select-wrap">
+                <select
+                  id="clientId"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  disabled={lockClient}
+                  className="nc-select nc-muted"
+                  required
+                >
+                  <option value="">Select a client…</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.companyName}</option>
+                  ))}
+                </select>
+                <ChevronDown className="lic size-[15px]" />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="signerName">Signer name</Label>
-              <Input id="signerName" value={signerName} onChange={(e) => setSignerName(e.target.value)} required />
+            <div className="nc-field">
+              <label className="nc-label" htmlFor="signerName">Signer name</label>
+              <input id="signerName" className="nc-input" value={signerName} onChange={(e) => setSignerName(e.target.value)} required />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="signerEmail">Signer email</Label>
-              <Input id="signerEmail" type="email" value={signerEmail} onChange={(e) => setSignerEmail(e.target.value)} required />
+            <div className="nc-field">
+              <label className="nc-label" htmlFor="signerEmail">Signer email</label>
+              <input id="signerEmail" className="nc-input" type="email" value={signerEmail} onChange={(e) => setSignerEmail(e.target.value)} required />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="signerRole">
-                Signer role / title <span className="text-muted-foreground font-normal">(optional)</span>
-              </Label>
-              <Input
+            <div className="nc-field">
+              <label className="nc-label" htmlFor="signerRole">
+                Signer role / title <span className="ag-opt">(optional)</span>
+              </label>
+              <input
                 id="signerRole"
+                className="nc-input"
                 value={signerRole}
                 onChange={(e) => setSignerRole(e.target.value)}
                 placeholder="e.g. Director, CEO, Compliance Officer"
                 maxLength={100}
               />
-              <p className="text-xs text-muted-foreground">
+              <span className="nc-hint">
                 The legal capacity they sign in — appears under the signature line + in the audit trail.
-              </p>
+              </span>
             </div>
 
             {/* Template picker — only shown when templates exist */}
             {templates && templates.length > 0 && (
-              <div className="space-y-3 p-4 border rounded-md bg-muted/30">
-                <div className="space-y-1.5">
-                  <Label>Use a template (optional)</Label>
-                  <select
-                    className="w-full h-10 rounded-md border bg-background px-3 text-sm"
-                    value={selectedTemplateId ?? ''}
-                    onChange={(e) => setSelectedTemplateId(e.target.value || null)}
-                  >
-                    <option value="">— No template (upload PDF below) —</option>
-                    {templates.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
+              <div className="nc-contact" style={{ marginBottom: 18 }}>
+                <div className="nc-field" style={{ marginBottom: selectedTemplateId ? 18 : 0 }}>
+                  <label className="nc-label">Use a template (optional)</label>
+                  <div className="nc-select-wrap">
+                    <select
+                      className="nc-select"
+                      value={selectedTemplateId ?? ''}
+                      onChange={(e) => setSelectedTemplateId(e.target.value || null)}
+                    >
+                      <option value="">— No template (upload PDF below) —</option>
+                      {templates.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="lic size-[15px]" />
+                  </div>
                 </div>
                 {selectedTemplateId && (
                   <>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="effectiveDate">Effective date</Label>
-                      <Input
+                    <div className="nc-field">
+                      <label className="nc-label" htmlFor="effectiveDate">Effective date</label>
+                      <input
                         id="effectiveDate"
+                        className="nc-input"
                         type="date"
                         value={effectiveDate}
                         onChange={(e) => setEffectiveDate(e.target.value)}
                       />
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
+                    <button
                       type="button"
+                      className="btn b-ghost b-sm"
                       disabled={preview.isPending}
                       onClick={async () => {
                         const resolvedClientId = prefill?.clientId ?? clientId;
@@ -314,11 +315,11 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
                         }
                       }}
                     >
-                      {preview.isPending ? <Loader2 className="size-3.5 animate-spin mr-1" /> : null}
+                      {preview.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
                       Refresh preview
-                    </Button>
+                    </button>
                     {previewUrl && (
-                      <iframe src={previewUrl} className="w-full h-96 border rounded" title="populated preview" />
+                      <iframe src={previewUrl} className="w-full h-96 border rounded mt-3" title="populated preview" />
                     )}
                   </>
                 )}
@@ -327,8 +328,8 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
 
             {/* PDF upload — only shown when no template is selected */}
             {!selectedTemplateId && (
-              <div className="space-y-1.5">
-                <Label>PDF document</Label>
+              <div className="nc-field">
+                <label className="nc-label">PDF document</label>
                 <FileUpload
                   folder="misc"
                   accept="application/pdf"
@@ -337,24 +338,24 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
                   onUploaded={handleUploaded}
                 />
                 {uploaded && (
-                  <p className="text-xs text-muted-foreground truncate">
+                  <span className="nc-hint truncate">
                     <FileText className="inline size-3.5 mr-1" />
                     {uploaded.name} (uploaded to R2)
-                  </p>
+                  </span>
                 )}
               </div>
             )}
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={send.isPending}>Cancel</Button>
+            <button type="button" className="btn b-ghost b-sm" onClick={() => handleOpenChange(false)} disabled={send.isPending}>Cancel</button>
             {/* #47-50 — branch to the drag-place editor instead of sending
                 free-form. Open in editor only enables once the PDF + client
                 are populated; everything else can be edited from the editor.
                 Hidden when using a template (fields already on template). */}
             {!selectedTemplateId && (
-              <Button
+              <button
                 type="button"
-                variant="outline"
+                className="btn b-ghost b-sm"
                 disabled={send.isPending || !uploaded || !clientId || !signerEmail || !signerName}
                 onClick={() => {
                   if (!uploaded) return;
@@ -370,14 +371,14 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
                   navigate(`/agreements/editor?${params.toString()}`);
                 }}
               >
-                <PenLine className="size-4" />
+                <PenLine className="size-[15px]" />
                 Place fields...
-              </Button>
+              </button>
             )}
-            <Button type="submit" disabled={send.isPending}>
-              {send.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            <button type="submit" className="btn b-dark b-sm" disabled={send.isPending}>
+              {send.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Send className="size-[15px]" />}
               Send envelope
-            </Button>
+            </button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -388,9 +389,10 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
 function RefreshButton({ id }: { id: string }) {
   const refresh = useRefreshAgreementStatus();
   return (
-    <Button
-      variant="ghost"
-      size="sm"
+    <button
+      type="button"
+      className="inv-open"
+      title="Refresh status"
       onClick={() => {
         refresh.mutate(id, {
           onSuccess: ({ agreement }) => toast.info(`Status: ${agreement.status}`),
@@ -400,8 +402,8 @@ function RefreshButton({ id }: { id: string }) {
       disabled={refresh.isPending}
       aria-label="Refresh status"
     >
-      {refresh.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-    </Button>
+      {refresh.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+    </button>
   );
 }
 
@@ -422,77 +424,79 @@ export function AgreementsPage() {
   const agreements: Agreement[] = data?.agreements ?? [];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Agreements"
-        description="Service agreements sent to clients via SignNow"
-      />
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Agreements</h1>
+          <p className="ahead-sub">Service agreements sent to clients via SignNow</p>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+      <div className="card acard ag-card">
+        <div className="ag-head">
           <div>
-            <CardTitle className="text-base">All agreements</CardTitle>
-            <CardDescription>
+            <h3 className="statto-title">All agreements</h3>
+            <p className="ac-sub">
               {hasPending ? 'Auto-refreshing every 30s while envelopes are pending…' : 'Envelope statuses update via webhook.'}
-            </CardDescription>
+            </p>
           </div>
           <SendAgreementDialog />
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading && (
-            <div className="p-6 space-y-2">
-              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-            </div>
-          )}
-          {!isLoading && agreements.length === 0 && (
-            <EmptyState
-              icon={FileSignature}
-              title="No agreements yet"
-              description='Send a contract or onboarding document for e-signature. Use "Send for signature" above to start.'
-            />
-          )}
-          {!isLoading && agreements.length > 0 && (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Signer</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Sent</TableHead>
-                    <TableHead>Signed</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {agreements.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-medium">
-                        {a.signerName}
-                        {a.signerRole && (
-                          <span className="block text-xs text-muted-foreground font-normal mt-0.5">{a.signerRole}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{a.signerEmail}</TableCell>
-                      <TableCell>{formatDateTime(a.sentAt)}</TableCell>
-                      <TableCell>{formatDateTime(a.signedAt)}</TableCell>
-                      <TableCell>{statusBadge(a.status)}</TableCell>
-                      <TableCell className="text-right">
+        </div>
+        {isLoading && (
+          <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        )}
+        {!isLoading && agreements.length === 0 && (
+          <EmptyState
+            icon={FileSignature}
+            title="No agreements yet"
+            description='Send a contract or onboarding document for e-signature. Use "Send for signature" above to start.'
+          />
+        )}
+        {!isLoading && agreements.length > 0 && (
+          <div className="table-scroll">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th>Signer</th>
+                  <th>Email</th>
+                  <th>Sent</th>
+                  <th>Signed</th>
+                  <th>Status</th>
+                  <th className="r">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agreements.map((a) => (
+                  <tr key={a.id}>
+                    <td className="ag-signer">
+                      {a.signerName}
+                      {a.signerRole && (
+                        <span className="block text-xs text-muted-foreground font-normal mt-0.5">{a.signerRole}</span>
+                      )}
+                    </td>
+                    <td className="ag-email">{a.signerEmail}</td>
+                    <td className="inv-date">{formatDateTime(a.sentAt)}</td>
+                    <td className="inv-date">{formatDateTime(a.signedAt)}</td>
+                    <td>{statusBadge(a.status)}</td>
+                    <td className="r">
+                      <div className="sos-actions">
                         <RefreshButton id={a.id} />
                         {a.documentUrl && (
-                          <a href={a.documentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline ml-2">
+                          <a href={a.documentUrl} target="_blank" rel="noreferrer" className="sos-page">
                             PDF
                           </a>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,11 @@
 import type { ApiResponse, AuthTokens } from '@/types';
 import { API_URL } from '@/lib/env';
+import { getDevMock } from '@/lib/dev-mocks';
+
+// Dev-only: serve canned data from dev-mocks.ts when VITE_USE_MOCKS=true (i.e.
+// no backend). Decoupled from the login bypass so the app can auto-login against
+// a REAL backend (VITE_API_URL) while mocks stay off. Hard-gated to DEV.
+const USE_DEV_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true';
 
 class ApiClient {
   private token: string | null = null;
@@ -47,6 +53,11 @@ class ApiClient {
   }
 
   private async request<T>(path: string, options: RequestInit = {}, retried = false): Promise<ApiResponse<T>> {
+    if (USE_DEV_MOCKS) {
+      const mock = getDevMock((options.method as string) || 'GET', path);
+      if (mock) return mock as ApiResponse<T>;
+    }
+
     const response = await fetch(`${API_URL}${path}`, { ...options, headers: this.buildHeaders(options) });
 
     if (response.status === 401 && !retried && this.token && !path.startsWith('/api/v1/auth/')) {

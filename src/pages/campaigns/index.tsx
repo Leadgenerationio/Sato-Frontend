@@ -1,15 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Megaphone, ChevronDown, ChevronRight, Layers, List as ListIcon, AlertTriangle } from 'lucide-react';
+import {
+  Search, ExternalLink, Megaphone, ChevronDown, ChevronRight, Layers, List as ListIcon, TriangleAlert,
+} from 'lucide-react';
 import { useCampaigns, useUnlinkedSpend, type CampaignSummary } from '@/lib/hooks/use-campaigns';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
@@ -24,11 +18,8 @@ const TYPE_TABS = [
   { value: 'internal', label: 'Internal' },
 ] as const;
 
-const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  paused: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  inactive: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-};
+const statusPill = (s: string) => (s === 'active' ? 'pos' : s === 'paused' ? 'warn' : 'gray');
+const marginCls = (m: number) => (m >= 50 ? 'm-pos' : m >= 30 ? 'm-warn' : 'm-neg');
 
 const campaignTypeLabels: Record<string, string> = {
   pay_per_lead: 'PPL',
@@ -42,10 +33,10 @@ const campaignTypeLabels: Record<string, string> = {
 // "Pending client mapping" string).
 function BuyerCell({ names, fallback }: { names?: string[]; fallback: string }) {
   const list = names && names.length > 0 ? names : (fallback ? [fallback] : []);
-  if (list.length === 0) return <span className="text-muted-foreground">—</span>;
+  if (list.length === 0) return <span className="cmp-client">—</span>;
   if (list.length === 1) return <span>{list[0]}</span>;
   return (
-    <span title={list.join('\n')} className="cursor-help">
+    <span title={list.join('\n')} style={{ cursor: 'help' }}>
       Multiple ({list.length})
     </span>
   );
@@ -88,190 +79,167 @@ export function CampaignsPage() {
   const handleSearchChange = (val: string) => { setSearch(val); setPage(1); };
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Campaigns" description="Lead generation campaigns synced from LeadByte" />
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Campaigns</h1>
+          <p className="ahead-sub">Lead generation campaigns synced from LeadByte</p>
+        </div>
+      </div>
 
       <UnlinkedSpendCard />
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => handleStatusChange(tab)}
-                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-                  statusFilter === tab
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-            {TYPE_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => handleTypeChange(tab.value)}
-                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  typeFilter === tab.value
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+      <div className="cmp-toolbar">
+        <div className="inv-tabs">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleStatusChange(tab)}
+              className={'inv-tab' + (statusFilter === tab ? ' on' : '')}
+              style={{ textTransform: 'capitalize' }}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <div className="inv-tabs">
+          {TYPE_TABS.map((tab) => (
             <button
-              onClick={() => handleGroupModeChange('vertical')}
-              className={`shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
-                groupMode === 'vertical' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-              aria-pressed={groupMode === 'vertical'}
+              key={tab.value}
+              onClick={() => handleTypeChange(tab.value)}
+              className={'inv-tab' + (typeFilter === tab.value ? ' on' : '')}
             >
-              <Layers className="size-4" />
-              Group by vertical
+              {tab.label}
             </button>
-            <button
-              onClick={() => handleGroupModeChange('flat')}
-              className={`shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
-                groupMode === 'flat' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-              aria-pressed={groupMode === 'flat'}
-            >
-              <ListIcon className="size-4" />
-              Flat
-            </button>
-          </div>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Search campaigns..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+          ))}
+        </div>
+        <div className="cmp-toggle">
+          <button
+            onClick={() => handleGroupModeChange('vertical')}
+            className={'cmp-tg' + (groupMode === 'vertical' ? ' on' : '')}
+            aria-pressed={groupMode === 'vertical'}
+          >
+            <Layers className="size-[15px]" /> Group by vertical
+          </button>
+          <button
+            onClick={() => handleGroupModeChange('flat')}
+            className={'cmp-tg' + (groupMode === 'flat' ? ' on' : '')}
+            aria-pressed={groupMode === 'flat'}
+          >
+            <ListIcon className="size-[15px]" /> Flat
+          </button>
+        </div>
+        <div className="inv-search cmp-search">
+          <Search className="size-4" />
+          <input
+            placeholder="Search campaigns…"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
         </div>
       </div>
 
       {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex gap-4">
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-5 w-20" />
-                  <Skeleton className="h-5 w-16" />
-                  <Skeleton className="h-5 w-16" />
-                  <Skeleton className="h-5 w-20" />
-                </div>
-              ))}
-            </div>
-          ) : error ? (
-            <ErrorState
-              title="Couldn't load campaigns"
-              error={error}
-              onRetry={() => refetch()}
-            />
-          ) : !campaigns?.length ? (
-            <EmptyState
-              icon={Megaphone}
-              title={search || statusFilter !== 'all' || typeFilter !== 'all' ? 'No matching campaigns' : 'No campaigns yet'}
-              description={
-                search || statusFilter !== 'all' || typeFilter !== 'all'
-                  ? 'Try a different filter or search term.'
-                  : 'Campaigns sync from LeadByte. Check that LeadByte is connected and has active campaigns.'
-              }
-            />
-          ) : groupMode === 'vertical' ? (
-            <VerticalGroupedView campaigns={campaigns} />
-          ) : (
-            <div className="overflow-x-auto">
-              {/* T3.6 (Sam, 2026-05-20): 11-column flat table — pin the
-                  Campaign column so the row label stays visible while
-                  the metric columns scroll horizontally on narrow
-                  viewports. */}
-              <Table className="[&_th:first-child]:sticky [&_th:first-child]:left-0 [&_th:first-child]:bg-card [&_th:first-child]:z-20 [&_th:first-child]:border-r [&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:bg-card [&_td:first-child]:z-10 [&_td:first-child]:border-r">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Campaign</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Vertical</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Today</TableHead>
-                    <TableHead className="text-right">Week</TableHead>
-                    <TableHead className="text-right">Month</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">CPL</TableHead>
-                    <TableHead className="text-right">Margin</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaigns.map((c: CampaignSummary) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="max-w-[140px] sm:max-w-[220px]">
-                        <div className="truncate font-medium">{c.name}</div>
-                        <div className="truncate text-xs text-muted-foreground">LeadByte ID: {c.id.replace(/^lb-/, '')}</div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <BuyerCell names={c.clientNames} fallback={c.clientName} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Badge variant="secondary" className="text-xs">{c.vertical}</Badge>
-                          <Badge variant="outline" className="text-xs">{campaignTypeLabels[c.campaignType] ?? 'PPL'}</Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>
-                          {c.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{c.leadsToday}</TableCell>
-                      <TableCell className="text-right tabular-nums">{c.leadsThisWeek}</TableCell>
-                      <TableCell className="text-right tabular-nums">{c.leadsThisMonth}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(c.totalRevenue)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(c.cpl)}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        <span className={c.margin >= 50 ? 'text-emerald-600' : c.margin >= 30 ? 'text-amber-600' : 'text-destructive'}>
-                          {c.margin}%
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/campaigns/${c.id}`}>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <ExternalLink className="size-4" />
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-        {data && data.total > 0 && groupMode === 'flat' && (
-          <Pagination
-            page={data.page}
-            pageSize={data.pageSize}
-            total={data.total}
-            onPageChange={setPage}
+      {isLoading ? (
+        <div className="card acard inv-card">
+          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ display: 'flex', gap: 16 }}>
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : error ? (
+        <div className="card acard inv-card">
+          <ErrorState
+            title="Couldn't load campaigns"
+            error={error}
+            onRetry={() => refetch()}
           />
-        )}
-      </Card>
+        </div>
+      ) : !campaigns?.length ? (
+        <div className="card acard inv-card">
+          <EmptyState
+            icon={Megaphone}
+            title={search || statusFilter !== 'all' || typeFilter !== 'all' ? 'No matching campaigns' : 'No campaigns yet'}
+            description={
+              search || statusFilter !== 'all' || typeFilter !== 'all'
+                ? 'Try a different filter or search term.'
+                : 'Campaigns sync from LeadByte. Check that LeadByte is connected and has active campaigns.'
+            }
+          />
+        </div>
+      ) : groupMode === 'vertical' ? (
+        <VerticalGroupedView campaigns={campaigns} />
+      ) : (
+        <div className="card acard inv-card">
+          <div className="table-scroll">
+            <table className="inv-table cmp-table cmp-flat">
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th>Client</th>
+                  <th>Vertical</th>
+                  <th>Status</th>
+                  <th className="r">Today</th>
+                  <th className="r">Week</th>
+                  <th className="r">Month</th>
+                  <th className="r">Revenue</th>
+                  <th className="r">CPL</th>
+                  <th className="r">Margin</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaigns.map((c: CampaignSummary) => (
+                  <tr key={c.id}>
+                    <td>
+                      <div className="cmp-name">{c.name}</div>
+                      <div className="cmp-lbid">LeadByte ID: {c.id.replace(/^lb-/, '')}</div>
+                    </td>
+                    <td className="cmp-client">
+                      <BuyerCell names={c.clientNames} fallback={c.clientName} />
+                    </td>
+                    <td>
+                      <span className="cmp-vpill">{c.vertical}</span>
+                      <span className="cmp-type">{campaignTypeLabels[c.campaignType] ?? 'PPL'}</span>
+                    </td>
+                    <td>
+                      <span className={'pill p-' + statusPill(c.status)} style={{ textTransform: 'capitalize' }}>{c.status}</span>
+                    </td>
+                    <td className="r mono inv-num">{c.leadsToday}</td>
+                    <td className="r mono inv-num">{c.leadsThisWeek}</td>
+                    <td className="r mono inv-num">{c.leadsThisMonth}</td>
+                    <td className="r mono inv-total">{formatCurrency(c.totalRevenue)}</td>
+                    <td className="r mono inv-num">{formatCurrency(c.cpl)}</td>
+                    <td className={'r mono cmp-margin ' + marginCls(c.margin)}>{c.margin}%</td>
+                    <td className="r">
+                      <Link to={`/campaigns/${c.id}`} className="inv-open" title="Open campaign">
+                        <ExternalLink className="size-4" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {data && data.total > 0 && (
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onPageChange={setPage}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -301,11 +269,11 @@ function VerticalGroupedView({ campaigns }: { campaigns: CampaignSummary[] }) {
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
 
   return (
-    <div className="p-2">
+    <>
       {ordered.map((g) => (
         <VerticalGroup key={g.vertical} group={g} />
       ))}
-    </div>
+    </>
   );
 }
 
@@ -326,88 +294,56 @@ function VerticalGroup({
     : 0;
 
   return (
-    <div className="border-b last:border-b-0">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full flex-col gap-2 px-4 py-3 text-left hover:bg-muted/40 transition-colors sm:flex-row sm:items-center sm:gap-3"
-        aria-expanded={open}
-      >
-        {/* T3 slice 2 (Sam, 2026-05-20): on mobile, stack the title-row
-            above the metric chips so the vertical name + buyer count
-            stay readable at 375px and the £Revenue / Margin chips wrap
-            cleanly underneath. Above sm the original single-row layout
-            with ml-auto metrics returns. */}
-        <div className="flex items-center gap-3">
-          {open ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
-          <Layers className="size-4 text-muted-foreground" />
-          <span className="font-semibold">{group.vertical}</span>
-          <Badge variant="secondary" className="text-xs">
-            {group.rows.length} buyer{group.rows.length === 1 ? '' : 's'}
-          </Badge>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 pl-7 text-xs tabular-nums sm:ml-auto sm:pl-0">
-          <span><span className="text-muted-foreground">Month:</span> <span className="font-medium">{group.totalLeadsMonth.toLocaleString()}</span></span>
-          <span><span className="text-muted-foreground">Revenue:</span> <span className="font-medium">{formatCurrency(group.totalRevenue)}</span></span>
-          <span>
-            <span className="text-muted-foreground">Margin:</span>{' '}
-            <span className={`font-medium ${margin >= 50 ? 'text-emerald-600' : margin >= 30 ? 'text-amber-600' : 'text-destructive'}`}>
-              {margin}%
-            </span>
-          </span>
-        </div>
+    <div className="card acard cmp-group">
+      <button type="button" className="cmp-group-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        {open ? <ChevronDown className="size-[18px]" /> : <ChevronRight className="size-[18px]" />}
+        <span className="cmp-vstack"><Layers className="size-4" /></span>
+        <span className="cmp-vname">{group.vertical}</span>
+        <span className="cmp-buyers">{group.rows.length} buyer{group.rows.length === 1 ? '' : 's'}</span>
+        <span className="cmp-totals">
+          <span><i>Month:</i> {group.totalLeadsMonth.toLocaleString('en-GB')}</span>
+          <span><i>Revenue:</i> {formatCurrency(group.totalRevenue)}</span>
+          <span><i>Margin:</i> <b className={marginCls(margin)}>{margin}%</b></span>
+        </span>
       </button>
       {open && (
-        <div className="overflow-x-auto">
-          {/* T3 slice 2 (Sam, 2026-05-20): 8-column grouped table overflowed
-              at 375px because the outer card was already inside a
-              non-scrolling div. Wrap in overflow-x-auto so phones can pan
-              the inner columns (Month / Revenue / CPL / Margin) while the
-              vertical group header above stays fully visible. */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-12">Campaign</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Month</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">CPL</TableHead>
-                <TableHead className="text-right">Margin</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <div className="table-scroll">
+          <table className="inv-table cmp-table">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th>Client</th>
+                <th>Status</th>
+                <th className="r">Month</th>
+                <th className="r">Revenue</th>
+                <th className="r">CPL</th>
+                <th className="r">Margin</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
               {group.rows.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="pl-12 max-w-[220px]">
-                    <div className="truncate font-medium">{c.name}</div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
+                <tr key={c.id}>
+                  <td className="cmp-name">{c.name}</td>
+                  <td className="cmp-client">
                     <BuyerCell names={c.clientNames} fallback={c.clientName} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`text-xs capitalize ${statusColors[c.status] || ''}`}>{c.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{c.leadsThisMonth}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(c.totalRevenue)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(c.cpl)}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    <span className={c.margin >= 50 ? 'text-emerald-600' : c.margin >= 30 ? 'text-amber-600' : 'text-destructive'}>
-                      {c.margin}%
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Link to={`/campaigns/${c.id}`}>
-                      <Button variant="ghost" size="icon" className="size-8">
-                        <ExternalLink className="size-4" />
-                      </Button>
+                  </td>
+                  <td>
+                    <span className={'pill p-' + statusPill(c.status)} style={{ textTransform: 'capitalize' }}>{c.status}</span>
+                  </td>
+                  <td className="r mono inv-num">{c.leadsThisMonth}</td>
+                  <td className="r mono inv-total">{formatCurrency(c.totalRevenue)}</td>
+                  <td className="r mono inv-num">{formatCurrency(c.cpl)}</td>
+                  <td className={'r mono cmp-margin ' + marginCls(c.margin)}>{c.margin}%</td>
+                  <td className="r">
+                    <Link to={`/campaigns/${c.id}`} className="inv-open" title="Open campaign">
+                      <ExternalLink className="size-4" />
                     </Link>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       )}
     </div>
@@ -435,64 +371,48 @@ function UnlinkedSpendCard() {
 
   const rows = expanded ? data.rows : data.rows.slice(0, 5);
   return (
-    <Card className="border-amber-200 bg-amber-50/40">
-      <CardContent className="p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-amber-100">
-              <AlertTriangle className="size-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">
-                {formatCurrency(data.total)} of Catchr spend isn't linked to a campaign
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {data.rows.length} ad account{data.rows.length === 1 ? '' : 's'} active in the last {data.windowDays} days with no traffic-source mapping. Link the account on its campaign's detail page to attribute spend.
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setExpanded((v) => !v)}
-            className="text-amber-700 hover:text-amber-800"
-          >
-            {expanded ? 'Hide' : 'Show'} accounts
-            {expanded ? <ChevronDown className="ml-1 size-4" /> : <ChevronRight className="ml-1 size-4" />}
-          </Button>
+    <div>
+      <div className="cmp-banner">
+        <span className="cmp-banner-ic"><TriangleAlert className="size-5" /></span>
+        <div className="cmp-banner-text">
+          <strong>{formatCurrency(data.total)} of Catchr spend isn't linked to a campaign</strong>
+          <span>
+            {data.rows.length} ad account{data.rows.length === 1 ? '' : 's'} active in the last {data.windowDays} days with no traffic-source mapping. Link the account on its campaign's detail page to attribute spend.
+          </span>
         </div>
-        {expanded && (
-          <div className="mt-3 overflow-x-auto rounded-md border border-amber-200 bg-white">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Platform</TableHead>
-                  <TableHead className="text-xs">Account</TableHead>
-                  <TableHead className="text-xs">Account ID</TableHead>
-                  <TableHead className="text-xs text-right">Spend (30d)</TableHead>
-                  <TableHead className="text-xs text-right">Days active</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+        <button className="cmp-banner-link" onClick={() => setExpanded((v) => !v)}>
+          {expanded ? 'Hide' : 'Show'} accounts
+          {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        </button>
+      </div>
+      {expanded && (
+        <div className="card acard inv-card" style={{ marginTop: 12 }}>
+          <div className="table-scroll">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th>Platform</th>
+                  <th>Account</th>
+                  <th>Account ID</th>
+                  <th className="r">Spend (30d)</th>
+                  <th className="r">Days active</th>
+                </tr>
+              </thead>
+              <tbody>
                 {rows.map((r) => (
-                  <TableRow key={`${r.platform}-${r.accountId}`}>
-                    <TableCell className="text-sm capitalize">{r.platform.replace('-', ' ')}</TableCell>
-                    <TableCell className="text-sm">{r.accountName ?? <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{r.accountId}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm font-medium">{formatCurrency(r.spend)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm">{r.daysActive}</TableCell>
-                  </TableRow>
+                  <tr key={`${r.platform}-${r.accountId}`}>
+                    <td style={{ textTransform: 'capitalize' }}>{r.platform.replace('-', ' ')}</td>
+                    <td>{r.accountName ?? <span className="cmp-client">—</span>}</td>
+                    <td className="mono cmp-lbid">{r.accountId}</td>
+                    <td className="r mono inv-total">{formatCurrency(r.spend)}</td>
+                    <td className="r mono inv-num">{r.daysActive}</td>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
-            {!expanded && data.rows.length > 5 && (
-              <p className="px-3 py-2 text-xs text-muted-foreground">
-                Showing top 5 by spend — click Show accounts to see all {data.rows.length}.
-              </p>
-            )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }

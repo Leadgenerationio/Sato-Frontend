@@ -1,20 +1,16 @@
 import { useParams, Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Pencil, Video, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useSop, loomEmbedUrl } from '@/lib/hooks/use-sops';
 import { useUploadUrl } from '@/lib/hooks/use-uploads';
 
-const categoryColors: Record<string, string> = {
-  Operations: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  Finance: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  Onboarding: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  Compliance: 'bg-purple-500/10 text-purple-600 border-purple-200',
-  Campaigns: 'bg-rose-500/10 text-rose-600 border-rose-200',
+// Statto pill variant per SOP category.
+const categoryPill: Record<string, string> = {
+  Operations: 'infosoft',
+  Finance: 'pos',
+  Onboarding: 'soft',
+  Compliance: 'warn',
+  Campaigns: 'gray',
 };
 
 function formatDate(dateStr: string) {
@@ -31,164 +27,132 @@ export function SopDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-40" />
-        <Skeleton className="h-60" />
+      <div className="screen-page">
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--fg2)' }}>Loading SOP…</div>
       </div>
     );
   }
 
   if (error || !sop) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 text-muted-foreground">
-        <p>SOP not found</p>
-        <Link to="/sops">
-          <Button variant="outline">
-            <ArrowLeft className="size-4 mr-2" />Back to SOPs
-          </Button>
-        </Link>
+      <div className="screen-page">
+        <div className="ph-screen">
+          <span className="ph-screen-ic"><ImageIcon className="size-[26px]" /></span>
+          <strong>SOP not found</strong>
+          <Link to="/sops"><button className="btn b-ghost b-sm"><ArrowLeft className="size-[15px]" /> Back to SOPs</button></Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/sops">
-          <Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button>
-        </Link>
-        <div className="flex-1">
-          <PageHeader title={sop.title}>
-            <Badge className={`${categoryColors[sop.category] || ''}`}>
-              {sop.category}
-            </Badge>
-            <Badge variant="secondary">v{sop.version}</Badge>
-            {sop.status === 'draft' && (
-              <Badge variant="outline" className="text-muted-foreground">Draft</Badge>
-            )}
-            {canWrite && (
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/sops/${sop.id}/edit`}>
-                  <Pencil className="size-4 mr-1.5" />
-                  Edit
-                </Link>
-              </Button>
-            )}
-          </PageHeader>
+    <div className="screen-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/sops" className="nc-back" title="Back to SOPs"><ArrowLeft className="size-5" /></Link>
+          <div>
+            <h1 className="ahead-title">{sop.title}</h1>
+            <div className="sop-tags" style={{ marginTop: 6 }}>
+              <span className={'pill p-' + (categoryPill[sop.category] || 'gray')}>{sop.category}</span>
+              <span className="sop-ver">v{sop.version}</span>
+              {sop.status === 'draft' && <span className="pill p-gray">Draft</span>}
+            </div>
+          </div>
         </div>
+        {canWrite && (
+          <div className="page-actions">
+            <Link to={`/sops/${sop.id}/edit`}>
+              <button className="btn b-ghost b-sm"><Pencil className="size-[15px]" /> Edit</button>
+            </Link>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="ct-layout">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="csop-main">
           {embedUrl && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Video className="size-4" /> Walkthrough
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="relative w-full overflow-hidden rounded-md border" style={{ paddingBottom: '56.25%' }}>
-                  <iframe
-                    src={embedUrl}
-                    title="Loom walkthrough"
-                    allowFullScreen
-                    className="absolute inset-0 h-full w-full"
-                  />
-                </div>
-                {sop.loomUrl && (
-                  <a
-                    href={sop.loomUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-muted-foreground hover:underline"
-                  >
-                    Open in Loom →
-                  </a>
-                )}
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <h3 className="statto-title csop-loom" style={{ marginBottom: 16 }}><Video className="size-[18px]" /> Walkthrough</h3>
+              <div style={{ position: 'relative', width: '100%', overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)', paddingBottom: '56.25%' }}>
+                <iframe
+                  src={embedUrl}
+                  title="Loom walkthrough"
+                  allowFullScreen
+                  style={{ position: 'absolute', inset: 0, height: '100%', width: '100%' }}
+                />
+              </div>
+              {sop.loomUrl && (
+                <a
+                  href={sop.loomUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ marginTop: 8, display: 'inline-block', fontSize: 12, color: 'var(--fg2)' }}
+                >
+                  Open in Loom →
+                </a>
+              )}
+            </div>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Content</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-sans leading-relaxed">
-                {sop.content}
-              </pre>
-            </CardContent>
-          </Card>
+          <div className="card pad acard">
+            <h3 className="statto-title nc-h">Content</h3>
+            <pre style={{ fontSize: 14, color: 'var(--fg2)', whiteSpace: 'pre-wrap', fontFamily: 'inherit', lineHeight: 1.6, margin: 0 }}>
+              {sop.content}
+            </pre>
+          </div>
 
           {sop.screenshots.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ImageIcon className="size-4" /> Screenshots ({sop.screenshots.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {sop.screenshots.map((s) => (
-                    <ScreenshotThumb key={s.key} screenshot={s} />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <h3 className="statto-title csop-loom" style={{ marginBottom: 16 }}><ImageIcon className="size-[18px]" /> Screenshots ({sop.screenshots.length})</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                {sop.screenshots.map((s) => (
+                  <ScreenshotThumb key={s.key} screenshot={s} />
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Author</span>
-                <span className="font-medium">{sop.author}</span>
+        <div className="ct-side csop-side">
+          <div className="card pad acard">
+            <h3 className="statto-title nc-h">Details</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13.5 }}>
+                <span style={{ color: 'var(--fg2)' }}>Author</span>
+                <span style={{ fontWeight: 600, color: 'var(--fg1)' }}>{sop.author}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Category</span>
-                <Badge className={`text-xs ${categoryColors[sop.category] || ''}`}>{sop.category}</Badge>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13.5 }}>
+                <span style={{ color: 'var(--fg2)' }}>Category</span>
+                <span className={'pill p-' + (categoryPill[sop.category] || 'gray')}>{sop.category}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Version</span>
-                <span className="font-medium">v{sop.version}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13.5 }}>
+                <span style={{ color: 'var(--fg2)' }}>Version</span>
+                <span style={{ fontWeight: 600, color: 'var(--fg1)' }}>v{sop.version}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
-                <Badge variant={sop.status === 'published' ? 'default' : 'outline'} className="text-xs capitalize">
-                  {sop.status}
-                </Badge>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13.5 }}>
+                <span style={{ color: 'var(--fg2)' }}>Status</span>
+                <span className={'pill p-' + (sop.status === 'published' ? 'pos' : 'gray')} style={{ textTransform: 'capitalize' }}>{sop.status}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Last Updated</span>
-                <span className="font-medium tabular-nums">{formatDate(sop.lastUpdated)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13.5 }}>
+                <span style={{ color: 'var(--fg2)' }}>Last Updated</span>
+                <span style={{ fontWeight: 600, color: 'var(--fg1)' }}>{formatDate(sop.lastUpdated)}</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {sop.tags.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Tags</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-1.5">
-                  {sop.tags.map((t) => (
-                    <Link key={t} to={`/sops?tag=${encodeURIComponent(t)}`}>
-                      <Badge variant="outline" className="hover:bg-muted cursor-pointer">{t}</Badge>
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <h3 className="statto-title nc-h">Tags</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {sop.tags.map((t) => (
+                  <Link key={t} to={`/sops?tag=${encodeURIComponent(t)}`}>
+                    <span className="pill p-gray" style={{ cursor: 'pointer' }}>{t}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -203,14 +167,15 @@ function ScreenshotThumb({ screenshot }: { screenshot: { key: string; name: stri
       href={url ?? '#'}
       target="_blank"
       rel="noopener noreferrer"
-      className="group relative aspect-video overflow-hidden rounded-md border bg-muted"
+      className="group"
+      style={{ position: 'relative', aspectRatio: '16 / 9', overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--gray-50)', display: 'block' }}
       title={screenshot.name}
     >
       {url ? (
         // eslint-disable-next-line jsx-a11y/img-redundant-alt
-        <img src={url} alt={screenshot.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+        <img src={url} alt={screenshot.name} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
       ) : (
-        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading…</div>
+        <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--fg2)' }}>Loading…</div>
       )}
     </a>
   );

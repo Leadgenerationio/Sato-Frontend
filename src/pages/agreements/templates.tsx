@@ -1,14 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pencil, Copy, Archive, FileText, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { FileUpload } from '@/components/shared/file-upload';
 import { EmptyState } from '@/components/shared/empty-state';
 import {
@@ -27,8 +22,13 @@ export function AgreementTemplatesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6">
-        <PageHeader title="Agreement Templates" description="Reusable templates with auto-populated client data" />
+      <div className="screen-page">
+        <div className="page-head">
+          <div>
+            <h1 className="ahead-title">Agreement Templates</h1>
+            <p className="ahead-sub">Reusable templates with auto-populated client data</p>
+          </div>
+        </div>
         <Skeleton className="h-64" />
       </div>
     );
@@ -37,70 +37,76 @@ export function AgreementTemplatesPage() {
   const templates = data ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Agreement Templates" description="Reusable templates with auto-populated client data">
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4 mr-1.5" /> New Template
-        </Button>
-      </PageHeader>
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Agreement Templates</h1>
+          <p className="ahead-sub">Reusable templates with auto-populated client data</p>
+        </div>
+        <div className="page-actions">
+          <button type="button" className="btn b-dark b-sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="size-[15px]" /> New Template
+          </button>
+        </div>
+      </div>
 
       {templates.length === 0 ? (
-        <EmptyState
-          icon={FileText}
-          title="No templates yet"
-          description="Create your first template to auto-populate contracts with client data."
-        />
+        <div className="card acard">
+          <EmptyState
+            icon={FileText}
+            title="No templates yet"
+            description="Create your first template to auto-populate contracts with client data."
+          />
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((t) => (
-            <Card key={t.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6 space-y-3">
-                <div>
-                  <h3 className="font-semibold text-base truncate">{t.name}</h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{t.description ?? '—'}</p>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {t.fieldLayout.length} field{t.fieldLayout.length === 1 ? '' : 's'} placed
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" asChild>
-                    <Link to={`/agreements/templates/${t.id}`}>
-                      <Pencil className="size-3.5 mr-1.5" /> Edit
-                    </Link>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={async () => {
-                      try {
-                        const dup = await duplicate.mutateAsync(t.id);
-                        toast.success(`Duplicated "${t.name}"`);
-                        navigate(`/agreements/templates/${dup.id}`);
-                      } catch (err) {
-                        toast.error(err instanceof Error ? err.message : 'Duplicate failed');
-                      }
-                    }}
-                  >
-                    <Copy className="size-3.5 mr-1.5" /> Duplicate
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={async () => {
-                      if (!confirm(`Archive "${t.name}"? Existing agreements that used this template are unaffected.`)) return;
-                      try {
-                        await archive.mutateAsync(t.id);
-                        toast.success('Template archived');
-                      } catch (err) {
-                        toast.error(err instanceof Error ? err.message : 'Archive failed');
-                      }
-                    }}
-                  >
-                    <Archive className="size-3.5 mr-1.5" /> Archive
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={t.id} className="card pad acard">
+              <div className="mb-3">
+                <h3 className="statto-title truncate">{t.name}</h3>
+                <p className="ac-sub line-clamp-2">{t.description ?? '—'}</p>
+              </div>
+              <div className="ac-sub" style={{ marginBottom: 14 }}>
+                {t.fieldLayout.length} field{t.fieldLayout.length === 1 ? '' : 's'} placed
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link to={`/agreements/templates/${t.id}`}>
+                  <button type="button" className="btn b-ghost b-sm">
+                    <Pencil className="size-[15px]" /> Edit
+                  </button>
+                </Link>
+                <button
+                  type="button"
+                  className="btn b-ghost b-sm"
+                  onClick={async () => {
+                    try {
+                      const dup = await duplicate.mutateAsync(t.id);
+                      toast.success(`Duplicated "${t.name}"`);
+                      navigate(`/agreements/templates/${dup.id}`);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Duplicate failed');
+                    }
+                  }}
+                >
+                  <Copy className="size-[15px]" /> Duplicate
+                </button>
+                <button
+                  type="button"
+                  className="btn b-ghost b-sm"
+                  onClick={async () => {
+                    if (!confirm(`Archive "${t.name}"? Existing agreements that used this template are unaffected.`)) return;
+                    try {
+                      await archive.mutateAsync(t.id);
+                      toast.success('Template archived');
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Archive failed');
+                    }
+                  }}
+                >
+                  <Archive className="size-[15px]" /> Archive
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -142,17 +148,17 @@ function CreateTemplateDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>New Template</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Lead Buyer Service Agreement v3" />
+        <div className="py-2">
+          <div className="nc-field">
+            <label className="nc-label" htmlFor="name">Name</label>
+            <input id="name" className="nc-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Lead Buyer Service Agreement v3" />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="description">Description (optional)</Label>
-            <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Standard service agreement" />
+          <div className="nc-field">
+            <label className="nc-label" htmlFor="description">Description <span className="ag-opt">(optional)</span></label>
+            <input id="description" className="nc-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Standard service agreement" />
           </div>
-          <div className="space-y-1.5">
-            <Label>Template PDF</Label>
+          <div className="nc-field">
+            <label className="nc-label">Template PDF</label>
             {/* FileUpload.onUploaded signature: (result: PresignedUpload, file: File) => void
                 Extract result.key for the R2 key. */}
             <FileUpload
@@ -160,16 +166,16 @@ function CreateTemplateDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               accept="application/pdf"
               onUploaded={(result) => setPdfR2Key(result.key)}
             />
-            {pdfR2Key && <p className="text-xs text-muted-foreground">Uploaded: {pdfR2Key}</p>}
+            {pdfR2Key && <span className="nc-hint">Uploaded: {pdfR2Key}</span>}
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="signerRole">Signer role (optional)</Label>
-            <Input id="signerRole" value={signerRole} onChange={(e) => setSignerRole(e.target.value)} placeholder="e.g. Director" />
+          <div className="nc-field" style={{ marginBottom: 0 }}>
+            <label className="nc-label" htmlFor="signerRole">Signer role <span className="ag-opt">(optional)</span></label>
+            <input id="signerRole" className="nc-input" value={signerRole} onChange={(e) => setSignerRole(e.target.value)} placeholder="e.g. Director" />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={create.isPending}>Create + Edit Fields</Button>
+          <button type="button" className="btn b-ghost b-sm" onClick={() => onOpenChange(false)}>Cancel</button>
+          <button type="button" className="btn b-dark b-sm" onClick={handleSubmit} disabled={create.isPending}>Create + Edit Fields</button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

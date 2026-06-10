@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText } from 'lucide-react';
 import {
@@ -89,45 +88,41 @@ interface SectionProps {
 function SideBySideSection({ title, description, items, selectedId, onSelect, emptyHint }: SectionProps) {
   const selected = items.find((c) => c.id === selectedId) ?? null;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {items.length === 0 ? (
-          <EmptyState icon={FileText} title="Nothing here yet" description={emptyHint} size="compact" />
-        ) : (
-          <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
-            <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
-              {items.map((c) => (
-                <CreativeListItem
-                  key={c.id}
-                  item={toListItem(c)}
-                  selected={selectedId === c.id}
-                  onSelect={() => onSelect(c.id)}
-                  metricsLine={compactMetricsLine(c.campaignMetrics)}
-                />
-              ))}
-            </div>
-            <div className="md:sticky md:top-4 md:self-start">
-              {selected ? (
-                <CreativeDetailPanel
-                  key={selected.id}
-                  creative={toDetail(selected)}
-                  showDecisionControls={false}
-                  metrics={adaptMetrics(selected.campaignMetrics)}
-                />
-              ) : (
-                <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  Select an asset to view it here.
-                </div>
-              )}
-            </div>
+    <div className="card pad">
+      <h3 className="statto-title" style={{ marginBottom: 4 }}>{title}</h3>
+      <p className="lc-sub" style={{ marginBottom: 16 }}>{description}</p>
+      {items.length === 0 ? (
+        <EmptyState icon={FileText} title="Nothing here yet" description={emptyHint} size="compact" />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
+          <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
+            {items.map((c) => (
+              <CreativeListItem
+                key={c.id}
+                item={toListItem(c)}
+                selected={selectedId === c.id}
+                onSelect={() => onSelect(c.id)}
+                metricsLine={compactMetricsLine(c.campaignMetrics)}
+              />
+            ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <div className="md:sticky md:top-4 md:self-start">
+            {selected ? (
+              <CreativeDetailPanel
+                key={selected.id}
+                creative={toDetail(selected)}
+                showDecisionControls={false}
+                metrics={adaptMetrics(selected.campaignMetrics)}
+              />
+            ) : (
+              <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+                Select an asset to view it here.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -161,23 +156,15 @@ export function PortalCreativesPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64" />
-        <Skeleton className="h-64" />
+      <div className="screen">
+        <Skeleton className="h-64 rounded-3xl" />
+        <Skeleton className="h-64 rounded-3xl" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Creatives</h1>
-        <p className="text-muted-foreground">
-          Approved assets currently running on your campaigns.
-        </p>
-      </div>
-
+    <div className="screen">
       <SideBySideSection
         title="Media"
         description={`${media.length} approved asset${media.length === 1 ? '' : 's'}`}

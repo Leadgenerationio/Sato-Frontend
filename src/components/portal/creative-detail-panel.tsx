@@ -1,16 +1,14 @@
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Image as ImageIcon, Video, FileText, Check, X, Clock, AlertCircle } from 'lucide-react';
+import { Image as ImageIcon, Video, FileText, Check, X, Clock, CircleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApproveCreative, useRejectCreative, type CreativeApprovalState } from '@/lib/hooks/use-portal';
+import { StatusPill } from './creative-list-item';
 
-// Sam (jam-video #3, 29-May-2026) — right-hand detail panel that fills as the
-// buyer clicks each row in the side-panel layout. Pulls the full asset, the
-// decision audit, and (Compliance only) the approve / reject controls into
-// one place so there is no more "open in new tab" round-trip.
+// Right-hand detail panel that fills as the buyer clicks each row in the
+// side-panel layout. Restyled to the Statto design (statto card + tokens),
+// preserving the full asset preview, decision audit, approve/reject controls,
+// and the campaign-performance metrics.
 
 export interface CreativeDetailData {
   id: string;
@@ -32,22 +30,8 @@ function iconFor(type: string) {
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
-
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
-function StatusBadge({ status }: { status: CreativeApprovalState['status'] }) {
-  if (status === 'approved') {
-    return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200"><Check className="size-3 mr-1" />Approved</Badge>;
-  }
-  if (status === 'rejected') {
-    return <Badge className="bg-rose-500/10 text-rose-600 border-rose-200"><X className="size-3 mr-1" />Rejected</Badge>;
-  }
-  if (status === 'changes_requested') {
-    return <Badge className="bg-orange-500/10 text-orange-600 border-orange-200">Changes requested</Badge>;
-  }
-  return <Badge className="bg-amber-500/10 text-amber-600 border-amber-200"><Clock className="size-3 mr-1" />Pending review</Badge>;
 }
 
 export interface CampaignMetrics {
@@ -56,7 +40,6 @@ export interface CampaignMetrics {
   spendCurrency: string;
   validLeads: number;
   costPerLead: number | null;
-  /** Why a number is real-zero, surfaced as a tooltip. */
   notes?: { spend?: string; leads?: string };
 }
 
@@ -71,40 +54,29 @@ function fmtMoney(amount: number, currency: string) {
 function MetricsCard({ metrics }: { metrics: CampaignMetrics | null }) {
   if (metrics === null) {
     return (
-      <Card>
-        <CardContent className="py-3 text-xs text-muted-foreground">
-          <p className="flex items-center gap-1.5"><AlertCircle className="size-3.5" />Performance data temporarily unavailable.</p>
-        </CardContent>
-      </Card>
+      <div style={{ background: 'var(--gray-50)', borderRadius: 16, padding: '14px 18px' }}>
+        <p className="lc-sub" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <CircleAlert className="size-[14px]" /> Performance data temporarily unavailable.
+        </p>
+      </div>
     );
   }
   const cpl = metrics.costPerLead;
+  const cell = (value: string, label: string, note?: string) => (
+    <div>
+      <div className="mono" style={{ fontSize: 20, fontWeight: 600, color: 'var(--statto-ink)' }}>{value}</div>
+      <div className="lc-sub" title={note ?? undefined}>{label}{note ? ' *' : ''}</div>
+    </div>
+  );
   return (
-    <Card>
-      <CardContent className="py-3">
-        <p className="text-xs font-medium text-muted-foreground mb-2">
-          Campaign performance · this month
-        </p>
-        <div className="grid grid-cols-3 gap-3 tabular-nums">
-          <div>
-            <p className="text-lg font-semibold">{fmtMoney(metrics.spend, metrics.spendCurrency)}</p>
-            <p className="text-[11px] text-muted-foreground" title={metrics.notes?.spend ?? undefined}>
-              Spend{metrics.notes?.spend ? ' *' : ''}
-            </p>
-          </div>
-          <div>
-            <p className="text-lg font-semibold">{metrics.validLeads.toLocaleString('en-GB')}</p>
-            <p className="text-[11px] text-muted-foreground" title={metrics.notes?.leads ?? undefined}>
-              Valid leads{metrics.notes?.leads ? ' *' : ''}
-            </p>
-          </div>
-          <div>
-            <p className="text-lg font-semibold">{cpl === null ? '—' : fmtMoney(cpl, metrics.spendCurrency)}</p>
-            <p className="text-[11px] text-muted-foreground">Cost per lead</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div style={{ background: 'var(--gray-50)', borderRadius: 16, padding: '16px 18px' }}>
+      <p className="lc-sub" style={{ marginBottom: 10, fontWeight: 500 }}>Campaign performance · this month</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        {cell(fmtMoney(metrics.spend, metrics.spendCurrency), 'Spend', metrics.notes?.spend)}
+        {cell(metrics.validLeads.toLocaleString('en-GB'), 'Valid leads', metrics.notes?.leads)}
+        {cell(cpl === null ? '—' : fmtMoney(cpl, metrics.spendCurrency), 'Cost per lead')}
+      </div>
+    </div>
   );
 }
 
@@ -112,7 +84,7 @@ interface Props {
   creative: CreativeDetailData;
   /** When true (Compliance), show Approve/Reject controls for pending rows. */
   showDecisionControls?: boolean;
-  /** Optional campaign-performance card (Item 3). null = error; undefined = hide entirely. */
+  /** Optional campaign-performance card. null = error; undefined = hide entirely. */
   metrics?: CampaignMetrics | null;
 }
 
@@ -139,10 +111,7 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
 
   async function handleSubmitReject() {
     const trimmed = rejectFeedback.trim();
-    if (trimmed.length === 0) {
-      toast.error('Please tell us what needs to change');
-      return;
-    }
+    if (trimmed.length === 0) { toast.error('Please tell us what needs to change'); return; }
     try {
       await reject.mutateAsync({ creativeId: creative.id, feedback: trimmed });
       toast.success('Creative rejected with feedback');
@@ -153,125 +122,105 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
     }
   }
 
+  // Decision-audit banner tint per status.
+  const auditStyle =
+    ap.status === 'approved' ? { background: 'var(--lime-50)', color: 'var(--green-700)' }
+    : (ap.status === 'rejected' || ap.status === 'changes_requested') ? { background: 'var(--negative-bg)', color: 'var(--negative)' }
+    : { background: 'var(--warning-bg)', color: 'var(--warning)' };
+
   return (
-    <div className="space-y-3">
+    <div className="card pad" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold">{creative.name}</h2>
-          <p className="text-xs text-muted-foreground">
+      <div className="cc-row" style={{ alignItems: 'flex-start' }}>
+        <div style={{ minWidth: 0 }}>
+          <h3 className="statto-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{creative.name}</h3>
+          <p className="lc-sub">
             {creative.campaignName ? <>{creative.campaignName} · </> : null}
-            Uploaded {formatDate(creative.uploadedAt)} · <span className="capitalize">{creative.type}</span>
+            Uploaded {formatDate(creative.uploadedAt)} · <span style={{ textTransform: 'capitalize' }}>{creative.type}</span>
           </p>
         </div>
-        <StatusBadge status={ap.status} />
+        <StatusPill status={ap.status} />
       </div>
 
       {/* Media */}
-      <div className="flex items-center justify-center overflow-hidden rounded-lg border bg-muted/40 min-h-[280px] max-h-[60vh]">
+      <div style={{ background: 'var(--gray-50)', border: '1px solid var(--border)', borderRadius: 16, minHeight: 280, maxHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 16 }}>
         {isImg ? (
-          <img src={creative.signedUrl!} alt={creative.name} className="max-h-[60vh] w-auto object-contain" />
+          <img src={creative.signedUrl!} alt={creative.name} style={{ maxHeight: '56vh', width: 'auto', objectFit: 'contain', borderRadius: 8 }} />
         ) : isVid ? (
-          <video src={creative.signedUrl!} className="max-h-[60vh] w-auto" controls autoPlay muted />
+          <video src={creative.signedUrl!} style={{ maxHeight: '56vh', width: 'auto' }} controls autoPlay muted />
         ) : creative.signedUrl || creative.fileUrl ? (
-          <a
-            href={creative.signedUrl ?? creative.fileUrl ?? '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-600 underline px-6 py-12"
-          >
+          <a href={creative.signedUrl ?? creative.fileUrl ?? '#'} target="_blank" rel="noopener noreferrer" className="cc-open" style={{ padding: '48px 24px' }}>
             Open {creative.name} ↗
           </a>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-muted-foreground py-12">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--fg3)', padding: '48px 0' }}>
             <Icon className="size-8" />
-            <p className="text-xs">No preview available</p>
+            <p className="lc-sub">No preview available</p>
           </div>
         )}
       </div>
 
       {/* Decision audit */}
-      <div className="rounded-lg border p-3 text-sm">
+      <div style={{ ...auditStyle, borderRadius: 12, padding: '11px 14px', fontSize: 13.5, lineHeight: 1.5 }}>
         {ap.status === 'approved' && (
-          <p className="text-emerald-700 dark:text-emerald-400">
-            <Check className="size-4 inline mr-1" />
-            Signed off
-            {ap.decidedByName && <> by <span className="font-medium">{ap.decidedByName}</span></>}
-            {ap.decidedAt && <> on {formatDateTime(ap.decidedAt)}</>}
-          </p>
+          <span><Check className="size-4" style={{ display: 'inline', verticalAlign: '-3px', marginRight: 6 }} />Signed off
+            {ap.decidedByName && <> by <strong>{ap.decidedByName}</strong></>}
+            {ap.decidedAt && <> on {formatDateTime(ap.decidedAt)}</>}</span>
         )}
         {(ap.status === 'rejected' || ap.status === 'changes_requested') && (
-          <div className="space-y-2 text-rose-700 dark:text-rose-400">
-            <p>
-              <X className="size-4 inline mr-1" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span><X className="size-4" style={{ display: 'inline', verticalAlign: '-3px', marginRight: 6 }} />
               {ap.status === 'rejected' ? 'Rejected' : 'Changes requested'}
-              {ap.decidedByName && <> by <span className="font-medium">{ap.decidedByName}</span></>}
-              {ap.decidedAt && <> on {formatDateTime(ap.decidedAt)}</>}
-            </p>
+              {ap.decidedByName && <> by <strong>{ap.decidedByName}</strong></>}
+              {ap.decidedAt && <> on {formatDateTime(ap.decidedAt)}</>}</span>
             {ap.feedback && !/^(na|n\/a|none|-|nil)$/i.test(ap.feedback.trim()) && (
-              <p className="rounded-md bg-rose-50 dark:bg-rose-950/30 p-2 text-foreground">
-                <span className="font-medium">Feedback:</span> {ap.feedback}
-              </p>
+              <span style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', color: 'var(--fg1)' }}>
+                <strong>Feedback:</strong> {ap.feedback}
+              </span>
             )}
           </div>
         )}
         {isPending && (
-          <p className="text-amber-700 dark:text-amber-400">
-            <Clock className="size-4 inline mr-1" />
-            Awaiting your review.
-            {showDecisionControls && ' Each decision is timestamped with your IP for audit.'}
-          </p>
+          <span><Clock className="size-4" style={{ display: 'inline', verticalAlign: '-3px', marginRight: 6 }} />Awaiting your review.
+            {showDecisionControls && ' Each decision is timestamped with your IP for audit.'}</span>
         )}
       </div>
 
       {/* Decision controls (Compliance only, pending only) */}
       {showDecisionControls && isPending && (
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            onClick={handleApprove}
-            disabled={approve.isPending}
-            className="h-11 sm:h-9 flex-1"
-          >
-            <Check className="size-4 mr-1.5" />
-            Approve
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setRejectOpen(true)}
-            className="h-11 sm:h-9 flex-1"
-          >
-            <X className="size-4 mr-1.5" />
-            Reject
-          </Button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn b-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleApprove} disabled={approve.isPending}>
+            <Check className="size-4" /> Approve
+          </button>
+          <button className="btn b-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setRejectOpen(true)}>
+            <X className="size-4" /> Reject
+          </button>
         </div>
       )}
 
-      {/* Campaign performance (Item 3) */}
+      {/* Campaign performance */}
       {metrics !== undefined && <MetricsCard metrics={metrics} />}
 
-      {/* Reject dialog, scoped to this detail panel */}
+      {/* Reject dialog */}
       <Dialog open={rejectOpen} onOpenChange={(open) => { if (!open) { setRejectOpen(false); setRejectFeedback(''); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reject creative</DialogTitle>
-            <DialogDescription>
-              Tell the team what needs to change. They will see your feedback and revise the asset.
-            </DialogDescription>
+            <DialogDescription>Tell the team what needs to change. They will see your feedback and revise the asset.</DialogDescription>
           </DialogHeader>
           <textarea
-            className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="acct-input"
+            style={{ minHeight: 120, resize: 'vertical' }}
             placeholder="What needs to change? (e.g. logo too small, wrong call-to-action)"
             value={rejectFeedback}
             onChange={(e) => setRejectFeedback(e.target.value)}
             autoFocus
           />
           <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button variant="outline" onClick={() => { setRejectOpen(false); setRejectFeedback(''); }} disabled={reject.isPending}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleSubmitReject} disabled={reject.isPending || rejectFeedback.trim().length === 0}>
+            <button className="btn b-ghost b-sm" onClick={() => { setRejectOpen(false); setRejectFeedback(''); }} disabled={reject.isPending}>Cancel</button>
+            <button className="btn b-sm" style={{ background: 'var(--negative)', color: '#fff' }} onClick={handleSubmitReject} disabled={reject.isPending || rejectFeedback.trim().length === 0}>
               Submit rejection
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
