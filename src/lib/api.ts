@@ -2,9 +2,10 @@ import type { ApiResponse, AuthTokens } from '@/types';
 import { API_URL } from '@/lib/env';
 import { getDevMock } from '@/lib/dev-mocks';
 
-// Dev-only: when the login bypass is on (no backend), serve canned portal data
-// from dev-mocks.ts. Hard-gated to import.meta.env.DEV so it can never ship.
-const USE_DEV_MOCKS = import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === 'true';
+// Dev-only: serve canned data from dev-mocks.ts when VITE_USE_MOCKS=true (i.e.
+// no backend). Decoupled from the login bypass so the app can auto-login against
+// a REAL backend (VITE_API_URL) while mocks stay off. Hard-gated to DEV.
+const USE_DEV_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true';
 
 class ApiClient {
   private token: string | null = null;

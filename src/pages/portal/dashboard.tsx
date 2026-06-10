@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Megaphone, Users, ReceiptText, BadgeCheck, ChevronDown, ArrowUpRight,
@@ -31,6 +31,66 @@ function niceTicks(maxValue: number): number[] {
 
 function MockTag({ label = 'sample' }: { label?: string }) {
   return <span className="mock-flag" title="Placeholder — backend does not supply this field yet">{label}</span>;
+}
+
+// ── Time-period presets that drive the deliveries chart + ad-spend breakdown ──
+const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const dayOffset = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); };
+const monthStart = (back = 0) => { const n = new Date(); return isoDate(new Date(n.getFullYear(), n.getMonth() - back, 1)); };
+const monthEnd = (back = 0) => { const n = new Date(); return isoDate(new Date(n.getFullYear(), n.getMonth() - back + 1, 0)); };
+const weekStart = () => { const n = new Date(); const dow = n.getDay() === 0 ? 6 : n.getDay() - 1; return isoDate(new Date(n.getFullYear(), n.getMonth(), n.getDate() - dow)); };
+
+interface Period { value: string; label: string; from: () => string; to: () => string; }
+
+// Deliveries can use any range (daily lead rows exist for any window).
+const DELIVERY_PERIODS: Period[] = [
+  { value: 'last_14', label: 'Last 14 days', from: () => dayOffset(-13), to: () => dayOffset(0) },
+  { value: 'last_7', label: 'Last 7 days', from: () => dayOffset(-6), to: () => dayOffset(0) },
+  { value: 'this_month', label: 'This month', from: () => monthStart(0), to: () => dayOffset(0) },
+  { value: 'last_month', label: 'Last month', from: () => monthStart(1), to: () => monthEnd(1) },
+];
+// Ad spend needs a LeadByte preset window for the per-source breakdown.
+const SPEND_PERIODS: Period[] = [
+  { value: 'this_month', label: 'This Month', from: () => monthStart(0), to: () => dayOffset(0) },
+  { value: 'last_month', label: 'Last Month', from: () => monthStart(1), to: () => monthEnd(1) },
+  { value: 'this_week', label: 'This Week', from: () => weekStart(), to: () => dayOffset(0) },
+];
+const rangeOf = (periods: Period[], value: string) => {
+  const p = periods.find((x) => x.value === value) ?? periods[0];
+  return { from: p.from(), to: p.to() };
+};
+const labelOf = (periods: Period[], value: string) => (periods.find((x) => x.value === value) ?? periods[0]).label;
+
+// Interactive period selector (replaces the old static `.dd` label).
+function PeriodDropdown({ value, options, onChange }: { value: string; options: Period[]; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+  return (
+    <span className="dd-wrap" ref={ref}>
+      <button type="button" className="dd" onClick={() => setOpen((o) => !o)}>
+        {labelOf(options, value)} <ChevronDown className="size-[15px]" />
+      </button>
+      {open && (
+        <div className="dd-menu">
+          {options.map((o) => (
+            <button
+              type="button"
+              key={o.value}
+              className={'dd-opt' + (o.value === value ? ' on' : '')}
+              onClick={() => { onChange(o.value); setOpen(false); }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
 }
 
 // ── Lead deliveries chart (custom bar/area, ported from the design) ──
@@ -87,6 +147,12 @@ interface DashData {
   compliance: { cleared: number; actionNeeded: number; total: number } | null;
   creatives: { live: number; review: number } | null;
   userName: string;
+  deliveryPeriod: string;
+  spendPeriod: string;
+  deliveryPeriodLabel: string;
+  spendPeriodLabel: string;
+  onDeliveryPeriod: (v: string) => void;
+  onSpendPeriod: (v: string) => void;
 }
 
 function StatCard({ stat }: { stat: DashData['stats'][number] }) {
@@ -114,9 +180,9 @@ function AdSpendCard({ d }: { d: DashData }) {
       <div className="lc-head">
         <div>
           <h3 className="statto-title">Ad Spend by Platform</h3>
-          <p className="lc-sub">This month · across {d.adSpend.length} platform{d.adSpend.length === 1 ? '' : 's'}</p>
+          <p className="lc-sub">{d.spendPeriodLabel} · across {d.adSpend.length} platform{d.adSpend.length === 1 ? '' : 's'}</p>
         </div>
-        <span className="dd">This Month <ChevronDown className="size-[15px]" /></span>
+        <PeriodDropdown value={d.spendPeriod} options={SPEND_PERIODS} onChange={d.onSpendPeriod} />
       </div>
       <div className="spend-grid">
         <div className="spend-summary">
@@ -346,8 +412,8 @@ function DashboardGrid({ d }: { d: DashData }) {
       case 'deliveries': return (
         <div className="card pad lead-card">
           <div className="lc-head">
-            <div><h3 className="statto-title">Recent Lead Deliveries</h3><p className="lc-sub">Last 14 days</p></div>
-            <span className="dd">This Period <ChevronDown className="size-[15px]" /></span>
+            <div><h3 className="statto-title">Recent Lead Deliveries</h3><p className="lc-sub">{d.deliveryPeriodLabel}</p></div>
+            <PeriodDropdown value={d.deliveryPeriod} options={DELIVERY_PERIODS} onChange={d.onDeliveryPeriod} />
           </div>
           <LeadChart deliveries={d.deliveries} />
         </div>
@@ -434,14 +500,19 @@ export function PortalDashboardPage() {
   const { user } = useAuth();
   const { data: dashboard, isLoading } = usePortalDashboard();
   const { data: invoices } = usePortalInvoices();
-  // "This month" range matches the leads page default → shared react-query cache.
-  const monthRange = useMemo(() => {
-    const now = new Date();
-    const iso = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-    return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(now) };
-  }, []);
-  const { data: leadsData } = usePortalLeads(monthRange);
   const { data: compliance } = usePortalCompliance();
+
+  // Independent period selectors for the two cards.
+  const [deliveryPeriod, setDeliveryPeriod] = useState('last_14');
+  const [spendPeriod, setSpendPeriod] = useState('this_month');
+  const deliveryRange = useMemo(() => rangeOf(DELIVERY_PERIODS, deliveryPeriod), [deliveryPeriod]);
+  const spendRange = useMemo(() => rangeOf(SPEND_PERIODS, spendPeriod), [spendPeriod]);
+  // Fixed "this month" range for lead quality (independent of the dropdowns).
+  const monthRange = useMemo(() => ({ from: monthStart(0), to: dayOffset(0) }), []);
+
+  const { data: deliveryLeads } = usePortalLeads(deliveryRange);
+  const { data: spendLeads } = usePortalLeads(spendRange);
+  const { data: leadsData } = usePortalLeads(monthRange);
 
   const dashData = useMemo<DashData | null>(() => {
     if (!dashboard) return null;
@@ -453,20 +524,29 @@ export function PortalDashboardPage() {
       { id: 'agreement', icon: BadgeCheck, value: dashboard.agreementSigned ? 'Signed' : 'Pending', label: 'Agreement', badge: dashboard.agreementSigned ? 'Active' : 'Action', lime: dashboard.agreementSigned },
     ];
 
-    const deliveries = (dashboard.recentLeads ?? []).map((r) => ({
-      d: new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-      v: r.leads,
-    }));
+    // Recent lead deliveries — daily valid-lead volume across the selected
+    // window, gap-filled so every day in range renders a bar.
+    const dRows = deliveryLeads?.leads ?? [];
+    const daySums = new Map<string, number>();
+    for (const r of dRows) daySums.set(r.date, (daySums.get(r.date) ?? 0) + r.validLeads);
+    const deliveries: { d: string; v: number }[] = [];
+    {
+      const start = new Date(`${deliveryRange.from}T00:00:00`);
+      const end = new Date(`${deliveryRange.to}T00:00:00`);
+      for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+        deliveries.push({ d: dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), v: daySums.get(isoDate(dt)) ?? 0 });
+      }
+    }
 
     // Ad spend — real leads + spend per platform from the LeadByte "by source"
-    // breakdown (this-month preset). Falls back to the dashboard's spend-only
-    // adSpendByPlatform if the breakdown isn't available for the range.
-    const bySource = leadsData?.bySource ?? [];
+    // breakdown for the selected preset window. Falls back to the dashboard's
+    // spend-only adSpendByPlatform (MTD) only when "This Month" is selected.
+    const bySource = spendLeads?.bySource ?? [];
     let adSpend: DashData['adSpend'] = bySource.map((r, i) => ({
       platform: platformLabel(r.platform), amount: r.spend, leads: r.leads, currency: r.currency, color: PALETTE[i % PALETTE.length],
     }));
     let adSpendReal = adSpend.length > 0;
-    if (adSpend.length === 0 && dashboard.adSpendByPlatform?.length) {
+    if (adSpend.length === 0 && spendPeriod === 'this_month' && dashboard.adSpendByPlatform?.length) {
       adSpend = dashboard.adSpendByPlatform.map((r, i) => ({
         platform: platformLabel(r.platform), amount: r.spend, leads: 0, currency: r.currency, color: PALETTE[i % PALETTE.length],
       }));
@@ -521,8 +601,14 @@ export function PortalDashboardPage() {
       compliance: complianceSummary,
       creatives: creativesSummary,
       userName: user?.name ?? '—',
+      deliveryPeriod,
+      spendPeriod,
+      deliveryPeriodLabel: labelOf(DELIVERY_PERIODS, deliveryPeriod),
+      spendPeriodLabel: labelOf(SPEND_PERIODS, spendPeriod),
+      onDeliveryPeriod: setDeliveryPeriod,
+      onSpendPeriod: setSpendPeriod,
     };
-  }, [dashboard, leadsData, invoices, compliance, user]);
+  }, [dashboard, deliveryLeads, spendLeads, leadsData, invoices, compliance, user, deliveryRange, spendRange, deliveryPeriod, spendPeriod]);
 
   const navigate = useNavigate();
 

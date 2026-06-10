@@ -59,28 +59,54 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // backend session flow entirely and seed a mock owner so the dashboard renders
 // without a running backend. Hard-gated to import.meta.env.DEV so it can never
 // ship in a production build.
-const BYPASS_AUTH = import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === 'true';
-// role 'owner' so the bypass lands on the redesigned admin dashboard at "/".
-// Switch role to 'client' to preview the redesigned /portal instead.
+// Two independent dev conveniences, both hard-gated to import.meta.env.DEV:
+//
+//  • USE_MOCKS (VITE_USE_MOCKS=true): no backend — serve canned data and seed a
+//    fake user whose role comes from VITE_BYPASS_ROLE (owner → "/", client →
+//    "/portal"). Fake user carries no real token.
+//  • AUTO_LOGIN (VITE_BYPASS_AUTH=true + VITE_BYPASS_EMAIL/PASSWORD): real
+//    backend (VITE_API_URL) — silently perform a real login on first load so we
+//    skip the manual login screen but obtain a valid token + REAL data.
+const DEV = import.meta.env.DEV;
+const USE_MOCKS = DEV && import.meta.env.VITE_USE_MOCKS === 'true';
+const BYPASS_ROLE = ((import.meta.env.VITE_BYPASS_ROLE as User['role']) || 'owner');
+const IS_CLIENT_BYPASS = BYPASS_ROLE === 'client' || BYPASS_ROLE === 'client_admin';
+const AUTO_LOGIN_EMAIL = DEV ? (import.meta.env.VITE_BYPASS_EMAIL as string | undefined) : undefined;
+const AUTO_LOGIN_PASSWORD = DEV ? (import.meta.env.VITE_BYPASS_PASSWORD as string | undefined) : undefined;
+const AUTO_LOGIN =
+  DEV && import.meta.env.VITE_BYPASS_AUTH === 'true' && !USE_MOCKS && !!AUTO_LOGIN_EMAIL && !!AUTO_LOGIN_PASSWORD;
+// Offline mode seeds a fake user; real-backend auto-login does not.
+const SEED_FAKE_USER = USE_MOCKS && import.meta.env.VITE_BYPASS_AUTH === 'true';
 const MOCK_USER: User = {
   id: 'dev-bypass',
-  email: 'owner@stato.app',
-  name: 'Sam Owner',
-  role: 'owner',
+  email: IS_CLIENT_BYPASS ? 'client@stato.app' : 'owner@stato.app',
+  name: IS_CLIENT_BYPASS ? 'Coby Benson' : 'Sam Owner',
+  role: BYPASS_ROLE,
   businessId: 'dev-business',
-  clientId: null,
+  clientId: IS_CLIENT_BYPASS ? 'dev-client' : null,
   isActive: true,
   isPrimaryOwner: true,
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(BYPASS_AUTH ? MOCK_USER : null);
+  const [user, setUser] = useState<User | null>(SEED_FAKE_USER ? MOCK_USER : null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
-  const [loading, setLoading] = useState(!BYPASS_AUTH);
+  const [loading, setLoading] = useState(!SEED_FAKE_USER);
 
   useEffect(() => {
-    if (BYPASS_AUTH) return;
-    restoreSession();
+    if (SEED_FAKE_USER) return; // offline mock user already seeded
+    let cancelled = false;
+    (async () => {
+      const existing = localStorage.getItem('accessToken');
+      // Dev auto-login against the real backend — skip the manual login screen.
+      if (!existing && AUTO_LOGIN && AUTO_LOGIN_EMAIL && AUTO_LOGIN_PASSWORD) {
+        const res = await login(AUTO_LOGIN_EMAIL, AUTO_LOGIN_PASSWORD);
+        if (!cancelled && res.user) { setLoading(false); return; }
+        // auto-login failed → fall through to the normal session/login flow
+      }
+      if (!cancelled) await restoreSession();
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   async function restoreSession() {
