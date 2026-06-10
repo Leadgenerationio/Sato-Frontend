@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
-  Mail, Lock, Eye, EyeOff, CircleAlert, ArrowRight, Check, KeyRound,
+  Mail, Lock, Eye, EyeOff, CircleAlert, ArrowRight, Check,
   BarChart3, Users, ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -97,7 +97,6 @@ export function LoginPage() {
       {/* Form panel */}
       <div className="auth-form-wrap">
         <form className="auth-card" onSubmit={handleSubmit} noValidate>
-          <div className="auth-eyebrow">Admin access</div>
           <h1 className="auth-title">Sign in to Stato</h1>
           <p className="auth-sub">Use your Stato admin credentials. Access is restricted to authorised staff accounts.</p>
 
@@ -136,19 +135,11 @@ export function LoginPage() {
               <span className="box"><Check className="size-[13px]" strokeWidth={3} /></span>
               Keep me signed in
             </label>
-            <a className="link" href="#">Forgot password?</a>
           </div>
 
           <button type="submit" className="btn b-primary b-block" disabled={loading}>
             {loading ? <><span className="spinner" /> Signing in…</> : <>Sign in <ArrowRight className="size-[16px]" /></>}
           </button>
-
-          <div className="auth-divider">or continue with</div>
-          <button type="button" className="btn b-ghost b-block" disabled title="SSO is not configured for this demo">
-            <KeyRound className="size-[16px]" /> Single sign-on (SSO)
-          </button>
-
-          <div className="auth-switch">Not an admin? <Link to="/portal">Go to the client portal</Link></div>
         </form>
       </div>
     </div>
