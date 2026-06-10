@@ -3,6 +3,7 @@ import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { getThemeRoot } from "@/lib/theme-root"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -53,7 +54,7 @@ function SheetContent({
   showCloseButton?: boolean
 }) {
   return (
-    <SheetPortal>
+    <SheetPortal container={getThemeRoot()}>
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
