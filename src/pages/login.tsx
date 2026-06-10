@@ -3,9 +3,11 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   Mail, Lock, Eye, EyeOff, CircleAlert, ArrowRight, Check,
-  BarChart3, Users, ShieldCheck,
+  BarChart3, Users, ShieldCheck, KeyRound, ArrowLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_URL } from '@/lib/env';
+import type { ApiResponse } from '@/types';
 
 // Stato — Admin Sign In. Restyled to the Claude Design handoff
 // (Admin Login.html): ink-green brand panel + white form panel. Wired to the
@@ -27,6 +29,103 @@ export function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // ─── Forgot-password OTP flow (Sam 2026-06-10) ───
+  // 'signin' shows the normal form; the other steps drive the 3-step reset.
+  const [mode, setMode] = useState<'signin' | 'fp-email' | 'fp-code' | 'fp-newpw'>('signin');
+  const [fpEmail, setFpEmail] = useState('');
+  const [fpCode, setFpCode] = useState('');
+  const [fpResetToken, setFpResetToken] = useState('');
+  const [fpNewPw, setFpNewPw] = useState('');
+  const [fpConfirm, setFpConfirm] = useState('');
+  const [fpShowPw, setFpShowPw] = useState(false);
+  const [fpError, setFpError] = useState('');
+  const [fpLoading, setFpLoading] = useState(false);
+
+  function openForgot() {
+    setFpEmail(email.trim());
+    setFpCode('');
+    setFpResetToken('');
+    setFpNewPw('');
+    setFpConfirm('');
+    setFpError('');
+    setMode('fp-email');
+  }
+
+  function backToSignin() {
+    setFpError('');
+    setMode('signin');
+  }
+
+  // Step 1 — request a code. Backend always returns success (no enumeration),
+  // so we always advance to the code step.
+  async function fpSendCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fpEmail.trim())) { setFpError('Enter a valid email address'); return; }
+    setFpLoading(true);
+    setFpError('');
+    try {
+      await fetch(`${API_URL}/api/v1/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: fpEmail.trim() }),
+      });
+      toast.success('Code sent', { description: 'If that email is registered, a 6-digit code is on its way.' });
+      setMode('fp-code');
+    } catch {
+      setFpError('Network error — please try again');
+    } finally { setFpLoading(false); }
+  }
+
+  // Step 2 — verify the code, capture the reset token.
+  async function fpVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!/^\d{6}$/.test(fpCode.trim())) { setFpError('Enter the 6-digit code'); return; }
+    setFpLoading(true);
+    setFpError('');
+    try {
+      const res = await fetch(`${API_URL}/api/v1/auth/verify-reset-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: fpEmail.trim(), code: fpCode.trim() }),
+      });
+      const data: ApiResponse<{ resetToken: string }> = await res.json();
+      if (data.status === 'success' && data.data?.resetToken) {
+        setFpResetToken(data.data.resetToken);
+        setMode('fp-newpw');
+      } else {
+        setFpError(data.message || 'Invalid or expired code');
+      }
+    } catch {
+      setFpError('Network error — please try again');
+    } finally { setFpLoading(false); }
+  }
+
+  // Step 3 — set the new password.
+  async function fpResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (fpNewPw.length < 8) { setFpError('Password must be at least 8 characters'); return; }
+    if (fpNewPw !== fpConfirm) { setFpError('Passwords do not match'); return; }
+    setFpLoading(true);
+    setFpError('');
+    try {
+      const res = await fetch(`${API_URL}/api/v1/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resetToken: fpResetToken, newPassword: fpNewPw }),
+      });
+      const data: ApiResponse<{ message: string }> = await res.json();
+      if (data.status === 'success') {
+        toast.success('Password reset', { description: 'You can now sign in with your new password.' });
+        setPassword('');
+        setMode('signin');
+      } else {
+        setFpError(data.message || 'Could not reset password — start again');
+      }
+    } catch {
+      setFpError('Network error — please try again');
+    } finally { setFpLoading(false); }
+  }
 
   if (user) {
     const isPortal = user.role === 'client' || user.role === 'client_admin';
@@ -96,51 +195,141 @@ export function LoginPage() {
 
       {/* Form panel */}
       <div className="auth-form-wrap">
-        <form className="auth-card" onSubmit={handleSubmit} noValidate>
-          <h1 className="auth-title">Sign in to Stato</h1>
-          <p className="auth-sub">Use your Stato admin credentials. Access is restricted to authorised staff accounts.</p>
+        {mode === 'signin' ? (
+          <form className="auth-card" onSubmit={handleSubmit} noValidate>
+            <h1 className="auth-title">Sign in to Stato</h1>
+            <p className="auth-sub">Use your Stato admin credentials. Access is restricted to authorised staff accounts.</p>
 
-          {serverError && (
-            <div className="field-err" style={{ marginBottom: 16 }}><CircleAlert className="size-[13px]" />{serverError}</div>
-          )}
+            {serverError && (
+              <div className="field-err" style={{ marginBottom: 16 }}><CircleAlert className="size-[13px]" />{serverError}</div>
+            )}
 
-          <div className="field">
-            <label className="field-label" htmlFor="email">Work email</label>
-            <div className={'field-input' + (errors.email ? ' err' : '')}>
-              <span className="lic"><Mail className="size-[18px]" /></span>
-              <input id="email" type="email" autoComplete="username" placeholder="you@stato.com"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: undefined })); }} />
+            <div className="field">
+              <label className="field-label" htmlFor="email">Work email</label>
+              <div className={'field-input' + (errors.email ? ' err' : '')}>
+                <span className="lic"><Mail className="size-[18px]" /></span>
+                <input id="email" type="email" autoComplete="username" placeholder="you@stato.com"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: undefined })); }} />
+              </div>
+              {errors.email && <div className="field-err"><CircleAlert className="size-[13px]" />{errors.email}</div>}
             </div>
-            {errors.email && <div className="field-err"><CircleAlert className="size-[13px]" />{errors.email}</div>}
-          </div>
 
-          <div className="field">
-            <label className="field-label" htmlFor="password">Password</label>
-            <div className={'field-input' + (errors.password ? ' err' : '')}>
-              <span className="lic"><Lock className="size-[18px]" /></span>
-              <input id="password" type={show ? 'text' : 'password'} autoComplete="current-password" placeholder="••••••••"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((p) => ({ ...p, password: undefined })); }} />
-              <button type="button" className="field-eye" tabIndex={-1} title={show ? 'Hide' : 'Show'} onClick={() => setShow((s) => !s)}>
-                {show ? <EyeOff className="size-[17px]" /> : <Eye className="size-[17px]" />}
-              </button>
+            <div className="field">
+              <label className="field-label" htmlFor="password">Password</label>
+              <div className={'field-input' + (errors.password ? ' err' : '')}>
+                <span className="lic"><Lock className="size-[18px]" /></span>
+                <input id="password" type={show ? 'text' : 'password'} autoComplete="current-password" placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((p) => ({ ...p, password: undefined })); }} />
+                <button type="button" className="field-eye" tabIndex={-1} title={show ? 'Hide' : 'Show'} onClick={() => setShow((s) => !s)}>
+                  {show ? <EyeOff className="size-[17px]" /> : <Eye className="size-[17px]" />}
+                </button>
+              </div>
+              {errors.password && <div className="field-err"><CircleAlert className="size-[13px]" />{errors.password}</div>}
             </div>
-            {errors.password && <div className="field-err"><CircleAlert className="size-[13px]" />{errors.password}</div>}
-          </div>
 
-          <div className="field-row">
-            <label className="checkbox">
-              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-              <span className="box"><Check className="size-[13px]" strokeWidth={3} /></span>
-              Keep me signed in
-            </label>
-          </div>
+            <div className="field-row">
+              <label className="checkbox">
+                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                <span className="box"><Check className="size-[13px]" strokeWidth={3} /></span>
+                Keep me signed in
+              </label>
+              <button type="button" className="link" onClick={openForgot}>Forgot password?</button>
+            </div>
 
-          <button type="submit" className="btn b-primary b-block" disabled={loading}>
-            {loading ? <><span className="spinner" /> Signing in…</> : <>Sign in <ArrowRight className="size-[16px]" /></>}
-          </button>
-        </form>
+            <button type="submit" className="btn b-primary b-block" disabled={loading}>
+              {loading ? <><span className="spinner" /> Signing in…</> : <>Sign in <ArrowRight className="size-[16px]" /></>}
+            </button>
+          </form>
+        ) : (
+          <form
+            className="auth-card"
+            onSubmit={mode === 'fp-email' ? fpSendCode : mode === 'fp-code' ? fpVerifyCode : fpResetPassword}
+            noValidate
+          >
+            <button type="button" className="link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 14 }} onClick={backToSignin}>
+              <ArrowLeft className="size-[14px]" /> Back to sign in
+            </button>
+
+            <h1 className="auth-title">Reset your password</h1>
+            <p className="auth-sub">
+              {mode === 'fp-email' && 'Enter your work email and we’ll send a 6-digit code.'}
+              {mode === 'fp-code' && `Enter the 6-digit code sent to ${fpEmail}.`}
+              {mode === 'fp-newpw' && 'Choose a new password for your account.'}
+            </p>
+
+            {fpError && (
+              <div className="field-err" style={{ marginBottom: 16 }}><CircleAlert className="size-[13px]" />{fpError}</div>
+            )}
+
+            {mode === 'fp-email' && (
+              <div className="field">
+                <label className="field-label" htmlFor="fp-email">Work email</label>
+                <div className="field-input">
+                  <span className="lic"><Mail className="size-[18px]" /></span>
+                  <input id="fp-email" type="email" autoComplete="username" placeholder="you@stato.com"
+                    value={fpEmail} autoFocus
+                    onChange={(e) => { setFpEmail(e.target.value); if (fpError) setFpError(''); }} />
+                </div>
+              </div>
+            )}
+
+            {mode === 'fp-code' && (
+              <div className="field">
+                <label className="field-label" htmlFor="fp-code">6-digit code</label>
+                <div className="field-input">
+                  <span className="lic"><KeyRound className="size-[18px]" /></span>
+                  <input id="fp-code" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength={6}
+                    value={fpCode} autoFocus
+                    style={{ letterSpacing: 4, fontVariantNumeric: 'tabular-nums' }}
+                    onChange={(e) => { setFpCode(e.target.value.replace(/\D/g, '').slice(0, 6)); if (fpError) setFpError(''); }} />
+                </div>
+                <button type="button" className="link" style={{ marginTop: 8 }} onClick={fpSendCode} disabled={fpLoading}>
+                  Resend code
+                </button>
+              </div>
+            )}
+
+            {mode === 'fp-newpw' && (
+              <>
+                <div className="field">
+                  <label className="field-label" htmlFor="fp-newpw">New password</label>
+                  <div className="field-input">
+                    <span className="lic"><Lock className="size-[18px]" /></span>
+                    <input id="fp-newpw" type={fpShowPw ? 'text' : 'password'} autoComplete="new-password" placeholder="Min 8 characters"
+                      value={fpNewPw} autoFocus
+                      onChange={(e) => { setFpNewPw(e.target.value); if (fpError) setFpError(''); }} />
+                    <button type="button" className="field-eye" tabIndex={-1} title={fpShowPw ? 'Hide' : 'Show'} onClick={() => setFpShowPw((s) => !s)}>
+                      {fpShowPw ? <EyeOff className="size-[17px]" /> : <Eye className="size-[17px]" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="fp-confirm">Confirm new password</label>
+                  <div className="field-input">
+                    <span className="lic"><Lock className="size-[18px]" /></span>
+                    <input id="fp-confirm" type={fpShowPw ? 'text' : 'password'} autoComplete="new-password" placeholder="Re-enter the new password"
+                      value={fpConfirm}
+                      onChange={(e) => { setFpConfirm(e.target.value); if (fpError) setFpError(''); }} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <button type="submit" className="btn b-primary b-block" disabled={fpLoading}>
+              {fpLoading ? (
+                <><span className="spinner" /> Working…</>
+              ) : mode === 'fp-email' ? (
+                <>Send code <ArrowRight className="size-[16px]" /></>
+              ) : mode === 'fp-code' ? (
+                <>Verify code <ArrowRight className="size-[16px]" /></>
+              ) : (
+                <>Reset password <ArrowRight className="size-[16px]" /></>
+              )}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
