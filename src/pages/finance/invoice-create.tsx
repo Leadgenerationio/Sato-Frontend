@@ -1,14 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DatePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Plus, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Loader2, Check, ChevronDown, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoiceClients, useCreateInvoice, type LineItem, type InvoiceClient } from '@/lib/hooks/use-invoices';
 
@@ -125,7 +119,7 @@ export function InvoiceCreatePage() {
 
   if (clientsLoading) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="screen-page">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-96" />
       </div>
@@ -133,170 +127,137 @@ export function InvoiceCreatePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to="/finance/invoices">
-          <Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button>
-        </Link>
-        <PageHeader title="Create Invoice" description="Create a new invoice and push to Xero" />
+    <div className="screen-page nc-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/finance/invoices" className="nc-back" title="Back to invoices">
+            <ArrowLeft className="size-5" />
+          </Link>
+          <div>
+            <h1 className="ahead-title">Create Invoice</h1>
+            <p className="ahead-sub">Create a new invoice and push to Xero</p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Main Form */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base">Line Items</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {lines.map((line, i) => (
-                <div
-                  key={line.id}
-                  className="grid grid-cols-1 gap-3 rounded-md border p-3 sm:grid-cols-12 sm:items-end sm:rounded-none sm:border-0 sm:p-0"
+        <div className="ci-layout">
+          <div className="card pad acard ci-lines">
+            <h3 className="statto-title nc-h">Line Items</h3>
+            <div className="ci-line-head">
+              <span>Description</span><span>Qty</span><span>Unit Price</span><span className="r">Amount</span><span></span>
+            </div>
+            {lines.map((line, i) => (
+              <div key={line.id} className="ci-line">
+                <input
+                  className="nc-input"
+                  placeholder="Lead type…"
+                  value={line.description}
+                  onChange={(e) => updateLine(i, 'description', e.target.value)}
+                />
+                <input
+                  className="nc-input r"
+                  type="number"
+                  min={1}
+                  value={line.quantity === 0 ? '' : line.quantity}
+                  onChange={(e) => updateLine(i, 'quantity', e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                />
+                <input
+                  className="nc-input"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="0.00"
+                  value={line.unitPrice === 0 ? '' : line.unitPrice}
+                  onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                />
+                <span className="ci-amt mono">{formatCurrency(line.amount, currency)}</span>
+                <button
+                  type="button"
+                  className="ci-line-x"
+                  onClick={() => removeLine(i)}
+                  disabled={lines.length === 1}
+                  title="Remove line"
                 >
-                  <div className="sm:col-span-5">
-                    <Label className="text-xs text-muted-foreground sm:hidden">Description</Label>
-                    {i === 0 && <Label className="hidden text-xs text-muted-foreground sm:block">Description</Label>}
-                    <Input
-                      value={line.description}
-                      onChange={(e) => updateLine(i, 'description', e.target.value)}
-                      placeholder="Lead type..."
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 sm:col-span-7 sm:grid-cols-7">
-                    <div className="sm:col-span-2">
-                      <Label className="text-xs text-muted-foreground sm:hidden">Qty</Label>
-                      {i === 0 && <Label className="hidden text-xs text-muted-foreground sm:block">Qty</Label>}
-                      <Input
-                        type="number"
-                        min={1}
-                        value={line.quantity === 0 ? '' : line.quantity}
-                        onChange={(e) => updateLine(i, 'quantity', e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label className="text-xs text-muted-foreground sm:hidden">Unit Price</Label>
-                      {i === 0 && <Label className="hidden text-xs text-muted-foreground sm:block">Unit Price</Label>}
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={line.unitPrice === 0 ? '' : line.unitPrice}
-                        onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </div>
-                    <div className="sm:col-span-2 sm:text-right">
-                      <Label className="text-xs text-muted-foreground sm:hidden">Amount</Label>
-                      {i === 0 && <Label className="hidden text-xs text-muted-foreground sm:block">Amount</Label>}
-                      <p className="flex h-9 items-center text-sm font-medium tabular-nums sm:justify-end">
-                        {formatCurrency(line.amount, currency)}
-                      </p>
-                    </div>
-                    <div className="flex items-end justify-end sm:col-span-1">
-                      {lines.length > 1 && (
-                        <Button type="button" variant="ghost" size="icon" className="size-9" onClick={() => removeLine(i)}>
-                          <Trash2 className="size-4 text-muted-foreground" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <Button type="button" variant="outline" size="sm" onClick={addLine}>
-                <Plus className="size-4 mr-1.5" />
-                Add Line
-              </Button>
-
-              <Separator />
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium tabular-nums">{formatCurrency(subtotal, currency)}</span>
-                </div>
-                {addVat && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">VAT (20%)</span>
-                    <span className="font-medium tabular-nums">{formatCurrency(vatAmount, currency)}</span>
-                  </div>
-                )}
-                <Separator />
-                <div className="flex justify-between text-base">
-                  <span className="font-bold">Total</span>
-                  <span className="font-bold tabular-nums">{formatCurrency(total, currency)}</span>
-                </div>
+                  <X className="size-[15px]" />
+                </button>
               </div>
-            </CardContent>
-          </Card>
+            ))}
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Invoice Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Client</Label>
+            <button type="button" className="btn b-ghost b-sm ci-add" onClick={addLine}>
+              <Plus className="size-[15px]" /> Add Line
+            </button>
+
+            <div className="ci-sep"></div>
+            <div className="ci-total-row"><span>Subtotal</span><span className="mono">{formatCurrency(subtotal, currency)}</span></div>
+            {addVat && <div className="ci-total-row"><span>VAT (20%)</span><span className="mono">{formatCurrency(vatAmount, currency)}</span></div>}
+            <div className="ci-total-row grand"><span>Total</span><span className="mono">{formatCurrency(total, currency)}</span></div>
+          </div>
+
+          <div className="ci-side">
+            <div className="card pad acard">
+              <h3 className="statto-title nc-h">Invoice Settings</h3>
+
+              <div className="nc-field">
+                <label className="nc-label">Client</label>
+                <div className="nc-select-wrap">
                   <select
+                    className={'nc-select' + (selectedClientId ? '' : ' nc-muted')}
                     value={selectedClientId}
                     onChange={(e) => handleClientChange(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
-                    <option value="">Select a client...</option>
+                    <option value="">Select a client…</option>
                     {clients?.map((c: InvoiceClient) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
+                  <span className="lic"><ChevronDown className="size-[15px]" /></span>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Currency</Label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
+              <div className="nc-field">
+                <label className="nc-label">Currency</label>
+                <div className="nc-select-wrap">
+                  <select className="nc-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
                     <option value="GBP">GBP (£)</option>
                     <option value="EUR">EUR (€)</option>
                     <option value="USD">USD ($)</option>
                   </select>
+                  <span className="lic"><ChevronDown className="size-[15px]" /></span>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Due Date</Label>
+              <div className="nc-field">
+                <label className="nc-label">Due Date</label>
+                <div className="ci-date">
+                  <span className="lic"><Calendar className="size-4" /></span>
                   <DatePicker
                     date={dueDate}
                     onSelect={(d) => setDueDate(d)}
                     placeholder="Select due date"
                   />
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <Label>Add VAT (20%)</Label>
-                  <input
-                    type="checkbox"
-                    checked={addVat}
-                    onChange={(e) => setAddVat(e.target.checked)}
-                    className="size-4 rounded border-input"
-                  />
-                </div>
+              <label className="nc-check ci-vat">
+                <input type="checkbox" checked={addVat} onChange={(e) => setAddVat(e.target.checked)} />
+                <span className="nc-check-box"><Check className="size-[13px]" strokeWidth={3} /></span>
+                <span>Add VAT (20%)</span>
+              </label>
 
-                {selectedClient && (
-                  <p className="text-xs text-muted-foreground">
-                    {selectedClient.name} — {selectedClient.vatRegistered ? 'VAT registered' : 'Not VAT registered'}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+              {selectedClient && (
+                <p className="nc-hint" style={{ marginTop: 12 }}>
+                  {selectedClient.name} — {selectedClient.vatRegistered ? 'VAT registered' : 'Not VAT registered'}
+                </p>
+              )}
+            </div>
 
-            <Button type="submit" className="w-full" disabled={createInvoice.isPending}>
-              {createInvoice.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+            <button type="submit" className="btn b-dark b-block ci-submit" disabled={createInvoice.isPending}>
+              {createInvoice.isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
               Create Invoice
-            </Button>
+            </button>
           </div>
         </div>
       </form>

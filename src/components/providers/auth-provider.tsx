@@ -55,12 +55,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Dev-only login bypass. When VITE_BYPASS_AUTH=true (see .env.local), skip the
+// backend session flow entirely and seed a mock owner so the dashboard renders
+// without a running backend. Hard-gated to import.meta.env.DEV so it can never
+// ship in a production build.
+const BYPASS_AUTH = import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === 'true';
+// role 'owner' so the bypass lands on the redesigned admin dashboard at "/".
+// Switch role to 'client' to preview the redesigned /portal instead.
+const MOCK_USER: User = {
+  id: 'dev-bypass',
+  email: 'owner@stato.app',
+  name: 'Sam Owner',
+  role: 'owner',
+  businessId: 'dev-business',
+  clientId: null,
+  isActive: true,
+  isPrimaryOwner: true,
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(BYPASS_AUTH ? MOCK_USER : null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!BYPASS_AUTH);
 
   useEffect(() => {
+    if (BYPASS_AUTH) return;
     restoreSession();
   }, []);
 

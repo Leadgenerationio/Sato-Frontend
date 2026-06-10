@@ -1,100 +1,63 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Printer } from 'lucide-react';
+import { useState } from 'react';
+import { ReceiptText, CircleCheckBig, Printer, ChevronDown } from 'lucide-react';
 import { usePortalInvoices, type PortalInvoice } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { toMoney } from '@/lib/hooks/use-invoices';
+import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 
-const statusColors: Record<string, string> = {
-  draft: 'bg-neutral-500/10 text-neutral-500',
-  sent: 'bg-blue-500/10 text-blue-600',
-  authorised: 'bg-blue-500/10 text-blue-600',
-  paid: 'bg-emerald-500/10 text-emerald-600',
-  overdue: 'bg-red-500/10 text-red-600',
-};
-
-// Sam T8 (2026-05-20): client-facing label map. Xero's raw "authorised"
-// reads as legalese to a buyer — surface it as "Pending Payment". Backend
-// flips past-due rows to status='overdue' (T7), so this map covers only
-// the current statuses the portal renders.
+// Sam T8 (2026-05-20): client-facing label map — Xero's "authorised" reads as
+// legalese to a buyer, surface as "Pending Payment".
 const STATUS_LABEL: Record<string, string> = {
-  draft: 'Draft',
-  sent: 'Pending Payment',
-  authorised: 'Pending Payment',
-  paid: 'Paid',
-  overdue: 'Overdue',
+  draft: 'Draft', sent: 'Pending Payment', authorised: 'Pending Payment', paid: 'Paid', overdue: 'Overdue',
 };
 const statusLabel = (s: string) => STATUS_LABEL[s.toLowerCase()] ?? s;
+const statusPill = (s: string) => {
+  const k = s.toLowerCase();
+  if (k === 'paid') return 'p-soft';
+  if (k === 'overdue') return 'p-neg';
+  return 'p-warn';
+};
 
-// Escape any user-provided string before interpolating into the print-window HTML.
 const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Opens the invoice in a new tab with print styling + auto-print. Was
-// previously labelled "Download" which misled buyers — nothing actually
-// downloads, the new window simply renders the invoice and triggers the
-// browser's print dialog.
 function handleViewInvoice(inv: PortalInvoice) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
-
   printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${escapeHtml(inv.invoiceNumber)}</title>
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111; }
-        h1 { font-size: 24px; margin-bottom: 4px; }
-        .meta { color: #666; font-size: 14px; margin-bottom: 24px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e5e5; font-size: 14px; }
-        th { font-weight: 600; background: #f5f5f5; }
-        .text-right { text-align: right; }
-        .total-row td { font-weight: 700; font-size: 16px; border-top: 2px solid #111; }
-        .status { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; text-transform: capitalize; }
-        .status-paid { background: #d1fae5; color: #059669; }
-        .status-sent { background: #dbeafe; color: #2563eb; }
-        .status-overdue { background: #fee2e2; color: #dc2626; }
-        .status-draft { background: #f3f4f6; color: #6b7280; }
-        @media print { body { padding: 20px; } }
-      </style>
-    </head>
-    <body>
+    <!DOCTYPE html><html><head><title>${escapeHtml(inv.invoiceNumber)}</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111; }
+      h1 { font-size: 24px; margin-bottom: 4px; }
+      .meta { color: #666; font-size: 14px; margin-bottom: 24px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e5e5; font-size: 14px; }
+      th { font-weight: 600; background: #f5f5f5; }
+      .text-right { text-align: right; }
+      .total-row td { font-weight: 700; font-size: 16px; border-top: 2px solid #111; }
+      @media print { body { padding: 20px; } }
+    </style></head><body>
       <h1>Invoice ${escapeHtml(inv.invoiceNumber)}</h1>
-      <div class="meta">
-        <span class="status status-${escapeHtml(inv.status)}">${escapeHtml(inv.status)}${inv.daysOverdue > 0 ? ` (${escapeHtml(inv.daysOverdue)} days overdue)` : ''}</span>
-      </div>
+      <div class="meta">${escapeHtml(statusLabel(inv.status))}${inv.daysOverdue > 0 ? ` (${escapeHtml(inv.daysOverdue)} days overdue)` : ''}</div>
       <table>
         <tr><th>Detail</th><th class="text-right">Value</th></tr>
         <tr><td>Currency</td><td class="text-right">${escapeHtml(inv.currency)}</td></tr>
-        <tr><td>Due Date</td><td class="text-right">${escapeHtml(new Date(inv.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</td></tr>
-        ${inv.paidDate ? `<tr><td>Paid Date</td><td class="text-right">${escapeHtml(new Date(inv.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</td></tr>` : ''}
+        <tr><td>Due Date</td><td class="text-right">${escapeHtml(formatDate(inv.dueDate))}</td></tr>
+        ${inv.paidDate ? `<tr><td>Paid Date</td><td class="text-right">${escapeHtml(formatDate(inv.paidDate))}</td></tr>` : ''}
       </table>
-      <table>
-        <tr class="total-row"><td>Total</td><td class="text-right">${escapeHtml(new Intl.NumberFormat('en-GB', { style: 'currency', currency: inv.currency }).format(toMoney(inv.total)))}</td></tr>
-      </table>
+      <table><tr class="total-row"><td>Total</td><td class="text-right">${escapeHtml(formatCurrency(toMoney(inv.total), inv.currency))}</td></tr></table>
       <script>window.onload = function() { window.print(); }</script>
-    </body>
-    </html>
-  `);
+    </body></html>`);
   printWindow.document.close();
 }
 
-// Defensive client-side filter — backend already strips these in
-// portal.service.ts, but if it ever ships a draft/voided row by mistake
-// we must not render it or include it in the Outstanding tile.
 const PORTAL_HIDDEN_INVOICE_STATUSES = new Set(['draft', 'voided', 'deleted']);
 
 export function PortalInvoicesPage() {
@@ -102,118 +65,73 @@ export function PortalInvoicesPage() {
   const { data: rawInvoices, isLoading } = usePortalInvoices();
   const invoices = rawInvoices?.filter((i) => !PORTAL_HIDDEN_INVOICE_STATUSES.has((i.status ?? '').toLowerCase()));
 
-  const totalOutstanding = invoices?.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + toMoney(i.total), 0) ?? 0;
-  const totalPaid = invoices?.filter((i) => i.status === 'paid').reduce((sum, i) => sum + toMoney(i.total), 0) ?? 0;
+  const years = Array.from(new Set((invoices ?? []).map((i) => new Date(i.dueDate).getFullYear().toString()))).sort().reverse();
+  const [year, setYear] = useState<string>('all');
+  const [yearOpen, setYearOpen] = useState(false);
+  const rows = (invoices ?? []).filter((i) => year === 'all' || new Date(i.dueDate).getFullYear().toString() === year);
+
+  const totalOutstanding = invoices?.filter((i) => i.status !== 'paid').reduce((s, i) => s + toMoney(i.total), 0) ?? 0;
+  const totalPaid = invoices?.filter((i) => i.status === 'paid').reduce((s, i) => s + toMoney(i.total), 0) ?? 0;
+  const paidCount = invoices?.filter((i) => i.status === 'paid').length ?? 0;
+
+  if (isLoading) {
+    return <div className="screen"><div className="stat-row two"><Skeleton className="h-[168px] rounded-3xl" /><Skeleton className="h-[168px] rounded-3xl" /></div><Skeleton className="h-72 rounded-3xl" /></div>;
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Invoices</h1>
-        <p className="text-muted-foreground">Your invoices and payment status</p>
+    <div className="screen">
+      <div className="stat-row two">
+        <div className="pstat">
+          <div className="pstat-top"><span className="pstat-ic"><ReceiptText className="size-5" /></span></div>
+          <div className="pstat-val mono">{formatCurrency(totalOutstanding)}</div><div className="pstat-lab">Outstanding</div>
+        </div>
+        <div className="pstat">
+          <div className="pstat-top"><span className="pstat-ic"><CircleCheckBig className="size-5" /></span>{paidCount > 0 && <span className="pill p-soft">{paidCount} paid</span>}</div>
+          <div className="pstat-val mono">{formatCurrency(totalPaid)}</div><div className="pstat-lab">Total Paid</div>
+        </div>
       </div>
 
-      {!isLoading && invoices && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Card className="gap-3 py-5"><CardContent className="text-center"><p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</p><p className="text-sm text-muted-foreground">Total Paid</p></CardContent></Card>
-          <Card className="gap-3 py-5"><CardContent className="text-center"><p className={`text-2xl font-bold ${totalOutstanding > 0 ? 'text-amber-600' : ''}`}>{formatCurrency(totalOutstanding)}</p><p className="text-sm text-muted-foreground">Outstanding</p></CardContent></Card>
-        </div>
-      )}
-
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
-          ) : !invoices?.length ? (
-            <EmptyState
-              icon={FileText}
-              title="No invoices yet"
-              description="When an invoice is issued, it will appear here for download."
-            />
-          ) : (
-            <>
-              {/* T3 (Sam, 2026-05-20): on mobile the 6-column invoice table
-                  overflowed horizontally beyond a thumb's reach. Below md
-                  we render the same data as a stacked card list so every
-                  row's must-see fields (number, status, amount, due) are
-                  visible without scrolling sideways. Above md the original
-                  table comes back. */}
-              <div className="md:hidden divide-y">
-                {invoices?.map((inv) => (
-                  <div key={inv.id} className="space-y-2 p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{inv.invoiceNumber}</p>
-                        <p className="text-xs text-muted-foreground">Due {formatDate(inv.dueDate)}</p>
-                      </div>
-                      <Badge className={`text-xs shrink-0 ${statusColors[inv.status] || ''}`}>
-                        {statusLabel(inv.status)}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
-                      </Badge>
-                    </div>
-                    <div className="flex items-end justify-between gap-2">
-                      <div>
-                        <p className="text-lg font-semibold tabular-nums">{formatCurrency(toMoney(inv.total), inv.currency)}</p>
-                        {inv.paidDate && (
-                          <p className="text-xs text-muted-foreground">Paid {formatDate(inv.paidDate)}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => handleViewInvoice(inv)}
-                        className="h-11 px-4"
-                        title="Open in new tab and print"
-                      >
-                        <Printer className="size-4 mr-1.5" />
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Paid Date</TableHead>
-                      <TableHead className="text-right">View</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices?.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                        <TableCell>
-                          <Badge className={`text-xs ${statusColors[inv.status] || ''}`}>
-                            {statusLabel(inv.status)}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
-                        <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
-                        <TableCell className="text-muted-foreground">{inv.paidDate ? formatDate(inv.paidDate) : '—'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7"
-                            onClick={() => handleViewInvoice(inv)}
-                            title="Open in new tab and print"
-                          >
-                            <Printer className="size-3.5 mr-1" />
-                            View / Print
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
+      <div className="card pad">
+        <div className="txn-head">
+          <h3 className="statto-title">Invoices</h3>
+          {years.length > 0 && (
+            <span className="dd-wrap">
+              <button className="dd" onClick={() => setYearOpen((o) => !o)}>{year === 'all' ? 'All years' : year} <ChevronDown className="size-[15px]" /></button>
+              {yearOpen && (
+                <div className="dd-menu">
+                  <button className={'dd-opt' + (year === 'all' ? ' on' : '')} onClick={() => { setYear('all'); setYearOpen(false); }}>All years</button>
+                  {years.map((y) => (
+                    <button key={y} className={'dd-opt' + (year === y ? ' on' : '')} onClick={() => { setYear(y); setYearOpen(false); }}>{y}</button>
+                  ))}
+                </div>
+              )}
+            </span>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {!rows.length ? (
+          <EmptyState icon={ReceiptText} title="No invoices yet" description="When an invoice is issued, it will appear here." />
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Invoice</th><th>Due</th><th>Amount</th><th>Status</th><th /></tr></thead>
+              <tbody>
+                {rows.map((inv) => (
+                  <tr key={inv.id}>
+                    <td style={{ fontWeight: 600 }}>{inv.invoiceNumber}</td>
+                    <td style={{ color: 'var(--fg2)' }}>{formatDate(inv.dueDate)}</td>
+                    <td className="mono" style={{ fontWeight: 600 }}>{formatCurrency(toMoney(inv.total), inv.currency)}</td>
+                    <td><span className={'pill ' + statusPill(inv.status)}>{statusLabel(inv.status)}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}</span></td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="link-btn" title="View / print" onClick={() => handleViewInvoice(inv)}><Printer className="size-4" /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

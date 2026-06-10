@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ArrowLeft, Plus, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Loader2, ChevronDown, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateWorkflow } from '@/lib/hooks/use-workflows';
 
@@ -82,165 +77,180 @@ export function WorkflowCreatePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to="/workflows"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <PageHeader title="Create Workflow" description="Define a new automated workflow" />
+    <div className="screen-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/workflows" className="nc-back" title="Back to workflows"><ArrowLeft className="size-5" /></Link>
+          <div>
+            <h1 className="ahead-title">Create Workflow</h1>
+            <p className="ahead-sub">Define a new automated workflow</p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="cw-layout">
           {/* Steps */}
-          <Card className="lg:col-span-2">
-            <CardHeader><CardTitle className="text-base">Workflow Steps</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              {steps.map((step, i) => (
-                <div key={i} className="flex gap-3 items-start rounded-lg border p-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold mt-1">
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 space-y-3 min-w-0">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Step Name</Label>
-                        <Input
-                          value={step.name}
-                          onChange={(e) => updateStep(i, 'name', e.target.value)}
-                          placeholder="e.g., Pull LeadByte Data"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Type</Label>
+          <div className="card pad acard">
+            <h3 className="statto-title nc-h">Workflow Steps</h3>
+            {steps.map((step, i) => (
+              <div key={i} className="wf-step">
+                <span className="wf-step-n">{i + 1}</span>
+                <div className="wf-step-body">
+                  {steps.length > 1 && (
+                    <button type="button" className="wf-step-x" onClick={() => removeStep(i)} title="Remove step">
+                      <X className="size-[15px]" />
+                    </button>
+                  )}
+                  <div className="nc-grid2">
+                    <div className="nc-field">
+                      <label className="nc-label">Step Name</label>
+                      <input
+                        className="nc-input"
+                        value={step.name}
+                        onChange={(e) => updateStep(i, 'name', e.target.value)}
+                        placeholder="e.g., Pull LeadByte Data"
+                      />
+                    </div>
+                    <div className="nc-field">
+                      <label className="nc-label">Type</label>
+                      <div className="nc-select-wrap">
                         <select
+                          className="nc-select"
                           value={step.type}
                           onChange={(e) => updateStep(i, 'type', e.target.value)}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                         >
                           {STEP_TYPES.map((t) => (
                             <option key={t} value={t}>{t.replace('_', ' ')}</option>
                           ))}
                         </select>
+                        <ChevronDown className="lic size-[15px]" />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Configuration</Label>
-                      <Input
-                        value={step.config}
-                        onChange={(e) => updateStep(i, 'config', e.target.value)}
-                        placeholder="Describe what this step does..."
-                      />
-                    </div>
                   </div>
-                  {steps.length > 1 && (
-                    <Button type="button" variant="ghost" size="icon" className="size-8 mt-1" onClick={() => removeStep(i)}>
-                      <Trash2 className="size-4 text-muted-foreground" />
-                    </Button>
-                  )}
+                  <div className="nc-field" style={{ marginBottom: 0 }}>
+                    <label className="nc-label">Configuration</label>
+                    <textarea
+                      className="nc-textarea wf-config"
+                      value={step.config}
+                      onChange={(e) => updateStep(i, 'config', e.target.value)}
+                      placeholder="Describe what this step does..."
+                    />
+                  </div>
                 </div>
-              ))}
+              </div>
+            ))}
 
-              <Button type="button" variant="outline" size="sm" onClick={addStep}>
-                <Plus className="size-4 mr-1.5" />
-                Add Step
-              </Button>
-            </CardContent>
-          </Card>
+            <button type="button" className="btn b-ghost b-sm cw-addstep" onClick={addStep}>
+              <Plus className="size-[15px]" />
+              Add Step
+            </button>
+          </div>
 
           {/* Settings */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Settings</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Workflow Name</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Weekly Report" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="What does this workflow do?"
-                    rows={3}
-                    className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Trigger Type</Label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                  >
+          <div className="cw-side">
+            <div className="card pad acard">
+              <h3 className="statto-title nc-h">Settings</h3>
+              <div className="nc-field">
+                <label className="nc-label">Workflow Name</label>
+                <input className="nc-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Weekly Report" />
+              </div>
+              <div className="nc-field">
+                <label className="nc-label">Description</label>
+                <textarea
+                  className="nc-textarea"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What does this workflow do?"
+                  rows={3}
+                />
+              </div>
+              <div className="nc-field">
+                <label className="nc-label">Trigger Type</label>
+                <div className="nc-select-wrap">
+                  <select className="nc-select" value={type} onChange={(e) => setType(e.target.value)}>
                     <option value="scheduled">Scheduled</option>
                     <option value="trigger">Event Trigger</option>
                     <option value="manual">Manual</option>
                   </select>
+                  <ChevronDown className="lic size-[15px]" />
                 </div>
-                {type === 'scheduled' && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Frequency</Label>
+              </div>
+              {type === 'scheduled' && (
+                <>
+                  <div className="nc-field">
+                    <label className="nc-label">Frequency</label>
+                    <div className="nc-select-wrap">
                       <select
+                        className="nc-select"
                         value={frequency}
                         onChange={(e) => {
                           setFrequency(e.target.value);
                           buildSchedule(e.target.value, day, time);
                         }}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                       >
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
                       </select>
+                      <ChevronDown className="lic size-[15px]" />
                     </div>
-                    {frequency === 'weekly' && (
-                      <div className="space-y-2">
-                        <Label>Day</Label>
+                  </div>
+                  {frequency === 'weekly' && (
+                    <div className="nc-field">
+                      <label className="nc-label">Day</label>
+                      <div className="nc-select-wrap">
                         <select
+                          className="nc-select"
                           value={day}
                           onChange={(e) => { setDay(e.target.value); buildSchedule(frequency, e.target.value, time); }}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                         >
                           {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((d) => (
                             <option key={d} value={d}>{d}</option>
                           ))}
                         </select>
+                        <ChevronDown className="lic size-[15px]" />
                       </div>
-                    )}
-                    {frequency === 'monthly' && (
-                      <div className="space-y-2">
-                        <Label>Day of Month</Label>
+                    </div>
+                  )}
+                  {frequency === 'monthly' && (
+                    <div className="nc-field">
+                      <label className="nc-label">Day of Month</label>
+                      <div className="nc-select-wrap">
                         <select
+                          className="nc-select"
                           value={day}
                           onChange={(e) => { setDay(e.target.value); buildSchedule(frequency, e.target.value, time); }}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                         >
                           {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                             <option key={d} value={`${d}`}>{d === 1 ? '1st' : d === 2 ? '2nd' : d === 3 ? '3rd' : `${d}th`}</option>
                           ))}
                         </select>
+                        <ChevronDown className="lic size-[15px]" />
                       </div>
-                    )}
-                    <div className="space-y-2">
-                      <Label>Time</Label>
+                    </div>
+                  )}
+                  <div className="nc-field">
+                    <label className="nc-label">Time</label>
+                    <div className="ci-date">
                       <input
+                        className="nc-input"
                         type="time"
                         value={time}
                         onChange={(e) => { setTime(e.target.value); buildSchedule(frequency, day, e.target.value); }}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                       />
+                      <Clock className="lic size-4" />
                     </div>
-                    <p className="text-xs text-muted-foreground">{schedule || 'Select frequency and time'}</p>
+                    <span className="nc-hint">{schedule || 'Select frequency and time'}</span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </>
+              )}
+            </div>
 
-            <Button type="submit" className="w-full" disabled={createWorkflow.isPending}>
-              {createWorkflow.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+            <button type="submit" className="btn b-dark b-block cw-submit" disabled={createWorkflow.isPending}>
+              {createWorkflow.isPending ? <Loader2 className="size-[15px] animate-spin" /> : null}
               Create Workflow
-            </Button>
+            </button>
           </div>
         </div>
       </form>

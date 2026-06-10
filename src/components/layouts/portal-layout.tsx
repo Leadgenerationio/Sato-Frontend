@@ -1,41 +1,34 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
-import { Button } from '@/components/ui/button';
-import { Logo } from '@/components/shared/logo';
-import { cn } from '@/lib/utils';
+import { usePortalDashboard } from '@/lib/hooks/use-portal';
 import { toast } from 'sonner';
 import {
-  LayoutDashboard, FileBarChart, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone,
+  BarChart3, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone, LayoutGrid,
 } from 'lucide-react';
 import type { User, PortalTabSlug } from '@/types';
 
-// Sam (2026-05-27 jam-video #2): the portal is *display-only* for clients.
-// Users management + ad-spend dedicated tab + agreement self-upload all
-// belong to the admin side, not the client portal. The remaining nav
-// items are read-only views the client sees. allowedTabs (admin-set) can
-// still hide individual tabs per portal user.
+// Statto Client Portal chrome — ink-green icon rail + portal header.
+// Ported from the Claude Design handoff (Stato Portal.html → portal/chrome.jsx).
+// Routing + per-user tab visibility (Sam 27-May) are preserved from the
+// previous top-nav layout; only the visual shell changed.
+
 const navItems: Array<{
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  subtitle: string;
   tabSlug?: PortalTabSlug;
 }> = [
-  { href: '/portal', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/portal/leads', label: 'Leads', icon: FileBarChart, tabSlug: 'leads' },
-  { href: '/portal/invoices', label: 'Invoices', icon: FileText, tabSlug: 'invoices' },
-  { href: '/portal/compliance', label: 'Compliance', icon: Shield, tabSlug: 'compliance' },
-  { href: '/portal/creatives', label: 'Creatives', icon: Megaphone, tabSlug: 'creatives' },
-  { href: '/portal/agreement', label: 'Agreement', icon: ScrollText, tabSlug: 'agreement' },
-  { href: '/portal/account', label: 'Account', icon: UserCog },
+  { href: '/portal', label: 'Dashboard', icon: LayoutGrid, subtitle: 'Client Portal' },
+  { href: '/portal/leads', label: 'Leads', icon: BarChart3, subtitle: 'Lead delivery', tabSlug: 'leads' },
+  { href: '/portal/invoices', label: 'Invoices', icon: FileText, subtitle: 'Billing', tabSlug: 'invoices' },
+  { href: '/portal/compliance', label: 'Compliance', icon: Shield, subtitle: 'Compliance', tabSlug: 'compliance' },
+  { href: '/portal/creatives', label: 'Creatives', icon: Megaphone, subtitle: 'Ad creatives', tabSlug: 'creatives' },
+  { href: '/portal/agreement', label: 'Agreement', icon: ScrollText, subtitle: 'Your contract', tabSlug: 'agreement' },
+  { href: '/portal/account', label: 'Account', icon: UserCog, subtitle: 'Account' },
 ];
 
-function isVisibleToUser(
-  item: { tabSlug?: PortalTabSlug },
-  user: User | null,
-): boolean {
-  // Admin (Sam-side) can pick per-portal-user tab visibility via allowedTabs.
-  // null = full access (backward compat). Dashboard + Account have no slug,
-  // so they're always visible.
+function isVisibleToUser(item: { tabSlug?: PortalTabSlug }, user: User | null): boolean {
   if (item.tabSlug && user?.allowedTabs) {
     return user.allowedTabs.includes(item.tabSlug);
   }
@@ -48,90 +41,73 @@ function getInitials(name: string | undefined): string {
   return parts.map((p) => p[0]?.toUpperCase() ?? '').join('') || '?';
 }
 
+function isActiveHref(href: string, pathname: string): boolean {
+  return href === '/portal' ? pathname === '/portal' : pathname.startsWith(href);
+}
+
 export function PortalLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  // Shares the cached react-query result with PortalDashboardPage, so this
+  // doesn't fire an extra request. companyName powers the header title; while
+  // it loads we fall back to the signed-in user's name.
+  const { data: dashboard } = usePortalDashboard();
+
+  const visibleItems = navItems.filter((item) => isVisibleToUser(item, user));
+  const active = visibleItems.find((i) => isActiveHref(i.href, location.pathname)) ?? visibleItems[0];
+
+  const title = dashboard?.companyName ?? user?.name ?? 'Client Portal';
+  const isManaged = dashboard?.clientType === 'managed';
+  const handleLogout = () => { logout(); toast.info('Signed out'); };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top nav bar */}
-      <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-6">
-            <Logo size="sm" />
-            <nav className="hidden md:flex items-center gap-1">
-              {navItems.filter((item) => isVisibleToUser(item, user)).map((item) => {
-                const isActive = item.href === '/portal'
-                  ? location.pathname === '/portal'
-                  : location.pathname.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    className={cn(
-                      'flex items-center gap-2 rounded-md px-3 py-2 text-sm whitespace-nowrap transition-colors',
-                      isActive ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                    )}
-                  >
-                    <item.icon className="size-4 shrink-0" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-          <div className="flex items-center gap-3 sm:gap-4 sm:border-l sm:pl-4">
-            <div className="hidden sm:flex items-center gap-2 min-w-0">
-              <div
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground"
-                aria-hidden="true"
-              >
-                {getInitials(user?.name)}
-              </div>
-              <span
-                className="max-w-[10rem] truncate text-sm font-medium text-foreground"
-                title={user?.name}
-              >
-                {user?.name}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => { logout(); toast.info('Signed out'); }}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut className="size-4" />
-            </Button>
-          </div>
-        </div>
-        {/* Mobile nav */}
-        <div className="flex md:hidden overflow-x-auto border-t px-4 gap-1 py-1">
-          {navItems.filter((item) => isVisibleToUser(item, user)).map((item) => {
-            const isActive = item.href === '/portal'
-              ? location.pathname === '/portal'
-              : location.pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs whitespace-nowrap transition-colors',
-                  isActive ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-accent',
-                )}
-              >
-                <item.icon className="size-3.5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      </header>
+    <div className="statto-portal app">
+      {/* Left ink-green icon rail */}
+      <nav className="sidebar">
+        <div className="brand-dot" title="Stato"><BarChart3 className="size-[22px]" strokeWidth={2.6} /></div>
+        {visibleItems.map((item) => (
+          <Link
+            key={item.href}
+            to={item.href}
+            title={item.label}
+            aria-label={item.label}
+            className={'nav-btn' + (isActiveHref(item.href, location.pathname) ? ' active' : '')}
+          >
+            <item.icon className="size-[22px]" />
+          </Link>
+        ))}
+        <div className="nav-spacer" />
+        <button className="nav-btn" title="Sign out" aria-label="Sign out" onClick={handleLogout}>
+          <LogOut className="size-[22px]" />
+        </button>
+      </nav>
 
-      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
-        <Outlet />
-      </main>
+      <div className="main">
+        <div className="viewport">
+          {/* Portal header — client name + status + user */}
+          <header className="portal-header">
+            <div className="ph-left">
+              <div className="ph-title-row">
+                <h1 className="ph-title" title={title}>{title}</h1>
+                {isManaged && <span className="ph-tag">Managed</span>}
+              </div>
+              <p className="ph-sub">{active?.subtitle ?? 'Client Portal'}</p>
+            </div>
+            <div className="ph-user">
+              <span className="hdr-avatar" aria-hidden="true">{getInitials(user?.name)}</span>
+              <div className="ph-user-meta">
+                <span className="ph-user-name" title={user?.name}>{user?.name}</span>
+                <span className="ph-user-role">{user?.isPrimaryOwner ? 'Account Owner' : 'Portal User'}</span>
+              </div>
+              <button className="ph-logout" title="Sign out" aria-label="Sign out" onClick={handleLogout}>
+                <LogOut className="size-[19px]" />
+              </button>
+            </div>
+          </header>
+
+          <Outlet />
+        </div>
+      </div>
     </div>
   );
 }

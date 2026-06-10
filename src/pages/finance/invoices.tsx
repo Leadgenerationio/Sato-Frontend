@@ -1,29 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, Plus, Download, FileText, ArrowUp, ArrowDown, ArrowUpDown, Calendar } from 'lucide-react';
+import { Search, ExternalLink, Plus, Download, ArrowUp, ArrowDown, ChevronsUpDown, Calendar } from 'lucide-react';
 import { useInvoices, toMoney, type InvoiceSummary, type InvoiceSortBy, type SortDir } from '@/lib/hooks/use-invoices';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
-import { EmptyState } from '@/components/shared/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/shared/error-state';
 
 const STATUS_TABS = ['all', 'draft', 'sent', 'authorised', 'paid', 'overdue'] as const;
 
-const statusColors: Record<string, string> = {
-  draft: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  sent: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  authorised: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
-  paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  overdue: 'bg-red-500/10 text-red-600 border-red-200',
+// Map invoice status → Statto pill colour suffix.
+const statusPill: Record<string, string> = {
+  draft: 'gray',
+  sent: 'warn',
+  authorised: 'infosoft',
+  paid: 'pos',
+  overdue: 'neg',
 };
 
 function formatCurrency(value: number, currency = 'GBP') {
@@ -64,18 +56,14 @@ function SortableHead({
   onToggle: (id: InvoiceSortBy) => void;
 }) {
   const active = sortBy === id;
-  const Icon = active ? (sortDir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+  const Icon = active ? (sortDir === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown;
   return (
-    <TableHead className={align === 'right' ? 'text-right' : ''}>
-      <button
-        type="button"
-        onClick={() => onToggle(id)}
-        className={`inline-flex items-center gap-1 transition-colors ${active ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
-      >
+    <th className={align === 'right' ? 'r' : ''}>
+      <button type="button" className={'inv-sort' + (active ? ' on' : '')} onClick={() => onToggle(id)}>
         {label}
-        <Icon className="size-3" />
+        <span className="lic"><Icon className="size-[13px]" /></span>
       </button>
-    </TableHead>
+    </th>
   );
 }
 
@@ -137,142 +125,121 @@ export function InvoiceListPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Invoices" description="Manage invoices synced with Xero">
-        <div className="flex gap-2">
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">Invoices</h1>
+          <p className="ahead-sub">Manage invoices synced with Xero</p>
+        </div>
+        <div className="page-actions">
           <Link to="/finance/auto-invoice">
-            <Button variant="outline" size="sm">
-              <Calendar className="size-4 mr-1.5" />
-              Auto-invoice
-            </Button>
+            <button className="btn b-ghost b-sm">
+              <Calendar className="size-[15px]" /> Auto-invoice
+            </button>
           </Link>
-          <Button variant="outline" size="sm" onClick={() => invoices && exportCsv(invoices)} disabled={!invoices?.length}>
-            <Download className="size-4 mr-1.5" />
-            CSV
-          </Button>
+          <button className="btn b-ghost b-sm" onClick={() => invoices && exportCsv(invoices)} disabled={!invoices?.length}>
+            <Download className="size-[15px]" /> CSV
+          </button>
           <Link to="/finance/invoices/create">
-            <Button size="sm">
-              <Plus className="size-4 mr-1.5" />
-              New Invoice
-            </Button>
+            <button className="btn b-dark b-sm">
+              <Plus className="size-[15px]" /> New Invoice
+            </button>
           </Link>
         </div>
-      </PageHeader>
+      </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 rounded-lg bg-muted p-1 overflow-x-auto">
+      <div className="inv-toolbar">
+        <div className="inv-tabs">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => handleStatusChange(tab)}
-              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-                statusFilter === tab
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={'inv-tab' + (statusFilter === tab ? ' on' : '')}
+              style={{ textTransform: 'capitalize' }}
             >
               {tab}
             </button>
           ))}
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search invoices..."
+        <div className="inv-search">
+          <span className="lic"><Search className="size-4" /></span>
+          <input
+            placeholder="Search invoices…"
             value={searchDraft}
             onChange={(e) => setSearchDraft(e.target.value)}
-            className="pl-9"
           />
         </div>
       </div>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex gap-4">
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-5 w-36" />
-                  <Skeleton className="h-5 w-20" />
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-5 w-24" />
-                </div>
+      <div className="card acard inv-card">
+        {isLoading ? (
+          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{ display: 'flex', gap: 16 }}>
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-36" />
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load invoices"
+            error={error}
+            onRetry={() => refetch()}
+          />
+        ) : !invoices?.length ? (
+          <div className="inv-empty">
+            {debouncedSearch || statusFilter !== 'all'
+              ? 'No invoices match your filters.'
+              : 'No invoices yet — create your first invoice to bill clients and push it through to Xero.'}
+          </div>
+        ) : (
+          <table className="inv-table">
+            <thead>
+              <tr>
+                <SortableHead id="invoiceNumber" label="Invoice" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
+                <th>Client</th>
+                <SortableHead id="status" label="Status" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
+                <th className="r">Subtotal</th>
+                <th className="r">VAT</th>
+                <SortableHead id="total" label="Total" align="right" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
+                <SortableHead id="dueDate" label="Due Date" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
+                <SortableHead id="createdAt" label="Created" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoices.map((inv) => (
+                <tr key={inv.id}>
+                  <td className="inv-id">{inv.invoiceNumber}</td>
+                  <td className="inv-client">{inv.clientName}</td>
+                  <td>
+                    <span className="inv-status">
+                      <span className={'pill p-' + (statusPill[inv.status] ?? 'gray')} style={{ textTransform: 'capitalize' }}>
+                        {inv.status}
+                        {inv.daysOverdue > 0 && ` (${inv.daysOverdue}d)`}
+                      </span>
+                      {inv.xeroInvoiceId && <span className="pill p-xero">Xero</span>}
+                    </span>
+                  </td>
+                  <td className="r mono inv-num">{formatCurrency(toMoney(inv.subtotal), inv.currency)}</td>
+                  <td className="r mono inv-num">{formatCurrency(toMoney(inv.vatAmount), inv.currency)}</td>
+                  <td className="r mono inv-total">{formatCurrency(toMoney(inv.total), inv.currency)}</td>
+                  <td className="inv-date">{formatDate(inv.dueDate)}</td>
+                  <td className="inv-date">{formatDate(inv.createdAt)}</td>
+                  <td className="r">
+                    <Link to={`/finance/invoices/${inv.id}`} className="inv-open" title="Open invoice">
+                      <ExternalLink className="size-4" />
+                    </Link>
+                  </td>
+                </tr>
               ))}
-            </div>
-          ) : error ? (
-            <ErrorState
-              title="Couldn't load invoices"
-              error={error}
-              onRetry={() => refetch()}
-            />
-          ) : !invoices?.length ? (
-            <EmptyState
-              icon={FileText}
-              title={debouncedSearch || statusFilter !== 'all' ? 'No matching invoices' : 'No invoices yet'}
-              description={
-                debouncedSearch || statusFilter !== 'all'
-                  ? 'Try a different search or status filter.'
-                  : 'Create your first invoice to bill clients and push it through to Xero.'
-              }
-              link={debouncedSearch || statusFilter !== 'all' ? undefined : { label: 'New invoice', to: '/finance/invoices/create', icon: Plus }}
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              {/* T3.6 (Sam, 2026-05-20): pin the Invoice column so the
-                  identifier stays visible while the 9 metric columns
-                  scroll horizontally on narrow viewports. */}
-              <Table className="[&_th:first-child]:sticky [&_th:first-child]:left-0 [&_th:first-child]:bg-card [&_th:first-child]:z-20 [&_th:first-child]:border-r [&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:bg-card [&_td:first-child]:z-10 [&_td:first-child]:border-r">
-                <TableHeader>
-                  <TableRow>
-                    <SortableHead id="invoiceNumber" label="Invoice" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
-                    <TableHead>Client</TableHead>
-                    <SortableHead id="status" label="Status" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
-                    <TableHead className="text-right">Subtotal</TableHead>
-                    <TableHead className="text-right">VAT</TableHead>
-                    <SortableHead id="total" label="Total" align="right" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
-                    <SortableHead id="dueDate" label="Due Date" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
-                    <SortableHead id="createdAt" label="Created" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices.map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                      <TableCell className="text-muted-foreground">{inv.clientName}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Badge className={`text-xs capitalize ${statusColors[inv.status] || ''}`}>
-                            {inv.status}
-                            {inv.daysOverdue > 0 && ` (${inv.daysOverdue}d)`}
-                          </Badge>
-                          {inv.xeroInvoiceId && (
-                            <Badge className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Xero</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(inv.subtotal), inv.currency)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(toMoney(inv.vatAmount), inv.currency)}</TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">{formatCurrency(toMoney(inv.total), inv.currency)}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(inv.dueDate)}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(inv.createdAt)}</TableCell>
-                      <TableCell>
-                        <Link to={`/finance/invoices/${inv.id}`}>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <ExternalLink className="size-4" />
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+            </tbody>
+          </table>
+        )}
         {data && data.total > 0 && (
           <Pagination
             page={data.page}
@@ -281,7 +248,7 @@ export function InvoiceListPage() {
             onPageChange={handlePageChange}
           />
         )}
-      </Card>
+      </div>
     </div>
   );
 }

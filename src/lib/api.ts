@@ -1,5 +1,10 @@
 import type { ApiResponse, AuthTokens } from '@/types';
 import { API_URL } from '@/lib/env';
+import { getDevMock } from '@/lib/dev-mocks';
+
+// Dev-only: when the login bypass is on (no backend), serve canned portal data
+// from dev-mocks.ts. Hard-gated to import.meta.env.DEV so it can never ship.
+const USE_DEV_MOCKS = import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === 'true';
 
 class ApiClient {
   private token: string | null = null;
@@ -47,6 +52,11 @@ class ApiClient {
   }
 
   private async request<T>(path: string, options: RequestInit = {}, retried = false): Promise<ApiResponse<T>> {
+    if (USE_DEV_MOCKS) {
+      const mock = getDevMock((options.method as string) || 'GET', path);
+      if (mock) return mock as ApiResponse<T>;
+    }
+
     const response = await fetch(`${API_URL}${path}`, { ...options, headers: this.buildHeaders(options) });
 
     if (response.status === 401 && !retried && this.token && !path.startsWith('/api/v1/auth/')) {

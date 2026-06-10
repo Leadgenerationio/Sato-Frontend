@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image, Globe, ExternalLink, Shield, AlertTriangle } from 'lucide-react';
 import {
@@ -118,7 +117,7 @@ export function PortalCompliancePage() {
   }, [reviewable, selectedId]);
 
   if (isLoading) {
-    return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-96" /></div>;
+    return <div className="screen"><Skeleton className="h-[420px] rounded-3xl" /></div>;
   }
 
   const allCreatives = (compliance ?? []).flatMap((c) => c.creatives);
@@ -129,139 +128,118 @@ export function PortalCompliancePage() {
   const selectedRow = reviewable.find((r) => r.creative.id === selectedId) ?? null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Compliance</h1>
-        <p className="text-muted-foreground">Review and approve creatives used in your campaigns</p>
-      </div>
-
+    <div className="screen">
       {pendingCount > 0 && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        <div className="edit-hint" style={{ color: 'var(--warning)', background: 'var(--warning-bg)', borderColor: 'var(--warning)' }}>
           <AlertTriangle className="size-5 shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium">{pendingCount} creative{pendingCount === 1 ? '' : 's'} need your review</p>
-            <p className="mt-0.5 text-amber-800 dark:text-amber-300">
-              Each decision is timestamped with your IP address as a record of approval.
-            </p>
+          <div>
+            <strong>{pendingCount} creative{pendingCount === 1 ? '' : 's'} need your review.</strong>{' '}
+            Each decision is timestamped with your IP address as a record of approval.
           </div>
         </div>
       )}
 
       {!compliance?.length && (
-        <Card>
-          <CardContent>
-            <EmptyState
-              icon={Shield}
-              title="No compliance assets yet"
-              description="Creatives and landing pages used in your campaigns will appear here once uploaded by the team."
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {compliance && compliance.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-amber-600">{pendingCount}</p><p className="text-xs text-muted-foreground">Pending review</p></CardContent></Card>
-          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-emerald-600">{approvedCount}</p><p className="text-xs text-muted-foreground">Approved</p></CardContent></Card>
-          <Card className="gap-2 py-4"><CardContent><p className="text-2xl font-bold tabular-nums text-rose-600">{rejectedCount}</p><p className="text-xs text-muted-foreground">Rejected</p></CardContent></Card>
+        <div className="card pad">
+          <EmptyState
+            icon={Shield}
+            title="No compliance assets yet"
+            description="Creatives and landing pages used in your campaigns will appear here once uploaded by the team."
+          />
         </div>
       )}
 
-      {/* Sam (jam-video #3, 29-May-2026) — grid + detail panel. Sam's quote:
-          "click in, see all the ads on the right hand side". List on the
-          left scrolls, detail panel on the right is sticky on md+ so a buyer
-          can compare adjacent assets without losing the panel. */}
-      {reviewable.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Open compliance items</CardTitle>
-            <CardDescription>
-              {reviewable.length} item{reviewable.length === 1 ? '' : 's'} across {compliance?.length ?? 0} campaign{(compliance?.length ?? 0) === 1 ? '' : 's'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
-              <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
-                {reviewable.map((row) => (
-                  <CreativeListItem
-                    key={row.creative.id}
-                    item={toListItem(row)}
-                    selected={selectedId === row.creative.id}
-                    onSelect={() => setSelectedId(row.creative.id)}
-                    metricsLine={compactMetricsLine(row.creative.campaignMetrics)}
-                  />
-                ))}
-              </div>
-              <div className="md:sticky md:top-4 md:self-start">
-                {selectedRow ? (
-                  <CreativeDetailPanel
-                    key={selectedRow.creative.id}
-                    creative={toDetail(selectedRow)}
-                    showDecisionControls
-                    metrics={adaptMetrics(selectedRow.creative.campaignMetrics)}
-                  />
-                ) : (
-                  <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                    Select a creative to review it here.
-                  </div>
-                )}
-              </div>
+      {compliance && compliance.length > 0 && (
+        <div className="stat-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          {[
+            { v: pendingCount, l: 'Pending review', c: 'var(--warning)' },
+            { v: approvedCount, l: 'Approved', c: 'var(--positive)' },
+            { v: rejectedCount, l: 'Rejected', c: 'var(--negative)' },
+          ].map((s) => (
+            <div className="pstat" key={s.l} style={{ minHeight: 132 }}>
+              <div className="pstat-val mono" style={{ color: s.c }}>{s.v}</div>
+              <div className="pstat-lab">{s.l}</div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       )}
 
-      {/* Landing pages — kept per-campaign because each LP belongs to a
-          single campaign and the URL list is small enough that grouping
-          adds clarity rather than noise. */}
+      {/* Sam (jam-video #3, 29-May-2026) — list on the left scrolls, detail
+          panel on the right is sticky on md+ so a buyer can compare adjacent
+          assets without losing the panel. */}
+      {reviewable.length > 0 && (
+        <div className="card pad">
+          <h3 className="statto-title" style={{ marginBottom: 4 }}>Open compliance items</h3>
+          <p className="lc-sub" style={{ marginBottom: 16 }}>
+            {reviewable.length} item{reviewable.length === 1 ? '' : 's'} across {compliance?.length ?? 0} campaign{(compliance?.length ?? 0) === 1 ? '' : 's'}
+          </p>
+          <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
+            <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
+              {reviewable.map((row) => (
+                <CreativeListItem
+                  key={row.creative.id}
+                  item={toListItem(row)}
+                  selected={selectedId === row.creative.id}
+                  onSelect={() => setSelectedId(row.creative.id)}
+                  metricsLine={compactMetricsLine(row.creative.campaignMetrics)}
+                />
+              ))}
+            </div>
+            <div className="md:sticky md:top-4 md:self-start">
+              {selectedRow ? (
+                <CreativeDetailPanel
+                  key={selectedRow.creative.id}
+                  creative={toDetail(selectedRow)}
+                  showDecisionControls
+                  metrics={adaptMetrics(selectedRow.creative.campaignMetrics)}
+                />
+              ) : (
+                <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+                  Select a creative to review it here.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Landing pages — kept per-campaign. */}
       {compliance?.map((campaign) => (
         campaign.landingPages.length > 0 ? (
-          <Card key={campaign.campaignName}>
-            <CardHeader>
-              <CardTitle className="text-base">Landing pages · {campaign.campaignName}</CardTitle>
-              <CardDescription>{campaign.landingPages.length} page{campaign.landingPages.length !== 1 ? 's' : ''}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="card pad" key={campaign.campaignName}>
+            <h3 className="statto-title" style={{ marginBottom: 4 }}>Landing pages · {campaign.campaignName}</h3>
+            <p className="lc-sub" style={{ marginBottom: 16 }}>{campaign.landingPages.length} page{campaign.landingPages.length !== 1 ? 's' : ''}</p>
+            <div className="comp-list">
               {campaign.landingPages.map((lp) => {
                 const isSafeUrl = typeof lp.url === 'string' && (lp.url.startsWith('http://') || lp.url.startsWith('https://'));
                 return (
-                  <div key={lp.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
-                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                        <Globe className="size-4 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="break-all text-sm font-medium">{lp.url}</p>
-                        <p className="text-xs text-muted-foreground">Last checked {formatDate(lp.lastChecked)}</p>
-                      </div>
+                  <div key={lp.id} className="comp-item" style={{ cursor: 'default' }}>
+                    <span className="comp-ic2 ok"><Globe className="size-[19px]" /></span>
+                    <div className="comp-meta">
+                      <span className="comp-l" style={{ wordBreak: 'break-all' }}>{lp.url}</span>
+                      <span className="comp-s">Last checked {formatDate(lp.lastChecked)}</span>
                     </div>
                     {isSafeUrl ? (
-                      <a href={lp.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                        <ExternalLink className="size-4 text-muted-foreground hover:text-foreground" />
-                      </a>
+                      <a href={lp.url} target="_blank" rel="noopener noreferrer" className="link-btn"><ExternalLink className="size-4" /></a>
                     ) : (
-                      <span className="shrink-0 text-xs text-muted-foreground" title="Link not shown — URL did not pass safety check">
-                        (link hidden)
-                      </span>
+                      <span className="comp-s" title="Link not shown — URL did not pass safety check">(link hidden)</span>
                     )}
                   </div>
                 );
               })}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : null
       ))}
 
       {reviewable.length === 0 && compliance && compliance.length > 0 && (
-        <Card>
-          <CardContent>
-            <EmptyState
-              icon={Image}
-              title="All clear"
-              description="Nothing awaiting your review right now. Approved items live on the Creatives tab."
-            />
-          </CardContent>
-        </Card>
+        <div className="card pad">
+          <EmptyState
+            icon={Image}
+            title="All clear"
+            description="Nothing awaiting your review right now. Approved items live on the Creatives tab."
+          />
+        </div>
       )}
     </div>
   );

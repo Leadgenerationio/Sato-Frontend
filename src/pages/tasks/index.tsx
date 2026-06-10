@@ -1,18 +1,8 @@
 import { useState, useMemo, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Pagination } from '@/components/ui/pagination';
 import {
   Search, Plus, CheckSquare, Clock, AlertTriangle, ListTodo, LayoutGrid, List, Timer, Trash2, CornerDownRight, Archive,
-  ChevronRight, ChevronDown, Square,
+  ChevronRight, ChevronDown, ChevronLeft, Square,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -63,11 +53,12 @@ const TIME_LABELS: Record<string, string> = {
 // dedicated Archived tab maps to 'archive'.
 type ArchiveView = 'today' | 'archive' | 'all';
 
-const statusColors: Record<string, string> = {
-  todo: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
-  in_progress: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  on_hold: 'bg-amber-500/10 text-amber-700 border-amber-200',
-  completed: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+// Statto status-pill class per task status (drives the inline dropdown chip).
+const statusPillClass: Record<string, string> = {
+  todo: 'st-todo',
+  in_progress: 'st-prog',
+  on_hold: 'st-hold',
+  completed: 'st-done',
 };
 
 const statusLabels: Record<string, string> = {
@@ -78,11 +69,12 @@ const statusLabels: Record<string, string> = {
   completed: 'Completed',
 };
 
-const priorityColors: Record<string, string> = {
-  urgent: 'bg-red-500/10 text-red-600 border-red-200',
-  high: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  medium: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  low: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+// Statto priority-pill class per priority. Urgent maps to the High visual.
+const priorityPillClass: Record<string, string> = {
+  urgent: 'prio-high',
+  high: 'prio-high',
+  medium: 'prio-med',
+  low: 'prio-low',
 };
 
 function formatDate(dateStr: string | null) {
@@ -127,10 +119,10 @@ function matchesTimeFilter(t: TaskSummary, time: string): boolean {
 }
 
 const BOARD_COLUMNS = [
-  { key: 'todo', label: 'To Do', color: 'bg-neutral-500', dotColor: 'bg-neutral-400' },
-  { key: 'in_progress', label: 'In Progress', color: 'bg-blue-500', dotColor: 'bg-blue-500' },
-  { key: 'on_hold', label: 'On Hold', color: 'bg-amber-500', dotColor: 'bg-amber-500' },
-  { key: 'completed', label: 'Completed', color: 'bg-emerald-500', dotColor: 'bg-emerald-500' },
+  { key: 'todo', label: 'To Do' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'on_hold', label: 'On Hold' },
+  { key: 'completed', label: 'Completed' },
 ] as const;
 
 // Sam-Loom (jam-video #5) — draggable card. dnd-kit handles the pointer/
@@ -164,8 +156,9 @@ function DraggableCard({
       {...listeners}
       className={isDragging ? 'opacity-50' : ''}
     >
-      <Card
-        className="cursor-grab transition-colors hover:bg-muted/50 group active:cursor-grabbing"
+      <div
+        className="tk-mini"
+        style={{ cursor: 'grab' }}
         onClick={(e) => {
           // Treat as a click only if the pointer hasn't moved more than the
           // dnd-kit activation distance. We rely on dnd-kit to swallow the
@@ -174,49 +167,46 @@ function DraggableCard({
           e.stopPropagation();
         }}
       >
-        <CardContent className="p-3 space-y-2">
-          <div className="flex items-start gap-2">
-            <p className="flex-1 text-sm font-medium leading-snug line-clamp-2">{task.title}</p>
-            {canDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Delete ${task.title}`}
-                className="size-6 -m-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                onClick={(e) => { e.stopPropagation(); onDelete(task.id, task.title); }}
-                disabled={deleting}
-              >
-                <Trash2 className="size-3.5 text-red-600" />
-              </Button>
-            )}
-          </div>
-          {(parentTitle || task.parentTitle) && (
-            // Sam-Loom #2 — surfaces the parent → child link on the card so
-            // "I wouldn't know these two are connected while looking at a
-            // screen" becomes "↪ Parent: Foo" with the arrow as a visual cue.
-            // Prefer the in-page title (cached freshness), fall back to the
-            // BE-provided field for cross-page parents.
-            <p className="flex items-center gap-1 text-[10px] text-muted-foreground italic">
-              <CornerDownRight className="size-3" />
-              <span className="truncate">{parentTitle ?? task.parentTitle}</span>
-            </p>
+        <div className="tk-mini-title" style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <span style={{ flex: 1 }}>{task.title}</span>
+          {canDelete && (
+            <button
+              type="button"
+              className="tk-del"
+              aria-label={`Delete ${task.title}`}
+              onClick={(e) => { e.stopPropagation(); onDelete(task.id, task.title); }}
+              disabled={deleting}
+            >
+              <Trash2 className="size-3.5" />
+            </button>
           )}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={`text-[10px] capitalize ${priorityColors[task.priority] || ''}`}>
-              {task.priority}
-            </Badge>
-            {formatTimeBlock(task.timeBlockMinutes) && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground tabular-nums">
-                <Timer className="size-3" />{formatTimeBlock(task.timeBlockMinutes)}
-              </span>
-            )}
-            {task.dueDate && (
-              <span className="text-[10px] text-muted-foreground tabular-nums">{formatDate(task.dueDate)}</span>
-            )}
+        </div>
+        {(parentTitle || task.parentTitle) && (
+          // Sam-Loom #2 — surfaces the parent → child link on the card so
+          // "I wouldn't know these two are connected while looking at a
+          // screen" becomes "↪ Parent: Foo" with the arrow as a visual cue.
+          // Prefer the in-page title (cached freshness), fall back to the
+          // BE-provided field for cross-page parents.
+          <div className="tk-mini-parent">
+            <CornerDownRight className="size-3" />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{parentTitle ?? task.parentTitle}</span>
           </div>
-          <p className="text-xs text-muted-foreground truncate">{task.assignee}</p>
-        </CardContent>
-      </Card>
+        )}
+        <div className="tk-mini-meta">
+          <span className={`tk-prio ${priorityPillClass[task.priority] || ''}`} style={{ textTransform: 'capitalize' }}>
+            {task.priority}
+          </span>
+          {formatTimeBlock(task.timeBlockMinutes) && (
+            <span className="tk-time">
+              <Timer className="size-3" />{formatTimeBlock(task.timeBlockMinutes)}
+            </span>
+          )}
+          {task.dueDate && (
+            <span className="tk-mini-due">{formatDate(task.dueDate)}</span>
+          )}
+        </div>
+        <div className="tk-mini-foot"><span className="tk-assignee">{task.assignee}</span></div>
+      </div>
     </div>
   );
 }
@@ -227,9 +217,8 @@ function DroppableColumn({ id, children }: { id: string; children: React.ReactNo
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col gap-2 min-h-[120px] rounded-lg transition-colors ${
-        isOver ? 'bg-muted/50 ring-2 ring-primary/30' : ''
-      }`}
+      className="tk-col-body"
+      style={isOver ? { outline: '2px solid var(--statto-ink)', outlineOffset: 2, borderRadius: 12 } : undefined}
     >
       {children}
     </div>
@@ -273,22 +262,20 @@ function KanbanBoard({
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="tk-board">
         {BOARD_COLUMNS.map((col) => {
           const columnTasks = tasks.filter((t) => t.status === col.key);
           return (
-            <div key={col.key} className="flex flex-col gap-3">
+            <div key={col.key} className="tk-col">
               {/* Column header */}
-              <div className="flex items-center gap-2 px-1">
-                <div className={`size-2.5 rounded-full ${col.dotColor}`} />
-                <span className="text-sm font-semibold">{col.label}</span>
-                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{columnTasks.length}</span>
+              <div className="tk-col-head">
+                <span className={`tk-col-dot ${statusPillClass[col.key] || ''}`} />
+                {col.label}
+                <span className="tk-col-n">{columnTasks.length}</span>
               </div>
               <DroppableColumn id={col.key}>
                 {columnTasks.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-                    No tasks
-                  </div>
+                  <div className="tk-col-empty">No tasks</div>
                 ) : (
                   columnTasks.map((t) => (
                     <DraggableCard
@@ -331,21 +318,21 @@ function SubtaskFolderRows({ taskId, depth }: { taskId: string; depth: number })
 
   if (isLoading) {
     return (
-      <TableRow>
-        <TableCell colSpan={8} style={{ paddingLeft: indentPx }} className="text-xs text-muted-foreground bg-muted/20">
+      <tr>
+        <td colSpan={8} style={{ paddingLeft: indentPx }} className="tk-assignee">
           Loading subtasks…
-        </TableCell>
-      </TableRow>
+        </td>
+      </tr>
     );
   }
   const subtasks = task?.subtasks ?? [];
   if (subtasks.length === 0) {
     return (
-      <TableRow>
-        <TableCell colSpan={8} style={{ paddingLeft: indentPx }} className="text-xs text-muted-foreground italic bg-muted/20">
+      <tr>
+        <td colSpan={8} style={{ paddingLeft: indentPx, fontStyle: 'italic' }} className="tk-assignee">
           No subtasks yet — open the task to add one.
-        </TableCell>
-      </TableRow>
+        </td>
+      </tr>
     );
   }
 
@@ -357,25 +344,28 @@ function SubtaskFolderRows({ taskId, depth }: { taskId: string; depth: number })
   return (
     <>
       {subtasks.map((s) => (
-        <TableRow key={s.id} className="bg-muted/20 hover:bg-muted/30">
-          <TableCell colSpan={8} style={{ paddingLeft: indentPx }} className="py-2">
-            <div className="flex items-center gap-2 text-sm">
+        <tr key={s.id}>
+          <td colSpan={8} style={{ paddingLeft: indentPx }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button
                 type="button"
                 onClick={() => toggle(s)}
                 aria-label={s.isDone ? `Mark "${s.title}" not done` : `Mark "${s.title}" done`}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
+                style={{ flexShrink: 0, color: 'var(--fg2)' }}
               >
                 {s.isDone
-                  ? <CheckSquare className="size-4 text-emerald-600" />
+                  ? <CheckSquare className="size-4" style={{ color: 'var(--positive)' }} />
                   : <Square className="size-4" />}
               </button>
-              <span className={`truncate ${s.isDone ? 'line-through text-muted-foreground' : ''}`}>
+              <span
+                className="tk-title-text sub"
+                style={s.isDone ? { textDecoration: 'line-through', color: 'var(--fg3)' } : undefined}
+              >
                 {s.title}
               </span>
             </div>
-          </TableCell>
-        </TableRow>
+          </td>
+        </tr>
       ))}
     </>
   );
@@ -506,135 +496,80 @@ export function TasksPage() {
   const handlePriorityChange = (p: string) => { setPriorityFilter(p); setPage(1); };
   const handleSearchChange = (val: string) => { setSearch(val); setPage(1); };
 
+  const STAT_TILES = stats ? [
+    { icon: ListTodo, value: stats.total, label: 'Total Tasks', tint: 'plain' },
+    { icon: Clock, value: stats.inProgress, label: 'In Progress', tint: 'info' },
+    { icon: CheckSquare, value: stats.completedToday, label: 'Completed Today', tint: 'pos' },
+    { icon: AlertTriangle, value: stats.overdue, label: 'Overdue', tint: 'neg' },
+  ] : [];
+
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Tasks" description="Track and manage team tasks">
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg bg-muted p-1">
+    <div className="screen-page">
+      <div className="page-head tk-head">
+        <div>
+          <h1 className="ahead-title">Tasks</h1>
+          <p className="ahead-sub">Track and manage team tasks</p>
+        </div>
+        <div className="tk-head-tools">
+          <div className="seg tk-seg">
             <button
+              className={'seg-btn' + (scope === 'mine' ? ' on' : '')}
               onClick={() => handleScopeChange('mine')}
-              className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
-                scope === 'mine'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
             >
               My tasks
             </button>
             <button
+              className={'seg-btn' + (scope === 'all' ? ' on' : '')}
               onClick={() => handleScopeChange('all')}
-              className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
-                scope === 'all'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
             >
               All tasks
             </button>
           </div>
-          <div className="flex rounded-lg bg-muted p-1">
+          <div className="seg tk-seg">
             <button
+              className={'seg-btn' + (viewMode === 'list' ? ' on' : '')}
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
             >
-              <List className="size-4" />
-              List
+              <List className="size-4" /> List
             </button>
             <button
+              className={'seg-btn' + (viewMode === 'board' ? ' on' : '')}
               onClick={() => setViewMode('board')}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
-                viewMode === 'board'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
             >
-              <LayoutGrid className="size-4" />
-              Board
+              <LayoutGrid className="size-4" /> Board
             </button>
           </div>
           <Link to="/tasks/create">
-            <Button>
-              <Plus className="size-4 mr-1.5" />
-              New Task
-            </Button>
+            <button className="btn b-dark b-sm">
+              <Plus className="size-4" /> New Task
+            </button>
           </Link>
         </div>
-      </PageHeader>
+      </div>
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="gap-3 py-5">
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                  <ListTodo className="size-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums">{stats.total}</p>
-                  <p className="text-sm text-muted-foreground">Total Tasks</p>
-                </div>
+        <div className="tk-stat-row">
+          {STAT_TILES.map((s) => (
+            <div key={s.label} className="tk-stat">
+              <span className={'tk-stat-ic ' + s.tint}><s.icon className="size-5" /></span>
+              <div>
+                <div className="tk-stat-v">{s.value}</div>
+                <div className="tk-stat-l">{s.label}</div>
               </div>
-            </CardContent>
-          </Card>
-          <Card className="gap-3 py-5">
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
-                  <Clock className="size-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums">{stats.inProgress}</p>
-                  <p className="text-sm text-muted-foreground">In Progress</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="gap-3 py-5">
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                  <CheckSquare className="size-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums">{stats.completedToday}</p>
-                  <p className="text-sm text-muted-foreground">Completed Today</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="gap-3 py-5">
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-red-500/10">
-                  <AlertTriangle className="size-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums">{stats.overdue}</p>
-                  <p className="text-sm text-muted-foreground">Overdue</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 rounded-lg bg-muted p-1 flex-wrap">
+      <div className="tk-filters">
+        <div className="tk-tabs">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => handleStatusChange(tab)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                statusFilter === tab
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={'tk-tab' + (statusFilter === tab ? ' on' : '')}
             >
               {statusLabels[tab] || tab}
             </button>
@@ -644,113 +579,113 @@ export function TasksPage() {
               status tabs rather than a separate gear. */}
           <button
             onClick={() => setArchiveView(showingArchived ? 'today' : 'archive')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              showingArchived
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={'tk-tab' + (showingArchived ? ' on' : '')}
             aria-pressed={showingArchived}
           >
             <Archive className="size-3.5" />
             Archived
           </button>
         </div>
-        <div className="flex gap-3 flex-wrap">
-          <select
-            value={priorityFilter}
-            onChange={(e) => handlePriorityChange(e.target.value)}
-            className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm capitalize"
-            aria-label="Filter by priority"
-          >
-            {PRIORITY_OPTIONS.map((p) => (
-              <option key={p} value={p}>{p === 'all' ? 'All Priorities' : p}</option>
-            ))}
-          </select>
-          <select
-            value={dueFilter}
-            onChange={(e) => { setDueFilter(e.target.value); setPage(1); }}
-            className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-            aria-label="Filter by due date"
-          >
-            {DUE_OPTIONS.map((d) => (
-              <option key={d} value={d}>{DUE_LABELS[d]}</option>
-            ))}
-          </select>
-          <select
-            value={timeFilter}
-            onChange={(e) => { setTimeFilter(e.target.value); setPage(1); }}
-            className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-            aria-label="Filter by duration"
-          >
-            {TIME_OPTIONS.map((tm) => (
-              <option key={tm} value={tm}>{TIME_LABELS[tm]}</option>
-            ))}
-          </select>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Search tasks..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-9"
-            />
+        <div className="tk-filter-right">
+          <div className="nc-select-wrap tk-dd">
+            <select
+              value={priorityFilter}
+              onChange={(e) => handlePriorityChange(e.target.value)}
+              className="nc-select"
+              style={{ textTransform: 'capitalize' }}
+              aria-label="Filter by priority"
+            >
+              {PRIORITY_OPTIONS.map((p) => (
+                <option key={p} value={p}>{p === 'all' ? 'All Priorities' : p}</option>
+              ))}
+            </select>
+            <ChevronDown className="size-[15px]" />
+          </div>
+          <div className="nc-select-wrap tk-dd">
+            <select
+              value={dueFilter}
+              onChange={(e) => { setDueFilter(e.target.value); setPage(1); }}
+              className="nc-select"
+              aria-label="Filter by due date"
+            >
+              {DUE_OPTIONS.map((d) => (
+                <option key={d} value={d}>{DUE_LABELS[d]}</option>
+              ))}
+            </select>
+            <ChevronDown className="size-[15px]" />
+          </div>
+          <div className="nc-select-wrap tk-dd">
+            <select
+              value={timeFilter}
+              onChange={(e) => { setTimeFilter(e.target.value); setPage(1); }}
+              className="nc-select"
+              aria-label="Filter by duration"
+            >
+              {TIME_OPTIONS.map((tm) => (
+                <option key={tm} value={tm}>{TIME_LABELS[tm]}</option>
+              ))}
+            </select>
+            <ChevronDown className="size-[15px]" />
           </div>
         </div>
+      </div>
+      <div className="inv-search tk-search">
+        <Search className="size-4" />
+        <input
+          placeholder="Search tasks..."
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+        />
       </div>
 
       {/* Content: List or Board */}
       {isLoading ? (
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex gap-4">
-                <Skeleton className="h-5 w-48" />
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-5 w-20" />
-                <Skeleton className="h-5 w-20" />
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-5 w-20" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <div className="card acard inv-card">
+          <table className="inv-table tk-table">
+            <tbody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  <td colSpan={8}>
+                    <div style={{ height: 20, background: 'var(--gray-100)', borderRadius: 8 }} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : error ? (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              icon={AlertTriangle}
-              title="Couldn't load tasks"
-              description="Something went wrong reaching the server. Try refreshing the page."
-            />
-          </CardContent>
-        </Card>
+        <div className="card acard">
+          <EmptyState
+            icon={AlertTriangle}
+            title="Couldn't load tasks"
+            description="Something went wrong reaching the server. Try refreshing the page."
+          />
+        </div>
       ) : !tasksToShow.length ? (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              icon={showingArchived ? Archive : CheckSquare}
-              title={
-                showingArchived
-                  ? 'Archive is empty'
-                  : (search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
-                      ? 'No matching tasks'
-                      : 'No tasks yet')
-              }
-              description={
-                showingArchived
-                  ? 'Tasks land here automatically the day after they\'re marked completed.'
-                  : (search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
-                      ? 'Try a different search or filter.'
-                      : 'Create a task to track work and assign it to a teammate.')
-              }
-              link={
-                showingArchived || search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
-                  ? undefined
-                  : { label: 'New task', to: '/tasks/new', icon: Plus }
-              }
-            />
-          </CardContent>
-        </Card>
+        <div className="card acard">
+          <EmptyState
+            icon={showingArchived ? Archive : CheckSquare}
+            title={
+              showingArchived
+                ? 'Archive is empty'
+                : (search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
+                    ? 'No matching tasks'
+                    : 'No tasks yet')
+            }
+            description={
+              showingArchived
+                ? 'Tasks land here automatically the day after they\'re marked completed.'
+                : (search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
+                    ? 'Try a different search or filter.'
+                    : 'Create a task to track work and assign it to a teammate.')
+            }
+            link={
+              showingArchived || search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
+                ? undefined
+                : { label: 'New task', to: '/tasks/new', icon: Plus }
+            }
+          />
+        </div>
       ) : viewMode === 'board' ? (
         <KanbanBoard
           tasks={tasksToShow}
@@ -762,137 +697,151 @@ export function TasksPage() {
           currentUserEmail={user?.email ?? ''}
         />
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Assignee</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="w-12 text-right" aria-label="Actions" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {groupedTasks.map(({ task: t, depth }) => {
-                    const isExpanded = expandedIds.has(t.id);
-                    return (
-                    <Fragment key={t.id}>
-                    <TableRow
-                      className="cursor-pointer"
-                      onClick={() => navigate(`/tasks/${t.id}`)}
-                    >
-                      <TableCell
-                        className="max-w-[140px] truncate font-medium sm:max-w-[250px]"
-                        style={{ paddingLeft: depth === 1 ? '2.25rem' : undefined }}
-                      >
-                        {/* Sam-Loom #2 — child rows indent + show a corner glyph so
-                            the parent/child relationship reads at a glance.
-                            Pagination edge case: when the parent is on a different
-                            page, depth stays 0 but parentTitle is still populated by
-                            the BE — render a small italic hint so the link still
-                            reads on screen.
-                            Sam (27 May 2026) — chevron toggle expands the row to
-                            show its subtasks below, file-tree style. */}
-                        <span className="inline-flex flex-col gap-0.5">
-                          <span className="inline-flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); toggleExpanded(t.id); }}
-                              aria-label={`${isExpanded ? 'Hide' : 'Show'} subtasks for ${t.title}`}
-                              aria-expanded={isExpanded}
-                              className="shrink-0 text-muted-foreground hover:text-foreground"
-                            >
-                              {isExpanded
-                                ? <ChevronDown className="size-3.5" />
-                                : <ChevronRight className="size-3.5" />}
-                            </button>
-                            {depth === 1 && <CornerDownRight className="size-3.5 text-muted-foreground shrink-0" />}
-                            <span className="truncate">{t.title}</span>
-                          </span>
-                          {depth === 0 && t.parentTaskId && t.parentTitle && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground italic">
-                              <CornerDownRight className="size-3 shrink-0" />
-                              <span className="truncate">{t.parentTitle}</span>
-                            </span>
-                          )}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{t.assignee}</TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs capitalize ${priorityColors[t.priority] || ''}`}>
-                          {t.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        {/* Sam-Loom #8 — inline status dropdown. Sam: "we just have a
-                            dropdown where we can select the status somewhere". Native
-                            <select> keeps the bundle small + the dropdown native to
-                            the platform (mobile, keyboard). */}
-                        <select
-                          value={t.status}
-                          onChange={(e) => handleStatusInline(t.id, e.target.value)}
-                          aria-label={`Change status for ${t.title}`}
-                          className={`h-7 rounded-md border border-input bg-transparent px-2 py-0 text-xs font-medium ${statusColors[t.status] || ''}`}
-                          disabled={updateStatus.isPending}
+        <div className="card acard inv-card">
+          <table className="inv-table tk-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Assignee</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Time</th>
+                <th>Category</th>
+                <th aria-label="Actions" />
+              </tr>
+            </thead>
+            <tbody>
+              {groupedTasks.map(({ task: t, depth }) => {
+                const isExpanded = expandedIds.has(t.id);
+                return (
+                <Fragment key={t.id}>
+                <tr
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/tasks/${t.id}`)}
+                >
+                  <td>
+                    {/* Sam-Loom #2 — child rows indent + show a corner glyph so
+                        the parent/child relationship reads at a glance.
+                        Pagination edge case: when the parent is on a different
+                        page, depth stays 0 but parentTitle is still populated by
+                        the BE — render a small italic hint so the link still
+                        reads on screen.
+                        Sam (27 May 2026) — chevron toggle expands the row to
+                        show its subtasks below, file-tree style. */}
+                    <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2, paddingLeft: depth === 1 ? '1.75rem' : undefined }}>
+                      <span className="tk-title">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); toggleExpanded(t.id); }}
+                          aria-label={`${isExpanded ? 'Hide' : 'Show'} subtasks for ${t.title}`}
+                          aria-expanded={isExpanded}
+                          style={{ flexShrink: 0, color: 'var(--fg3)', display: 'inline-flex' }}
                         >
-                          {BOARD_COLUMNS.map((col) => (
-                            <option key={col.key} value={col.key}>{col.label}</option>
-                          ))}
-                        </select>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground tabular-nums">{formatDate(t.dueDate)}</TableCell>
-                      <TableCell className="text-muted-foreground tabular-nums">
-                        {formatTimeBlock(t.timeBlockMinutes) ? (
-                          <span className="inline-flex items-center gap-1 text-xs">
-                            <Timer className="size-3.5" />{formatTimeBlock(t.timeBlockMinutes)}
-                          </span>
-                        ) : (
-                          <span className="text-xs">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">{t.category}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        {/* Row-click navigates to detail; the delete button has to
-                            stopPropagation or it'd open the task and delete simultaneously.
-                            Sam-Loom (jam-video #10) — only the creator sees the delete
-                            icon; the BE returns 403 for anyone else. */}
-                        {t.createdBy === user?.email && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Delete ${t.title}`}
-                            onClick={() => handleDelete(t.id, t.title)}
-                            disabled={deleteTask.isPending}
-                          >
-                            <Trash2 className="size-4 text-red-600" />
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    {isExpanded && <SubtaskFolderRows taskId={t.id} depth={depth} />}
-                    </Fragment>
-                  );})}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
+                          {isExpanded
+                            ? <ChevronDown className="size-[15px]" />
+                            : <ChevronRight className="size-[15px]" />}
+                        </button>
+                        {depth === 1 && <CornerDownRight className="size-[15px]" />}
+                        <span className={'tk-title-text' + (depth === 1 ? ' sub' : '')}>{t.title}</span>
+                      </span>
+                      {depth === 0 && t.parentTaskId && t.parentTitle && (
+                        <span className="tk-mini-parent" style={{ marginBottom: 0 }}>
+                          <CornerDownRight className="size-3" />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.parentTitle}</span>
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="tk-assignee">{t.assignee}</td>
+                  <td>
+                    <span className={`tk-prio ${priorityPillClass[t.priority] || ''}`} style={{ textTransform: 'capitalize' }}>
+                      {t.priority}
+                    </span>
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    {/* Sam-Loom #8 — inline status dropdown. Sam: "we just have a
+                        dropdown where we can select the status somewhere". Native
+                        <select> keeps the bundle small + the dropdown native to
+                        the platform (mobile, keyboard). */}
+                    <div className={'tk-status-wrap ' + (statusPillClass[t.status] || '')}>
+                      <select
+                        value={t.status}
+                        onChange={(e) => handleStatusInline(t.id, e.target.value)}
+                        aria-label={`Change status for ${t.title}`}
+                        className="tk-status"
+                        disabled={updateStatus.isPending}
+                      >
+                        {BOARD_COLUMNS.map((col) => (
+                          <option key={col.key} value={col.key}>{col.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="size-[14px]" />
+                    </div>
+                  </td>
+                  <td className="inv-date">{formatDate(t.dueDate)}</td>
+                  <td>
+                    {formatTimeBlock(t.timeBlockMinutes) ? (
+                      <span className="tk-time">
+                        <Timer className="size-[14px]" />{formatTimeBlock(t.timeBlockMinutes)}
+                      </span>
+                    ) : (
+                      <span className="tk-assignee">—</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className="tk-cat">{t.category}</span>
+                  </td>
+                  <td className="r" onClick={(e) => e.stopPropagation()}>
+                    {/* Row-click navigates to detail; the delete button has to
+                        stopPropagation or it'd open the task and delete simultaneously.
+                        Sam-Loom (jam-video #10) — only the creator sees the delete
+                        icon; the BE returns 403 for anyone else. */}
+                    {t.createdBy === user?.email && (
+                      <button
+                        type="button"
+                        className="tk-del"
+                        aria-label={`Delete ${t.title}`}
+                        onClick={() => handleDelete(t.id, t.title)}
+                        disabled={deleteTask.isPending}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+                {isExpanded && <SubtaskFolderRows taskId={t.id} depth={depth} />}
+                </Fragment>
+              );})}
+            </tbody>
+          </table>
           {data && data.total > 0 && (
-            <Pagination
-              page={data.page}
-              pageSize={data.pageSize}
-              total={data.total}
-              onPageChange={setPage}
-            />
+            <div className="bf-pager">
+              <span className="bf-count">
+                Showing <strong>{(data.page - 1) * data.pageSize + 1}–{Math.min(data.page * data.pageSize, data.total)}</strong> of <strong>{data.total}</strong>
+              </span>
+              <div className="bf-pages">
+                <button
+                  className="bf-pg-btn"
+                  disabled={data.page <= 1}
+                  onClick={() => setPage(data.page - 1)}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button className="bf-pg-btn on">{data.page}</button>
+                <button
+                  className="bf-pg-btn"
+                  disabled={data.page * data.pageSize >= data.total}
+                  onClick={() => setPage(data.page + 1)}
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            </div>
           )}
-        </Card>
+        </div>
       )}
     </div>
   );

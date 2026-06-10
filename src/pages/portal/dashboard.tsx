@@ -1,126 +1,541 @@
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Megaphone, Users, FileText, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { usePortalDashboard } from '@/lib/hooks/use-portal';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Megaphone, Users, ReceiptText, BadgeCheck, ChevronDown, ArrowUpRight,
+  ShieldCheck, FileSignature, UserCog, Pencil, Plus, RotateCcw, Check, GripVertical,
+  X, ChevronUp, Image as ImageIcon, ArrowRight, Headset, Phone, MessageSquare, BarChart3,
+} from 'lucide-react';
+import { usePortalDashboard, usePortalInvoices, usePortalLeads, usePortalCompliance } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
-import { EmptyState } from '@/components/shared/empty-state';
+import { useAuth } from '@/components/providers/auth-provider';
 import { formatCurrency } from '@/lib/currency';
+import { platformLabel } from '@/lib/hooks/use-ad-spend';
+import { toMoney } from '@/lib/hooks/use-invoices';
+import { Skeleton } from '@/components/ui/skeleton';
 
-function StatCard({
-  label, value, icon: Icon, badge, href,
-}: {
-  label: string;
-  value: string;
-  icon: React.ElementType;
-  badge?: { text: string; variant: 'default' | 'destructive' | 'secondary' };
-  href?: string;
-}) {
-  const card = (
-    <Card className={`gap-3 py-5 ${href ? 'transition-colors hover:bg-accent/40 cursor-pointer' : ''}`}>
-      <CardContent>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-            <Icon className="size-5 text-muted-foreground" />
-          </div>
-          {badge && <Badge variant={badge.variant} className="text-xs">{badge.text}</Badge>}
-        </div>
-        <div className="mt-3">
-          <p className="truncate text-2xl font-bold tabular-nums">{value}</p>
-          <p className="truncate text-sm text-muted-foreground">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-  if (!href) return card;
+// ── Portal dashboard, restyled to the Statto design (Stato Portal.html).
+// Editable card grid (drag / add / remove, persisted to localStorage) ported
+// from portal/dashboard.jsx. Cards are wired to the real portal API; the few
+// fields the backend can't supply yet (account-manager identity) are rendered
+// with a "sample" flag and documented in PORTAL_REDESIGN_BACKEND.md.
+
+const PALETTE = ['var(--statto-ink)', 'var(--lime-500)', 'var(--green-300)', 'var(--lime-600)', 'var(--green-500)'];
+
+function niceTicks(maxValue: number): number[] {
+  const safe = Math.max(maxValue, 1);
+  const pow = Math.pow(10, Math.floor(Math.log10(safe)));
+  const top = Math.ceil(safe / pow) * pow;
+  // 5 evenly-spaced ticks, high → low (matches the design's 28/21/14/7/0).
+  return [4, 3, 2, 1, 0].map((i) => Math.round((top / 4) * i));
+}
+
+function MockTag({ label = 'sample' }: { label?: string }) {
+  return <span className="mock-flag" title="Placeholder — backend does not supply this field yet">{label}</span>;
+}
+
+// ── Lead deliveries chart (custom bar/area, ported from the design) ──
+function LeadChart({ deliveries }: { deliveries: { d: string; v: number }[] }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const ticks = useMemo(() => niceTicks(Math.max(...deliveries.map((d) => d.v), 0)), [deliveries]);
+  const max = ticks[0] || 1;
+
   return (
-    <Link to={href} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg" aria-label={`${label} — view details`}>
-      {card}
-    </Link>
+    <div className="lead-chart">
+      <div className="lc-yaxis">
+        {ticks.map((t) => (
+          <span key={t} style={{ top: `${(1 - t / max) * 100}%` }}>{t}</span>
+        ))}
+      </div>
+      <div className="lc-plot">
+        {ticks.map((t) => (
+          <div key={t} className={'lc-grid' + (t === 0 ? ' base' : '')} style={{ top: `${(1 - t / max) * 100}%` }} />
+        ))}
+        <div className="lc-bars">
+          {deliveries.map((d, i) => (
+            <div key={d.d + i} className="lc-col" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
+              <div
+                className={'lc-bar' + (hover === i ? ' on' : '') + (d.v === 0 ? ' empty' : '')}
+                style={{ height: `${(d.v / max) * 100}%` }}
+              />
+              {hover === i && d.v > 0 && (
+                <div className="lc-tip" style={{ bottom: `${(d.v / max) * 100}%` }}>
+                  <strong>{d.v}</strong> leads<span>{d.d}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="lc-xaxis">
+        {deliveries.map((d, i) => <span key={d.d + i}>{d.d}</span>)}
+      </div>
+    </div>
+  );
+}
+
+interface DashData {
+  go: (slug: string) => void;
+  companyName: string;
+  stats: { id: string; icon: React.ElementType; value: string; label: string; badge?: string; lime?: boolean }[];
+  deliveries: { d: string; v: number }[];
+  adSpend: { platform: string; amount: number; leads: number; currency: string; color: string }[];
+  adSpendReal: boolean;
+  invoices: { outstanding: number; outstandingCount: number; paidCount: number; nextDue?: { number: string; due: string; total: number; currency: string } };
+  leadsThisMonth: number;
+  activeCampaigns: number;
+  quality: { valid: number; invalid: number; rate: number } | null;
+  compliance: { cleared: number; actionNeeded: number; total: number } | null;
+  creatives: { live: number; review: number } | null;
+  userName: string;
+}
+
+function StatCard({ stat }: { stat: DashData['stats'][number] }) {
+  return (
+    <div className={'pstat' + (stat.lime ? ' lime' : '')}>
+      <div className="pstat-top">
+        <span className="pstat-ic" style={stat.lime ? { background: 'rgba(6,47,40,.10)' } : undefined}>
+          <stat.icon className="size-5" />
+        </span>
+        {stat.badge && <span className="pstat-badge">{stat.badge}</span>}
+      </div>
+      <div className="pstat-val mono">{stat.value}</div>
+      <div className="pstat-lab">{stat.label}</div>
+    </div>
+  );
+}
+
+function AdSpendCard({ d }: { d: DashData }) {
+  const total = d.adSpend.reduce((s, p) => s + p.amount, 0);
+  const totalLeads = d.adSpend.reduce((s, p) => s + p.leads, 0);
+  const max = Math.max(...d.adSpend.map((p) => p.amount), 1);
+  const currency = d.adSpend[0]?.currency ?? 'GBP';
+  return (
+    <div className="card pad spend-card">
+      <div className="lc-head">
+        <div>
+          <h3 className="statto-title">Ad Spend by Platform</h3>
+          <p className="lc-sub">This month · across {d.adSpend.length} platform{d.adSpend.length === 1 ? '' : 's'}</p>
+        </div>
+        <span className="dd">This Month <ChevronDown className="size-[15px]" /></span>
+      </div>
+      <div className="spend-grid">
+        <div className="spend-summary">
+          <span className="spend-sum-lab">Total ad spend</span>
+          <span className="spend-sum-val mono">{formatCurrency(total, currency)}</span>
+          {totalLeads > 0 && (
+            <div className="spend-sum-foot">
+              <span>{totalLeads.toLocaleString()} leads</span>
+              <span className="dot-sep">·</span>
+              <span>{formatCurrency(Math.round(total / totalLeads), currency)} avg CPL</span>
+            </div>
+          )}
+        </div>
+        <div className="spend-list">
+          {d.adSpend.map((p) => (
+            <div key={p.platform} className="spend-row">
+              <div className="spend-label">
+                <span className="spend-dot" style={{ background: p.color }} />
+                <span className="spend-name">{p.platform}</span>
+                {p.leads > 0 && (
+                  <span className="spend-meta">{p.leads} leads · {formatCurrency(Math.round(p.amount / p.leads), p.currency)} CPL</span>
+                )}
+              </div>
+              <div className="spend-track">
+                <span className="spend-fill" style={{ width: `${(p.amount / max) * 100}%`, background: p.color }} />
+              </div>
+              <span className="spend-amt mono">{formatCurrency(p.amount, p.currency)}</span>
+              <span className="spend-pct">{Math.round((p.amount / total) * 100)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Snap({ icon: Icon, title, hint, onClick, children }: {
+  icon: React.ElementType; title: string; hint?: React.ReactNode; onClick: () => void; children: React.ReactNode;
+}) {
+  return (
+    <button className="snap card" onClick={onClick}>
+      <div className="snap-head">
+        <span className="snap-ic"><Icon className="size-[18px]" /></span>
+        <span className="snap-title">{title}</span>
+        {hint && <span className="snap-hint">{hint}</span>}
+        <span className="snap-go"><ArrowUpRight className="size-4" /></span>
+      </div>
+      <div className="snap-body">{children}</div>
+    </button>
+  );
+}
+
+function SnapshotGrid({ d }: { d: DashData }) {
+  return (
+    <div>
+      <div className="snap-section">Your account at a glance</div>
+      <div className="snap-grid">
+        <Snap icon={BarChart3} title="Leads" hint={`${d.leadsThisMonth} this month`} onClick={() => d.go('leads')}>
+          <div className="snap-amt mono">{d.leadsThisMonth.toLocaleString()}</div>
+          <div className="snap-sub">delivered this month</div>
+          <div className="snap-tags"><span className="pill p-soft">{d.activeCampaigns} active campaign{d.activeCampaigns === 1 ? '' : 's'}</span></div>
+        </Snap>
+
+        <Snap icon={ReceiptText} title="Invoices" onClick={() => d.go('invoices')}>
+          <div className="snap-amt mono">{formatCurrency(d.invoices.outstanding)}</div>
+          <div className="snap-sub">{d.invoices.nextDue ? `Outstanding · due ${d.invoices.nextDue.due}` : 'Outstanding'}</div>
+          <div className="snap-tags">
+            {d.invoices.outstandingCount > 0 && <span className="pill p-warn">{d.invoices.outstandingCount} outstanding</span>}
+            {d.invoices.paidCount > 0 && <span className="pill p-soft">{d.invoices.paidCount} paid</span>}
+          </div>
+        </Snap>
+
+        {d.compliance && (
+          <Snap icon={ShieldCheck} title="Compliance" onClick={() => d.go('compliance')}>
+            <div className="snap-meter">
+              <span className="snap-meter-fill" style={{ width: `${d.compliance.total ? (d.compliance.cleared / d.compliance.total) * 100 : 100}%` }} />
+            </div>
+            <div className="snap-sub">{d.compliance.cleared} of {d.compliance.total} items cleared</div>
+            <div className="snap-tags">
+              {d.compliance.cleared > 0 && <span className="pill p-soft">{d.compliance.cleared} cleared</span>}
+              {d.compliance.actionNeeded > 0 && <span className="pill p-warn">{d.compliance.actionNeeded} action needed</span>}
+            </div>
+          </Snap>
+        )}
+
+        {d.creatives && (
+          <Snap icon={Megaphone} title="Creatives" onClick={() => d.go('creatives')}>
+            <div className="snap-thumbs">
+              <span className="snap-thumb"><ImageIcon className="size-4" /></span>
+              <span className="snap-thumb"><ImageIcon className="size-4" /></span>
+              <span className="snap-thumb"><ImageIcon className="size-4" /></span>
+            </div>
+            <div className="snap-tags">
+              {d.creatives.live > 0 && <span className="pill p-soft">{d.creatives.live} live</span>}
+              {d.creatives.review > 0 && <span className="pill p-warn">{d.creatives.review} in review</span>}
+            </div>
+          </Snap>
+        )}
+
+        <Snap icon={FileSignature} title="Agreement" hint={d.stats.find((s) => s.id === 'agreement')?.badge} onClick={() => d.go('agreement')}>
+          <div className="snap-amt mono">{d.stats.find((s) => s.id === 'agreement')?.value}</div>
+          <div className="snap-sub">Service agreement status</div>
+        </Snap>
+
+        <Snap icon={UserCog} title="Account" onClick={() => d.go('account')}>
+          <div className="snap-kv"><span>Signed in as</span><strong>{d.userName}</strong></div>
+          <div className="snap-kv"><span>Company</span><strong>{d.companyName}</strong></div>
+        </Snap>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceDueCard({ d }: { d: DashData }) {
+  const due = d.invoices.nextDue;
+  if (!due) {
+    return (
+      <div className="card pad mini-wide">
+        <div className="mw-ic"><ReceiptText className="size-[22px]" /></div>
+        <div className="mw-body"><div className="mw-row"><h3 className="statto-title">Next Invoice Due</h3></div><p className="mw-sub">Nothing outstanding — you're all paid up.</p></div>
+      </div>
+    );
+  }
+  return (
+    <div className="card pad mini-wide">
+      <div className="mw-ic"><ReceiptText className="size-[22px]" /></div>
+      <div className="mw-body">
+        <div className="mw-row"><h3 className="statto-title">Next Invoice Due</h3></div>
+        <p className="mw-sub">{due.number} · due {due.due}</p>
+      </div>
+      <div className="mw-end">
+        <span className="mw-amt mono">{formatCurrency(due.total, due.currency)}</span>
+        <button className="btn b-primary b-sm" onClick={() => d.go('invoices')}><ArrowRight className="size-[15px]" /> View</button>
+      </div>
+    </div>
+  );
+}
+
+function LeadQualityCard({ d }: { d: DashData }) {
+  if (!d.quality) {
+    return (
+      <div className="card pad"><div className="lc-head" style={{ marginBottom: 14 }}><div><h3 className="statto-title">Lead Quality</h3><p className="lc-sub">No scored leads this month yet</p></div></div></div>
+    );
+  }
+  const { valid, invalid, rate } = d.quality;
+  return (
+    <div className="card pad">
+      <div className="lc-head" style={{ marginBottom: 14 }}>
+        <div><h3 className="statto-title">Lead Quality</h3><p className="lc-sub">This month · {valid + invalid} scored</p></div>
+        <span className="pill p-soft">{rate}% valid</span>
+      </div>
+      <div className="snap-meter" style={{ height: 10 }}><span className="snap-meter-fill" style={{ width: rate + '%' }} /></div>
+      <div className="lq-tags">
+        <span className="pill p-soft">{valid} valid</span>
+        <span className="pill p-neg">{invalid} invalid</span>
+      </div>
+    </div>
+  );
+}
+
+function SupportCard() {
+  return (
+    <div className="card pad mini-wide">
+      <div className="mw-ic lime"><Headset className="size-[22px]" /></div>
+      <div className="mw-body">
+        <div className="mw-row"><h3 className="statto-title">Your Account Manager</h3><MockTag /></div>
+        <p className="mw-sub">Contact your account manager via the team.</p>
+      </div>
+      <div className="mw-end">
+        <button className="btn b-ghost b-sm"><Phone className="size-[15px]" /> Call</button>
+        <button className="btn b-dark b-sm"><MessageSquare className="size-[15px]" /> Message</button>
+      </div>
+    </div>
+  );
+}
+
+const DASH_BLOCKS = [
+  { id: 'stats', title: 'Headline stats' },
+  { id: 'deliveries', title: 'Recent Lead Deliveries' },
+  { id: 'adspend', title: 'Ad Spend by Platform' },
+  { id: 'snapshots', title: 'Account at a glance' },
+  { id: 'invoice', title: 'Next Invoice Due' },
+  { id: 'quality', title: 'Lead Quality' },
+  { id: 'support', title: 'Account Manager' },
+];
+const DASH_DEFAULT = ['stats', 'deliveries', 'adspend', 'snapshots'];
+const DASH_KEY = 'stato-portal-dash-v1';
+
+function DashboardGrid({ d }: { d: DashData }) {
+  const [editing, setEditing] = useState(false);
+  const [active, setActive] = useState<string[]>(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(DASH_KEY) ?? 'null');
+      if (Array.isArray(s) && s.length) return s.filter((id: string) => DASH_BLOCKS.some((b) => b.id === id));
+    } catch { /* ignore */ }
+    return DASH_DEFAULT;
+  });
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const hidden = DASH_BLOCKS.filter((b) => !active.includes(b.id));
+  const titleOf = (id: string) => DASH_BLOCKS.find((b) => b.id === id)?.title;
+
+  const save = () => { localStorage.setItem(DASH_KEY, JSON.stringify(active)); setEditing(false); setAddOpen(false); };
+  const resetLayout = () => { setActive(DASH_DEFAULT); localStorage.removeItem(DASH_KEY); };
+  const remove = (id: string) => setActive((a) => a.filter((x) => x !== id));
+  const add = (id: string) => { setActive((a) => [...a, id]); setAddOpen(false); };
+  const move = (i: number, dir: number) => setActive((a) => {
+    const j = i + dir;
+    if (j < 0 || j >= a.length) return a;
+    const next = [...a];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
+  const onDrop = (i: number) => {
+    if (dragIdx === null || dragIdx === i) { setDragIdx(null); setOverIdx(null); return; }
+    const next = [...active];
+    const [m] = next.splice(dragIdx, 1);
+    next.splice(i, 0, m);
+    setActive(next); setDragIdx(null); setOverIdx(null);
+  };
+
+  const renderBlock = (id: string) => {
+    switch (id) {
+      case 'stats': return <div className="stat-row">{d.stats.map((s) => <StatCard key={s.id} stat={s} />)}</div>;
+      case 'deliveries': return (
+        <div className="card pad lead-card">
+          <div className="lc-head">
+            <div><h3 className="statto-title">Recent Lead Deliveries</h3><p className="lc-sub">Last 14 days</p></div>
+            <span className="dd">This Period <ChevronDown className="size-[15px]" /></span>
+          </div>
+          <LeadChart deliveries={d.deliveries} />
+        </div>
+      );
+      case 'adspend': return d.adSpend.length > 0
+        ? <AdSpendCard d={d} />
+        : <div className="dash-empty">No ad-spend data for this month yet.</div>;
+      case 'snapshots': return <SnapshotGrid d={d} />;
+      case 'invoice': return <InvoiceDueCard d={d} />;
+      case 'quality': return <LeadQualityCard d={d} />;
+      case 'support': return <SupportCard />;
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="screen">
+      <div className="dash-toolbar">
+        {!editing ? (
+          <button className="btn b-ghost b-sm" onClick={() => setEditing(true)}><Pencil className="size-[15px]" /> Edit dashboard</button>
+        ) : (
+          <>
+            <div className="addcard-dd">
+              <button className="btn b-ghost b-sm" onClick={() => setAddOpen((o) => !o)} disabled={!hidden.length}>
+                <Plus className="size-[15px]" /> Add card <ChevronDown className="size-[14px]" />
+              </button>
+              {addOpen && hidden.length > 0 && (
+                <div className="addcard-menu">
+                  {hidden.map((b) => (
+                    <button key={b.id} className="addcard-opt" onClick={() => add(b.id)}>
+                      <Plus className="size-[14px]" /> {b.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button className="btn b-ghost b-sm" onClick={resetLayout}><RotateCcw className="size-[15px]" /> Reset</button>
+            <button className="btn b-primary b-sm" onClick={save}><Check className="size-[15px]" /> Save</button>
+          </>
+        )}
+      </div>
+
+      {editing && (
+        <div className="edit-hint">
+          <GripVertical className="size-4" /> Drag cards to rearrange, remove with ×, or add more from the <strong>Add card</strong> menu. Press <strong>Save</strong> when done.
+        </div>
+      )}
+
+      {active.map((id, i) => (
+        <div
+          key={id}
+          className={'pblock' + (editing ? ' editing' : '') + (dragIdx === i ? ' dragging' : '') + (overIdx === i && dragIdx !== null && dragIdx !== i ? ' over' : '')}
+          draggable={editing}
+          onDragStart={() => editing && setDragIdx(i)}
+          onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
+          onDragOver={(e) => { if (editing) { e.preventDefault(); if (i !== overIdx) setOverIdx(i); } }}
+          onDrop={() => editing && onDrop(i)}
+        >
+          {editing && (
+            <div className="pblock-bar">
+              <span className="phandle"><GripVertical className="size-[13px]" /> {titleOf(id)}</span>
+              <button className="premove" onClick={() => remove(id)} title="Remove card"><X className="size-[15px]" /></button>
+            </div>
+          )}
+          {editing && (
+            <div className="pblock-move">
+              <button className="pmove-btn" disabled={i === 0} onClick={() => move(i, -1)} title="Move up"><ChevronUp className="size-[18px]" /></button>
+              <button className="pmove-btn" disabled={i === active.length - 1} onClick={() => move(i, 1)} title="Move down"><ChevronDown className="size-[18px]" /></button>
+            </div>
+          )}
+          {renderBlock(id)}
+        </div>
+      ))}
+
+      {editing && active.length === 0 && (
+        <div className="dash-empty">No cards. Use <strong>Add card</strong> to choose what to show.</div>
+      )}
+    </div>
   );
 }
 
 export function PortalDashboardPage() {
   usePageTitle('Stato — Dashboard');
-  const { data, isLoading } = usePortalDashboard();
+  const { user } = useAuth();
+  const { data: dashboard, isLoading } = usePortalDashboard();
+  const { data: invoices } = usePortalInvoices();
+  // "This month" range matches the leads page default → shared react-query cache.
+  const monthRange = useMemo(() => {
+    const now = new Date();
+    const iso = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(now) };
+  }, []);
+  const { data: leadsData } = usePortalLeads(monthRange);
+  const { data: compliance } = usePortalCompliance();
 
-  if (isLoading || !data) {
+  const dashData = useMemo<DashData | null>(() => {
+    if (!dashboard) return null;
+
+    const stats: DashData['stats'] = [
+      { id: 'campaigns', icon: Megaphone, value: String(dashboard.activeCampaigns), label: 'Active Campaigns' },
+      { id: 'leads', icon: Users, value: dashboard.totalLeadsThisMonth.toLocaleString(), label: 'Leads This Month' },
+      { id: 'owed', icon: ReceiptText, value: formatCurrency(dashboard.totalOutstanding), label: 'Outstanding' },
+      { id: 'agreement', icon: BadgeCheck, value: dashboard.agreementSigned ? 'Signed' : 'Pending', label: 'Agreement', badge: dashboard.agreementSigned ? 'Active' : 'Action', lime: dashboard.agreementSigned },
+    ];
+
+    const deliveries = (dashboard.recentLeads ?? []).map((r) => ({
+      d: new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+      v: r.leads,
+    }));
+
+    // Ad spend — real leads + spend per platform from the LeadByte "by source"
+    // breakdown (this-month preset). Falls back to the dashboard's spend-only
+    // adSpendByPlatform if the breakdown isn't available for the range.
+    const bySource = leadsData?.bySource ?? [];
+    let adSpend: DashData['adSpend'] = bySource.map((r, i) => ({
+      platform: platformLabel(r.platform), amount: r.spend, leads: r.leads, currency: r.currency, color: PALETTE[i % PALETTE.length],
+    }));
+    let adSpendReal = adSpend.length > 0;
+    if (adSpend.length === 0 && dashboard.adSpendByPlatform?.length) {
+      adSpend = dashboard.adSpendByPlatform.map((r, i) => ({
+        platform: platformLabel(r.platform), amount: r.spend, leads: 0, currency: r.currency, color: PALETTE[i % PALETTE.length],
+      }));
+      adSpendReal = false;
+    }
+
+    // Lead quality — valid vs invalid from the leads daily rows.
+    const days = leadsData?.leads ?? [];
+    const valid = days.reduce((s, x) => s + x.validLeads, 0);
+    const invalid = days.reduce((s, x) => s + x.invalidLeads, 0);
+    const quality = valid + invalid > 0 ? { valid, invalid, rate: Math.round((valid / (valid + invalid)) * 100) } : null;
+
+    // Invoices summary
+    const HIDDEN = new Set(['draft', 'voided', 'deleted']);
+    const visibleInv = (invoices ?? []).filter((i) => !HIDDEN.has((i.status ?? '').toLowerCase()));
+    const outstandingInv = visibleInv.filter((i) => i.status !== 'paid');
+    const outstanding = outstandingInv.reduce((s, i) => s + toMoney(i.total), 0);
+    const paidCount = visibleInv.filter((i) => i.status === 'paid').length;
+    const nextDueInv = outstandingInv.slice().sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+    const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    // Compliance + creatives counts (across campaigns)
+    let complianceSummary: DashData['compliance'] = null;
+    let creativesSummary: DashData['creatives'] = null;
+    if (compliance) {
+      const allCreatives = compliance.flatMap((c) => c.creatives);
+      const approved = allCreatives.filter((c) => c.approval?.status === 'approved').length;
+      const pending = allCreatives.filter((c) => (c.approval?.status ?? 'pending') !== 'approved').length;
+      const total = allCreatives.length;
+      if (total > 0) {
+        complianceSummary = { cleared: approved, actionNeeded: pending, total };
+        creativesSummary = { live: approved, review: pending };
+      }
+    }
+
+    return {
+      go: () => {},
+      companyName: dashboard.companyName,
+      stats,
+      deliveries,
+      adSpend,
+      adSpendReal,
+      invoices: {
+        outstanding,
+        outstandingCount: outstandingInv.length,
+        paidCount,
+        nextDue: nextDueInv ? { number: nextDueInv.invoiceNumber, due: fmtDate(nextDueInv.dueDate), total: toMoney(nextDueInv.total), currency: nextDueInv.currency } : undefined,
+      },
+      leadsThisMonth: dashboard.totalLeadsThisMonth,
+      activeCampaigns: dashboard.activeCampaigns,
+      quality,
+      compliance: complianceSummary,
+      creatives: creativesSummary,
+      userName: user?.name ?? '—',
+    };
+  }, [dashboard, leadsData, invoices, compliance, user]);
+
+  const navigate = useNavigate();
+
+  if (isLoading || !dashData) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)}
-        </div>
-        <Skeleton className="h-64" />
+      <div className="screen" style={{ paddingTop: 8 }}>
+        <Skeleton className="h-9 w-40 self-end rounded-xl" />
+        <div className="stat-row">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[168px] rounded-3xl" />)}</div>
+        <Skeleton className="h-[360px] rounded-3xl" />
       </div>
     );
   }
 
-  const chartData = data.recentLeads.map((d) => ({
-    date: new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-    leads: d.leads,
-  }));
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold">{data.companyName}</h1>
-          {data.clientType === 'managed' && (
-            <Badge variant="secondary" className="text-xs">Managed</Badge>
-          )}
-        </div>
-        <p className="text-muted-foreground">Client Portal</p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Active Campaigns" value={String(data.activeCampaigns)} icon={Megaphone} href="/portal/leads" />
-        <StatCard label="Leads This Month" value={data.totalLeadsThisMonth.toLocaleString()} icon={Users} href="/portal/leads" />
-        <StatCard
-          label="Outstanding"
-          value={formatCurrency(data.totalOutstanding)}
-          icon={FileText}
-          badge={data.overdueInvoices > 0 ? { text: `${data.overdueInvoices} overdue`, variant: 'destructive' } : undefined}
-          href="/portal/invoices"
-        />
-        <StatCard
-          label="Agreement"
-          value={data.agreementSigned ? 'Signed' : 'Pending'}
-          icon={data.agreementSigned ? CheckCircle2 : AlertTriangle}
-          badge={{ text: data.agreementSigned ? 'Active' : 'Action needed', variant: data.agreementSigned ? 'secondary' : 'destructive' }}
-          href="/portal/agreement"
-        />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Lead Deliveries</CardTitle>
-          <CardDescription>Last 14 days</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {chartData.length === 0 || chartData.every((d) => d.leads === 0) ? (
-            <EmptyState
-              icon={BarChart3}
-              title="No lead deliveries yet"
-              description="Once leads are delivered against your campaigns, you'll see daily volumes here."
-            />
-          ) : (
-            <div className="h-[180px] sm:h-[250px] w-full min-w-0">
-              <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" interval="preserveStartEnd" minTickGap={16} />
-                  <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                  <Tooltip />
-                  <Bar dataKey="leads" fill="#171717" radius={[4, 4, 0, 0]} name="Leads" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const data: DashData = { ...dashData, go: (slug) => navigate(slug === 'leads' ? '/portal/leads' : `/portal/${slug}`) };
+  return <DashboardGrid d={data} />;
 }

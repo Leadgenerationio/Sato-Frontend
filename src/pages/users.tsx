@@ -1,14 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { PageHeader } from '@/components/layouts/page-header';
 import { StatCardSkeleton, UserTableSkeleton, PermissionMatrixSkeleton } from '@/components/shared/loading-skeleton';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import {
@@ -21,6 +13,7 @@ import type { UserRole, ApiResponse } from '@/types';
 import { toast } from 'sonner';
 
 import { logError, logWarn } from '../lib/log';
+
 interface PermissionEntry {
   permission: string;
   access: Record<UserRole, boolean>;
@@ -53,10 +46,38 @@ const allRoles: { value: UserRole; label: string; icon: React.ElementType; desc:
 function getRoleIcon(role: UserRole) { return allRoles.find((r) => r.value === role)?.icon || Shield; }
 function getRoleLabel(role: UserRole) { return allRoles.find((r) => r.value === role)?.label || role; }
 
+// Statto role picker shared by the Add + Edit dialogs.
+function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRole) => void }) {
+  return (
+    <div className="set-roles">
+      {allRoles.map((r) => (
+        <button
+          key={r.value}
+          type="button"
+          onClick={() => onChange(r.value)}
+          className={'set-role' + (value === r.value ? ' on' : '')}
+        >
+          <span className="set-role-ic"><r.icon className="size-[18px]" /></span>
+          <div className="set-role-meta">
+            <div className="set-role-name">{r.label}</div>
+            <div className="set-role-desc">{r.desc}</div>
+          </div>
+          {value === r.value && <span className="set-role-dot" />}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function UsersPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="User Management" description="Manage users and their role permissions" />
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">User Management</h1>
+          <p className="ahead-sub">Manage users and their role permissions</p>
+        </div>
+      </div>
       <UsersManagement />
     </div>
   );
@@ -266,64 +287,69 @@ export function UsersManagement() {
   const stats = { total: users.length, active: users.filter((u) => u.isActive).length, owners: users.filter((u) => u.role === 'owner').length };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div />
-        <Button onClick={openAddDialog} className="gap-2">
-          <Plus className="size-4" />
+    <div className="screen-page">
+      <div className="set-users-bar">
+        <button className="btn b-dark b-sm" onClick={openAddDialog}>
+          <Plus className="size-[15px]" />
           Add User
-        </Button>
+        </button>
       </div>
 
       {/* Stats */}
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="tk-stat-row set-users-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           <StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-neutral-100"><Users className="size-5 text-neutral-700" /></div><div><p className="text-2xl font-bold">{stats.total}</p><p className="text-sm text-muted-foreground">Total Users</p></div></div></CardContent></Card>
-          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-emerald-50"><UserCheck className="size-5 text-emerald-600" /></div><div><p className="text-2xl font-bold">{stats.active}</p><p className="text-sm text-muted-foreground">Active Users</p></div></div></CardContent></Card>
-          <Card className="gap-3 py-5"><CardContent><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-lg bg-amber-50"><Crown className="size-5 text-amber-600" /></div><div><p className="text-2xl font-bold">{stats.owners}</p><p className="text-sm text-muted-foreground">Owners</p></div></div></CardContent></Card>
+        <div className="tk-stat-row set-users-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <div className="tk-stat">
+            <span className="tk-stat-ic plain"><Users className="size-5" /></span>
+            <div><div className="tk-stat-v">{stats.total}</div><div className="tk-stat-l">Total Users</div></div>
+          </div>
+          <div className="tk-stat">
+            <span className="tk-stat-ic pos"><UserCheck className="size-5" /></span>
+            <div><div className="tk-stat-v">{stats.active}</div><div className="tk-stat-l">Active Users</div></div>
+          </div>
+          <div className="tk-stat">
+            <span className="tk-stat-ic info"><Crown className="size-5" /></span>
+            <div><div className="tk-stat-v">{stats.owners}</div><div className="tk-stat-l">Owners</div></div>
+          </div>
         </div>
       )}
 
       {/* Role Access Matrix — editable by owner */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Role Access Matrix</CardTitle>
-          <CardDescription>Toggle switches to change what each role can access</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {permissions.length === 0 ? (
-            <PermissionMatrixSkeleton />
-          ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[180px]">Permission</TableHead>
+      <div className="card pad acard">
+        <h3 className="statto-title">Role Access Matrix</h3>
+        <p className="ac-sub" style={{ marginTop: 4, marginBottom: 20 }}>Toggle switches to change what each role can access</p>
+        {permissions.length === 0 ? (
+          <PermissionMatrixSkeleton />
+        ) : (
+          <div className="table-scroll">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 180 }}>Permission</th>
                   {allRoles.map((r) => (
-                    <TableHead key={r.value} className="text-center min-w-[100px]">
-                      <div className="flex flex-col items-center gap-1">
+                    <th key={r.value} style={{ textAlign: 'center', minWidth: 100 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                         <r.icon className="size-4" />
-                        <span className="text-xs">{r.label}</span>
+                        <span style={{ fontSize: 12 }}>{r.label}</span>
                       </div>
-                    </TableHead>
+                    </th>
                   ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                </tr>
+              </thead>
+              <tbody>
                 {permissions.map((row) => (
-                  <TableRow key={row.permission}>
-                    <TableCell className="font-medium text-sm">{row.permission}</TableCell>
+                  <tr key={row.permission}>
+                    <td style={{ fontWeight: 500 }}>{row.permission}</td>
                     {allRoles.map((r) => {
                       const allowed = row.access[r.value];
                       const isOwnerCol = r.value === 'owner';
                       return (
-                        <TableCell key={r.value} className="text-center">
+                        <td key={r.value} style={{ textAlign: 'center' }}>
                           {isOwnerCol ? (
-                            <Badge variant="default" className="text-[10px] px-1.5">Always</Badge>
+                            <span className="pill p-pos">Always</span>
                           ) : (
                             <Switch
                               checked={allowed}
@@ -331,111 +357,111 @@ export function UsersManagement() {
                               disabled={permUpdating}
                             />
                           )}
-                        </TableCell>
+                        </td>
                       );
                     })}
-                  </TableRow>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Users Table */}
-      <Card>
-        <CardHeader><CardTitle>All Users</CardTitle><CardDescription>Click role to change permissions, or edit to update details</CardDescription></CardHeader>
-        <CardContent>
-          {loading ? (
-            <UserTableSkeleton rows={5} />
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((u) => {
-                    const RoleIcon = getRoleIcon(u.role);
-                    const isSelf = u.id === user.id;
-                    const isProtected = u.isPrimaryOwner === true && !isSelf;
-                    const roleLocked = isSelf || isProtected;
-                    return (
-                      <TableRow key={u.id} className={!u.isActive ? 'opacity-50' : ''}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar><AvatarFallback>{u.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}</AvatarFallback></Avatar>
-                            <div>
-                              <div className="font-medium flex items-center gap-2">
-                                {u.name}
-                                {isSelf && <Badge variant="outline" className="text-[10px] px-1.5">You</Badge>}
-                                {u.isPrimaryOwner && <Badge variant="secondary" className="text-[10px] px-1.5 gap-1"><Crown className="size-2.5" />Primary</Badge>}
-                              </div>
-                              <div className="text-xs text-muted-foreground">{u.email}</div>
+      <div className="card pad acard">
+        <h3 className="statto-title">All Users</h3>
+        <p className="ac-sub" style={{ marginTop: 4, marginBottom: 20 }}>Click role to change permissions, or edit to update details</p>
+        {loading ? (
+          <UserTableSkeleton rows={5} />
+        ) : (
+          <div className="table-scroll">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => {
+                  const RoleIcon = getRoleIcon(u.role);
+                  const isSelf = u.id === user.id;
+                  const isProtected = u.isPrimaryOwner === true && !isSelf;
+                  const roleLocked = isSelf || isProtected;
+                  return (
+                    <tr key={u.id} style={!u.isActive ? { opacity: 0.5 } : undefined}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span className="set-avatar" style={{ width: 38, height: 38, fontSize: 14 }}>
+                            {u.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                          </span>
+                          <div>
+                            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {u.name}
+                              {isSelf && <span className="pill p-gray">You</span>}
+                              {u.isPrimaryOwner && <span className="pill p-gray"><Crown className="size-[10px]" />Primary</span>}
                             </div>
+                            <div style={{ fontSize: 12.5, color: 'var(--fg2)' }}>{u.email}</div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {roleLocked ? (
-                            <Badge className="capitalize gap-1"><RoleIcon className="size-3" />{u.role.replace('_', ' ')}</Badge>
-                          ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="gap-1.5 h-7 px-2" disabled={updating === u.id}>
-                                  {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : <RoleIcon className="size-3" />}
-                                  <span className="capitalize">{u.role.replace('_', ' ')}</span>
-                                  <ChevronDown className="size-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="w-64">
-                                <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {allRoles.map((r) => (
-                                  <DropdownMenuItem key={r.value} onClick={() => requestRoleChange(u.id, u.name, u.role, r.value)} className="flex items-start gap-3 py-2">
-                                    <r.icon className="size-4 mt-0.5 shrink-0" />
-                                    <div><p className="text-sm font-medium">{r.label}</p><p className="text-xs text-muted-foreground">{r.desc}</p></div>
-                                    {u.role === r.value && <div className="size-2 rounded-full bg-neutral-900 ml-auto mt-1.5 shrink-0" />}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                        </div>
+                      </td>
+                      <td>
+                        {roleLocked ? (
+                          <span className="pill p-gray" style={{ textTransform: 'capitalize' }}><RoleIcon className="size-3" />{u.role.replace('_', ' ')}</span>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="btn b-ghost b-xs" disabled={updating === u.id} style={{ textTransform: 'capitalize' }}>
+                                {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : <RoleIcon className="size-3" />}
+                                <span>{u.role.replace('_', ' ')}</span>
+                                <ChevronDown className="size-3" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-64">
+                              <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {allRoles.map((r) => (
+                                <DropdownMenuItem key={r.value} onClick={() => requestRoleChange(u.id, u.name, u.role, r.value)} className="flex items-start gap-3 py-2">
+                                  <r.icon className="size-4 mt-0.5 shrink-0" />
+                                  <div><p className="text-sm font-medium">{r.label}</p><p className="text-xs text-muted-foreground">{r.desc}</p></div>
+                                  {u.role === r.value && <div className="size-2 rounded-full bg-neutral-900 ml-auto mt-1.5 shrink-0" />}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </td>
+                      <td>
+                        <span className={'pill ' + (u.isActive ? 'p-pos' : 'p-neg')}>{u.isActive ? 'Active' : 'Inactive'}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                          {!isSelf && !isProtected && (
+                            <button className="btn b-ghost b-xs" onClick={() => openEditDialog(u)}>
+                              <Pencil className="size-3" /> Edit
+                            </button>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={u.isActive ? 'default' : 'destructive'}>{u.isActive ? 'Active' : 'Inactive'}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {!isSelf && !isProtected && (
-                              <Button variant="ghost" size="sm" onClick={() => openEditDialog(u)} className="gap-1.5">
-                                <Pencil className="size-3" /> Edit
-                              </Button>
-                            )}
-                            {!isSelf && !isProtected && (
-                              <Button variant="ghost" size="sm" onClick={() => requestToggle(u.id, u.name, u.isActive)} disabled={updating === u.id} className="gap-1.5">
-                                {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : u.isActive ? <><UserX className="size-3" /> Deactivate</> : <><UserCheck className="size-3" /> Activate</>}
-                              </Button>
-                            )}
-                            {isProtected && (
-                              <Badge variant="outline" className="text-[10px] gap-1"><Shield className="size-2.5" />Protected</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          {!isSelf && !isProtected && (
+                            <button className="btn b-ghost b-xs" onClick={() => requestToggle(u.id, u.name, u.isActive)} disabled={updating === u.id}>
+                              {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : u.isActive ? <><UserX className="size-3" /> Deactivate</> : <><UserCheck className="size-3" /> Activate</>}
+                            </button>
+                          )}
+                          {isProtected && (
+                            <span className="pill p-gray"><Shield className="size-[10px]" />Protected</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* ─── Add User Dialog ─── */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -446,41 +472,28 @@ export function UsersManagement() {
           </DialogHeader>
           <div className="space-y-4">
             {addError && <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600"><div className="size-1.5 rounded-full bg-red-500 shrink-0" />{addError}</div>}
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input value={addForm.name} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} placeholder="John Smith" />
+            <div className="nc-field">
+              <label className="nc-label">Full Name</label>
+              <input className="nc-input" value={addForm.name} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} placeholder="John Smith" />
             </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" value={addForm.email} onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))} placeholder="john@stato.app" />
+            <div className="nc-field">
+              <label className="nc-label">Email</label>
+              <input className="nc-input" type="email" value={addForm.email} onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))} placeholder="john@stato.app" />
             </div>
-            <div className="space-y-2">
-              <Label>Password</Label>
-              <Input type="password" value={addForm.password} onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))} placeholder="Min 6 characters" />
+            <div className="nc-field">
+              <label className="nc-label">Password</label>
+              <input className="nc-input" type="password" value={addForm.password} onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))} placeholder="Min 6 characters" />
             </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <div className="grid grid-cols-1 gap-2">
-                {allRoles.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setAddForm((f) => ({ ...f, role: r.value }))}
-                    className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${addForm.role === r.value ? 'border-neutral-900 bg-neutral-50' : 'hover:bg-neutral-50'}`}
-                  >
-                    <r.icon className="size-4 shrink-0" />
-                    <div className="flex-1"><p className="text-sm font-medium">{r.label}</p><p className="text-xs text-muted-foreground">{r.desc}</p></div>
-                    {addForm.role === r.value && <div className="size-2 rounded-full bg-neutral-900 shrink-0" />}
-                  </button>
-                ))}
-              </div>
+            <div className="nc-field">
+              <label className="nc-label">Role</label>
+              <RolePicker value={addForm.role} onChange={(role) => setAddForm((f) => ({ ...f, role }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddUser} disabled={addLoading}>
+            <button className="btn b-ghost b-sm" onClick={() => setAddOpen(false)}>Cancel</button>
+            <button className="btn b-dark b-sm" onClick={handleAddUser} disabled={addLoading}>
               {addLoading ? <><Loader2 className="size-4 animate-spin" /> Creating...</> : 'Create User'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -494,37 +507,24 @@ export function UsersManagement() {
           </DialogHeader>
           <div className="space-y-4">
             {editError && <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600"><div className="size-1.5 rounded-full bg-red-500 shrink-0" />{editError}</div>}
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={editUser?.email || ''} disabled />
+            <div className="nc-field">
+              <label className="nc-label">Email</label>
+              <input className="nc-input" value={editUser?.email || ''} disabled />
             </div>
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+            <div className="nc-field">
+              <label className="nc-label">Full Name</label>
+              <input className="nc-input" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <div className="grid grid-cols-1 gap-2">
-                {allRoles.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setEditForm((f) => ({ ...f, role: r.value }))}
-                    className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${editForm.role === r.value ? 'border-neutral-900 bg-neutral-50' : 'hover:bg-neutral-50'}`}
-                  >
-                    <r.icon className="size-4 shrink-0" />
-                    <div className="flex-1"><p className="text-sm font-medium">{r.label}</p><p className="text-xs text-muted-foreground">{r.desc}</p></div>
-                    {editForm.role === r.value && <div className="size-2 rounded-full bg-neutral-900 shrink-0" />}
-                  </button>
-                ))}
-              </div>
+            <div className="nc-field">
+              <label className="nc-label">Role</label>
+              <RolePicker value={editForm.role} onChange={(role) => setEditForm((f) => ({ ...f, role }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditUser} disabled={editLoading}>
+            <button className="btn b-ghost b-sm" onClick={() => setEditOpen(false)}>Cancel</button>
+            <button className="btn b-dark b-sm" onClick={handleEditUser} disabled={editLoading}>
               {editLoading ? <><Loader2 className="size-4 animate-spin" /> Saving...</> : 'Save Changes'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -540,8 +540,8 @@ export function UsersManagement() {
               </DialogHeader>
               <div className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">User</span><span className="text-sm font-medium">{confirmAction.userName}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Current Role</span><Badge variant="outline" className="capitalize">{getRoleLabel(confirmAction.currentRole)}</Badge></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">New Role</span><Badge className="capitalize">{getRoleLabel(confirmAction.newRole)}</Badge></div>
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Current Role</span><span className="pill p-gray" style={{ textTransform: 'capitalize' }}>{getRoleLabel(confirmAction.currentRole)}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">New Role</span><span className="pill p-pos" style={{ textTransform: 'capitalize' }}>{getRoleLabel(confirmAction.newRole)}</span></div>
               </div>
               {confirmAction.newRole === 'owner' && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -550,8 +550,8 @@ export function UsersManagement() {
                 </div>
               )}
               <DialogFooter>
-                <Button variant="outline" onClick={() => { setConfirmOpen(false); setConfirmAction(null); }}>Cancel</Button>
-                <Button onClick={executeConfirm}>Confirm Change</Button>
+                <button className="btn b-ghost b-sm" onClick={() => { setConfirmOpen(false); setConfirmAction(null); }}>Cancel</button>
+                <button className="btn b-dark b-sm" onClick={executeConfirm}>Confirm Change</button>
               </DialogFooter>
             </>
           )}
@@ -568,11 +568,11 @@ export function UsersManagement() {
               </DialogHeader>
               <div className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">User</span><span className="text-sm font-medium">{confirmAction.userName}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Action</span><Badge variant={confirmAction.isActive ? 'destructive' : 'default'}>{confirmAction.isActive ? 'Deactivate' : 'Activate'}</Badge></div>
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Action</span><span className={'pill ' + (confirmAction.isActive ? 'p-neg' : 'p-pos')}>{confirmAction.isActive ? 'Deactivate' : 'Activate'}</span></div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => { setConfirmOpen(false); setConfirmAction(null); }}>Cancel</Button>
-                <Button variant={confirmAction.isActive ? 'destructive' : 'default'} onClick={executeConfirm}>{confirmAction.isActive ? 'Deactivate' : 'Activate'}</Button>
+                <button className="btn b-ghost b-sm" onClick={() => { setConfirmOpen(false); setConfirmAction(null); }}>Cancel</button>
+                <button className={'btn b-sm ' + (confirmAction.isActive ? 'set-signout' : 'b-dark')} onClick={executeConfirm}>{confirmAction.isActive ? 'Deactivate' : 'Activate'}</button>
               </DialogFooter>
             </>
           )}
@@ -594,21 +594,21 @@ export function UsersManagement() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Role</span>
-                <Badge variant="secondary" className="capitalize">{getRoleLabel(pendingPerm.role)}</Badge>
+                <span className="pill p-gray" style={{ textTransform: 'capitalize' }}>{getRoleLabel(pendingPerm.role)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Access</span>
-                <Badge variant={pendingPerm.newValue ? 'default' : 'destructive'}>
+                <span className={'pill ' + (pendingPerm.newValue ? 'p-pos' : 'p-neg')}>
                   {pendingPerm.newValue ? 'Allow' : 'Deny'}
-                </Badge>
+                </span>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setPermConfirmOpen(false); setPendingPerm(null); }}>Cancel</Button>
-            <Button onClick={confirmPermToggle} disabled={permUpdating}>
+            <button className="btn b-ghost b-sm" onClick={() => { setPermConfirmOpen(false); setPendingPerm(null); }}>Cancel</button>
+            <button className="btn b-dark b-sm" onClick={confirmPermToggle} disabled={permUpdating}>
               {permUpdating ? <><Loader2 className="size-4 animate-spin" /> Updating...</> : 'Confirm'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -3,10 +3,6 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft, Send, Loader2, PenLine, Calendar, Type, X, Trash2, AlertTriangle,
 } from 'lucide-react';
@@ -188,73 +184,80 @@ export function AgreementEditorPage() {
 
   if (pdfError) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <Link to="/agreements"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-          <PageHeader title="Agreement editor" description="Couldn't load the source PDF" />
+      <div className="screen-page">
+        <div className="page-head">
+          <div className="nc-title-row">
+            <Link to="/agreements" className="nc-back" title="Back to agreements"><ArrowLeft className="size-5" /></Link>
+            <div>
+              <h1 className="ahead-title">Agreement editor</h1>
+              <p className="ahead-sub">Couldn't load the source PDF</p>
+            </div>
+          </div>
         </div>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-6 text-sm">
-            <AlertTriangle className="size-5 text-red-600 shrink-0" />
-            <p className="text-muted-foreground">{pdfError}</p>
-          </CardContent>
-        </Card>
+        <div className="card pad acard flex items-center gap-3 text-sm">
+          <AlertTriangle className="size-5 text-red-600 shrink-0" />
+          <p className="text-muted-foreground">{pdfError}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to="/agreements"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <PageHeader title="Agreement editor" description={`Drop signature, date, and text fields onto the PDF before sending to ${signerName || signerEmail}`} />
+    <div className="screen-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/agreements" className="nc-back" title="Back to agreements"><ArrowLeft className="size-5" /></Link>
+          <div>
+            <h1 className="ahead-title">Agreement editor</h1>
+            <p className="ahead-sub">{`Drop signature, date, and text fields onto the PDF before sending to ${signerName || signerEmail}`}</p>
+          </div>
+        </div>
       </div>
 
       {/* Toolbar */}
-      <Card className="sticky top-16 z-10">
-        <CardContent className="flex flex-wrap items-center gap-2 p-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {(Object.keys(FIELD_DEFAULTS) as FieldType[]).map((t) => {
-              const def = FIELD_DEFAULTS[t];
-              const active = tool === t;
-              return (
-                <Button
-                  key={t}
-                  type="button"
-                  variant={active ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTool(active ? null : t)}
-                >
-                  <def.icon className="size-4 mr-1.5" />
-                  Add {def.label}
-                </Button>
-              );
-            })}
-            {tool && (
-              <Badge variant="secondary" className="text-xs">
-                Click anywhere on the PDF to drop the {FIELD_DEFAULTS[tool].label} box
-              </Badge>
-            )}
-          </div>
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              {fields.length} field{fields.length === 1 ? '' : 's'} placed
+      <div className="card pad acard sticky top-16 z-10 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {(Object.keys(FIELD_DEFAULTS) as FieldType[]).map((t) => {
+            const def = FIELD_DEFAULTS[t];
+            const active = tool === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                className={'btn b-sm ' + (active ? 'b-dark' : 'b-ghost')}
+                onClick={() => setTool(active ? null : t)}
+              >
+                <def.icon className="size-[15px]" />
+                Add {def.label}
+              </button>
+            );
+          })}
+          {tool && (
+            <span className="pill p-infosoft">
+              Click anywhere on the PDF to drop the {FIELD_DEFAULTS[tool].label} box
             </span>
-            <Button
-              onClick={handleSend}
-              disabled={!canSend}
-              title={!fields.length ? 'Place at least one field before sending' : ''}
-            >
-              {sending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Send className="size-4 mr-1.5" />}
-              Send for signature
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {fields.length} field{fields.length === 1 ? '' : 's'} placed
+          </span>
+          <button
+            type="button"
+            className="btn b-dark b-sm"
+            onClick={handleSend}
+            disabled={!canSend}
+            title={!fields.length ? 'Place at least one field before sending' : ''}
+          >
+            {sending ? <Loader2 className="size-[15px] animate-spin" /> : <Send className="size-[15px]" />}
+            Send for signature
+          </button>
+        </div>
+      </div>
 
       {/* PDF + overlays */}
-      <Card>
-        <CardContent className="flex flex-col items-center gap-6 bg-muted/30 p-6">
+      <div className="card acard">
+        <div className="flex flex-col items-center gap-6 bg-muted/30 p-6 rounded-[18px]">
           {!pdfUrl ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-12">
               <Loader2 className="size-4 animate-spin" />
@@ -314,8 +317,8 @@ export function AgreementEditorPage() {
               ))}
             </Document>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Empty-state hint */}
       {pdfUrl && fields.length === 0 && (

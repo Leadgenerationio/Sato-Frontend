@@ -1,89 +1,63 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, Clock, ScrollText } from 'lucide-react';
+import { FileSignature, Eye } from 'lucide-react';
 import { usePortalAgreement } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-// Sam (2026-05-27 jam-video #2): "the user shouldn't be able to upload a
-// document because we're managing this account, so they shouldn't be
-// able to upload a document. We should be able to do everything for the
-// back end." Portal users see the agreement state only — admin-side
-// (clients/detail) keeps the "Mark as signed (external)" override.
+// Display-only agreement view (Sam 27-May: portal clients can't upload — the
+// team manages signing). Restyled to the Statto design (Stato Portal.html).
 
 export function PortalAgreementPage() {
   usePageTitle('Stato — Agreement');
   const { data: agreement, isLoading } = usePortalAgreement();
 
   if (isLoading || !agreement) {
-    return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
+    return <div className="screen"><Skeleton className="h-[360px] rounded-3xl" style={{ maxWidth: 720 }} /></div>;
   }
 
-  // Backend canonicalizes a fully-signed agreement as status='completed' and
-  // sets signedAt at the same moment. The earlier check on status==='signed'
-  // never fired because the backend never writes that string — the portal
-  // showed "Pending" indefinitely even after the buyer had signed.
+  // Backend canonicalizes a fully-signed agreement as status='completed'.
   const isSigned = agreement.status === 'completed' || !!agreement.signedAt;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Agreement</h1>
-        <p className="text-muted-foreground">Your lead generation service agreement</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`flex size-10 items-center justify-center rounded-lg ${isSigned ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
-                {isSigned ? <CheckCircle2 className="size-5 text-emerald-600" /> : <Clock className="size-5 text-amber-600" />}
-              </div>
-              <div>
-                <CardTitle className="text-base">Service Agreement</CardTitle>
-                <p className="text-sm text-muted-foreground">{agreement.clientName}</p>
-              </div>
-            </div>
-            <Badge className={isSigned ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-amber-500/10 text-amber-600 border-amber-200'}>
-              {isSigned ? 'Signed' : 'Pending'}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {agreement.signedAt && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="size-4 text-emerald-600" />
-              <span>Signed on {formatDate(agreement.signedAt)}</span>
-            </div>
-          )}
-
-          <Separator />
-
+    <div className="screen">
+      <div className="card pad agreement-card">
+        <div className="ag-head">
+          <span className="pstat-ic lime-ic"><FileSignature className="size-[22px]" /></span>
           <div>
-            <h3 className="text-sm font-medium mb-2">Agreement Terms</h3>
-            <div className="rounded-lg border bg-muted/50 p-4">
-              <div className="flex items-start gap-3">
-                <ScrollText className="size-5 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground leading-relaxed">{agreement.terms}</p>
-              </div>
-            </div>
+            <h3 className="statto-title">Lead Generation Agreement</h3>
+            <p className="lc-sub">{agreement.clientName}</p>
           </div>
+          <span className={'pstat-badge ag-badge' + (isSigned ? '' : ' p-warn')}>{isSigned ? 'Active' : 'Pending'}</span>
+        </div>
 
-          {!isSigned && (
-            <>
-              <Separator />
-              <p className="text-sm text-amber-600">
-                Your agreement is pending signature. Please contact your account manager to complete the signing process.
-              </p>
-            </>
+        <div className="ag-terms">
+          <div className="ag-term"><span>Status</span><strong>{isSigned ? 'Signed' : 'Awaiting signature'}</strong></div>
+          {agreement.signedAt && (
+            <div className="ag-term"><span>Signed</span><strong>{formatDate(agreement.signedAt)}</strong></div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {agreement.terms && (
+          <div className="ag-terms-text">{agreement.terms}</div>
+        )}
+
+        <div className="ag-actions">
+          {agreement.documentUrl && (
+            <a className="btn b-primary b-sm" href={agreement.documentUrl} target="_blank" rel="noopener noreferrer">
+              <Eye className="size-[15px]" /> View document
+            </a>
+          )}
+        </div>
+
+        {!isSigned && (
+          <p className="lc-sub" style={{ marginTop: 18, color: 'var(--warning)' }}>
+            Your agreement is pending signature. Please contact your account manager to complete signing.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

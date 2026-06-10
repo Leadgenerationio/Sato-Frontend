@@ -1,10 +1,4 @@
 import { useState } from 'react';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useLbBuyers, useUpdateLbBuyer, type LbBuyer } from '@/lib/hooks/use-leadbyte';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Building2, AlertTriangle } from 'lucide-react';
@@ -52,88 +46,89 @@ export function LeadByteBuyersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="LeadByte Buyers" description="Buyers synced from LeadByte — status & credit" />
+    <div className="screen-page">
+      <div className="page-head">
+        <div>
+          <h1 className="ahead-title">LeadByte Buyers</h1>
+          <p className="ahead-sub">Buyers synced from LeadByte — status &amp; credit</p>
+        </div>
+      </div>
 
-      <div className="flex gap-2">
+      <div className="inv-tabs" style={{ alignSelf: 'flex-start' }}>
         {STATUS_TABS.map((s) => (
-          <Button
+          <button
             key={s}
-            variant={statusFilter === s ? 'default' : 'outline'}
-            size="sm"
+            className={'inv-tab' + (statusFilter === s ? ' on' : '')}
             onClick={() => setStatusFilter(s)}
           >
             {s === 'all' ? 'All' : s}
-          </Button>
+          </button>
         ))}
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {isLoading && (
-            <div className="p-6 space-y-2">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-            </div>
-          )}
-          {error && (
-            <EmptyState
-              icon={AlertTriangle}
-              title="Couldn't load buyers"
-              description="LeadByte may be unreachable — contact your administrator if this persists."
-            />
-          )}
-          {buyers && buyers.length === 0 && (
-            <EmptyState
-              icon={Building2}
-              title={statusFilter === 'all' ? 'No buyers yet' : `No ${statusFilter.toLowerCase()} buyers`}
-              description={
-                statusFilter === 'all'
-                  ? 'Buyers sync from LeadByte. Add a buyer in LeadByte and it will appear here.'
-                  : 'No buyers match this filter. Try switching to "All".'
-              }
-            />
-          )}
-          {buyers && buyers.length > 0 && (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Company</TableHead>
-                    <TableHead>BID</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Credit Amount</TableHead>
-                    <TableHead className="text-right">Credit Balance</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {buyers.map((b) => (
-                    <TableRow key={String(b.id ?? b.bid ?? b.company)}>
-                      <TableCell className="font-medium">{b.company}</TableCell>
-                      <TableCell className="font-mono text-xs">{b.bid ?? '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant={b.status === 'Active' ? 'default' : 'secondary'}>{b.status ?? 'Unknown'}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{formatMoney(b.credit_amount)}</TableCell>
-                      <TableCell className="text-right">{formatMoney(b.credit_balance)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={updateBuyer.isPending || !b.id}
-                          onClick={() => toggleStatus(b)}
-                        >
-                          {b.status === 'Active' ? 'Deactivate' : 'Activate'}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="card acard inv-card">
+        {isLoading && (
+          <div style={{ padding: '24px' }}>
+            <p className="ac-sub">Loading buyers…</p>
+          </div>
+        )}
+        {error && (
+          <EmptyState
+            icon={AlertTriangle}
+            title="Couldn't load buyers"
+            description="LeadByte may be unreachable — contact your administrator if this persists."
+          />
+        )}
+        {buyers && buyers.length === 0 && (
+          <EmptyState
+            icon={Building2}
+            title={statusFilter === 'all' ? 'No buyers yet' : `No ${statusFilter.toLowerCase()} buyers`}
+            description={
+              statusFilter === 'all'
+                ? 'Buyers sync from LeadByte. Add a buyer in LeadByte and it will appear here.'
+                : 'No buyers match this filter. Try switching to "All".'
+            }
+          />
+        )}
+        {buyers && buyers.length > 0 && (
+          <div className="table-scroll">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>BID</th>
+                  <th>Status</th>
+                  <th className="r">Credit Amount</th>
+                  <th className="r">Credit Balance</th>
+                  <th className="r">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {buyers.map((b) => (
+                  <tr key={String(b.id ?? b.bid ?? b.company)}>
+                    <td className="lb-company">{b.company}</td>
+                    <td className="lb-bid">{b.bid ?? '—'}</td>
+                    <td>
+                      <span className={'lb-status' + (b.status === 'Active' ? ' on' : '')}>{b.status ?? 'Unknown'}</span>
+                    </td>
+                    <td className="r mono inv-num">{formatMoney(b.credit_amount)}</td>
+                    <td className="r mono inv-total">{formatMoney(b.credit_balance)}</td>
+                    <td className="r">
+                      <button
+                        className="btn b-ghost b-sm lb-act"
+                        disabled={updateBuyer.isPending || !b.id}
+                        onClick={() => toggleStatus(b)}
+                      >
+                        {b.status === 'Active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

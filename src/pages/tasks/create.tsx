@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DatePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Loader2, FileText, Repeat, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Repeat, Sparkles, ChevronDown, Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useCreateTask, useTaskTemplates, useTasks,
@@ -18,9 +13,6 @@ import { useSops } from '@/lib/hooks/use-sops';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { logError } from '../../lib/log';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
 
 const ASSIGNEES = ['Sam Owner', 'Finance Admin', 'Ops Manager'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
@@ -53,12 +45,23 @@ function looksLikeCron(s: string): boolean {
   return s.trim().split(/\s+/).filter(Boolean).length === 5;
 }
 
-const priorityColors: Record<string, string> = {
-  urgent: 'bg-red-500/10 text-red-600 border-red-200',
-  high: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  medium: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  low: 'bg-neutral-500/10 text-neutral-500 border-neutral-200',
+const priorityPillClass: Record<string, string> = {
+  urgent: 'prio-high',
+  high: 'prio-high',
+  medium: 'prio-med',
+  low: 'prio-low',
 };
+
+// Statto form field wrapper — label + optional hint above the control.
+function Field({ label, hint, children }: { label: React.ReactNode; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="nc-field">
+      <label className="nc-label">{label}</label>
+      {children}
+      {hint && <span className="nc-hint">{hint}</span>}
+    </div>
+  );
+}
 
 export function TaskCreatePage() {
   const navigate = useNavigate();
@@ -193,20 +196,23 @@ export function TaskCreatePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to="/tasks"><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <PageHeader title="Create Task" description="Add a new task for the team">
-          <Button
+    <div className="screen-page nc-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to="/tasks" className="nc-back" title="Back to tasks"><ArrowLeft className="size-5" /></Link>
+          <div>
+            <h1 className="ahead-title">Create Task</h1>
+            <p className="ahead-sub">Add a new task for the team</p>
+          </div>
+          <button
             type="button"
-            variant="outline"
+            className="btn b-ghost b-sm ct-ai"
             onClick={() => setAiOpen(true)}
-            className="gap-1.5"
           >
-            <Sparkles className="size-4 text-violet-500" />
+            <Sparkles className="size-4" />
             Generate with AI
-          </Button>
-        </PageHeader>
+          </button>
+        </div>
       </div>
 
       {/* #91 AI dialog */}
@@ -231,114 +237,116 @@ export function TaskCreatePage() {
               rows={3}
               maxLength={500}
               autoFocus
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="nc-textarea"
+              style={{ minHeight: 90 }}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="ec-hint">
               Keep it short — a sentence is enough. Up to 500 chars.
             </p>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAiOpen(false)} disabled={aiGenerate.isPending}>
+              <button type="button" className="btn b-ghost b-sm" onClick={() => setAiOpen(false)} disabled={aiGenerate.isPending}>
                 Cancel
-              </Button>
-              <Button type="submit" disabled={aiGenerate.isPending || !aiPrompt.trim()}>
-                {aiGenerate.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Sparkles className="size-4 mr-1.5" />}
+              </button>
+              <button type="submit" className="btn b-dark b-sm" disabled={aiGenerate.isPending || !aiPrompt.trim()}>
+                {aiGenerate.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
                 Generate
-              </Button>
+              </button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="ct-layout">
           {/* Form Fields */}
-          <Card className="lg:col-span-2">
-            <CardHeader><CardTitle className="text-base">Task Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Title</Label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Review monthly invoices"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe the task in detail..."
-                  rows={4}
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Assignee</Label>
+          <div className="card pad acard">
+            <h3 className="statto-title nc-h">Task Details</h3>
+            <Field label="Title">
+              <input
+                className="nc-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Review monthly invoices"
+              />
+            </Field>
+            <Field label="Description">
+              <textarea
+                className="nc-textarea ct-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe the task in detail..."
+                rows={4}
+              />
+            </Field>
+            <div className="nc-grid2">
+              <Field label="Assignee">
+                <div className="nc-select-wrap">
                   <select
+                    className="nc-select"
                     value={assignee}
                     onChange={(e) => setAssignee(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                   >
                     <option value="">Select assignee</option>
                     {ASSIGNEES.map((a) => (
                       <option key={a} value={a}>{a}</option>
                     ))}
                   </select>
+                  <ChevronDown className="size-[15px]" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Priority</Label>
+              </Field>
+              <Field label="Priority">
+                <div className="nc-select-wrap">
                   <select
+                    className="nc-select"
+                    style={{ textTransform: 'capitalize' }}
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm capitalize"
                   >
                     {PRIORITIES.map((p) => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
+                  <ChevronDown className="size-[15px]" />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  {/* Sam-Loom (jam-video #5) — surface previously-used
-                      categories via a native <datalist> so the same
-                      Marketing/Finance/Compliance buckets stop drifting
-                      into typo variants. Still free-form so a brand-new
-                      category can be entered on first use. */}
-                  <Input
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    placeholder="e.g., Finance, Operations, Marketing"
-                    list="task-category-suggestions"
-                  />
-                  <datalist id="task-category-suggestions">
-                    {(savedCategories ?? []).map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
-                </div>
-                <div className="space-y-2">
-                  <Label>Due Date</Label>
+              </Field>
+              <Field label="Category">
+                {/* Sam-Loom (jam-video #5) — surface previously-used
+                    categories via a native <datalist> so the same
+                    Marketing/Finance/Compliance buckets stop drifting
+                    into typo variants. Still free-form so a brand-new
+                    category can be entered on first use. */}
+                <input
+                  className="nc-input"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="e.g., Finance, Operations, Marketing"
+                  list="task-category-suggestions"
+                />
+                <datalist id="task-category-suggestions">
+                  {(savedCategories ?? []).map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </Field>
+              <Field label="Due Date">
+                <div className="ci-date">
+                  <Calendar className="size-4" />
                   <DatePicker
                     date={dueDate}
                     onSelect={setDueDate}
                     placeholder="Select due date"
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Time block</Label>
+              </Field>
+              <Field label="Time block">
+                <div className="nc-select-wrap">
                   <select
+                    className="nc-select"
                     value={timeBlockMinutes === null ? '' : String(timeBlockMinutes)}
                     onChange={(e) => {
                       const v = e.target.value;
                       setTimeBlockMinutes(v === '' ? null : Number(v));
                     }}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                   >
                     {TIME_BLOCKS.map((b) => (
                       <option key={b.label} value={b.minutes === null ? '' : String(b.minutes)}>
@@ -346,142 +354,143 @@ export function TaskCreatePage() {
                       </option>
                     ))}
                   </select>
+                  <ChevronDown className="size-[15px]" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Linked SOP</Label>
+              </Field>
+              <Field label="Linked SOP">
+                <div className="nc-select-wrap">
                   <select
+                    className="nc-select"
                     value={linkedSopId}
                     onChange={(e) => setLinkedSopId(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                   >
                     <option value="">No linked SOP</option>
                     {sopsPage?.sops.map((s) => (
                       <option key={s.id} value={s.id}>{s.title}</option>
                     ))}
                   </select>
+                  <ChevronDown className="size-[15px]" />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Parent task</Label>
+              </Field>
+            </div>
+            <Field label="Parent task" hint='Use this to group sub-tasks under a parent "project" task.'>
+              <div className="nc-select-wrap">
                 <select
+                  className="nc-select"
                   value={parentTaskId}
                   onChange={(e) => setParentTaskId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                 >
                   <option value="">No parent (top-level task)</option>
                   {tasksPage?.tasks.map((t) => (
                     <option key={t.id} value={t.id}>{t.title}</option>
                   ))}
                 </select>
-                <p className="text-xs text-muted-foreground">
-                  Use this to group sub-tasks under a parent "project" task.
-                </p>
+                <ChevronDown className="size-[15px]" />
               </div>
-              <div className="space-y-2">
-                <Label className="inline-flex items-center gap-1.5">
-                  <Repeat className="size-3.5" />Repeat
-                </Label>
+            </Field>
+            <Field label={<span className="ct-repeat-l"><Repeat className="size-[15px]" /> Repeat</span>}>
+              <div className="nc-select-wrap">
                 <select
+                  className="nc-select"
                   value={recurPreset}
                   onChange={(e) => setRecurPreset(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                 >
                   {RECURRENCE_PRESETS.map((p) => (
                     <option key={p.id} value={p.id}>{p.label}</option>
                   ))}
                 </select>
-                {recurPreset === 'custom' && (
-                  <div className="space-y-1">
-                    <Input
-                      value={customCron}
-                      onChange={(e) => setCustomCron(e.target.value)}
-                      placeholder="e.g. */15 9-17 * * 1-5"
-                      className="font-mono text-xs"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      5-field cron: minute hour day-of-month month day-of-week.
-                      {customCron.trim() && !looksLikeCron(customCron) && (
-                        <span className="text-red-600"> Need 5 space-separated fields.</span>
-                      )}
-                    </p>
-                  </div>
-                )}
-                {recurPreset !== 'none' && recurPreset !== 'custom' && (
-                  <p className="text-xs text-muted-foreground">
-                    A fresh copy of this task will be auto-created on every fire.
-                  </p>
-                )}
+                <ChevronDown className="size-[15px]" />
               </div>
-            </CardContent>
-          </Card>
+              {recurPreset === 'custom' && (
+                <div style={{ marginTop: 8 }}>
+                  <input
+                    className="nc-input"
+                    style={{ fontFamily: 'var(--mono, monospace)', fontSize: 13 }}
+                    value={customCron}
+                    onChange={(e) => setCustomCron(e.target.value)}
+                    placeholder="e.g. */15 9-17 * * 1-5"
+                  />
+                  <p className="nc-hint" style={{ marginTop: 6 }}>
+                    5-field cron: minute hour day-of-month month day-of-week.
+                    {customCron.trim() && !looksLikeCron(customCron) && (
+                      <span style={{ color: 'var(--negative)' }}> Need 5 space-separated fields.</span>
+                    )}
+                  </p>
+                </div>
+              )}
+              {recurPreset !== 'none' && recurPreset !== 'custom' && (
+                <p className="nc-hint" style={{ marginTop: 6 }}>
+                  A fresh copy of this task will be auto-created on every fire.
+                </p>
+              )}
+            </Field>
+          </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            <Button type="submit" className="w-full" disabled={createTask.isPending}>
-              {createTask.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+          <div className="ct-side" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <button type="submit" className="btn b-dark b-block ct-submit" disabled={createTask.isPending}>
+              {createTask.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
               Create Task
-            </Button>
+            </button>
 
             {/* AI-suggested subtasks preview (#91) — shown only when AI
                 filled them; user can drop any line by clicking ✕ */}
             {pendingSubtasks.length > 0 && (
-              <Card className="border-violet-200 bg-violet-50/50">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="size-4 text-violet-500" />
-                    AI-suggested subtasks
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Will be created after the task. Edit on the detail page.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-1.5">
+              <div className="card pad acard">
+                <h3 className="statto-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles className="size-4 text-violet-500" />
+                  AI-suggested subtasks
+                </h3>
+                <p className="ac-sub">
+                  Will be created after the task. Edit on the detail page.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
                   {pendingSubtasks.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5">
-                      <span className="flex-1 text-sm">{s}</span>
+                    <div key={i} className="ec-clientbox" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
+                      <span style={{ flex: 1, fontSize: 13.5 }}>{s}</span>
                       <button
                         type="button"
                         onClick={() => setPendingSubtasks((prev) => prev.filter((_, idx) => idx !== i))}
                         aria-label="Remove subtask"
-                        className="text-muted-foreground hover:text-red-600 text-xs"
+                        className="nc-contact-x"
+                        style={{ position: 'static' }}
                       >
-                        ✕
+                        <X className="size-4" />
                       </button>
                     </div>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
             {/* Templates */}
             {templates && templates.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Or create from template</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
+              <div className="card pad acard">
+                <h3 className="statto-title nc-h">Or create from template</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {templates.map((t: TaskTemplate) => (
                     <button
                       key={t.id}
                       type="button"
                       onClick={() => fillFromTemplate(t)}
-                      className="flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent"
+                      className="nc-contact"
+                      style={{ marginBottom: 0, display: 'flex', alignItems: 'flex-start', gap: 12, textAlign: 'left', cursor: 'pointer', background: '#fff', padding: 16 }}
                     >
-                      <FileText className="size-5 text-muted-foreground shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{t.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{t.description}</p>
-                        <div className="flex gap-2 mt-1.5">
-                          <Badge className={`text-xs capitalize ${priorityColors[t.priority] || ''}`}>
+                      <FileText className="size-5" style={{ color: 'var(--fg3)', flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg1)' }}>{t.name}</p>
+                        <p className="bf-desc" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</p>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <span className={`tk-prio ${priorityPillClass[t.priority] || ''}`} style={{ textTransform: 'capitalize' }}>
                             {t.priority}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">{t.category}</Badge>
+                          </span>
+                          <span className="tk-cat">{t.category}</span>
                         </div>
                       </div>
                     </button>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </div>
         </div>

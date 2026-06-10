@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Loader2, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Loader2, X, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSop, useUpdateSop, useSopTags, parseLoomId, loomEmbedUrl, type SopScreenshot } from '@/lib/hooks/use-sops';
 import { useUploadUrl } from '@/lib/hooks/use-uploads';
@@ -72,82 +66,87 @@ export function SopEditPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-96" />
+      <div className="screen-page">
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--fg2)' }}>Loading SOP…</div>
       </div>
     );
   }
 
   if (error || !sop) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 text-muted-foreground">
-        <p>SOP not found</p>
-        <Link to="/sops">
-          <Button variant="outline"><ArrowLeft className="size-4 mr-2" />Back to SOPs</Button>
-        </Link>
+      <div className="screen-page">
+        <div className="ph-screen">
+          <span className="ph-screen-ic"><ImageIcon className="size-[26px]" /></span>
+          <strong>SOP not found</strong>
+          <Link to="/sops"><button className="btn b-ghost b-sm"><ArrowLeft className="size-[15px]" /> Back to SOPs</button></Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to={`/sops/${id}`}><Button variant="ghost" size="icon"><ArrowLeft className="size-5" /></Button></Link>
-        <PageHeader title="Edit SOP" description={sop.title} />
+    <div className="screen-page">
+      <div className="page-head">
+        <div className="nc-title-row">
+          <Link to={`/sops/${id}`} className="nc-back" title="Back to SOP"><ArrowLeft className="size-5" /></Link>
+          <div>
+            <h1 className="ahead-title">Edit SOP</h1>
+            <p className="ahead-sub">{sop.title}</p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader><CardTitle className="text-base">SOP Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="sop-title">Title</Label>
-                <Input
+        <div className="ct-layout">
+          <div className="csop-main">
+            <div className="card pad acard">
+              <h3 className="statto-title nc-h">SOP Details</h3>
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="sop-title">Title</label>
+                <input
                   id="sop-title"
+                  className="nc-input"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., New Client Onboarding Procedure"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="sop-category">Category</Label>
-                <select
-                  id="sop-category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="sop-category">Category</label>
+                <div className="nc-select-wrap">
+                  <select id="sop-category" className="nc-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="size-[15px]" />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="sop-loom">Loom URL (optional)</Label>
-                <Input
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="sop-loom">Loom URL (optional)</label>
+                <input
                   id="sop-loom"
+                  className="nc-input"
                   type="url"
                   value={loomUrl}
                   onChange={(e) => setLoomUrl(e.target.value)}
                   placeholder="https://www.loom.com/share/…"
-                  className={loomUrl && !loomValid ? 'border-red-300' : ''}
+                  style={loomUrl && !loomValid ? { borderColor: 'var(--negative)' } : undefined}
                 />
                 {loomUrl && !loomValid && (
-                  <p className="text-xs text-red-600">Expected a loom.com/share/&lt;id&gt; URL</p>
+                  <p style={{ fontSize: 12, color: 'var(--negative)' }}>Expected a loom.com/share/&lt;id&gt; URL</p>
                 )}
                 {embed && (
-                  <div className="relative w-full overflow-hidden rounded-md border" style={{ paddingBottom: '56.25%' }}>
-                    <iframe src={embed} title="Loom preview" allowFullScreen className="absolute inset-0 h-full w-full" />
+                  <div style={{ position: 'relative', width: '100%', overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)', paddingBottom: '56.25%', marginTop: 8 }}>
+                    <iframe src={embed} title="Loom preview" allowFullScreen style={{ position: 'absolute', inset: 0, height: '100%', width: '100%' }} />
                   </div>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label>Tags</Label>
+              <div className="nc-field">
+                <label className="nc-label">Tags</label>
                 <TagInput
                   value={tags}
                   onChange={setTags}
@@ -156,94 +155,69 @@ export function SopEditPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="sop-content">Content</Label>
+              <div className="nc-field">
+                <label className="nc-label" htmlFor="sop-content">Content</label>
                 <textarea
                   id="sop-content"
+                  className="nc-textarea csop-content"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Write the SOP content here. Use separate paragraphs for each section..."
-                  rows={16}
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Screenshots</Label>
+              <div className="nc-field">
+                <label className="nc-label">Screenshots</label>
                 <ScreenshotList
                   items={screenshots}
                   onRemove={(key) => setScreenshots(screenshots.filter((s) => s.key !== key))}
                 />
-                <FileUpload
-                  folder="sops"
-                  accept="image/*"
-                  maxSizeMB={10}
-                  label="Upload screenshot"
-                  onUploaded={(result, file) => {
-                    setScreenshots((prev) => [
-                      ...prev,
-                      {
-                        key: result.key,
-                        name: file.name,
-                        size: file.size,
-                        contentType: file.type,
-                        uploadedAt: new Date().toISOString(),
-                        uploadedBy: user?.email,
-                      },
-                    ]);
-                  }}
-                />
               </div>
-            </CardContent>
-          </Card>
+              <FileUpload
+                folder="sops"
+                accept="image/*"
+                maxSizeMB={10}
+                label="Upload screenshot"
+                onUploaded={(result, file) => {
+                  setScreenshots((prev) => [
+                    ...prev,
+                    {
+                      key: result.key,
+                      name: file.name,
+                      size: file.size,
+                      contentType: file.type,
+                      uploadedAt: new Date().toISOString(),
+                      uploadedBy: user?.email,
+                    },
+                  ]);
+                }}
+              />
+            </div>
+          </div>
 
-          <div className="space-y-6">
-            <div className="flex flex-col gap-2">
-              <Button type="submit" className="w-full" disabled={updateSop.isPending}>
-                {updateSop.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+          <div className="ct-side csop-side">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button type="submit" className="btn b-dark b-block ct-submit" disabled={updateSop.isPending}>
+                {updateSop.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
                 Save changes
-              </Button>
-              <Button type="button" variant="outline" className="w-full" onClick={() => navigate(`/sops/${id}`)} disabled={updateSop.isPending}>
+              </button>
+              <button type="button" className="btn b-ghost b-block" onClick={() => navigate(`/sops/${id}`)} disabled={updateSop.isPending}>
                 Cancel
-              </Button>
+              </button>
             </div>
 
-            <Card>
-              <CardHeader><CardTitle className="text-base">Status</CardTitle></CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setStatus('draft')}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                      status === 'draft'
-                        ? 'bg-background text-foreground shadow-sm border'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Draft
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatus('published')}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                      status === 'published'
-                        ? 'bg-background text-foreground shadow-sm border'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Published
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <h3 className="statto-title csop-status-h">Status</h3>
+              <div className="seg csop-status">
+                <button type="button" className={'seg-btn' + (status === 'draft' ? ' on' : '')} onClick={() => setStatus('draft')}>Draft</button>
+                <button type="button" className={'seg-btn' + (status === 'published' ? ' on' : '')} onClick={() => setStatus('published')}>Published</button>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader><CardTitle className="text-base">Version</CardTitle></CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Currently <span className="font-medium text-foreground">v{sop.version}</span>. The backend bumps this automatically when content changes.</p>
-              </CardContent>
-            </Card>
+            <div className="card pad acard">
+              <h3 className="statto-title nc-h">Version</h3>
+              <p className="ac-sub">Currently <strong style={{ color: 'var(--fg1)' }}>v{sop.version}</strong>. The backend bumps this automatically when content changes.</p>
+            </div>
           </div>
         </div>
       </form>
@@ -254,14 +228,14 @@ export function SopEditPage() {
 function ScreenshotList({ items, onRemove }: { items: SopScreenshot[]; onRemove: (key: string) => void }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-md border border-dashed py-4 text-center text-xs text-muted-foreground">
-        <ImageIcon className="mx-auto mb-1 size-4" />
-        No screenshots yet
+      <div className="csop-drop">
+        <ImageIcon className="size-[26px]" />
+        <span>No screenshots yet</span>
       </div>
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
       {items.map((s) => (
         <ScreenshotEditThumb key={s.key} screenshot={s} onRemove={() => onRemove(s.key)} />
       ))}
@@ -272,16 +246,16 @@ function ScreenshotList({ items, onRemove }: { items: SopScreenshot[]; onRemove:
 function ScreenshotEditThumb({ screenshot, onRemove }: { screenshot: SopScreenshot; onRemove: () => void }) {
   const { data: url } = useUploadUrl(screenshot.key);
   return (
-    <div className="group relative aspect-video overflow-hidden rounded-md border bg-muted">
+    <div className="group" style={{ position: 'relative', aspectRatio: '16 / 9', overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--gray-50)' }}>
       {url ? (
-        <img src={url} alt={screenshot.name} className="h-full w-full object-cover" />
+        <img src={url} alt={screenshot.name} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
       ) : (
-        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading…</div>
+        <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--fg2)' }}>Loading…</div>
       )}
       <button
         type="button"
         onClick={onRemove}
-        className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+        style={{ position: 'absolute', right: 4, top: 4, borderRadius: 999, background: 'rgba(0,0,0,.7)', padding: 4, color: '#fff', border: 'none', cursor: 'pointer', display: 'inline-flex' }}
         aria-label={`Remove ${screenshot.name}`}
       >
         <X className="size-3" />
