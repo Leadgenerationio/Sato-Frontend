@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   Shield, Users, ChevronDown, UserCheck, UserX, Loader2, Crown,
   Calculator, Briefcase, Eye, User, AlertTriangle, Plus, Pencil,
+  KeyRound, EyeOff,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { API_URL } from '@/lib/env';
@@ -106,6 +107,14 @@ export function UsersManagement() {
   const [editError, setEditError] = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
+  // Reset password dialog state
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetUser, setResetUser] = useState<UserItem | null>(null);
+  const [resetForm, setResetForm] = useState({ password: '', confirm: '' });
+  const [resetShow, setResetShow] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
   // Permissions state
   const [permissions, setPermissions] = useState<PermissionEntry[]>([]);
   const [permConfirmOpen, setPermConfirmOpen] = useState(false);
@@ -202,6 +211,50 @@ export function UsersManagement() {
       setEditError('Network error');
       toast.error('Network error');
     } finally { setEditLoading(false); }
+  }
+
+  // ─── Reset Password ───
+  // Sam (2026-06-10): admin sets a new password for any client/staff user.
+  // No current-password challenge — this is the admin acting on their behalf.
+  function openResetDialog(u: UserItem) {
+    setResetUser(u);
+    setResetForm({ password: '', confirm: '' });
+    setResetShow(false);
+    setResetError('');
+    setResetOpen(true);
+  }
+
+  async function handleResetPassword() {
+    if (!resetUser) return;
+    if (resetForm.password.length < 8) {
+      setResetError('Password must be at least 8 characters');
+      return;
+    }
+    if (resetForm.password !== resetForm.confirm) {
+      setResetError('Passwords do not match');
+      return;
+    }
+    setResetLoading(true);
+    setResetError('');
+    try {
+      const res = await fetch(`${API_URL}/api/v1/users/${resetUser.id}/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ newPassword: resetForm.password }),
+      });
+      const data: ApiResponse<{ user: UserItem }> = await res.json();
+      if (data.status === 'success' && data.data) {
+        setResetOpen(false);
+        toast.success('Password reset', { description: `${resetUser.name} can now sign in with the new password.` });
+      } else {
+        setResetError(data.message || 'Failed to reset password');
+        toast.error('Failed to reset password', { description: data.message });
+      }
+    } catch (err) {
+      logError('Reset password failed', err);
+      setResetError('Network error');
+      toast.error('Network error');
+    } finally { setResetLoading(false); }
   }
 
   // ─── Confirm role change / toggle ───
@@ -445,6 +498,11 @@ export function UsersManagement() {
                             </button>
                           )}
                           {!isSelf && !isProtected && (
+                            <button className="btn b-ghost b-xs" onClick={() => openResetDialog(u)} title="Set a new password for this user">
+                              <KeyRound className="size-3" /> Reset Password
+                            </button>
+                          )}
+                          {!isSelf && !isProtected && (
                             <button className="btn b-ghost b-xs" onClick={() => requestToggle(u.id, u.name, u.isActive)} disabled={updating === u.id}>
                               {updating === u.id ? <Loader2 className="size-3 animate-spin" /> : u.isActive ? <><UserX className="size-3" /> Deactivate</> : <><UserCheck className="size-3" /> Activate</>}
                             </button>
@@ -524,6 +582,60 @@ export function UsersManagement() {
             <button className="btn b-ghost b-sm" onClick={() => setEditOpen(false)}>Cancel</button>
             <button className="btn b-dark b-sm" onClick={handleEditUser} disabled={editLoading}>
               {editLoading ? <><Loader2 className="size-4 animate-spin" /> Saving...</> : 'Save Changes'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Reset Password Dialog ─── */}
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><KeyRound className="size-5" /> Reset Password</DialogTitle>
+            <DialogDescription>Set a new password for {resetUser?.name}. They'll use it the next time they sign in.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {resetError && <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600"><div className="size-1.5 rounded-full bg-red-500 shrink-0" />{resetError}</div>}
+            <div className="nc-field">
+              <label className="nc-label">User</label>
+              <input className="nc-input" value={resetUser ? `${resetUser.name} (${resetUser.email})` : ''} disabled />
+            </div>
+            <div className="nc-field">
+              <label className="nc-label">New Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="nc-input"
+                  type={resetShow ? 'text' : 'password'}
+                  value={resetForm.password}
+                  onChange={(e) => { setResetForm((f) => ({ ...f, password: e.target.value })); if (resetError) setResetError(''); }}
+                  placeholder="Min 8 characters"
+                  style={{ paddingRight: 40 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setResetShow((s) => !s)}
+                  title={resetShow ? 'Hide' : 'Show'}
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg2)', display: 'flex' }}
+                >
+                  {resetShow ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="nc-field">
+              <label className="nc-label">Confirm Password</label>
+              <input
+                className="nc-input"
+                type={resetShow ? 'text' : 'password'}
+                value={resetForm.confirm}
+                onChange={(e) => { setResetForm((f) => ({ ...f, confirm: e.target.value })); if (resetError) setResetError(''); }}
+                placeholder="Re-enter the new password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button className="btn b-ghost b-sm" onClick={() => setResetOpen(false)}>Cancel</button>
+            <button className="btn b-dark b-sm" onClick={handleResetPassword} disabled={resetLoading}>
+              {resetLoading ? <><Loader2 className="size-4 animate-spin" /> Resetting...</> : 'Reset Password'}
             </button>
           </DialogFooter>
         </DialogContent>
