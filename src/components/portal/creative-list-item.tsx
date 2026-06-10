@@ -1,11 +1,10 @@
-import { Badge } from '@/components/ui/badge';
 import { Image as ImageIcon, Video, FileText, Check, X, Clock } from 'lucide-react';
 import type { CreativeApprovalState } from '@/lib/hooks/use-portal';
 
-// Sam (jam-video #3, 29-May-2026) — shared compact row for the side-panel
-// layout on /portal/compliance and /portal/creatives. Selected state is a
-// background tint + ring; clicking sets the parent's selectedId so the
-// right-hand detail panel updates without a route push or refetch.
+// Shared compact row for the side-panel layout on /portal/compliance and
+// /portal/creatives. Restyled to the Statto design (creative-card + cc-* +
+// pill). Selected state = ink outline; clicking sets the parent's selectedId
+// so the right-hand detail panel updates without a route push or refetch.
 
 export interface CreativeListItemData {
   id: string;
@@ -23,17 +22,12 @@ function iconFor(type: string) {
   return FileText;
 }
 
-function StatusChip({ status }: { status: CreativeApprovalState['status'] }) {
-  if (status === 'approved') {
-    return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[10px] h-5"><Check className="size-2.5 mr-0.5" />Approved</Badge>;
-  }
-  if (status === 'rejected') {
-    return <Badge className="bg-rose-500/10 text-rose-600 border-rose-200 text-[10px] h-5"><X className="size-2.5 mr-0.5" />Rejected</Badge>;
-  }
-  if (status === 'changes_requested') {
-    return <Badge className="bg-orange-500/10 text-orange-600 border-orange-200 text-[10px] h-5">Changes</Badge>;
-  }
-  return <Badge className="bg-amber-500/10 text-amber-600 border-amber-200 text-[10px] h-5"><Clock className="size-2.5 mr-0.5" />Pending</Badge>;
+export function StatusPill({ status, compact = false }: { status: CreativeApprovalState['status']; compact?: boolean }) {
+  const sz = compact ? 'size-3' : 'size-[13px]';
+  if (status === 'approved') return <span className="pill p-soft"><Check className={sz} />Approved</span>;
+  if (status === 'rejected') return <span className="pill p-neg"><X className={sz} />Rejected</span>;
+  if (status === 'changes_requested') return <span className="pill p-warn">Changes requested</span>;
+  return <span className="pill p-gray"><Clock className={sz} />Pending</span>;
 }
 
 interface Props {
@@ -53,47 +47,34 @@ export function CreativeListItem({ item, selected, onSelect, metricsLine }: Prop
     <button
       type="button"
       onClick={onSelect}
-      className={
-        'flex w-full items-start gap-3 rounded-lg border p-2.5 text-left transition-colors ' +
-        (selected
-          ? 'border-primary/40 bg-accent ring-2 ring-primary/30'
-          : 'hover:bg-accent/40 focus:bg-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring')
-      }
       title={item.name}
+      className="card creative-card"
+      style={{
+        alignItems: 'flex-start',
+        outline: selected ? '2px solid var(--statto-ink)' : '1px solid var(--border)',
+        outlineOffset: selected ? '-2px' : '-1px',
+      }}
     >
-      <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+      <span className="cc-thumb" style={{ width: 56, height: 56, borderRadius: 14 }}>
         {isImage ? (
-          <img src={item.signedUrl!} alt={item.name} className="size-full object-cover" loading="lazy" />
+          <img src={item.signedUrl!} alt={item.name} loading="lazy" />
         ) : isVideo ? (
-          <video src={item.signedUrl!} className="size-full object-cover" muted preload="metadata" />
+          <video src={item.signedUrl!} muted preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <Icon className="size-5 text-muted-foreground" />
+          <Icon className="size-5" />
         )}
-      </div>
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex items-center gap-1.5">
-          <p className="truncate text-sm font-medium">{item.name}</p>
-        </div>
-        {item.campaignName && (
-          <p className="truncate text-[11px] text-muted-foreground">{item.campaignName}</p>
-        )}
-        {metricsLine && (
-          <p className="truncate text-[11px] text-muted-foreground/90 tabular-nums">{metricsLine}</p>
-        )}
-        {/* Sam (jam-video #3, 29-May-2026): "shows you... who signed them off".
-            Surface the approver + date on the row itself so the audit info is
-            visible at a glance, not buried in the detail panel. */}
+      </span>
+      <div className="cc-body">
+        <span className="cc-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+        {item.campaignName && <span className="cc-fmt">{item.campaignName}</span>}
+        {metricsLine && <span className="cc-fmt mono">{metricsLine}</span>}
         {item.approval.status === 'approved' && item.approval.decidedByName && (
-          <p className="truncate text-[11px] text-emerald-700 dark:text-emerald-400">
-            Signed off by <span className="font-medium">{item.approval.decidedByName}</span>
-            {item.approval.decidedAt && (
-              <> · {new Date(item.approval.decidedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</>
-            )}
-          </p>
+          <span className="cc-fmt" style={{ color: 'var(--lime-600)' }}>
+            Signed off by <strong>{item.approval.decidedByName}</strong>
+            {item.approval.decidedAt && <> · {new Date(item.approval.decidedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</>}
+          </span>
         )}
-        <div className="pt-0.5">
-          <StatusChip status={item.approval.status} />
-        </div>
+        <div style={{ marginTop: 2 }}><StatusPill status={item.approval.status} compact /></div>
       </div>
     </button>
   );
