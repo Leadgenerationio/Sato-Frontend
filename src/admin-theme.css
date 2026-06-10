@@ -231,7 +231,7 @@
 .statto-admin .bank-total { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; margin-top: 6px; font-size: 15px; color: var(--fg2); }
 .statto-admin .bank-total strong { font-size: 17px; color: var(--statto-ink); }
 .statto-admin .seg { display: flex; background: var(--gray-50); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 18px; }
-.statto-admin .seg-btn { flex: 1; padding: 8px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--fg2); transition: var(--transition); border: none; background: none; cursor: pointer; font-family: inherit; }
+.statto-admin .seg-btn { flex: 1; padding: 8px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--fg2); transition: var(--transition); border: none; background: none; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .statto-admin .seg-btn.on { background: #fff; color: var(--statto-ink); box-shadow: var(--shadow-xs); }
 .statto-admin .owed-total { text-align: center; margin-bottom: 18px; }
 .statto-admin .owed-amt { font-size: 32px; font-weight: 600; letter-spacing: -.025em; color: var(--statto-ink); }
