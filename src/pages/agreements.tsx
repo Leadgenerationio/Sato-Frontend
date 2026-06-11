@@ -203,15 +203,15 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
             </DialogDescription>
           </DialogHeader>
           {selectedClient && lockClient && (
-            <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs">
-              <p className="font-medium text-foreground">{selectedClient.companyName}</p>
-              <p className="text-muted-foreground">
+            <div className="mt-3 rounded-lg border p-3 text-xs" style={{ background: 'var(--gray-50)', color: 'var(--fg2)' }}>
+              <p className="font-medium" style={{ color: 'var(--fg1)' }}>{selectedClient.companyName}</p>
+              <p style={{ color: 'var(--fg2)' }}>
                 {selectedClient.companyNumber ? `Co. ${selectedClient.companyNumber} · ` : ''}
                 {selectedClient.address || 'No address on file'}
               </p>
               {typeof selectedClient.creditScore === 'number' && (
-                <p className="mt-1 text-muted-foreground">
-                  Credit score: <span className="font-medium text-foreground">{selectedClient.creditScore}</span>
+                <p className="mt-1" style={{ color: 'var(--fg2)' }}>
+                  Credit score: <span className="font-medium" style={{ color: 'var(--fg1)' }}>{selectedClient.creditScore}</span>
                 </p>
               )}
             </div>
@@ -473,7 +473,7 @@ export function AgreementsPage() {
                     <td className="ag-signer">
                       {a.signerName}
                       {a.signerRole && (
-                        <span className="block text-xs text-muted-foreground font-normal mt-0.5">{a.signerRole}</span>
+                        <span className="block font-normal mt-0.5" style={{ fontSize: 12.5, color: 'var(--fg3)' }}>{a.signerRole}</span>
                       )}
                     </td>
                     <td className="ag-email">{a.signerEmail}</td>

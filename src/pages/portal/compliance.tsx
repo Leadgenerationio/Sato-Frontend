@@ -194,7 +194,7 @@ export function PortalCompliancePage() {
                   metrics={adaptMetrics(selectedRow.creative.campaignMetrics)}
                 />
               ) : (
-                <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+                <div className="dash-empty">
                   Select a creative to review it here.
                 </div>
               )}

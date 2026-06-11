@@ -148,7 +148,7 @@
 .statto-portal .p-warn { background: var(--warning-bg); color: var(--warning); }
 
 .statto-portal .btn { font-weight: 600; font-size: 14px; padding: 11px 18px; border-radius: 14px; display: inline-flex;
-  align-items: center; gap: 8px; transition: var(--transition); border: none; cursor: pointer; font-family: inherit; }
+  align-items: center; gap: 8px; transition: var(--transition); border: none; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .statto-portal .btn svg { width: 16px; height: 16px; }
 .statto-portal .btn:active { transform: scale(.98); }
 .statto-portal .b-primary { background: var(--statto-lime); color: var(--statto-ink); }
@@ -163,6 +163,7 @@
 .statto-portal .dd { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid var(--border);
   border-radius: 12px; padding: 9px 14px; font-size: 13px; font-weight: 500; color: var(--fg1); transition: var(--transition); cursor: pointer; font-family: inherit; }
 .statto-portal .dd:hover { background: var(--gray-50); }
+.statto-portal .dd:focus, .statto-portal .dd:focus-visible, .statto-portal .dd[aria-expanded="true"] { outline: none; border-color: var(--lime-500); box-shadow: 0 0 0 3px rgba(132,212,81,.30); }
 .statto-portal .dd svg { width: 15px; height: 15px; color: var(--fg2); }
 
 /* ---------- STAT CARDS ---------- */
@@ -396,3 +397,9 @@
   .statto-portal .creative-grid { grid-template-columns: 1fr; }
   .statto-portal .sidebar { width: 64px; }
 }
+
+/* Shared FilterSelect menu (also used in admin) — keep in sync with admin-theme. */
+.statto-portal .range-menu { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 40; min-width: 190px; }
+.statto-portal .range-opt { width: 100%; text-align: left; padding: 9px 12px; border-radius: 9px; font-size: 13.5px; color: var(--fg1); transition: var(--transition); border: none; background: none; cursor: pointer; font-family: inherit; }
+.statto-portal .range-opt:hover { background: var(--gray-50); }
+.statto-portal .range-opt.on { background: var(--lime-50); color: var(--lime-600); font-weight: 600; }

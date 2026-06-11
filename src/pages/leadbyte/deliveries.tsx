@@ -36,7 +36,7 @@ export function formatCaps(caps: LbDeliveryCaps | undefined): { primary: string;
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="card lbd-stat">
+    <div className="card acard lbd-stat">
       <span className="lbd-stat-k">{label}</span>
       <span className="lbd-stat-v mono">{value}</span>
     </div>

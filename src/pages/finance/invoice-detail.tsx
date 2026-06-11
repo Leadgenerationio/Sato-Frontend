@@ -37,9 +37,6 @@ function formatDate(iso: string) {
 }
 
 function handleDownloadPdf(invoice: InvoiceDetail) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-
   const lineItemsHtml = invoice.lineItems.map((item) => `
     <tr>
       <td>${escapeHtml(item.description)}</td>
@@ -52,7 +49,7 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
   const fmt = (v: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: invoice.currency }).format(v);
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  printWindow.document.write(`
+  const html = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -109,12 +106,57 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
         ${toMoney(invoice.vatAmount) > 0 ? `<tr><td class="text-right" colspan="3">VAT (20%)</td><td class="text-right">${escapeHtml(fmt(toMoney(invoice.vatAmount)))}</td></tr>` : ''}
         <tr class="grand-total"><td class="text-right" colspan="3">Total</td><td class="text-right">${escapeHtml(fmt(toMoney(invoice.total)))}</td></tr>
       </table>
-
-      <script>window.onload = function() { window.print(); }</script>
     </body>
     </html>
-  `);
-  printWindow.document.close();
+  `;
+
+  // Render into a hidden same-origin iframe and print from it. This avoids
+  // popup blockers (which silently killed the old window.open approach) and
+  // reliably opens the browser's print / "Save as PDF" dialog.
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    iframe.remove();
+  };
+
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) {
+      cleanup();
+      toast.error('Could not generate the PDF. Please try again.');
+      return;
+    }
+    try {
+      win.focus();
+      // Clean up only AFTER the print dialog is dismissed — print() isn't
+      // reliably blocking, so a fixed short timer can tear the document out
+      // mid-print and produce a blank PDF. afterprint covers most browsers;
+      // the window 'focus' handler covers the rest (focus returns to the page
+      // when the dialog closes); a long timeout is just a leak-safety net.
+      win.onafterprint = cleanup;
+      const onFocus = () => { window.removeEventListener('focus', onFocus); cleanup(); };
+      window.addEventListener('focus', onFocus);
+      win.print();
+    } catch (err) {
+      logError('Invoice PDF print failed', err);
+      toast.error('Could not open the print dialog.');
+      cleanup();
+    }
+    setTimeout(cleanup, 60000);
+  };
+
+  document.body.appendChild(iframe);
+  iframe.srcdoc = html;
 }
 
 export function InvoiceDetailPage() {

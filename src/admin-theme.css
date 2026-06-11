@@ -35,7 +35,7 @@
 .statto-admin .statto-title { font-weight: 600; font-size: 18px; line-height: 1.25; letter-spacing: -.01em; color: var(--fg1); }
 
 /* ---------- BUTTONS / DD (shared) ---------- */
-.statto-admin .btn { font-weight: 600; font-size: 14px; padding: 11px 18px; border-radius: 14px; display: inline-flex; align-items: center; gap: 8px; transition: var(--transition); border: none; cursor: pointer; font-family: inherit; }
+.statto-admin .btn { font-weight: 600; font-size: 14px; padding: 11px 18px; border-radius: 14px; display: inline-flex; align-items: center; gap: 8px; transition: var(--transition); border: none; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .statto-admin .btn svg { width: 16px; height: 16px; }
 .statto-admin .btn:active { transform: scale(.98); }
 .statto-admin .b-primary { background: var(--statto-lime); color: var(--statto-ink); }
@@ -48,6 +48,7 @@
 .statto-admin .btn:disabled { opacity: .55; cursor: default; }
 .statto-admin .dd { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 9px 14px; font-size: 13px; font-weight: 500; color: var(--fg1); transition: var(--transition); cursor: pointer; font-family: inherit; }
 .statto-admin .dd:hover { background: var(--gray-50); }
+.statto-admin .dd:focus, .statto-admin .dd:focus-visible, .statto-admin .dd[aria-expanded="true"] { outline: none; border-color: var(--lime-500); box-shadow: 0 0 0 3px rgba(132,212,81,.30); }
 .statto-admin .dd svg { width: 15px; height: 15px; color: var(--fg2); }
 
 /* ---------- SHELL ---------- */

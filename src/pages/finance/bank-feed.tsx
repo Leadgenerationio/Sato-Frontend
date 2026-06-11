@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import { Pagination } from '@/components/ui/pagination';
-import { Banknote, RefreshCw, Plus, Loader2, Search, AlertTriangle, Sparkles, ChevronDown } from 'lucide-react';
+import { Banknote, RefreshCw, Plus, Loader2, Search, AlertTriangle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useBankTransactions,
@@ -20,6 +18,7 @@ import {
   type CostCategory,
 } from '@/lib/hooks/use-bank-feed';
 import { useDebounce } from '@/lib/hooks/use-debounce';
+import { FilterSelect } from '@/components/ui/filter-select';
 
 import { logError } from '../../lib/log';
 function formatRelativeTime(iso: string | null): string {
@@ -53,6 +52,12 @@ const bucketLabels: Record<BucketTab, string> = {
   one_off: 'One-off',
   advertising: 'Advertising',
 };
+
+// Short bucket suffix shown in the category dropdowns (distinct from the
+// tab labels above). Shared by both the page filter and the per-row select.
+const bucketShort = (b: string) => (b === 'fixed' ? 'fixed' : b === 'one_off' ? 'one-off' : 'advertising');
+const categoryOptions = (categories: CostCategory[]) =>
+  categories.map((c) => ({ value: c.id, label: `${c.name} (${bucketShort(c.bucket)})` }));
 
 export function BankFeedPage() {
   const [bucket, setBucket] = useState<BucketTab>('uncategorized');
@@ -130,29 +135,20 @@ export function BankFeedPage() {
       {/* Category filter + search */}
       <div className="bf-filters">
         <span className="bf-filter-lab">Filter by category</span>
-        <div className="bf-select-wrap">
-          <select
-            aria-label="Filter by category"
-            className="bf-select"
-            value={categoryFilter}
-            onChange={(e) => {
-              // A specific category overrides the bucket tabs — reset bucket
-              // back to "all" so users don't see an empty list from a
-              // bucket+category mismatch.
-              setCategoryFilter(e.target.value);
-              if (e.target.value) setBucket('all');
-              setPage(1);
-            }}
-          >
-            <option value="">All categories</option>
-            {(categories ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.bucket === 'fixed' ? 'fixed' : c.bucket === 'one_off' ? 'one-off' : 'advertising'})
-              </option>
-            ))}
-          </select>
-          <span className="lic"><ChevronDown className="size-[15px]" /></span>
-        </div>
+        <FilterSelect
+          ariaLabel="Filter by category"
+          value={categoryFilter}
+          style={{ minWidth: 220 }}
+          onChange={(v) => {
+            // A specific category overrides the bucket tabs — reset bucket
+            // back to "all" so users don't see an empty list from a
+            // bucket+category mismatch.
+            setCategoryFilter(v);
+            if (v) setBucket('all');
+            setPage(1);
+          }}
+          options={[{ value: '', label: 'All categories' }, ...categoryOptions(categories ?? [])]}
+        />
         <div className="inv-search">
           <span className="lic"><Search className="size-4" /></span>
           <input
@@ -255,33 +251,25 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
         </td>
         <td>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div className="bf-select-wrap cell">
-              <select
-                className={'bf-select' + (tx.categoryId ? '' : ' muted')}
-                value={tx.categoryId ?? ''}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  if (next === '') {
-                    // Uncategorise: skip the confirm dialog (no rule-learning
-                    // decision needed) — the old code routed this through the
-                    // dialog which never opened because its open prop was
-                    // pendingCategoryId !== null, silently dropping the action.
-                    void applyCategory(null, false, false);
-                    return;
-                  }
-                  setPendingCategoryId(next);
-                }}
-                disabled={categorize.isPending}
-              >
-                <option value="">— Uncategorised —</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.bucket === 'fixed' ? 'fixed' : c.bucket === 'one_off' ? 'one-off' : 'advertising'})
-                  </option>
-                ))}
-              </select>
-              <span className="lic"><ChevronDown className="size-[15px]" /></span>
-            </div>
+            <FilterSelect
+              ariaLabel="Category"
+              value={tx.categoryId ?? ''}
+              muted={!tx.categoryId}
+              disabled={categorize.isPending}
+              style={{ width: '100%', maxWidth: 240 }}
+              onChange={(next) => {
+                if (next === '') {
+                  // Uncategorise: skip the confirm dialog (no rule-learning
+                  // decision needed) — the old code routed this through the
+                  // dialog which never opened because its open prop was
+                  // pendingCategoryId !== null, silently dropping the action.
+                  void applyCategory(null, false, false);
+                  return;
+                }
+                setPendingCategoryId(next);
+              }}
+              options={[{ value: '', label: '— Uncategorised —' }, ...categoryOptions(categories)]}
+            />
             {tx.isAutoCategorized && (
               <span className="pill p-soft" title="Auto-tagged by a vendor rule">
                 <Sparkles className="size-3" /> auto
@@ -302,11 +290,11 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
               Set <strong>{tx.vendorName ?? '(no vendor)'}</strong> to{' '}
               <strong>{categories.find((c) => c.id === pendingCategoryId)?.name ?? 'Uncategorised'}</strong>.
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs" style={{ color: 'var(--fg2)' }}>
               You can also remember this so future transactions from the same vendor are tagged automatically.
             </p>
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-wrap">
             <button
               className="btn b-ghost b-sm"
               onClick={() => applyCategory(pendingCategoryId, false, false)}
@@ -373,31 +361,31 @@ function CategoryDialog() {
           <DialogTitle>Add cost category</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cat-name">Name</Label>
-            <Input
+          <div className="nc-field">
+            <label className="nc-label" htmlFor="cat-name">Name</label>
+            <input
               id="cat-name"
+              className="nc-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Wages, Software, Travel"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="cat-bucket">Bucket</Label>
-            <select
-              id="cat-bucket"
+          <div className="nc-field">
+            <label className="nc-label">Bucket</label>
+            <FilterSelect
+              ariaLabel="Bucket"
               value={bucket}
-              onChange={(e) => {
-                const v = e.target.value;
+              onChange={(v) => {
                 if (v === 'fixed' || v === 'one_off' || v === 'advertising') setBucket(v);
               }}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-            >
-              <option value="fixed">Fixed cost (recurring)</option>
-              <option value="one_off">One-off</option>
-              <option value="advertising">Advertising (Facebook, Google, etc.)</option>
-            </select>
-            <p className="text-xs text-muted-foreground">
+              options={[
+                { value: 'fixed', label: 'Fixed cost (recurring)' },
+                { value: 'one_off', label: 'One-off' },
+                { value: 'advertising', label: 'Advertising (Facebook, Google, etc.)' },
+              ]}
+            />
+            <p className="text-xs" style={{ color: 'var(--fg2)' }}>
               Fixed = recurring (rent, salaries, software). One-off = ad-hoc (flights, equipment).
               Advertising = ad-platform spend (kept separate from fixed/one-off for clean P&amp;L).
             </p>
