@@ -171,7 +171,6 @@ export function LoginPage() {
           <div className="auth-logo">
             <span className="auth-logo-mark"><BarChart3 className="size-[22px]" strokeWidth={2.6} /></span>
             <span className="auth-logo-word">Stato</span>
-            <span className="auth-logo-tag">Admin</span>
           </div>
           <div className="auth-headline">
             <h1>Run every client from <em>one console.</em></h1>
@@ -198,7 +197,7 @@ export function LoginPage() {
         {mode === 'signin' ? (
           <form className="auth-card" onSubmit={handleSubmit} noValidate>
             <h1 className="auth-title">Sign in to Stato</h1>
-            <p className="auth-sub">Use your Stato admin credentials. Access is restricted to authorised staff accounts.</p>
+            <p className="auth-sub">Sign in with your Stato account to access your dashboard.</p>
 
             {serverError && (
               <div className="field-err" style={{ marginBottom: 16 }}><CircleAlert className="size-[13px]" />{serverError}</div>
