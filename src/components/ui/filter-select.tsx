@@ -18,7 +18,9 @@ import { getThemeRoot } from '@/lib/theme-root';
 // When used INSIDE a Radix dialog, the menu portals into the dialog content
 // node instead (and offsets for its transform) so it stays within the dialog's
 // dismissable layer + focus scope — otherwise picking an option reads as an
-// outside click and closes the dialog. See the open layout effect below.
+// outside click and closes the dialog. In that case the dialog's own overflow
+// can clip the menu, so the open layout effect caps the menu height to the
+// available space (and flips it above the trigger when there's more room there).
 
 export interface FilterOption {
   value: string;
@@ -48,14 +50,19 @@ export function FilterSelect({ value, options, onChange, ariaLabel, capitalize, 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const optRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
   const [menuRoot, setMenuRoot] = useState<HTMLElement | null>(null);
 
   // A disabled control must never stay open.
   useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
 
+  // If the options list shrinks while the menu is open, keep activeIndex in range.
+  useEffect(() => {
+    setActiveIndex((i) => Math.min(i, Math.max(0, options.length - 1)));
+  }, [options.length]);
+
   // Resolve where to portal the menu + position it against the trigger's rect,
-  // and keep it attached on scroll/resize (recompute rather than close).
+  // and keep it attached on scroll/resize/dialog-resize (recompute, not close).
   useLayoutEffect(() => {
     if (!open) return;
     // If we're inside a Radix dialog, mount the menu INSIDE the dialog content
@@ -66,21 +73,54 @@ export function FilterSelect({ value, options, onChange, ariaLabel, capitalize, 
     // both the dismissable layer and the focus scope.
     const dialog = wrapRef.current?.closest<HTMLElement>('[data-slot="dialog-content"]') ?? null;
     setMenuRoot(dialog ?? getThemeRoot() ?? document.body);
+
+    const GAP = 6;
+    const MAX_H = 320;
     const place = () => {
       const r = wrapRef.current?.getBoundingClientRect();
       if (!r) return;
-      // The menu is position:fixed. The dialog uses translate(-50%,-50%), which
+      // Clip bounds: a nested dialog also clips via its overflow + transform, so
+      // fit the menu within the dialog's box; otherwise within the viewport.
+      const d = dialog?.getBoundingClientRect();
+      const clipTop = d ? d.top : 0;
+      const clipBottom = d ? d.bottom : window.innerHeight;
+      const spaceBelow = clipBottom - r.bottom - GAP;
+      const spaceAbove = r.top - clipTop - GAP;
+      // Estimate the menu's natural height (~40px/option, capped) so we only
+      // flip up when the menu genuinely doesn't fit below and there's more room
+      // above — not merely because MAX_H exceeds the space below.
+      const desired = Math.min(MAX_H, Math.max(96, options.length * 40));
+      const openUp = spaceBelow < desired && spaceAbove > spaceBelow;
+      // Cap the height to the chosen side so the menu (which scrolls internally)
+      // is never clipped by the dialog/viewport.
+      const maxHeight = Math.min(MAX_H, Math.max(96, openUp ? spaceAbove : spaceBelow));
+      const topVp = openUp ? r.top - GAP - maxHeight : r.bottom + GAP;
+      // The menu is position:fixed. A dialog uses translate(-50%,-50%), which
       // makes it the containing block for fixed descendants — so offset by its
       // rect. The (untransformed) theme root needs no offset.
-      const o = dialog?.getBoundingClientRect();
-      setPos({ top: r.bottom + 6 - (o?.top ?? 0), left: r.left - (o?.left ?? 0), width: r.width });
+      setPos({ top: topVp - (d?.top ?? 0), left: r.left - (d?.left ?? 0), width: r.width, maxHeight });
     };
     place();
-    window.addEventListener('scroll', place, true);
-    window.addEventListener('resize', place);
+
+    // rAF-throttle the (layout-reading) reposition so rapid scroll doesn't force
+    // a synchronous reflow on every tick.
+    let raf = 0;
+    const schedule = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => { raf = 0; place(); });
+    };
+    window.addEventListener('scroll', schedule, true);
+    window.addEventListener('resize', schedule);
+    // A dialog re-centers (its transform shifts) when its content height changes
+    // — that fires no scroll/resize, so observe the dialog directly.
+    const ro = dialog && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(schedule) : null;
+    if (dialog && ro) ro.observe(dialog);
+
     return () => {
-      window.removeEventListener('scroll', place, true);
-      window.removeEventListener('resize', place);
+      if (raf) window.cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', schedule, true);
+      window.removeEventListener('resize', schedule);
+      ro?.disconnect();
     };
   }, [open]);
 
@@ -165,7 +205,7 @@ export function FilterSelect({ value, options, onChange, ariaLabel, capitalize, 
           role="listbox"
           tabIndex={-1}
           onKeyDown={onMenuKeyDown}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, right: 'auto', width: pos.width, minWidth: 'auto', maxHeight: 320, overflowY: 'auto', zIndex: 1000 }}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, right: 'auto', width: pos.width, minWidth: 'auto', maxHeight: pos.maxHeight, overflowY: 'auto', zIndex: 1000 }}
         >
           {options.map((o, i) => (
             <button
