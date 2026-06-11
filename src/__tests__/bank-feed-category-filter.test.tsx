@@ -71,8 +71,8 @@ beforeEach(() => {
 describe('BankFeedPage — per-category filter dropdown', () => {
   it('passes categoryId to useBankTransactions when a category is picked', async () => {
     renderPage();
-    const filterSelect = screen.getByLabelText(/filter by category/i);
-    fireEvent.change(filterSelect, { target: { value: 'cat-software' } });
+    fireEvent.click(screen.getByLabelText(/filter by category/i));
+    fireEvent.click(await screen.findByRole('option', { name: /Software Subscriptions \(fixed\)/i }));
 
     await waitFor(() => {
       expect(useBankTransactionsSpy).toHaveBeenLastCalledWith(
@@ -91,8 +91,8 @@ describe('BankFeedPage — per-category filter dropdown', () => {
       );
     });
 
-    const filterSelect = screen.getByLabelText(/filter by category/i);
-    fireEvent.change(filterSelect, { target: { value: 'cat-rent' } });
+    fireEvent.click(screen.getByLabelText(/filter by category/i));
+    fireEvent.click(await screen.findByRole('option', { name: /Rent \(fixed\)/i }));
 
     await waitFor(() => {
       const last = useBankTransactionsSpy.mock.calls.at(-1)?.[0] as {
@@ -108,15 +108,16 @@ describe('BankFeedPage — per-category filter dropdown', () => {
 
   it('clears the categoryId when the dropdown is set back to "All categories"', async () => {
     renderPage();
-    const filterSelect = screen.getByLabelText(/filter by category/i);
-    fireEvent.change(filterSelect, { target: { value: 'cat-software' } });
+    fireEvent.click(screen.getByLabelText(/filter by category/i));
+    fireEvent.click(await screen.findByRole('option', { name: /Software Subscriptions \(fixed\)/i }));
     await waitFor(() => {
       expect(useBankTransactionsSpy).toHaveBeenLastCalledWith(
         expect.objectContaining({ categoryId: 'cat-software' }),
       );
     });
 
-    fireEvent.change(filterSelect, { target: { value: '' } });
+    fireEvent.click(screen.getByLabelText(/filter by category/i));
+    fireEvent.click(await screen.findByRole('option', { name: /^All categories$/i }));
     await waitFor(() => {
       const last = useBankTransactionsSpy.mock.calls.at(-1)?.[0] as { categoryId?: string };
       expect(last?.categoryId).toBeUndefined();
