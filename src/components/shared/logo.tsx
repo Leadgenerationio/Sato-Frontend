@@ -14,17 +14,22 @@ const sizes = {
 export function Logo({ size = 'md', showText = true, className }: LogoProps) {
   const s = sizes[size];
 
+  // Brand mark: ink-green chip with lime bars + ink wordmark, matching the
+  // sidebar (.asb-logo / .asb-word) and login brand panel. Uses explicit
+  // --statto-ink / --statto-lime hex values because this renders on the
+  // pre-layout loading screen, outside the .statto-admin scope where those
+  // CSS vars are defined.
   return (
     <div className={`flex items-center gap-2.5 ${className || ''}`}>
-      <div className={`${s.icon} flex items-center justify-center rounded-lg bg-neutral-900`}>
+      <div className={`${s.icon} flex items-center justify-center rounded-lg bg-[#062F28]`}>
         <div className={`flex items-end ${s.gap}`}>
-          <div className={`${s.barW} ${s.bar1} rounded-full bg-white`} />
-          <div className={`${s.barW} ${s.bar2} rounded-full bg-white`} />
-          <div className={`${s.barW} ${s.bar3} rounded-full bg-white`} />
+          <div className={`${s.barW} ${s.bar1} rounded-full bg-[#9FE870]`} />
+          <div className={`${s.barW} ${s.bar2} rounded-full bg-[#9FE870]`} />
+          <div className={`${s.barW} ${s.bar3} rounded-full bg-[#9FE870]`} />
         </div>
       </div>
       {showText && (
-        <span className={`${s.text} font-bold tracking-tight text-neutral-900`}>
+        <span className={`${s.text} font-bold tracking-tight text-[#062F28]`}>
           Stato
         </span>
       )}
