@@ -68,12 +68,8 @@ export function CreativeListItem({ item, selected, onSelect, metricsLine }: Prop
         <span className="cc-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
         {item.campaignName && <span className="cc-fmt">{item.campaignName}</span>}
         {metricsLine && <span className="cc-fmt mono">{metricsLine}</span>}
-        {item.approval.status === 'approved' && item.approval.decidedByName && (
-          <span className="cc-fmt" style={{ color: 'var(--lime-600)' }}>
-            Signed off by <strong>{item.approval.decidedByName}</strong>
-            {item.approval.decidedAt && <> · {new Date(item.approval.decidedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</>}
-          </span>
-        )}
+        {/* "Signed off by …" lives in the detail panel; keeping it off the
+            compact row keeps approved cards the same height as the others. */}
         <div style={{ marginTop: 2 }}><StatusPill status={item.approval.status} compact /></div>
       </div>
     </button>
