@@ -129,10 +129,10 @@ describe('ClientDetailPage — onboarding-strip inline (no dedicated tab)', () =
   });
 
   it('has NO dedicated "Onboarding" tab — the 7 tabs are O/C/I/C/D/E/A', () => {
-    renderPage();
-    // Tabs use role="tab" via Radix Tabs. Querying all of them lets us assert
-    // both the count and the absence of an "Onboarding" trigger.
-    const triggers = screen.getAllByRole('tab');
+    const { container } = renderPage();
+    // Tabs are Statto segmented buttons (.seg-btn). Querying all of them lets us
+    // assert both the count and the absence of an "Onboarding" trigger.
+    const triggers = Array.from(container.querySelectorAll('.seg-btn'));
     expect(triggers).toHaveLength(7);
     for (const trigger of triggers) {
       expect(trigger.textContent?.toLowerCase()).not.toBe('onboarding');
@@ -145,14 +145,14 @@ describe('ClientDetailPage — onboarding-strip inline (no dedicated tab)', () =
     ]);
   });
 
-  it('renders the stage strip BEFORE the tablist in DOM order', () => {
+  it('renders the stage strip BEFORE the tab strip in DOM order', () => {
     const { container } = renderPage();
     const stageStrip = screen.getByText(/Stage \d of 4/);
-    const tabList = container.querySelector('[role="tablist"]');
-    expect(tabList).not.toBeNull();
-    // DOCUMENT_POSITION_FOLLOWING (4) means tabList comes AFTER stageStrip,
-    // i.e. the strip is above the tabs in the rendered DOM.
-    const pos = stageStrip.compareDocumentPosition(tabList!);
+    const tabStrip = container.querySelector('.seg');
+    expect(tabStrip).not.toBeNull();
+    // DOCUMENT_POSITION_FOLLOWING (4) means the tab strip comes AFTER the stage
+    // strip, i.e. the strip is above the tabs in the rendered DOM.
+    const pos = stageStrip.compareDocumentPosition(tabStrip!);
     expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -99,7 +99,8 @@ describe('StaffDetailPage — Documents tab', () => {
 
   it('renders the Documents tab trigger alongside the other tabs', () => {
     renderPage();
-    expect(screen.getByRole('tab', { name: /documents/i })).toBeInTheDocument();
+    // Tabs are Statto segmented buttons (.seg-btn), not ARIA tabs.
+    expect(screen.getByRole('button', { name: /documents/i })).toBeInTheDocument();
   });
 
   it('mounts FileUpload with folder="misc" on the Documents tab', async () => {

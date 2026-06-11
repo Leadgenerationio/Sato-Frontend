@@ -32,6 +32,11 @@ const { dashboardFixture } = vi.hoisted(() => ({
 
 vi.mock('@/lib/hooks/use-portal', () => ({
   usePortalDashboard: () => ({ data: dashboardFixture, isLoading: false, error: null }),
+  // The page also pulls invoices/compliance/leads for its snapshot cards +
+  // charts; stub them empty (all consumers guard with ?? [] / ?.).
+  usePortalInvoices: () => ({ data: undefined, isLoading: false, error: null }),
+  usePortalCompliance: () => ({ data: undefined, isLoading: false, error: null }),
+  usePortalLeads: () => ({ data: undefined, isLoading: false, error: null }),
 }));
 
 vi.mock('recharts', () => ({
@@ -79,7 +84,9 @@ describe('PortalDashboardPage', () => {
 
   it('renders Outstanding stat card', () => {
     renderPage();
-    expect(screen.getByText('Outstanding')).toBeInTheDocument();
+    // "Outstanding" also appears in the Invoices snapshot sub-text, so scope to
+    // ≥1 rather than a unique match.
+    expect(screen.getAllByText('Outstanding').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders lead delivery chart heading', () => {
@@ -87,16 +94,16 @@ describe('PortalDashboardPage', () => {
     expect(screen.getByText('Recent Lead Deliveries')).toBeInTheDocument();
   });
 
-  // Sam jam-video #2 (27-May-2026): no ad-spend section on the client
-  // portal yet. The dashboard must not render an Ad Spend card even if
-  // the BE keeps returning adSpendByPlatform for managed clients.
-  it('does NOT render an Ad Spend card on the dashboard', () => {
+  // Ad Spend by Platform is shown on the dashboard for managed clients when the
+  // BE returns adSpendByPlatform (falls back to the MTD spend when "This month"
+  // is selected and there's no per-source LeadByte breakdown).
+  it('renders the Ad Spend card for managed clients with ad-spend data', () => {
     dashboardFixture.clientType = 'managed';
     dashboardFixture.adSpendByPlatform = [
       { platform: 'Google Ads', spend: 300, currency: 'GBP' },
     ];
     renderPage();
-    expect(screen.queryByText('Ad Spend')).not.toBeInTheDocument();
-    expect(screen.queryByText('Google Ads')).not.toBeInTheDocument();
+    expect(screen.getByText('Ad Spend by Platform')).toBeInTheDocument();
+    expect(screen.getByText('Google Ads')).toBeInTheDocument();
   });
 });

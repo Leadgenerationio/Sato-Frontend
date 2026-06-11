@@ -104,18 +104,20 @@ describe('PortalLeadsPage — date range presets', () => {
     vi.useRealTimers();
   });
 
+  // Active preset uses the filled Statto button (.b-dark); inactive presets use
+  // the ghost variant (.b-ghost).
   it('highlights the preset matching the default range (This month) on load', () => {
     renderPage();
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'default');
-    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('data-variant', 'outline');
-    expect(screen.getByRole('button', { name: 'This week' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-dark');
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveClass('b-ghost');
+    expect(screen.getByRole('button', { name: 'This week' })).toHaveClass('b-ghost');
   });
 
   it('moves the highlight to the preset that was clicked', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Today' }));
-    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('data-variant', 'default');
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveClass('b-dark');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-ghost');
   });
 
   it('highlights only the clicked preset when two presets share the same range', () => {
@@ -125,26 +127,25 @@ describe('PortalLeadsPage — date range presets', () => {
     vi.setSystemTime(new Date('2026-06-03T12:00:00'));
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'This week' }));
-    expect(screen.getByRole('button', { name: 'This week' })).toHaveAttribute('data-variant', 'default');
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'This week' })).toHaveClass('b-dark');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-ghost');
   });
 
-  it('keeps a border on the active chip so it does not resize when selected', () => {
-    // The active chip uses the filled (primary) look; without a border it is
-    // ~2px narrower than the outline chips and visibly jumps on click. It must
-    // keep a (transparent) border to occupy the same box as the others.
+  it('keeps the active and inactive chips on the same button base so they do not resize', () => {
+    // Active (.b-dark) and inactive (.b-ghost) chips share the `btn b-sm` base,
+    // so the active one occupies the same box and doesn't jump on click.
     renderPage();
     const active = screen.getByRole('button', { name: 'This month' });
     const inactive = screen.getByRole('button', { name: 'Today' });
-    expect(active).toHaveClass('border');
-    expect(inactive).toHaveClass('border');
+    expect(active).toHaveClass('btn', 'b-sm', 'b-dark');
+    expect(inactive).toHaveClass('btn', 'b-sm', 'b-ghost');
   });
 
   it('clears the highlight when the range is edited manually', () => {
     renderPage();
     // "This month" is highlighted on load; editing a date input must drop it.
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'default');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-dark');
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-06-10' } });
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-ghost');
   });
 });
