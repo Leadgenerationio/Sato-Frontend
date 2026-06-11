@@ -14,6 +14,11 @@ import { getThemeRoot } from '@/lib/theme-root';
 // Home / End / Enter / Esc), and closes on outside-click. The .range-menu /
 // .range-opt menu styles are defined in BOTH admin-theme.css and
 // portal-theme.css so the menu renders correctly in either scope.
+//
+// When used INSIDE a Radix dialog, the menu portals into the dialog content
+// node instead (and offsets for its transform) so it stays within the dialog's
+// dismissable layer + focus scope — otherwise picking an option reads as an
+// outside click and closes the dialog. See the open layout effect below.
 
 export interface FilterOption {
   value: string;
@@ -44,17 +49,31 @@ export function FilterSelect({ value, options, onChange, ariaLabel, capitalize, 
   const menuRef = useRef<HTMLDivElement>(null);
   const optRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [menuRoot, setMenuRoot] = useState<HTMLElement | null>(null);
 
   // A disabled control must never stay open.
   useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
 
-  // Position the portaled menu against the trigger's viewport rect, and keep it
-  // attached on scroll/resize (recompute rather than close).
+  // Resolve where to portal the menu + position it against the trigger's rect,
+  // and keep it attached on scroll/resize (recompute rather than close).
   useLayoutEffect(() => {
     if (!open) return;
+    // If we're inside a Radix dialog, mount the menu INSIDE the dialog content
+    // rather than the theme root. The dialog also portals into getThemeRoot(),
+    // so a theme-root menu would be a *sibling* of the dialog: Radix would read
+    // an option click as an outside interaction (dismissing the dialog) and its
+    // focus trap would fight the option focus. A descendant menu stays inside
+    // both the dismissable layer and the focus scope.
+    const dialog = wrapRef.current?.closest<HTMLElement>('[data-slot="dialog-content"]') ?? null;
+    setMenuRoot(dialog ?? getThemeRoot() ?? document.body);
     const place = () => {
       const r = wrapRef.current?.getBoundingClientRect();
-      if (r) setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+      if (!r) return;
+      // The menu is position:fixed. The dialog uses translate(-50%,-50%), which
+      // makes it the containing block for fixed descendants — so offset by its
+      // rect. The (untransformed) theme root needs no offset.
+      const o = dialog?.getBoundingClientRect();
+      setPos({ top: r.bottom + 6 - (o?.top ?? 0), left: r.left - (o?.left ?? 0), width: r.width });
     };
     place();
     window.addEventListener('scroll', place, true);
@@ -112,14 +131,15 @@ export function FilterSelect({ value, options, onChange, ariaLabel, capitalize, 
       case 'End': e.preventDefault(); moveActive(options.length - 1); break;
       case 'Enter': case ' ': e.preventDefault(); select(options[activeIndex]?.value ?? value); break;
       case 'Escape': e.preventDefault(); setOpen(false); triggerRef.current?.focus(); break;
-      case 'Tab': setOpen(false); break;
+      // Restore focus to the trigger before closing so the (now-unmounting)
+      // option doesn't drop focus to <body> — keeps tab order on the trigger.
+      case 'Tab': triggerRef.current?.focus(); setOpen(false); break;
       default: break;
     }
   };
 
   const current = options.find((o) => o.value === value);
   const cap = capitalize ? { textTransform: 'capitalize' as const } : undefined;
-  const root = getThemeRoot() ?? document.body;
 
   return (
     <div className={'nc-select-wrap tk-dd' + (className ? ` ${className}` : '')} ref={wrapRef} style={style}>
@@ -138,7 +158,7 @@ export function FilterSelect({ value, options, onChange, ariaLabel, capitalize, 
         {current?.label ?? ''}
       </button>
       <ChevronDown className="size-[15px]" />
-      {open && pos && createPortal(
+      {open && pos && menuRoot && createPortal(
         <div
           ref={menuRef}
           className="range-menu"
@@ -162,7 +182,7 @@ export function FilterSelect({ value, options, onChange, ariaLabel, capitalize, 
             </button>
           ))}
         </div>,
-        root,
+        menuRoot,
       )}
     </div>
   );
