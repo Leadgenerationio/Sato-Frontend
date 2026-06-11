@@ -86,9 +86,13 @@ describe('BankFeedPage — uncategorize via dropdown', () => {
     // Switch from "Uncategorised" tab default to "All" so the categorized tx shows up
     fireEvent.click(screen.getByRole('button', { name: /^all$/i }));
 
-    // The row's category dropdown should currently show "Advertising"
-    const select = await screen.findByDisplayValue(/Advertising \(advertising\)/);
-    fireEvent.change(select, { target: { value: '' } });
+    // The row's category dropdown (aria-label "Category", so found by that name
+    // rather than its visible label) should currently show "Advertising"…
+    const categoryTrigger = await screen.findByRole('button', { name: 'Category' });
+    expect(categoryTrigger).toHaveTextContent(/Advertising \(advertising\)/);
+    // …then picking "— Uncategorised —" uncategorizes the row.
+    fireEvent.click(categoryTrigger);
+    fireEvent.click(await screen.findByRole('option', { name: /Uncategorised/i }));
 
     await waitFor(() => {
       expect(mockCategorizeMutate).toHaveBeenCalledWith(
