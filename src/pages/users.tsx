@@ -479,8 +479,8 @@ export function UsersManagement() {
                               {allRoles.map((r) => (
                                 <DropdownMenuItem key={r.value} onClick={() => requestRoleChange(u.id, u.name, u.role, r.value)} className="flex items-start gap-3 py-2">
                                   <r.icon className="size-4 mt-0.5 shrink-0" />
-                                  <div><p className="text-sm font-medium">{r.label}</p><p className="text-xs text-muted-foreground">{r.desc}</p></div>
-                                  {u.role === r.value && <div className="size-2 rounded-full bg-neutral-900 ml-auto mt-1.5 shrink-0" />}
+                                  <div><p className="text-sm font-medium" style={{ color: 'var(--fg1)' }}>{r.label}</p><p className="text-xs" style={{ color: 'var(--fg2)' }}>{r.desc}</p></div>
+                                  {u.role === r.value && <div className="size-2 rounded-full ml-auto mt-1.5 shrink-0" style={{ background: 'var(--statto-lime)' }} />}
                                 </DropdownMenuItem>
                               ))}
                             </DropdownMenuContent>
@@ -529,7 +529,7 @@ export function UsersManagement() {
             <DialogDescription>Create a new user account with a specific role</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {addError && <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600"><div className="size-1.5 rounded-full bg-red-500 shrink-0" />{addError}</div>}
+            {addError && <div className="flex items-center gap-2 p-3 text-sm" style={{ background: 'var(--negative-bg)', color: 'var(--negative)', border: '1px solid color-mix(in srgb, var(--negative) 30%, transparent)', borderRadius: 12 }}><div className="size-1.5 rounded-full shrink-0" style={{ background: 'var(--negative)' }} />{addError}</div>}
             <div className="nc-field">
               <label className="nc-label">Full Name</label>
               <input className="nc-input" value={addForm.name} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} placeholder="John Smith" />
@@ -564,7 +564,7 @@ export function UsersManagement() {
             <DialogDescription>Update {editUser?.name}'s details and role</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {editError && <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600"><div className="size-1.5 rounded-full bg-red-500 shrink-0" />{editError}</div>}
+            {editError && <div className="flex items-center gap-2 p-3 text-sm" style={{ background: 'var(--negative-bg)', color: 'var(--negative)', border: '1px solid color-mix(in srgb, var(--negative) 30%, transparent)', borderRadius: 12 }}><div className="size-1.5 rounded-full shrink-0" style={{ background: 'var(--negative)' }} />{editError}</div>}
             <div className="nc-field">
               <label className="nc-label">Email</label>
               <input className="nc-input" value={editUser?.email || ''} disabled />
@@ -595,7 +595,7 @@ export function UsersManagement() {
             <DialogDescription>Set a new password for {resetUser?.name}. They'll use it the next time they sign in.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {resetError && <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600"><div className="size-1.5 rounded-full bg-red-500 shrink-0" />{resetError}</div>}
+            {resetError && <div className="flex items-center gap-2 p-3 text-sm" style={{ background: 'var(--negative-bg)', color: 'var(--negative)', border: '1px solid color-mix(in srgb, var(--negative) 30%, transparent)', borderRadius: 12 }}><div className="size-1.5 rounded-full shrink-0" style={{ background: 'var(--negative)' }} />{resetError}</div>}
             <div className="nc-field">
               <label className="nc-label">User</label>
               <input className="nc-input" value={resetUser ? `${resetUser.name} (${resetUser.email})` : ''} disabled />
@@ -651,14 +651,14 @@ export function UsersManagement() {
                 <DialogDescription>Are you sure you want to change this user's role?</DialogDescription>
               </DialogHeader>
               <div className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">User</span><span className="text-sm font-medium">{confirmAction.userName}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Current Role</span><span className="pill p-gray" style={{ textTransform: 'capitalize' }}>{getRoleLabel(confirmAction.currentRole)}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">New Role</span><span className="pill p-pos" style={{ textTransform: 'capitalize' }}>{getRoleLabel(confirmAction.newRole)}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm" style={{ color: 'var(--fg2)' }}>User</span><span className="text-sm font-medium">{confirmAction.userName}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm" style={{ color: 'var(--fg2)' }}>Current Role</span><span className="pill p-gray" style={{ textTransform: 'capitalize' }}>{getRoleLabel(confirmAction.currentRole)}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm" style={{ color: 'var(--fg2)' }}>New Role</span><span className="pill p-pos" style={{ textTransform: 'capitalize' }}>{getRoleLabel(confirmAction.newRole)}</span></div>
               </div>
               {confirmAction.newRole === 'owner' && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <AlertTriangle className="size-4 text-amber-600 mt-0.5 shrink-0" />
-                  <p className="text-sm text-amber-800">Granting <strong>Owner</strong> role gives full system access including user management.</p>
+                <div className="flex items-start gap-2 p-3" style={{ background: 'var(--warning-bg)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)', borderRadius: 12 }}>
+                  <AlertTriangle className="size-4 mt-0.5 shrink-0" style={{ color: 'var(--warning)' }} />
+                  <p className="text-sm" style={{ color: 'var(--warning)' }}>Granting <strong>Owner</strong> role gives full system access including user management.</p>
                 </div>
               )}
               <DialogFooter>
@@ -671,7 +671,7 @@ export function UsersManagement() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  {confirmAction.isActive ? <UserX className="size-5 text-red-500" /> : <UserCheck className="size-5 text-emerald-500" />}
+                  {confirmAction.isActive ? <UserX className="size-5" style={{ color: 'var(--negative)' }} /> : <UserCheck className="size-5" style={{ color: 'var(--positive)' }} />}
                   {confirmAction.isActive ? 'Deactivate User' : 'Activate User'}
                 </DialogTitle>
                 <DialogDescription>
@@ -679,8 +679,8 @@ export function UsersManagement() {
                 </DialogDescription>
               </DialogHeader>
               <div className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">User</span><span className="text-sm font-medium">{confirmAction.userName}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Action</span><span className={'pill ' + (confirmAction.isActive ? 'p-neg' : 'p-pos')}>{confirmAction.isActive ? 'Deactivate' : 'Activate'}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm" style={{ color: 'var(--fg2)' }}>User</span><span className="text-sm font-medium">{confirmAction.userName}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm" style={{ color: 'var(--fg2)' }}>Action</span><span className={'pill ' + (confirmAction.isActive ? 'p-neg' : 'p-pos')}>{confirmAction.isActive ? 'Deactivate' : 'Activate'}</span></div>
               </div>
               <DialogFooter>
                 <button className="btn b-ghost b-sm" onClick={() => { setConfirmOpen(false); setConfirmAction(null); }}>Cancel</button>
@@ -701,15 +701,15 @@ export function UsersManagement() {
           {pendingPerm && (
             <div className="rounded-lg border p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Permission</span>
+                <span className="text-sm" style={{ color: 'var(--fg2)' }}>Permission</span>
                 <span className="text-sm font-medium">{pendingPerm.permission}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Role</span>
+                <span className="text-sm" style={{ color: 'var(--fg2)' }}>Role</span>
                 <span className="pill p-gray" style={{ textTransform: 'capitalize' }}>{getRoleLabel(pendingPerm.role)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Access</span>
+                <span className="text-sm" style={{ color: 'var(--fg2)' }}>Access</span>
                 <span className={'pill ' + (pendingPerm.newValue ? 'p-pos' : 'p-neg')}>
                   {pendingPerm.newValue ? 'Allow' : 'Deny'}
                 </span>

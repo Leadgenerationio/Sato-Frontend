@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface EmptyStateAction {
@@ -45,6 +44,9 @@ export function EmptyState({
 
   const ActionIcon = action?.icon;
   const LinkIcon = link?.icon;
+  // Keep the CTA proportional to the empty-state size (compact widgets get the
+  // smaller button), matching the pre-restyle behaviour.
+  const btnClass = 'btn b-dark' + (size === 'compact' ? ' b-sm' : '');
 
   return (
     <div
@@ -56,31 +58,37 @@ export function EmptyState({
     >
       <div
         className={cn(
-          'flex items-center justify-center rounded-full bg-muted text-muted-foreground',
+          'flex items-center justify-center rounded-full',
           iconWrap,
         )}
+        style={{ background: 'var(--gray-50)', color: 'var(--statto-ink)' }}
       >
         <Icon className={iconSize} />
       </div>
       <div className="flex flex-col gap-1">
-        <h3 className={cn('font-medium text-foreground', titleSize)}>{title}</h3>
+        <h3
+          className={cn('font-semibold', titleSize)}
+          style={{ color: 'var(--fg1)' }}
+        >
+          {title}
+        </h3>
         {description && (
-          <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
+          <p className="max-w-sm text-sm" style={{ color: 'var(--fg2)' }}>
+            {description}
+          </p>
         )}
       </div>
       {action && (
-        <Button onClick={action.onClick} size={size === 'compact' ? 'sm' : 'default'}>
+        <button type="button" className={btnClass} onClick={action.onClick}>
           {ActionIcon && <ActionIcon className="size-4" />}
           {action.label}
-        </Button>
+        </button>
       )}
       {link && (
-        <Button asChild size={size === 'compact' ? 'sm' : 'default'}>
-          <Link to={link.to}>
-            {LinkIcon && <LinkIcon className="size-4" />}
-            {link.label}
-          </Link>
-        </Button>
+        <Link to={link.to} className={btnClass}>
+          {LinkIcon && <LinkIcon className="size-4" />}
+          {link.label}
+        </Link>
       )}
     </div>
   );

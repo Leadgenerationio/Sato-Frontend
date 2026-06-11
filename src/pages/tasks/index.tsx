@@ -23,6 +23,7 @@ import {
 } from '@/lib/hooks/use-tasks';
 import { useAuth } from '@/components/providers/auth-provider';
 import { EmptyState } from '@/components/shared/empty-state';
+import { FilterSelect } from '@/components/ui/filter-select';
 
 const STATUS_TABS = ['all', 'todo', 'in_progress', 'on_hold', 'completed'] as const;
 
@@ -587,46 +588,25 @@ export function TasksPage() {
           </button>
         </div>
         <div className="tk-filter-right">
-          <div className="nc-select-wrap tk-dd">
-            <select
-              value={priorityFilter}
-              onChange={(e) => handlePriorityChange(e.target.value)}
-              className="nc-select"
-              style={{ textTransform: 'capitalize' }}
-              aria-label="Filter by priority"
-            >
-              {PRIORITY_OPTIONS.map((p) => (
-                <option key={p} value={p}>{p === 'all' ? 'All Priorities' : p}</option>
-              ))}
-            </select>
-            <ChevronDown className="size-[15px]" />
-          </div>
-          <div className="nc-select-wrap tk-dd">
-            <select
-              value={dueFilter}
-              onChange={(e) => { setDueFilter(e.target.value); setPage(1); }}
-              className="nc-select"
-              aria-label="Filter by due date"
-            >
-              {DUE_OPTIONS.map((d) => (
-                <option key={d} value={d}>{DUE_LABELS[d]}</option>
-              ))}
-            </select>
-            <ChevronDown className="size-[15px]" />
-          </div>
-          <div className="nc-select-wrap tk-dd">
-            <select
-              value={timeFilter}
-              onChange={(e) => { setTimeFilter(e.target.value); setPage(1); }}
-              className="nc-select"
-              aria-label="Filter by duration"
-            >
-              {TIME_OPTIONS.map((tm) => (
-                <option key={tm} value={tm}>{TIME_LABELS[tm]}</option>
-              ))}
-            </select>
-            <ChevronDown className="size-[15px]" />
-          </div>
+          <FilterSelect
+            value={priorityFilter}
+            onChange={handlePriorityChange}
+            ariaLabel="Filter by priority"
+            capitalize
+            options={PRIORITY_OPTIONS.map((p) => ({ value: p, label: p === 'all' ? 'All Priorities' : p }))}
+          />
+          <FilterSelect
+            value={dueFilter}
+            onChange={(v) => { setDueFilter(v); setPage(1); }}
+            ariaLabel="Filter by due date"
+            options={DUE_OPTIONS.map((d) => ({ value: d, label: DUE_LABELS[d] }))}
+          />
+          <FilterSelect
+            value={timeFilter}
+            onChange={(v) => { setTimeFilter(v); setPage(1); }}
+            ariaLabel="Filter by duration"
+            options={TIME_OPTIONS.map((tm) => ({ value: tm, label: TIME_LABELS[tm] }))}
+          />
         </div>
       </div>
       <div className="inv-search tk-search">

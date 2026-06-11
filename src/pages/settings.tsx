@@ -94,7 +94,7 @@ function XeroIntegration() {
       {!status?.configured ? (
         isOwner ? (
           <p className="set-intg-note">
-            Xero credentials are not configured on the server. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_ID</code> and <code className="rounded bg-muted px-1 py-0.5 text-xs">XERO_CLIENT_SECRET</code> in the backend environment.
+            Xero credentials are not configured on the server. Set <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>XERO_CLIENT_ID</code> and <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>XERO_CLIENT_SECRET</code> in the backend environment.
           </p>
         ) : (
           <p className="set-intg-note">
@@ -212,7 +212,7 @@ function LeadByteIntegration() {
         </>
       ) : isOwner ? (
         <p className="set-intg-note">
-          Running in mock mode with sample data. Set <code className="rounded bg-muted px-1 py-0.5 text-xs">LEADBYTE_API_KEY</code> in the backend environment to connect to LeadByte and enable hourly lead sync.
+          Running in mock mode with sample data. Set <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>LEADBYTE_API_KEY</code> in the backend environment to connect to LeadByte and enable hourly lead sync.
         </p>
       ) : (
         <p className="set-intg-note">
@@ -281,7 +281,7 @@ function CreditCheckIntegration() {
         </>
       ) : (
         <p className="set-intg-note">
-          Running in mock mode. Auto-selects provider on backend: <code className="rounded bg-muted px-1 py-0.5 text-xs">CREDITSAFE_API_KEY</code> (preferred) or <code className="rounded bg-muted px-1 py-0.5 text-xs">ENDOLE_API_KEY</code>.
+          Running in mock mode. Auto-selects provider on backend: <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>CREDITSAFE_API_KEY</code> (preferred) or <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>ENDOLE_API_KEY</code>.
         </p>
       )}
     </div>
@@ -348,7 +348,7 @@ function SimpleIntegrationCard<T extends { configured: boolean }>({
       {isConnected && data && renderDetails?.(data)}
       {!isConnected && (
         <p className="set-intg-note">
-          Add <code className="rounded bg-muted px-1 py-0.5 text-xs">{envHint}</code> to the backend environment to enable this integration.
+          Add <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>{envHint}</code> to the backend environment to enable this integration.
         </p>
       )}
     </div>

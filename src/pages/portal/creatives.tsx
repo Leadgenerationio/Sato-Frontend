@@ -115,7 +115,7 @@ function SideBySideSection({ title, description, items, selectedId, onSelect, em
                 metrics={adaptMetrics(selected.campaignMetrics)}
               />
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+              <div className="dash-empty">
                 Select an asset to view it here.
               </div>
             )}

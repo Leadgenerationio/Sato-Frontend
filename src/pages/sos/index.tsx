@@ -41,7 +41,8 @@ function renderMessageWithTaskLinks(message: string): React.ReactNode {
       <Link
         key={`l-${match.index}`}
         to={`/tasks/${match[1]}`}
-        className="text-blue-600 underline underline-offset-2 hover:text-blue-700"
+        className="underline underline-offset-2"
+        style={{ color: 'var(--lime-600)' }}
       >
         {match[0]}
       </Link>,
