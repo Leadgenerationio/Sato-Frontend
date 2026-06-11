@@ -5,6 +5,7 @@ import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { toMoney } from '@/lib/hooks/use-invoices';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
+import { printHtml } from '@/lib/print-html';
 
 // Sam T8 (2026-05-20): client-facing label map — Xero's "authorised" reads as
 // legalese to a buyer, surface as "Pending Payment".
@@ -29,9 +30,7 @@ function formatDate(iso: string) {
 }
 
 function handleViewInvoice(inv: PortalInvoice) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-  printWindow.document.write(`
+  printHtml(`
     <!DOCTYPE html><html><head><title>${escapeHtml(inv.invoiceNumber)}</title>
     <style>
       body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111; }
@@ -53,9 +52,7 @@ function handleViewInvoice(inv: PortalInvoice) {
         ${inv.paidDate ? `<tr><td>Paid Date</td><td class="text-right">${escapeHtml(formatDate(inv.paidDate))}</td></tr>` : ''}
       </table>
       <table><tr class="total-row"><td>Total</td><td class="text-right">${escapeHtml(formatCurrency(toMoney(inv.total), inv.currency))}</td></tr></table>
-      <script>window.onload = function() { window.print(); }</script>
     </body></html>`);
-  printWindow.document.close();
 }
 
 const PORTAL_HIDDEN_INVOICE_STATUSES = new Set(['draft', 'voided', 'deleted']);

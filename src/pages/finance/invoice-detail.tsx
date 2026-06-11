@@ -12,6 +12,7 @@ import {
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
+import { printHtml } from '@/lib/print-html';
 
 import { logError } from '../../lib/log';
 
@@ -110,53 +111,7 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
     </html>
   `;
 
-  // Render into a hidden same-origin iframe and print from it. This avoids
-  // popup blockers (which silently killed the old window.open approach) and
-  // reliably opens the browser's print / "Save as PDF" dialog.
-  const iframe = document.createElement('iframe');
-  iframe.setAttribute('aria-hidden', 'true');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-
-  let cleaned = false;
-  const cleanup = () => {
-    if (cleaned) return;
-    cleaned = true;
-    iframe.remove();
-  };
-
-  iframe.onload = () => {
-    const win = iframe.contentWindow;
-    if (!win) {
-      cleanup();
-      toast.error('Could not generate the PDF. Please try again.');
-      return;
-    }
-    try {
-      win.focus();
-      // Clean up only AFTER the print dialog is dismissed — print() isn't
-      // reliably blocking, so a fixed short timer can tear the document out
-      // mid-print and produce a blank PDF. afterprint covers most browsers;
-      // the window 'focus' handler covers the rest (focus returns to the page
-      // when the dialog closes); a long timeout is just a leak-safety net.
-      win.onafterprint = cleanup;
-      const onFocus = () => { window.removeEventListener('focus', onFocus); cleanup(); };
-      window.addEventListener('focus', onFocus);
-      win.print();
-    } catch (err) {
-      logError('Invoice PDF print failed', err);
-      toast.error('Could not open the print dialog.');
-      cleanup();
-    }
-    setTimeout(cleanup, 60000);
-  };
-
-  document.body.appendChild(iframe);
-  iframe.srcdoc = html;
+  printHtml(html);
 }
 
 export function InvoiceDetailPage() {
