@@ -174,7 +174,9 @@ export function PortalCompliancePage() {
             {reviewable.length} item{reviewable.length === 1 ? '' : 's'} across {compliance?.length ?? 0} campaign{(compliance?.length ?? 0) === 1 ? '' : 's'}
           </p>
           <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
-            <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
+            {/* px/py give the cards' hover lift + shadow room so the top edge
+                isn't clipped by this scroll container's overflow. */}
+            <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:px-1 md:py-2">
               {reviewable.map((row) => (
                 <CreativeListItem
                   key={row.creative.id}

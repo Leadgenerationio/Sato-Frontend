@@ -95,7 +95,9 @@ function SideBySideSection({ title, description, items, selectedId, onSelect, em
         <EmptyState icon={FileText} title="Nothing here yet" description={emptyHint} size="compact" />
       ) : (
         <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
-          <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
+          {/* px/py give the cards' hover lift + shadow room so the top edge
+              isn't clipped by this scroll container's overflow. */}
+          <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:px-1 md:py-2">
             {items.map((c) => (
               <CreativeListItem
                 key={c.id}
