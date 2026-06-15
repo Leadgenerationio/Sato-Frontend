@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
@@ -28,6 +28,12 @@ export function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Brand the browser tab too (Sam 2026-06-15: clients shouldn't see "Stato").
+  // Uses the hostname-resolved brand from src/config/brand.ts.
+  useEffect(() => {
+    document.title = `${brand.name} — ${brand.tagline}`;
+  }, []);
 
   // ─── Forgot-password OTP flow (Sam 2026-06-10) ───
   // 'signin' shows the normal form; the other steps drive the 3-step reset.
