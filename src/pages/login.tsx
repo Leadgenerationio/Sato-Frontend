@@ -1,23 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   Mail, Lock, Eye, EyeOff, CircleAlert, ArrowRight, Check,
-  BarChart3, Users, ShieldCheck, KeyRound, ArrowLeft,
+  KeyRound, ArrowLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_URL } from '@/lib/env';
+import { brand } from '@/config/brand';
 import type { ApiResponse } from '@/types';
 
-// Stato — Admin Sign In. Restyled to the Claude Design handoff
-// (Admin Login.html): ink-green brand panel + white form panel. Wired to the
-// real auth flow (validation, show/hide password, remember, error surface).
-
-const FEATURES = [
-  { Icon: Users, label: 'Oversee every client portal in one console' },
-  { Icon: BarChart3, label: 'Monitor lead deliveries & campaign performance' },
-  { Icon: ShieldCheck, label: 'Approve creatives, invoices & compliance' },
-];
+// Sign In. Restyled to the Claude Design handoff (Admin Login.html): ink-green
+// brand panel + white form panel. Wired to the real auth flow (validation,
+// show/hide password, remember, error surface).
+//
+// Branding is client-configurable via src/config/brand.ts (Sam ask
+// 2026-06-15) — the internal "Stato" wordmark and generic marketing bullets
+// were removed in favour of "<brand> — <tagline>".
 
 export function LoginPage() {
   const { user, login } = useAuth();
@@ -29,6 +28,12 @@ export function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Brand the browser tab too (Sam 2026-06-15: clients shouldn't see "Stato").
+  // Uses the hostname-resolved brand from src/config/brand.ts.
+  useEffect(() => {
+    document.title = `${brand.name} — ${brand.tagline}`;
+  }, []);
 
   // ─── Forgot-password OTP flow (Sam 2026-06-10) ───
   // 'signin' shows the normal form; the other steps drive the 3-step reset.
@@ -169,25 +174,20 @@ export function LoginPage() {
         <div className="auth-orb two" />
         <div className="auth-brand-inner">
           <div className="auth-logo">
-            <span className="auth-logo-mark"><BarChart3 className="size-[22px]" strokeWidth={2.6} /></span>
-            <span className="auth-logo-word">Stato</span>
+            {brand.logoUrl ? (
+              <img className="auth-logo-img" src={brand.logoUrl} alt={brand.name} style={{ maxHeight: 40, width: 'auto' }} />
+            ) : (
+              <span className="auth-logo-word">{brand.name}</span>
+            )}
           </div>
           <div className="auth-headline">
-            <h1>Run every client from <em>one console.</em></h1>
-            <p>Sign in to manage portals, track leads, and keep delivery, billing, and compliance on course.</p>
-            <div className="auth-feats">
-              {FEATURES.map((f) => (
-                <div key={f.label} className="auth-feat">
-                  <span className="auth-feat-ic"><f.Icon className="size-[18px]" /></span>{f.label}
-                </div>
-              ))}
-            </div>
+            <h1>{brand.name} <em>— {brand.tagline}</em></h1>
+            <p>Sign in to {brand.name}.</p>
           </div>
           <div className="auth-foot">
-            <span>© 2026 Stato</span>
+            <span>© {new Date().getFullYear()} {brand.name}</span>
             <a href="#">Privacy</a>
             <a href="#">Security</a>
-            <a href="#">Status</a>
           </div>
         </div>
       </div>
@@ -196,8 +196,8 @@ export function LoginPage() {
       <div className="auth-form-wrap">
         {mode === 'signin' ? (
           <form className="auth-card" onSubmit={handleSubmit} noValidate>
-            <h1 className="auth-title">Sign in to Stato</h1>
-            <p className="auth-sub">Sign in with your Stato account to access your dashboard.</p>
+            <h1 className="auth-title">Sign in to {brand.name}</h1>
+            <p className="auth-sub">Sign in with your account to access your dashboard.</p>
 
             {serverError && (
               <div className="field-err" style={{ marginBottom: 16 }}><CircleAlert className="size-[13px]" />{serverError}</div>

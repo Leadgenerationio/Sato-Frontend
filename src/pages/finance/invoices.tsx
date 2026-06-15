@@ -7,7 +7,10 @@ import { Pagination } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/shared/error-state';
 
-const STATUS_TABS = ['all', 'draft', 'sent', 'authorised', 'paid', 'overdue'] as const;
+// Sam request (repeated): no drafts. The backend now excludes drafts from the
+// default/`all` list; the 'draft' tab is removed so the admin can't land on a
+// drafts view. Other tabs unchanged.
+const STATUS_TABS = ['all', 'sent', 'authorised', 'paid', 'overdue'] as const;
 
 // Map invoice status → Statto pill colour suffix.
 const statusPill: Record<string, string> = {

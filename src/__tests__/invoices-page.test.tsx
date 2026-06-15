@@ -54,9 +54,20 @@ describe('InvoiceListPage', () => {
   it('renders status filter tabs', () => {
     renderPage();
     expect(screen.getAllByText(/^all$/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/^draft$/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/^sent$/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/^paid$/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/^overdue$/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  // Sam request 2026-06-15: no drafts — the 'draft' status tab must not render.
+  it('does NOT render a draft status tab', () => {
+    renderPage();
+    // The only "Draft" text that could appear is the status pill on the draft
+    // invoice row (INV-1050); there must be no clickable 'draft' filter tab.
+    const draftTabs = screen
+      .queryAllByText(/^draft$/i)
+      .filter((el) => el.className.includes('inv-tab'));
+    expect(draftTabs.length).toBe(0);
   });
 
   it('renders CSV and New Invoice buttons', () => {

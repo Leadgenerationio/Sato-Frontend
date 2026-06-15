@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Image, Globe, ExternalLink, Shield, AlertTriangle } from 'lucide-react';
+import { Image, Globe, ExternalLink, Shield, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   usePortalCompliance,
   type CreativeApprovalState,
@@ -64,6 +64,72 @@ interface FlatRow {
   campaignName: string;
 }
 
+// FIX 2 (2026-06-15): Compliance defaults to "Pending Review" — items needing
+// a decision. `changes_requested` is treated as pending/needs-action (the safe
+// default the client asked for). Selecting a tab filters the list to that
+// bucket; Pending Review is blank when nothing is awaiting a decision.
+type ComplianceTab = 'pending' | 'approved' | 'rejected';
+
+const COMPLIANCE_TABS: { value: ComplianceTab; label: string }[] = [
+  { value: 'pending', label: 'Pending Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+];
+
+function statusOf(cr: PortalCreative): CreativeApprovalState['status'] {
+  return cr.approval?.status ?? 'pending';
+}
+
+function matchesTab(cr: PortalCreative, tab: ComplianceTab): boolean {
+  const s = statusOf(cr);
+  if (tab === 'approved') return s === 'approved';
+  if (tab === 'rejected') return s === 'rejected';
+  // Pending bucket = pending + changes_requested (needs-action).
+  return s === 'pending' || s === 'changes_requested';
+}
+
+// FIX 3 (2026-06-15, client asked 3×): group creatives into dated BATCHES by
+// submission/upload day. PortalCreative carries `uploadedAt`; bucket on that.
+interface Batch {
+  /** Day key (yyyy-mm-dd) used for stable sorting + React keys. */
+  dayKey: string;
+  /** Human header, e.g. "Monday 15 June 2026". */
+  label: string;
+  rows: FlatRow[];
+}
+
+function dayKeyOf(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'unknown';
+  // Local-day bucket (yyyy-mm-dd) so rows uploaded on the same day group together.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function dayLabelOf(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Unknown date';
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function groupIntoBatches(rows: FlatRow[]): Batch[] {
+  const map = new Map<string, Batch>();
+  for (const row of rows) {
+    const iso = row.creative.uploadedAt;
+    const key = dayKeyOf(iso);
+    let batch = map.get(key);
+    if (!batch) {
+      batch = { dayKey: key, label: dayLabelOf(iso), rows: [] };
+      map.set(key, batch);
+    }
+    batch.rows.push(row);
+  }
+  // Newest day first.
+  return Array.from(map.values()).sort((a, b) => (a.dayKey < b.dayKey ? 1 : a.dayKey > b.dayKey ? -1 : 0));
+}
+
 function toListItem(row: FlatRow): CreativeListItemData {
   return {
     id: row.creative.id,
@@ -93,39 +159,57 @@ export function PortalCompliancePage() {
   usePageTitle('Stato — Compliance');
   const { data: compliance, isLoading } = usePortalCompliance();
 
-  // Sam (jam-video #3, 29-May-2026): flatten creatives across campaigns into
-  // one side-panel layout. Campaign name shows on each row + in the detail
-  // panel header. Approved items live on /portal/creatives — Compliance is
-  // for items still awaiting a decision.
-  const reviewable: FlatRow[] = useMemo(() => {
+  // FIX 2 (2026-06-15): default landing tab = Pending Review.
+  const [activeTab, setActiveTab] = useState<ComplianceTab>('pending');
+
+  // Flatten creatives across campaigns into one side-panel layout, then filter
+  // to the active status tab. Campaign name shows on each row + in the detail
+  // panel header.
+  const allRows: FlatRow[] = useMemo(() => {
     return (compliance ?? []).flatMap((c) =>
-      c.creatives
-        .filter((cr) => (cr.approval?.status ?? 'pending') !== 'approved')
-        .map((cr) => ({ creative: cr, campaignName: c.campaignName })),
+      c.creatives.map((cr) => ({ creative: cr, campaignName: c.campaignName })),
     );
   }, [compliance]);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const visibleRows: FlatRow[] = useMemo(
+    () => allRows.filter((r) => matchesTab(r.creative, activeTab)),
+    [allRows, activeTab],
+  );
 
-  // Auto-select the first reviewable creative once data loads. Re-runs only
-  // when the set of reviewable IDs changes so user selection isn't clobbered
-  // on every refetch.
+  // FIX 3 (2026-06-15): within the active tab, group rows into dated batches.
+  const batches = useMemo(() => groupIntoBatches(visibleRows), [visibleRows]);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Track which batches are collapsed; default is expanded (only collapsed
+  // batches are stored, so newly-appearing batches show open).
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  // Auto-select the first visible creative once data loads / tab changes.
+  // Re-runs only when the set of visible IDs changes so user selection isn't
+  // clobbered on every refetch.
   useEffect(() => {
-    if (reviewable.length === 0) return;
-    const stillExists = selectedId && reviewable.some((r) => r.creative.id === selectedId);
-    if (!stillExists) setSelectedId(reviewable[0].creative.id);
-  }, [reviewable, selectedId]);
+    if (visibleRows.length === 0) {
+      if (selectedId !== null) setSelectedId(null);
+      return;
+    }
+    const stillExists = selectedId && visibleRows.some((r) => r.creative.id === selectedId);
+    if (!stillExists) setSelectedId(visibleRows[0].creative.id);
+  }, [visibleRows, selectedId]);
 
   if (isLoading) {
     return <div className="screen"><Skeleton className="h-[420px] rounded-3xl" /></div>;
   }
 
   const allCreatives = (compliance ?? []).flatMap((c) => c.creatives);
-  const pendingCount = allCreatives.filter((c) => (c.approval?.status ?? 'pending') === 'pending').length;
-  const approvedCount = allCreatives.filter((c) => c.approval?.status === 'approved').length;
-  const rejectedCount = allCreatives.filter((c) => c.approval?.status === 'rejected').length;
+  const pendingCount = allCreatives.filter((c) => statusOf(c) === 'pending' || statusOf(c) === 'changes_requested').length;
+  const approvedCount = allCreatives.filter((c) => statusOf(c) === 'approved').length;
+  const rejectedCount = allCreatives.filter((c) => statusOf(c) === 'rejected').length;
+  const tabCount: Record<ComplianceTab, number> = { pending: pendingCount, approved: approvedCount, rejected: rejectedCount };
 
-  const selectedRow = reviewable.find((r) => r.creative.id === selectedId) ?? null;
+  const selectedRow = visibleRows.find((r) => r.creative.id === selectedId) ?? null;
+
+  const toggleBatch = (dayKey: string) =>
+    setCollapsed((prev) => ({ ...prev, [dayKey]: !prev[dayKey] }));
 
   return (
     <div className="screen">
@@ -149,41 +233,88 @@ export function PortalCompliancePage() {
         </div>
       )}
 
+      {/* FIX 2 (2026-06-15): clickable status tabs / stat cards. The three
+          stat cards double as the filter tabs (Pending Review | Approved |
+          Rejected); the selected one is outlined. Default = Pending Review. */}
       {compliance && compliance.length > 0 && (
-        <div className="stat-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-          {[
-            { v: pendingCount, l: 'Pending review', c: 'var(--warning)' },
-            { v: approvedCount, l: 'Approved', c: 'var(--positive)' },
-            { v: rejectedCount, l: 'Rejected', c: 'var(--negative)' },
-          ].map((s) => (
-            <div className="pstat" key={s.l} style={{ minHeight: 132 }}>
-              <div className="pstat-val mono" style={{ color: s.c }}>{s.v}</div>
-              <div className="pstat-lab">{s.l}</div>
-            </div>
-          ))}
+        <div className="stat-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }} role="tablist" aria-label="Compliance status filter">
+          {COMPLIANCE_TABS.map((t) => {
+            const color = t.value === 'pending' ? 'var(--warning)' : t.value === 'approved' ? 'var(--positive)' : 'var(--negative)';
+            const isActive = activeTab === t.value;
+            return (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className="pstat"
+                key={t.value}
+                onClick={() => setActiveTab(t.value)}
+                style={{
+                  minHeight: 132,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  outline: isActive ? '2px solid var(--statto-ink)' : '1px solid var(--border)',
+                  outlineOffset: isActive ? '-2px' : '-1px',
+                }}
+              >
+                <div className="pstat-val mono" style={{ color }}>{tabCount[t.value]}</div>
+                <div className="pstat-lab">{t.label}</div>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Sam (jam-video #3, 29-May-2026) — list on the left scrolls, detail
-          panel on the right is sticky on md+ so a buyer can compare adjacent
-          assets without losing the panel. */}
-      {reviewable.length > 0 && (
+      {/* List (grouped into dated batches) on the left scrolls; detail panel on
+          the right is sticky on md+ so a buyer can compare adjacent assets. */}
+      {compliance && compliance.length > 0 && visibleRows.length > 0 && (
         <div className="card pad">
-          <h3 className="statto-title" style={{ marginBottom: 4 }}>Open compliance items</h3>
+          <h3 className="statto-title" style={{ marginBottom: 4 }}>
+            {COMPLIANCE_TABS.find((t) => t.value === activeTab)?.label}
+          </h3>
           <p className="lc-sub" style={{ marginBottom: 16 }}>
-            {reviewable.length} item{reviewable.length === 1 ? '' : 's'} across {compliance?.length ?? 0} campaign{(compliance?.length ?? 0) === 1 ? '' : 's'}
+            {visibleRows.length} item{visibleRows.length === 1 ? '' : 's'} in {batches.length} batch{batches.length === 1 ? '' : 'es'}
           </p>
           <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
-            <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
-              {reviewable.map((row) => (
-                <CreativeListItem
-                  key={row.creative.id}
-                  item={toListItem(row)}
-                  selected={selectedId === row.creative.id}
-                  onSelect={() => setSelectedId(row.creative.id)}
-                  metricsLine={compactMetricsLine(row.creative.campaignMetrics)}
-                />
-              ))}
+            <div className="space-y-3 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
+              {/* FIX 3: each batch is a collapsible section keyed by upload day. */}
+              {batches.map((batch) => {
+                const isCollapsed = collapsed[batch.dayKey] ?? false;
+                return (
+                  <div key={batch.dayKey}>
+                    <button
+                      type="button"
+                      onClick={() => toggleBatch(batch.dayKey)}
+                      aria-expanded={!isCollapsed}
+                      className="comp-batch-head"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                        padding: '8px 4px', background: 'none', border: 'none', cursor: 'pointer',
+                        font: 'inherit', color: 'inherit', textAlign: 'left',
+                      }}
+                    >
+                      {isCollapsed ? <ChevronRight className="size-4 shrink-0" /> : <ChevronDown className="size-4 shrink-0" />}
+                      <span className="cc-name" style={{ fontWeight: 600 }}>{batch.label}</span>
+                      <span className="cc-fmt" style={{ marginLeft: 'auto' }}>
+                        {batch.rows.length} item{batch.rows.length === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                    {!isCollapsed && (
+                      <div className="space-y-2" style={{ marginTop: 4 }}>
+                        {batch.rows.map((row) => (
+                          <CreativeListItem
+                            key={row.creative.id}
+                            item={toListItem(row)}
+                            selected={selectedId === row.creative.id}
+                            onSelect={() => setSelectedId(row.creative.id)}
+                            metricsLine={compactMetricsLine(row.creative.campaignMetrics)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <div className="md:sticky md:top-4 md:self-start">
               {selectedRow ? (
@@ -200,6 +331,25 @@ export function PortalCompliancePage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Empty state for the active tab (e.g. blank Pending Review). */}
+      {compliance && compliance.length > 0 && visibleRows.length === 0 && (
+        <div className="card pad">
+          <EmptyState
+            icon={Image}
+            title={
+              activeTab === 'pending' ? 'Nothing pending review'
+                : activeTab === 'approved' ? 'No approved items'
+                  : 'No rejected items'
+            }
+            description={
+              activeTab === 'pending'
+                ? 'Nothing is awaiting your review right now.'
+                : `No ${activeTab} creatives to show.`
+            }
+          />
         </div>
       )}
 
@@ -231,16 +381,6 @@ export function PortalCompliancePage() {
           </div>
         ) : null
       ))}
-
-      {reviewable.length === 0 && compliance && compliance.length > 0 && (
-        <div className="card pad">
-          <EmptyState
-            icon={Image}
-            title="All clear"
-            description="Nothing awaiting your review right now. Approved items live on the Creatives tab."
-          />
-        </div>
-      )}
     </div>
   );
 }

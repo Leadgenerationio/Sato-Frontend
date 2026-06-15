@@ -33,6 +33,7 @@ vi.mock('sonner', () => ({
 
 const baseClient: ClientDetail = {
   id: 'client-1',
+  clientType: 'ppl',
   companyName: 'Acme Ltd',
   companyNumber: '12345678',
   contactName: 'Jamie Roberts',

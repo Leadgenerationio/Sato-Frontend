@@ -145,6 +145,23 @@ export function ClientDetailPage() {
   // we've already signed an agreement, just not within this platform" —
   // admin override to flip agreementSigned without going through SignNow.
   const updateClient = useUpdateClient();
+  // Sam ask 2026-06-15: admin needs the OPTION to switch a client's ad-spend
+  // visibility on/off. clientType='managed' → client sees ad spend; 'ppl' →
+  // hidden. The actual hiding is enforced server-side (getLeadsBySource); this
+  // control just persists the editable type via the existing update mutation.
+  const setClientType = async (clientType: 'managed' | 'ppl') => {
+    if (!client) return;
+    try {
+      await updateClient.mutateAsync({ id: client.id, clientType });
+      toast.success(
+        clientType === 'managed'
+          ? 'Client set to Managed — ad spend is now visible in their portal.'
+          : 'Client set to Pay-per-lead — ad spend is hidden in their portal.',
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update client type');
+    }
+  };
   const markAgreementSigned = async () => {
     if (!client) return;
     try {
@@ -214,9 +231,15 @@ export function ClientDetailPage() {
         <div className="page-actions">
           <span className={'pill p-' + (statusPill[displayed] ?? 'gray') + ' cl-status-pill'}>{statusLabels[displayed] ?? displayed}</span>
           <EditClientButton client={client} />
-          <button className="btn b-dark b-sm" onClick={() => setAgreementDialogOpen(true)}>
-            <FileSignature className="size-[15px]" /> Create Agreement
-          </button>
+          {/* Sam request 2026-06-15: hide the "Create Agreement" button (hide,
+              don't delete — flip to `true` to restore). The dialog itself is
+              left mounted so the auto-open flow from /clients/create still
+              works. */}
+          {false && (
+            <button className="btn b-dark b-sm" onClick={() => setAgreementDialogOpen(true)}>
+              <FileSignature className="size-[15px]" /> Create Agreement
+            </button>
+          )}
           <SendAgreementDialog
             lockClient
             prefill={{
@@ -292,6 +315,28 @@ export function ClientDetailPage() {
               )}
               <InfoRow icon={Tag} label="Lead Price" value={formatCurrency(client.leadPrice, client.currency)} />
               <InfoRow icon={Workflow} label="Billing Workflow" value={client.billingWorkflow.replace('_', ' ')} />
+            </div>
+
+            {/* Sam ask 2026-06-15 — editable client type / ad-spend visibility. */}
+            <div className="set-field" style={{ marginTop: 16, alignItems: 'flex-start' }}>
+              <span className="set-field-ic"><Tag className="size-[18px]" /></span>
+              <div style={{ flex: 1 }}>
+                <label className="set-field-l" htmlFor="client-type-select">Client type / Ad-spend visibility</label>
+                <div className="nc-select-wrap" style={{ marginTop: 6, maxWidth: 320 }}>
+                  <select
+                    id="client-type-select"
+                    aria-label="Client type / Ad-spend visibility"
+                    className="nc-select"
+                    value={client.clientType ?? 'ppl'}
+                    disabled={updateClient.isPending}
+                    onChange={(e) => setClientType(e.target.value as 'managed' | 'ppl')}
+                  >
+                    <option value="managed">Managed (client sees ad spend)</option>
+                    <option value="ppl">Pay-per-lead (ad spend hidden)</option>
+                  </select>
+                  <ChevronDown className="size-[15px]" />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -806,7 +851,9 @@ function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: str
                 <option value="overdue">Overdue</option>
                 <option value="authorised">Authorised</option>
                 <option value="paid">Paid</option>
-                <option value="draft">Draft</option>
+                {/* Sam request 2026-06-15: no drafts — removed the Draft filter
+                    option so this tab can't surface drafts. Backend also
+                    excludes them from the data. */}
               </select>
               <ChevronDown className="size-[15px]" />
             </div>
