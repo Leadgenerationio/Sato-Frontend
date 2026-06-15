@@ -46,12 +46,20 @@ describe('ClientsPage', () => {
   });
 
   it('renders status filter tabs', () => {
-    // Sam Loom #31 (13 May response) — Onboarding / Active Client / Client Churned.
+    // Sam request 2026-06-15 — the 'active' tab is removed. Remaining tabs:
+    // All / Onboarding / Client Churned.
     renderPage();
     expect(screen.getAllByText(/^all$/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Onboarding/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Active Client/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Client Churned/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does NOT render an "active" status filter tab (Sam 2026-06-15)', () => {
+    renderPage();
+    const activeTabs = screen
+      .queryAllByText(/^Active Client$/i)
+      .filter((el) => el.className.includes('inv-tab'));
+    expect(activeTabs.length).toBe(0);
   });
 
   it('renders credit scores', () => {

@@ -9,7 +9,10 @@ import { useDebounce } from '@/lib/hooks/use-debounce';
 // Client, Client Churned. 'prospect' and 'paused' were dropped; existing
 // rows migrated via 0022. UI labels diverge from DB values (we render
 // the longer label) so the underlying enum stays clean.
-const STATUS_TABS = ['all', 'onboarding', 'active', 'churned'] as const;
+// Sam request 2026-06-15: drop the 'active' status tab so there's no active
+// subsection — leave the rest as a plain list. ('active' rows still render in
+// the All view with their badge; only the filter tab is removed.)
+const STATUS_TABS = ['all', 'onboarding', 'churned'] as const;
 
 // Statto pill variant per displayed status.
 const statusPill: Record<string, string> = {

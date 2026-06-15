@@ -15,6 +15,7 @@ import type { ClientDetail } from '@/lib/hooks/use-clients';
 function makeClient(over: Partial<ClientDetail> = {}): ClientDetail {
   return {
     id: 'client-1',
+    clientType: 'ppl',
     companyName: 'Acme Ltd',
     contactName: 'Jane Doe',
     contactEmail: 'jane@acme.co',

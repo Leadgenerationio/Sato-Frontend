@@ -17,6 +17,7 @@ vi.mock('@/components/providers/auth-provider', () => ({
 
 const clientA: ClientDetail = {
   id: 'client-a',
+  clientType: 'ppl',
   companyName: 'Acme Ltd',
   companyNumber: '12345678',
   contactName: 'Jamie Roberts',

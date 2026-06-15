@@ -9,42 +9,52 @@ import { useUiStore } from '@/stores/ui-store';
 import { useState, useMemo } from 'react';
 import type { UserRole } from '@/types';
 
-interface NavLeaf { href: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; }
-interface NavGroup { key: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; children: NavLeaf[]; }
+// `hidden` temporarily removes an item from the sidebar without deleting it or
+// its route — flip the flag back to re-enable (one-line change). See the
+// 2026-06-15 client request below.
+interface NavLeaf { href: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; hidden?: boolean; }
+interface NavGroup { key: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; children: NavLeaf[]; hidden?: boolean; }
 type NavEntry = NavLeaf | NavGroup;
 const isGroup = (entry: NavEntry): entry is NavGroup => 'children' in entry;
 
 // Stato Admin sidebar — Statto green chrome (Admin Dashboard.html → dash-ui.jsx).
 // Routing, role-gating, and group structure preserved from the prior sidebar.
+//
+// Client request 2026-06-15: simplify the sidebar to ONLY five items —
+// Dashboard, Finance (Invoices), Clients, Campaigns. Everything else is
+// HIDDEN (hidden: true), NOT deleted: the routes stay in App.tsx and the pages
+// remain reachable by URL. To restore an item, remove its `hidden: true` flag.
 const navItems: NavEntry[] = [
   { href: '/', label: 'Dashboard', icon: LayoutGrid, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'] },
   {
     key: 'finance', label: 'Finance', icon: Banknote, roles: ['owner', 'finance_admin'],
     children: [
       { href: '/finance/invoices', label: 'Invoices', icon: FileSignature, roles: ['owner', 'finance_admin'] },
-      { href: '/finance/bank-feed', label: 'Bank Feed', icon: Banknote, roles: ['owner', 'finance_admin'] },
-      { href: '/finance/auto-invoice', label: 'Auto-invoice', icon: Banknote, roles: ['owner', 'finance_admin'] },
+      // Hidden per 2026-06-15 request — only Invoices stays under Finance.
+      { href: '/finance/bank-feed', label: 'Bank Feed', icon: Banknote, roles: ['owner', 'finance_admin'], hidden: true },
+      { href: '/finance/auto-invoice', label: 'Auto-invoice', icon: Banknote, roles: ['owner', 'finance_admin'], hidden: true },
     ],
   },
   { href: '/clients', label: 'Clients', icon: Users, roles: ['owner', 'finance_admin', 'ops_manager'] },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone, roles: ['owner', 'ops_manager'] },
+  // ── Hidden per client request 2026-06-15 (routes preserved in App.tsx) ──
   {
-    key: 'leadbyte', label: 'LeadByte', icon: Database, roles: ['owner', 'ops_manager', 'finance_admin'],
+    key: 'leadbyte', label: 'LeadByte', icon: Database, roles: ['owner', 'ops_manager', 'finance_admin'], hidden: true,
     children: [
       { href: '/leadbyte/buyers', label: 'Buyers', icon: Database, roles: ['owner', 'ops_manager'] },
       { href: '/leadbyte/deliveries', label: 'Deliveries', icon: Database, roles: ['owner', 'ops_manager'] },
     ],
   },
-  { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: ['owner', 'ops_manager'] },
-  { href: '/workflows', label: 'Workflows', icon: Workflow, roles: ['owner', 'ops_manager'] },
-  { href: '/tasks', label: 'Tasks', icon: CheckSquare, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'] },
-  { href: '/sops', label: 'SOPs', icon: BookOpen, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'] },
-  { href: '/staff', label: 'Staff', icon: UsersRound, roles: ['owner', 'ops_manager'] },
-  { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['owner', 'finance_admin'] },
-  { href: '/notifications', label: 'Notifications', icon: Bell, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'] },
-  { href: '/sos', label: 'SOS Queue', icon: LifeBuoy, roles: ['owner', 'ops_manager', 'finance_admin'] },
-  { href: '/integrations', label: 'Integrations', icon: Plug, roles: ['owner'] },
-  { href: '/settings', label: 'Settings', icon: Settings, roles: ['owner', 'finance_admin', 'ops_manager'] },
+  { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: ['owner', 'ops_manager'], hidden: true },
+  { href: '/workflows', label: 'Workflows', icon: Workflow, roles: ['owner', 'ops_manager'], hidden: true },
+  { href: '/tasks', label: 'Tasks', icon: CheckSquare, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'], hidden: true },
+  { href: '/sops', label: 'SOPs', icon: BookOpen, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'], hidden: true },
+  { href: '/staff', label: 'Staff', icon: UsersRound, roles: ['owner', 'ops_manager'], hidden: true },
+  { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['owner', 'finance_admin'], hidden: true },
+  { href: '/notifications', label: 'Notifications', icon: Bell, roles: ['owner', 'finance_admin', 'ops_manager', 'client', 'readonly'], hidden: true },
+  { href: '/sos', label: 'SOS Queue', icon: LifeBuoy, roles: ['owner', 'ops_manager', 'finance_admin'], hidden: true },
+  { href: '/integrations', label: 'Integrations', icon: Plug, roles: ['owner'], hidden: true },
+  { href: '/settings', label: 'Settings', icon: Settings, roles: ['owner', 'finance_admin', 'ops_manager'], hidden: true },
 ];
 
 function isLeafActive(pathname: string, href: string): boolean {
@@ -63,10 +73,15 @@ export function Sidebar() {
   const collapsed = !sidebarOpen;
 
   const filteredNav = useMemo(() =>
-    navItems.filter((item) => user && item.roles.includes(user.role)).map((item) => {
-      if (isGroup(item)) return { ...item, children: item.children.filter((c) => user && c.roles.includes(user.role)) };
-      return item;
-    }).filter((item) => !isGroup(item) || item.children.length > 0)
+    navItems
+      // Drop items hidden per the 2026-06-15 client request (routes preserved).
+      .filter((item) => !item.hidden)
+      .filter((item) => user && item.roles.includes(user.role))
+      .map((item) => {
+        if (isGroup(item)) return { ...item, children: item.children.filter((c) => !c.hidden && user && c.roles.includes(user.role)) };
+        return item;
+      })
+      .filter((item) => !isGroup(item) || item.children.length > 0)
   , [user]);
 
   const closeMobile = () => setMobileSidebarOpen(false);

@@ -39,7 +39,13 @@ export interface ClientContactInput {
   role: string;
 }
 
+// Managed clients see ad spend in their portal; pay-per-lead clients have it
+// hidden. Editable from the client detail page (Sam ask 2026-06-15). The
+// actual spend-hiding is enforced server-side in getLeadsBySource.
+export type ClientType = 'managed' | 'ppl';
+
 export interface ClientDetail extends ClientSummary {
+  clientType: ClientType;
   companyNumber: string;
   contactPhone: string;
   address: string;
