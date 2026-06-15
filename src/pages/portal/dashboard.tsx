@@ -140,6 +140,7 @@ interface DashData {
   deliveries: { d: string; v: number }[];
   adSpend: { platform: string; amount: number; leads: number; currency: string; color: string }[];
   adSpendReal: boolean;
+  isManaged: boolean;
   invoices: { outstanding: number; outstandingCount: number; paidCount: number; nextDue?: { number: string; due: string; total: number; currency: string } };
   leadsThisMonth: number;
   activeCampaigns: number;
@@ -210,7 +211,7 @@ function AdSpendCard({ d }: { d: DashData }) {
                 <span className="spend-fill" style={{ width: `${(p.amount / max) * 100}%`, background: p.color }} />
               </div>
               <span className="spend-amt mono">{formatCurrency(p.amount, p.currency)}</span>
-              <span className="spend-pct">{Math.round((p.amount / total) * 100)}%</span>
+              <span className="spend-pct">{total > 0 ? Math.round((p.amount / total) * 100) : 0}%</span>
             </div>
           ))}
         </div>
@@ -418,9 +419,12 @@ function DashboardGrid({ d }: { d: DashData }) {
           <LeadChart deliveries={d.deliveries} />
         </div>
       );
-      case 'adspend': return d.adSpend.length > 0
-        ? <AdSpendCard d={d} />
-        : <div className="dash-empty">No ad-spend data for this month yet.</div>;
+      case 'adspend':
+        // Pay-per-lead clients must not see ad spend at all (Sam 2026-06-15).
+        if (!d.isManaged) return null;
+        return d.adSpend.length > 0
+          ? <AdSpendCard d={d} />
+          : <div className="dash-empty">No ad-spend data for this month yet.</div>;
       case 'snapshots': return <SnapshotGrid d={d} />;
       case 'invoice': return <InvoiceDueCard d={d} />;
       case 'quality': return <LeadQualityCard d={d} />;
@@ -582,6 +586,11 @@ export function PortalDashboardPage() {
       }
     }
 
+    // Sam 2026-06-15: only managed clients see ad spend. Pay-per-lead clients
+    // get spend zeroed server-side; hide the card entirely so they don't see a
+    // confusing "£0.00 / NaN%" panel.
+    const isManaged = dashboard.clientType === 'managed';
+
     return {
       go: () => {},
       companyName: dashboard.companyName,
@@ -589,6 +598,7 @@ export function PortalDashboardPage() {
       deliveries,
       adSpend,
       adSpendReal,
+      isManaged,
       invoices: {
         outstanding,
         outstandingCount: outstandingInv.length,

@@ -6,6 +6,7 @@ import {
   BarChart3, FileText, Shield, ScrollText, LogOut, UserCog, Megaphone, LayoutGrid,
 } from 'lucide-react';
 import type { User, PortalTabSlug } from '@/types';
+import { brand } from '@/config/brand';
 
 // Statto Client Portal chrome — ink-green icon rail + portal header.
 // Ported from the Claude Design handoff (Stato Portal.html → portal/chrome.jsx).
@@ -64,7 +65,11 @@ export function PortalLayout() {
     <div className="statto-portal app">
       {/* Left ink-green icon rail */}
       <nav className="sidebar">
-        <div className="brand-dot" title="Stato"><BarChart3 className="size-[22px]" strokeWidth={2.6} /></div>
+        {/* Sam 2026-06-15: client portal must not show "Stato" — brand the rail
+            logo with the client brand (logo image if configured, else icon). */}
+        {brand.logoUrl
+          ? <div className="brand-dot" title={brand.name}><img src={brand.logoUrl} alt={brand.name} className="size-[22px]" /></div>
+          : <div className="brand-dot" title={brand.name}><BarChart3 className="size-[22px]" strokeWidth={2.6} /></div>}
         {visibleItems.map((item) => (
           <Link
             key={item.href}

@@ -26,6 +26,9 @@ vi.mock('@/lib/hooks/use-portal', () => ({
     isLoading: false,
     error: null,
   }),
+  // Leads page reads clientType from the (cached) dashboard query to decide
+  // whether to show the Ad spend column (Sam 2026-06-15 — PPL hides spend).
+  usePortalDashboard: () => ({ data: { clientType: 'managed' }, isLoading: false, error: null }),
 }));
 
 vi.mock('recharts', () => ({

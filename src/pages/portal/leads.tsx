@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { usePortalLeads } from '@/lib/hooks/use-portal';
+import { usePortalLeads, usePortalDashboard } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
 import type { PortalLeadDay, PortalLeadsBySource } from '@/lib/hooks/use-portal';
 import { platformLabel, formatMoney } from '@/lib/hooks/use-ad-spend';
@@ -85,6 +85,11 @@ export function PortalLeadsPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<'by-campaign' | 'daily'>('by-campaign');
   const { data, isLoading } = usePortalLeads({ from, to });
+  // Sam 2026-06-15: pay-per-lead clients must not see ad spend. Spend is zeroed
+  // server-side; also hide the Ad spend column here so PPL clients don't see a
+  // confusing £0.00 column. clientType comes from the (cached) dashboard query.
+  const { data: dash } = usePortalDashboard();
+  const showSpend = dash?.clientType === 'managed';
   const leads = data?.leads;
   const bySource = data?.bySource ?? [];
   const bySourceWindow = data?.bySourceWindow;
@@ -173,22 +178,27 @@ export function PortalLeadsPage() {
               <p className="lc-sub" style={{ marginBottom: 16 }}>Valid leads from LeadByte and ad spend from Catchr — same numbers as the admin /reports campaign view.</p>
               <div className="table-scroll">
                 <table>
-                  <thead><tr><th>Source</th><th style={{ textAlign: 'right' }}>Leads</th><th style={{ textAlign: 'right' }}>Ad spend</th></tr></thead>
+                  <thead><tr><th>Source</th><th style={{ textAlign: 'right' }}>Leads</th>{showSpend && <th style={{ textAlign: 'right' }}>Ad spend</th>}</tr></thead>
                   <tbody>
                     {bySource.map((row) => (
                       <tr key={`${row.platform}-${row.currency}`}>
                         <td style={{ fontWeight: 600 }}>{platformLabel(row.platform)}</td>
                         <td className="mono" style={{ textAlign: 'right' }}>{row.leads.toLocaleString()}</td>
-                        <td className="mono" style={{ textAlign: 'right', fontWeight: 600 }}>{formatMoney(row.spend, row.currency)}</td>
+                        {showSpend && <td className="mono" style={{ textAlign: 'right', fontWeight: 600 }}>{formatMoney(row.spend, row.currency)}</td>}
                       </tr>
                     ))}
-                    {totalSpendByCurrency(bySource).map(({ currency, total }, idx) => (
+                    {showSpend ? totalSpendByCurrency(bySource).map(({ currency, total }, idx) => (
                       <tr key={`total-${currency}`} style={{ background: 'var(--gray-50)' }}>
                         <td style={{ fontWeight: 700 }}>Total</td>
                         <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{idx === 0 ? summary.total.toLocaleString() : ''}</td>
                         <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(total, currency)}</td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr style={{ background: 'var(--gray-50)' }}>
+                        <td style={{ fontWeight: 700 }}>Total</td>
+                        <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{summary.total.toLocaleString()}</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

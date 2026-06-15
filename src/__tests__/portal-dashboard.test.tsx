@@ -32,6 +32,9 @@ const { dashboardFixture } = vi.hoisted(() => ({
 
 vi.mock('@/lib/hooks/use-portal', () => ({
   usePortalDashboard: () => ({ data: dashboardFixture, isLoading: false, error: null }),
+  usePortalInvoices: () => ({ data: [], isLoading: false, error: null }),
+  usePortalCompliance: () => ({ data: [], isLoading: false, error: null }),
+  usePortalLeads: () => ({ data: { leads: [], bySource: [] }, isLoading: false, error: null }),
 }));
 
 vi.mock('recharts', () => ({
@@ -87,16 +90,26 @@ describe('PortalDashboardPage', () => {
     expect(screen.getByText('Recent Lead Deliveries')).toBeInTheDocument();
   });
 
-  // Sam jam-video #2 (27-May-2026): no ad-spend section on the client
-  // portal yet. The dashboard must not render an Ad Spend card even if
-  // the BE keeps returning adSpendByPlatform for managed clients.
-  it('does NOT render an Ad Spend card on the dashboard', () => {
-    dashboardFixture.clientType = 'managed';
+  // Sam Loom 2026-06-15 SUPERSEDES the 27-May "no ad-spend on the portal at
+  // all" rule: pay-per-lead clients must NOT see ad spend, but MANAGED clients
+  // now DO. PPL → the Ad Spend card is hidden entirely (not a confusing £0).
+  it('hides the Ad Spend card for pay-per-lead clients', () => {
+    dashboardFixture.clientType = 'ppl';
     dashboardFixture.adSpendByPlatform = [
       { platform: 'Google Ads', spend: 300, currency: 'GBP' },
     ];
     renderPage();
-    expect(screen.queryByText('Ad Spend')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ad Spend by Platform')).not.toBeInTheDocument();
     expect(screen.queryByText('Google Ads')).not.toBeInTheDocument();
+  });
+
+  it('shows the Ad Spend section for managed clients', () => {
+    dashboardFixture.clientType = 'managed';
+    renderPage();
+    // Managed clients get the ad-spend block — the card when spend data exists,
+    // otherwise the empty state. Either way it is rendered (never hidden as for PPL).
+    expect(
+      screen.getByText((t) => /Ad Spend by Platform|No ad-spend data/.test(t)),
+    ).toBeInTheDocument();
   });
 });
