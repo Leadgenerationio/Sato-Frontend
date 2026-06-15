@@ -123,7 +123,7 @@ const CREATIVES: PortalCreativesBySection = {
 
 const AGREEMENT: PortalAgreement = {
   id: 'agr-1',
-  status: 'completed',
+  status: 'signed',
   signedAt: '2026-03-12T00:00:00Z',
   documentUrl: null,
   clientName: CLIENT_NAME,

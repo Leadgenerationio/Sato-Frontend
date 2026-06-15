@@ -18,6 +18,7 @@ import {
 } from '@/components/portal/creative-detail-panel';
 import type { PortalCreativeCampaignMetrics } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
+import { groupIntoBatches } from '@/lib/portal-batches';
 
 function adaptMetrics(m: PortalCreativeCampaignMetrics | null | undefined): CampaignMetrics | null | undefined {
   if (m === undefined) return undefined;
@@ -90,45 +91,8 @@ function matchesTab(cr: PortalCreative, tab: ComplianceTab): boolean {
 
 // FIX 3 (2026-06-15, client asked 3×): group creatives into dated BATCHES by
 // submission/upload day. PortalCreative carries `uploadedAt`; bucket on that.
-interface Batch {
-  /** Day key (yyyy-mm-dd) used for stable sorting + React keys. */
-  dayKey: string;
-  /** Human header, e.g. "Monday 15 June 2026". */
-  label: string;
-  rows: FlatRow[];
-}
-
-function dayKeyOf(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return 'unknown';
-  // Local-day bucket (yyyy-mm-dd) so rows uploaded on the same day group together.
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function dayLabelOf(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return 'Unknown date';
-  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function groupIntoBatches(rows: FlatRow[]): Batch[] {
-  const map = new Map<string, Batch>();
-  for (const row of rows) {
-    const iso = row.creative.uploadedAt;
-    const key = dayKeyOf(iso);
-    let batch = map.get(key);
-    if (!batch) {
-      batch = { dayKey: key, label: dayLabelOf(iso), rows: [] };
-      map.set(key, batch);
-    }
-    batch.rows.push(row);
-  }
-  // Newest day first.
-  return Array.from(map.values()).sort((a, b) => (a.dayKey < b.dayKey ? 1 : a.dayKey > b.dayKey ? -1 : 0));
-}
+// Batching helpers live in @/lib/portal-batches and are shared with the
+// Creatives tab.
 
 function toListItem(row: FlatRow): CreativeListItemData {
   return {
@@ -177,7 +141,10 @@ export function PortalCompliancePage() {
   );
 
   // FIX 3 (2026-06-15): within the active tab, group rows into dated batches.
-  const batches = useMemo(() => groupIntoBatches(visibleRows), [visibleRows]);
+  const batches = useMemo(
+    () => groupIntoBatches(visibleRows, (r) => r.creative.uploadedAt),
+    [visibleRows],
+  );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Track which batches are collapsed; default is expanded (only collapsed
@@ -296,12 +263,12 @@ export function PortalCompliancePage() {
                       {isCollapsed ? <ChevronRight className="size-4 shrink-0" /> : <ChevronDown className="size-4 shrink-0" />}
                       <span className="cc-name" style={{ fontWeight: 600 }}>{batch.label}</span>
                       <span className="cc-fmt" style={{ marginLeft: 'auto' }}>
-                        {batch.rows.length} item{batch.rows.length === 1 ? '' : 's'}
+                        {batch.items.length} item{batch.items.length === 1 ? '' : 's'}
                       </span>
                     </button>
                     {!isCollapsed && (
                       <div className="space-y-2" style={{ marginTop: 4 }}>
-                        {batch.rows.map((row) => (
+                        {batch.items.map((row) => (
                           <CreativeListItem
                             key={row.creative.id}
                             item={toListItem(row)}

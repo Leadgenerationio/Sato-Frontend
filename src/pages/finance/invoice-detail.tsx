@@ -77,7 +77,7 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
         @media print { body { padding: 20px; } }
       </style>
     </head>
-    <body>
+    <body id="invoice-print-root">
       <h1>Invoice ${escapeHtml(invoice.invoiceNumber)}</h1>
       <div class="subtitle">
         ${escapeHtml(invoice.clientName)} &middot;
@@ -115,48 +115,57 @@ function handleDownloadPdf(invoice: InvoiceDetail) {
   // reliably opens the browser's print / "Save as PDF" dialog.
   const iframe = document.createElement('iframe');
   iframe.setAttribute('aria-hidden', 'true');
+  // Off-screen but with real A4-ish dimensions. A 0×0 / display:none iframe
+  // never gets a layout box and prints blank in several browsers.
   iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
+  iframe.style.left = '-10000px';
+  iframe.style.top = '0';
+  iframe.style.width = '794px';
+  iframe.style.height = '1123px';
   iframe.style.border = '0';
 
+  let printed = false;
   let cleaned = false;
-  const cleanup = () => {
+  function onFocus() { cleanup(); }
+  function cleanup() {
     if (cleaned) return;
     cleaned = true;
+    window.removeEventListener('focus', onFocus);
     iframe.remove();
-  };
+  }
 
   iframe.onload = () => {
     const win = iframe.contentWindow;
-    if (!win) {
-      cleanup();
-      toast.error('Could not generate the PDF. Please try again.');
-      return;
-    }
+    const doc = win?.document;
+    // Guard against the iframe's initial about:blank load (which fires on
+    // insertion before srcdoc applies in some browsers): only print once the
+    // real invoice document is in place, and only once.
+    if (printed || !win || !doc || !doc.getElementById('invoice-print-root')) return;
+    printed = true;
     try {
-      win.focus();
       // Clean up only AFTER the print dialog is dismissed — print() isn't
       // reliably blocking, so a fixed short timer can tear the document out
       // mid-print and produce a blank PDF. afterprint covers most browsers;
       // the window 'focus' handler covers the rest (focus returns to the page
       // when the dialog closes); a long timeout is just a leak-safety net.
+      // We intentionally do NOT call win.focus() — focusing a hidden iframe can
+      // bounce focus straight back to the page and tear it out mid-print.
       win.onafterprint = cleanup;
-      const onFocus = () => { window.removeEventListener('focus', onFocus); cleanup(); };
       window.addEventListener('focus', onFocus);
       win.print();
     } catch (err) {
       logError('Invoice PDF print failed', err);
       toast.error('Could not open the print dialog.');
       cleanup();
+      return;
     }
     setTimeout(cleanup, 60000);
   };
 
-  document.body.appendChild(iframe);
+  // Set srcdoc before inserting so the iframe's first (and only) load is the
+  // real document, not about:blank.
   iframe.srcdoc = html;
+  document.body.appendChild(iframe);
 }
 
 export function InvoiceDetailPage() {

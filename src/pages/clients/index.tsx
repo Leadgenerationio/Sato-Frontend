@@ -14,11 +14,15 @@ import { useDebounce } from '@/lib/hooks/use-debounce';
 // the All view with their badge; only the filter tab is removed.)
 const STATUS_TABS = ['all', 'onboarding', 'churned'] as const;
 
-// Statto pill variant per displayed status.
+// Statto pill variant per displayed status. Legacy 'prospect'/'paused' are kept
+// as fallbacks (mirrors clients/detail.tsx) so a row that slipped through
+// migration 0022 renders a styled pill here too instead of raw enum text.
 const statusPill: Record<string, string> = {
   onboarding: 'infosoft',
   active: 'pos',
   churned: 'gray',
+  prospect: 'infosoft',
+  paused: 'warn',
 };
 
 const statusLabels: Record<string, string> = {
@@ -26,6 +30,8 @@ const statusLabels: Record<string, string> = {
   onboarding: 'Onboarding',
   active: 'Active Client',
   churned: 'Client Churned',
+  prospect: 'Onboarding',
+  paused: 'Client Churned',
 };
 
 function CreditCell({ score }: { score: number | null }) {

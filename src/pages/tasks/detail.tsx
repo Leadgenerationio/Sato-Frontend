@@ -63,12 +63,14 @@ function describeRecurrence(cron: string | null | undefined): string {
 }
 
 // Statto status-pill class per task status.
+// Status set must match the Task['status'] union (use-tasks.ts), the status
+// dropdown below, and tasks/index.tsx. 'blocked' is not a real status (no
+// dropdown option, not in the union/backend) — removed to stop it diverging.
 const statusPillClass: Record<string, string> = {
   todo: 'st-todo',
   in_progress: 'st-prog',
   on_hold: 'st-hold',
   completed: 'st-done',
-  blocked: 'st-hold',
 };
 
 const statusLabels: Record<string, string> = {
@@ -76,7 +78,6 @@ const statusLabels: Record<string, string> = {
   in_progress: 'In Progress',
   on_hold: 'On Hold',
   completed: 'Completed',
-  blocked: 'Blocked',
 };
 
 // Statto priority-pill class per priority. Urgent maps to the High visual.

@@ -8,6 +8,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
 import {
   useClient, useCreditHistory, useRunCreditCheck,
   useClientDocuments, useAddClientDocument, useRemoveClientDocument,
@@ -31,6 +32,7 @@ import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type UploadFolder } from '@/lib/hooks/use-uploads';
 import { SendAgreementDialog } from '@/pages/agreements';
 import { EditClientButton } from '@/components/clients/edit-client-dialog';
+import { features } from '@/config/features';
 
 import { logError } from '../../lib/log';
 
@@ -162,6 +164,8 @@ export function ClientDetailPage() {
       toast.error(err instanceof Error ? err.message : 'Failed to update client type');
     }
   };
+  // Admin override for the onboarding strip's "Mark as signed (external)" action.
+  // Only reachable when the strip is enabled (features.clientOnboardingStrip).
   const markAgreementSigned = async () => {
     if (!client) return;
     try {
@@ -171,7 +175,6 @@ export function ClientDetailPage() {
       toast.error(err instanceof Error ? err.message : 'Failed to mark agreement as signed');
     }
   };
-
   // Auto-open the Send Agreement dialog when arriving from /clients/create
   // with the "send agreement immediately" toggle on. Strip the query param
   // so a refresh doesn't re-open the dialog.
@@ -276,13 +279,17 @@ export function ClientDetailPage() {
         </div>
       )}
 
-      <OnboardingProgress
-        onboardingStatus={client.onboardingStatus}
-        agreementSigned={client.agreementSigned}
-        documentsCount={docsForStage?.length ?? 0}
-        onMarkAgreementSigned={markAgreementSigned}
-        markAgreementPending={updateClient.isPending}
-      />
+      {/* Onboarding stage strip — hidden by default (2026-06-15). Re-enable per
+          client via VITE_FEATURE_CLIENT_ONBOARDING_STRIP=1 (see config/features.ts). */}
+      {features.clientOnboardingStrip && (
+        <OnboardingProgress
+          onboardingStatus={client.onboardingStatus}
+          agreementSigned={client.agreementSigned}
+          documentsCount={docsForStage?.length ?? 0}
+          onMarkAgreementSigned={markAgreementSigned}
+          markAgreementPending={updateClient.isPending}
+        />
+      )}
 
       <div className="seg cl-detail-seg">
         {CLIENT_TABS.map((t) => (
@@ -317,25 +324,27 @@ export function ClientDetailPage() {
               <InfoRow icon={Workflow} label="Billing Workflow" value={client.billingWorkflow.replace('_', ' ')} />
             </div>
 
-            {/* Sam ask 2026-06-15 — editable client type / ad-spend visibility. */}
-            <div className="set-field" style={{ marginTop: 16, alignItems: 'flex-start' }}>
+            {/* Sam ask 2026-06-15 — editable client type / ad-spend visibility.
+                Toggle: on = Managed (client sees ad spend), off = Pay-per-lead
+                (hidden). Top border matches the row dividers above. */}
+            <div className="set-field" style={{ alignItems: 'flex-start', borderTop: '1px solid var(--gray-100)' }}>
               <span className="set-field-ic"><Tag className="size-[18px]" /></span>
               <div style={{ flex: 1 }}>
-                <label className="set-field-l" htmlFor="client-type-select">Client type / Ad-spend visibility</label>
-                <div className="nc-select-wrap" style={{ marginTop: 6, maxWidth: 320 }}>
-                  <select
-                    id="client-type-select"
+                <label className="set-field-l" htmlFor="client-type-toggle">Client type / Ad-spend visibility</label>
+                <label htmlFor="client-type-toggle" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, cursor: 'pointer' }}>
+                  <Switch
+                    id="client-type-toggle"
                     aria-label="Client type / Ad-spend visibility"
-                    className="nc-select"
-                    value={client.clientType ?? 'ppl'}
+                    checked={(client.clientType ?? 'ppl') === 'managed'}
                     disabled={updateClient.isPending}
-                    onChange={(e) => setClientType(e.target.value as 'managed' | 'ppl')}
-                  >
-                    <option value="managed">Managed (client sees ad spend)</option>
-                    <option value="ppl">Pay-per-lead (ad spend hidden)</option>
-                  </select>
-                  <ChevronDown className="size-[15px]" />
-                </div>
+                    onCheckedChange={(v: boolean) => setClientType(v ? 'managed' : 'ppl')}
+                  />
+                  <span className="set-field-v" style={{ margin: 0 }}>
+                    {(client.clientType ?? 'ppl') === 'managed'
+                      ? 'Managed — client sees ad spend'
+                      : 'Pay-per-lead — ad spend hidden'}
+                  </span>
+                </label>
               </div>
             </div>
           </div>

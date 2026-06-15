@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText } from 'lucide-react';
+import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   usePortalCreatives,
   type PortalReviewCreative,
@@ -17,6 +17,7 @@ import {
 } from '@/components/portal/creative-detail-panel';
 import type { PortalCreativeCampaignMetrics } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
+import { groupIntoBatches } from '@/lib/portal-batches';
 
 function adaptMetrics(m: PortalCreativeCampaignMetrics | null | undefined): CampaignMetrics | null | undefined {
   if (m === undefined) return undefined;
@@ -87,24 +88,66 @@ interface SectionProps {
 
 function SideBySideSection({ title, description, items, selectedId, onSelect, emptyHint }: SectionProps) {
   const selected = items.find((c) => c.id === selectedId) ?? null;
+
+  // Group assets into dated batches by upload day, mirroring the Compliance
+  // tab (client asked for batches here too). `items` arrives newest-first from
+  // the API, so each batch keeps that order internally.
+  const batches = useMemo(() => groupIntoBatches(items, (c) => c.uploadedAt), [items]);
+
+  // Collapsed batches are tracked by day key; default is expanded.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggleBatch = (dayKey: string) =>
+    setCollapsed((prev) => ({ ...prev, [dayKey]: !prev[dayKey] }));
+
   return (
     <div className="card pad">
       <h3 className="statto-title" style={{ marginBottom: 4 }}>{title}</h3>
-      <p className="lc-sub" style={{ marginBottom: 16 }}>{description}</p>
+      <p className="lc-sub" style={{ marginBottom: 16 }}>
+        {description}
+        {items.length > 0 && ` · ${batches.length} batch${batches.length === 1 ? '' : 'es'}`}
+      </p>
       {items.length === 0 ? (
         <EmptyState icon={FileText} title="Nothing here yet" description={emptyHint} size="compact" />
       ) : (
         <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
-          <div className="space-y-2 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
-            {items.map((c) => (
-              <CreativeListItem
-                key={c.id}
-                item={toListItem(c)}
-                selected={selectedId === c.id}
-                onSelect={() => onSelect(c.id)}
-                metricsLine={compactMetricsLine(c.campaignMetrics)}
-              />
-            ))}
+          <div className="space-y-3 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
+            {batches.map((batch) => {
+              const isCollapsed = collapsed[batch.dayKey] ?? false;
+              return (
+                <div key={batch.dayKey}>
+                  <button
+                    type="button"
+                    onClick={() => toggleBatch(batch.dayKey)}
+                    aria-expanded={!isCollapsed}
+                    className="comp-batch-head"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                      padding: '8px 4px', background: 'none', border: 'none', cursor: 'pointer',
+                      font: 'inherit', color: 'inherit', textAlign: 'left',
+                    }}
+                  >
+                    {isCollapsed ? <ChevronRight className="size-4 shrink-0" /> : <ChevronDown className="size-4 shrink-0" />}
+                    <span className="cc-name" style={{ fontWeight: 600 }}>{batch.label}</span>
+                    <span className="cc-fmt" style={{ marginLeft: 'auto' }}>
+                      {batch.items.length} item{batch.items.length === 1 ? '' : 's'}
+                    </span>
+                  </button>
+                  {!isCollapsed && (
+                    <div className="space-y-2" style={{ marginTop: 4 }}>
+                      {batch.items.map((c) => (
+                        <CreativeListItem
+                          key={c.id}
+                          item={toListItem(c)}
+                          selected={selectedId === c.id}
+                          onSelect={() => onSelect(c.id)}
+                          metricsLine={compactMetricsLine(c.campaignMetrics)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="md:sticky md:top-4 md:self-start">
             {selected ? (
