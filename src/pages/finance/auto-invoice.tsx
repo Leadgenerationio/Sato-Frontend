@@ -11,11 +11,6 @@ import {
 import { useWorkflows, usePauseWorkflow, useResumeWorkflow } from '@/lib/hooks/use-workflows';
 
 import { logError } from '../../lib/log';
-function formatMoney(value: string | number, currency = 'GBP') {
-  const n = typeof value === 'number' ? value : parseFloat(value);
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(Number.isFinite(n) ? n : 0);
-}
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
@@ -77,9 +72,9 @@ export function AutoInvoicePage() {
     try {
       const result = await runNow.mutateAsync();
       if (result.status === 'skipped') {
-        toast.info("This week's invoices were already generated. No duplicate run created.");
+        toast.info("This week was already reconciled against Xero. No duplicate run created.");
       } else if (result.status === 'completed') {
-        toast.success(`Generated ${result.clientsBilled} invoice${result.clientsBilled === 1 ? '' : 's'} totalling ${formatMoney(result.totalAmount)}`);
+        toast.success(`Reconciled ${result.clientsBilled} client${result.clientsBilled === 1 ? '' : 's'} against Xero`);
       } else {
         toast.error('Auto-invoice run finished with errors. Check the run detail below.');
       }
@@ -94,7 +89,7 @@ export function AutoInvoicePage() {
       <div className="page-head">
         <div>
           <h1 className="ahead-title">Auto-invoice</h1>
-          <p className="ahead-sub">Weekly cron — bills each client for the previous Mon-Sun's lead deliveries</p>
+          <p className="ahead-sub">Weekly cron — pulls each client's invoices from Xero for clients with deliveries in the previous Mon-Sun</p>
         </div>
         <div className="page-actions">
           {autoInvoiceWorkflow && (
@@ -123,7 +118,7 @@ export function AutoInvoicePage() {
       ) : autoInvoiceWorkflow ? (
         <div className="ai-banner ok">
           <span className="lic"><CircleCheck className="size-4" /></span>
-          <span><strong>Auto-invoice is active.</strong> The Monday 09:00 UTC cron will bill each client automatically.</span>
+          <span><strong>Auto-invoice is active.</strong> The Monday 09:00 UTC cron will reconcile each client's Xero invoices automatically.</span>
         </div>
       ) : null}
 
@@ -132,8 +127,8 @@ export function AutoInvoicePage() {
         <p className="ai-next-when">{nextWindow?.schedule ?? 'Mondays 09:00 UTC'}</p>
         {nextWindow ? (
           <p className="ai-next-desc">
-            Will bill the week <strong>{formatDate(nextWindow.fromDate)}</strong> through <strong>{formatDate(nextWindow.toDate)}</strong>.
-            Each client with deliveries in that window receives one invoice priced from their per-campaign lead rate.
+            Will reconcile the week <strong>{formatDate(nextWindow.fromDate)}</strong> through <strong>{formatDate(nextWindow.toDate)}</strong>.
+            For each client with deliveries in that window, we pull their latest invoices from Xero — amounts and numbers come from Xero, not from lead values.
           </p>
         ) : (
           <Skeleton className="h-5 w-72" />
@@ -165,8 +160,8 @@ export function AutoInvoicePage() {
                 <th>Period</th>
                 <th>Status</th>
                 <th>Trigger</th>
-                <th className="r">Invoices</th>
-                <th className="r">Total</th>
+                <th className="r">Imported</th>
+                <th className="r">Clients</th>
                 <th>Started</th>
                 <th></th>
               </tr>
@@ -185,7 +180,7 @@ export function AutoInvoicePage() {
                       </span>
                     )}
                   </td>
-                  <td className="r mono inv-total">{formatMoney(r.totalAmount, r.currency)}</td>
+                  <td className="r mono">{r.clientsBilled}</td>
                   <td className="inv-date">{formatDateTime(r.startedAt)}</td>
                   <td className="r">
                     <Link to={`/finance/auto-invoice/${r.id}`} className="inv-open" title="View run">

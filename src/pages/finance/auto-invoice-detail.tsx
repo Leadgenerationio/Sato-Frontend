@@ -1,12 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, ExternalLink, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAutoInvoiceRun, type AutoInvoiceClientDetail } from '@/lib/hooks/use-auto-invoice';
-
-function formatMoney(value: string | number, currency = 'GBP') {
-  const n = typeof value === 'number' ? value : parseFloat(value);
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(Number.isFinite(n) ? n : 0);
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -15,9 +10,9 @@ function formatDate(iso: string) {
 // Map per-client run status → Statto pill colour suffix.
 function clientStatusPill(status: AutoInvoiceClientDetail['status']): string {
   switch (status) {
-    case 'invoiced': return 'pos';
+    case 'synced': return 'pos';
     case 'failed': return 'neg';
-    case 'no_lead_price': return 'warn';
+    case 'no_xero_invoices': return 'warn';
     case 'no_deliveries': return 'gray';
     default: return 'gray';
   }
@@ -50,10 +45,10 @@ export function AutoInvoiceRunDetailPage() {
   }
 
   const stats = [
-    { label: 'INVOICED', value: String(run.invoicesCreated) },
+    { label: 'RECONCILED', value: String(run.clientsBilled) },
+    { label: 'IMPORTED', value: String(run.invoicesCreated) },
     { label: 'SKIPPED', value: String(run.clientsSkipped) },
     { label: 'FAILED', value: String(run.clientsFailed) },
-    { label: 'TOTAL', value: formatMoney(run.totalAmount, run.currency) },
   ];
 
   return (
@@ -97,10 +92,9 @@ export function AutoInvoiceRunDetailPage() {
                 <tr>
                   <th>Client</th>
                   <th className="r">Leads</th>
-                  <th className="r">Amount</th>
+                  <th className="r">Xero invoices</th>
                   <th>Status</th>
                   <th>Reason</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -108,20 +102,18 @@ export function AutoInvoiceRunDetailPage() {
                   <tr key={d.clientId}>
                     <td className="inv-client">{d.clientName}</td>
                     <td className="r mono">{d.leads}</td>
-                    <td className="r mono inv-total">{formatMoney(d.amount, d.currency)}</td>
+                    <td className="r mono">
+                      {d.totalRemote ?? 0}
+                      {(d.synced ?? 0) > 0 && (
+                        <span className="inv-date" style={{ marginLeft: 4, fontSize: 12 }}>(+{d.synced} new)</span>
+                      )}
+                    </td>
                     <td>
                       <span className={'pill p-' + clientStatusPill(d.status)} style={{ textTransform: 'capitalize' }}>
-                        {d.status.replace('_', ' ')}
+                        {d.status.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="inv-date">{d.reason ?? ''}</td>
-                    <td className="r">
-                      {d.invoiceId && (
-                        <Link to={`/finance/invoices/${d.invoiceId}`} className="inv-open" title={`View ${d.invoiceNumber}`}>
-                          <ExternalLink className="size-4" />
-                        </Link>
-                      )}
-                    </td>
                   </tr>
                 ))}
               </tbody>
