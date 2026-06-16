@@ -66,9 +66,10 @@ describe('StaffPage', () => {
 
   it('renders tab triggers', () => {
     renderPage();
-    expect(screen.getByRole('tab', { name: /team/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /recruitment/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /holidays/i })).toBeInTheDocument();
+    // Tabs are .seg-btn <button>s (role="button"), not Radix role="tab".
+    expect(screen.getByRole('button', { name: /team/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /recruitment/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /holidays/i })).toBeInTheDocument();
   });
 
   it('renders staff members in the team table', () => {

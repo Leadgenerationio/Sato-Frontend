@@ -92,7 +92,6 @@ export function PortalLeadsPage() {
   const showSpend = dash?.clientType === 'managed';
   const leads = data?.leads;
   const bySource = data?.bySource ?? [];
-  const bySourceWindow = data?.bySourceWindow;
   const validLeadsByCampaign = data?.validLeadsByCampaign;
 
   const summary = useMemo(() => {
@@ -162,17 +161,7 @@ export function PortalLeadsPage() {
             ))}
           </div>
 
-          {bySourceWindow?.kind === 'custom-no-preset-match' ? (
-            <div className="card pad">
-              <h3 className="statto-title" style={{ marginBottom: 4 }}>By Source</h3>
-              <p className="lc-sub" style={{ marginBottom: 16 }}>Per-source breakdown uses the LeadByte report, which only supports the presets below — pick one to see Facebook / Google lead counts and spend.</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {PRESETS.map((p) => (
-                  <button key={p.label} className={'btn b-sm ' + (activePreset === p.label ? 'b-dark' : 'b-ghost')} onClick={() => applyPreset(p)}>{p.label}</button>
-                ))}
-              </div>
-            </div>
-          ) : bySource.length > 0 && (
+          {bySource.length > 0 && (
             <div className="card pad">
               <h3 className="statto-title" style={{ marginBottom: 4 }}>By Source</h3>
               <p className="lc-sub" style={{ marginBottom: 16 }}>Valid leads from LeadByte and ad spend from Catchr — same numbers as the admin /reports campaign view.</p>

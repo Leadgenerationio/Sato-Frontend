@@ -1,10 +1,13 @@
 /**
- * Item 1 (2026-05-22) audit verification: Sam's 2026-05-15 ask was to surface
- * the onboarding lifecycle WITHOUT a dedicated "Onboarding" tab. Audit found
- * no such tab exists — the 7 tabs are Overview/Campaigns/Invoices/Credit/
- * Documents/Emails/Activity, and the <OnboardingProgress> strip renders
- * inline above <Tabs>. This test pins that structural invariant so a future
- * refactor that hides the stage strip again gets caught.
+ * The onboarding stage strip (<OnboardingProgress>, "Stage X of 4") was
+ * removed from the admin client-detail page on request (2026-06-15) — the
+ * lifecycle is no longer surfaced inline above the tabs. This test pins that:
+ * the strip must NOT render, and the page still shows its 7 tabs (Overview/
+ * Campaigns/Invoices/Credit/Documents/Emails/Activity) with no dedicated
+ * "Onboarding" tab. (The <OnboardingProgress> component itself is still
+ * exported and unit-tested directly in onboarding-progress.test.tsx.)
+ *
+ * Note: tabs render as `.seg-btn` <button> elements, not Radix role="tab".
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -106,6 +109,14 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
+// The strip is gated behind features.clientOnboardingStrip. Mock the flag as a
+// mutable object so each test can set the state it exercises (the component
+// reads the property at render time, so mutating before render() takes effect).
+vi.mock('@/config/features', () => ({
+  features: { clientOnboardingStrip: false },
+}));
+import { features } from '@/config/features';
+
 import { ClientDetailPage } from '../pages/clients/detail';
 
 function renderPage() {
@@ -121,19 +132,29 @@ function renderPage() {
   );
 }
 
-describe('ClientDetailPage — onboarding-strip inline (no dedicated tab)', () => {
-  it('renders the stage strip ("Stage X of 4") above the tabs', () => {
+describe('ClientDetailPage — onboarding strip (feature-flagged)', () => {
+  it('does NOT render the stage strip when the flag is off (default)', () => {
+    features.clientOnboardingStrip = false;
     renderPage();
-    // The strip surfaces a "Stage N of 4" line — matches the existing
-    // OnboardingProgress contract (see onboarding-progress.test.tsx).
-    expect(screen.getByText(/Stage \d of 4/)).toBeInTheDocument();
+    // The onboarding strip was removed from the detail page (2026-06-15).
+    expect(screen.queryByText(/Stage \d of 4/)).not.toBeInTheDocument();
+  });
+
+  it('renders the stage strip ("Stage X of 4") when the flag is on', () => {
+    features.clientOnboardingStrip = true;
+    try {
+      renderPage();
+      // Re-enabled via VITE_FEATURE_CLIENT_ONBOARDING_STRIP=1.
+      expect(screen.getByText(/Stage \d of 4/)).toBeInTheDocument();
+    } finally {
+      features.clientOnboardingStrip = false;
+    }
   });
 
   it('has NO dedicated "Onboarding" tab — the 7 tabs are O/C/I/C/D/E/A', () => {
-    renderPage();
-    // Tabs use role="tab" via Radix Tabs. Querying all of them lets us assert
-    // both the count and the absence of an "Onboarding" trigger.
-    const triggers = screen.getAllByRole('tab');
+    const { container } = renderPage();
+    // Tabs render as `.seg-btn` <button> elements (not Radix role="tab").
+    const triggers = Array.from(container.querySelectorAll('.seg.cl-detail-seg .seg-btn'));
     expect(triggers).toHaveLength(7);
     for (const trigger of triggers) {
       expect(trigger.textContent?.toLowerCase()).not.toBe('onboarding');
@@ -144,16 +165,5 @@ describe('ClientDetailPage — onboarding-strip inline (no dedicated tab)', () =
       'Overview', 'Campaigns', 'Invoices', 'Credit',
       'Documents', 'Emails', 'Activity',
     ]);
-  });
-
-  it('renders the stage strip BEFORE the tablist in DOM order', () => {
-    const { container } = renderPage();
-    const stageStrip = screen.getByText(/Stage \d of 4/);
-    const tabList = container.querySelector('[role="tablist"]');
-    expect(tabList).not.toBeNull();
-    // DOCUMENT_POSITION_FOLLOWING (4) means tabList comes AFTER stageStrip,
-    // i.e. the strip is above the tabs in the rendered DOM.
-    const pos = stageStrip.compareDocumentPosition(tabList!);
-    expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

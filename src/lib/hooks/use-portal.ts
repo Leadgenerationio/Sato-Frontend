@@ -111,7 +111,9 @@ export interface PortalCompliance {
 
 export interface PortalAgreement {
   id: string;
-  status: string;
+  // Matches the backend PortalAgreement (3-state). Was `string`, which let a
+  // phantom 'completed' check compile even though the BE never sends it.
+  status: 'pending' | 'sent' | 'signed';
   signedAt: string | null;
   documentUrl: string | null;
   clientName: string;
@@ -151,13 +153,14 @@ export interface PortalLeadsBySource {
   currency: string;
 }
 
-// Sam (jam-video #3, 29-May-2026): no more spend-share estimates. The BE
-// only returns per-source rows when the range matches a LeadByte preset.
-// `bySourceWindow` tells the FE whether the breakdown is available + which
-// preset gave it.
+// Sam (jam-video #3, 29-May-2026): no more spend-share estimates — every
+// number is real LeadByte data. The BE returns a per-source breakdown for any
+// range now: 'preset' when the range matched a named LeadByte preset, 'custom'
+// when it was fetched by an explicit from/to range (e.g. a manual calendar
+// selection). `bySourceWindow` just tells the FE which path produced the rows.
 export type PortalLeadsBySourceWindow =
   | { kind: 'preset'; preset: 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'ytd' }
-  | { kind: 'custom-no-preset-match' };
+  | { kind: 'custom' };
 
 export interface PortalLeadsResponse {
   leads: PortalLeadDay[];

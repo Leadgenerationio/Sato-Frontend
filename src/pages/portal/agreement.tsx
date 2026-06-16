@@ -18,8 +18,11 @@ export function PortalAgreementPage() {
     return <div className="screen"><Skeleton className="h-[360px] rounded-3xl" style={{ maxWidth: 720 }} /></div>;
   }
 
-  // Backend canonicalizes a fully-signed agreement as status='completed'.
-  const isSigned = agreement.status === 'completed' || !!agreement.signedAt;
+  // The backend already resolves the effective signed state (row status,
+  // signedAt, or the admin client.agreementSigned override) and returns
+  // status='signed' when signed — see portal.service getAgreement. Treat
+  // either signal as signed.
+  const isSigned = agreement.status === 'signed' || !!agreement.signedAt;
 
   return (
     <div className="screen">

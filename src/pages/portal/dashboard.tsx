@@ -140,7 +140,12 @@ interface DashData {
   deliveries: { d: string; v: number }[];
   adSpend: { platform: string; amount: number; leads: number; currency: string; color: string }[];
   adSpendReal: boolean;
-  isManaged: boolean;
+  // Sam 2026-06-15: the admin "Client type / Ad-spend visibility" toggle.
+  // managed → client sees the Ad Spend card; ppl (pay-per-lead) → it's removed
+  // from the dashboard entirely. Backend already empties the spend data for
+  // ppl; this also hides the card outright (the by-source lead rows would
+  // otherwise keep an all-zero card alive).
+  adSpendVisible: boolean;
   invoices: { outstanding: number; outstandingCount: number; paidCount: number; nextDue?: { number: string; due: string; total: number; currency: string } };
   leadsThisMonth: number;
   activeCampaigns: number;
@@ -374,22 +379,47 @@ const DASH_KEY = 'stato-portal-dash-v1';
 
 function DashboardGrid({ d }: { d: DashData }) {
   const [editing, setEditing] = useState(false);
+  // Sam 2026-06-15: the Ad Spend block only exists for managed clients (the
+  // admin toggle). Drop it from the catalogue when hidden so it can't be
+  // rendered, added from the menu, or reset back in; everything downstream
+  // keys off this filtered list.
+  const blocks = d.adSpendVisible ? DASH_BLOCKS : DASH_BLOCKS.filter((b) => b.id !== 'adspend');
+  const defaults = DASH_DEFAULT.filter((id) => blocks.some((b) => b.id === id));
   const [active, setActive] = useState<string[]>(() => {
     try {
       const s = JSON.parse(localStorage.getItem(DASH_KEY) ?? 'null');
-      if (Array.isArray(s) && s.length) return s.filter((id: string) => DASH_BLOCKS.some((b) => b.id === id));
+      if (Array.isArray(s) && s.length) return s.filter((id: string) => blocks.some((b) => b.id === id));
     } catch { /* ignore */ }
-    return DASH_DEFAULT;
+    return defaults;
   });
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
-  const hidden = DASH_BLOCKS.filter((b) => !active.includes(b.id));
-  const titleOf = (id: string) => DASH_BLOCKS.find((b) => b.id === id)?.title;
+  // Keep the ad-spend card in sync with the admin toggle, so the client never
+  // has to edit their dashboard manually:
+  //   • toggle ON  → ensure the card is present (re-add it at its default slot,
+  //     just after Recent Lead Deliveries, if a saved layout dropped it).
+  //   • toggle OFF → strip it from the layout.
+  useEffect(() => {
+    setActive((a) => {
+      const has = a.includes('adspend');
+      if (d.adSpendVisible && !has) {
+        const after = a.indexOf('deliveries');
+        const next = [...a];
+        next.splice(after >= 0 ? after + 1 : next.length, 0, 'adspend');
+        return next;
+      }
+      if (!d.adSpendVisible && has) return a.filter((x) => x !== 'adspend');
+      return a;
+    });
+  }, [d.adSpendVisible]);
+
+  const hidden = blocks.filter((b) => !active.includes(b.id));
+  const titleOf = (id: string) => blocks.find((b) => b.id === id)?.title;
 
   const save = () => { localStorage.setItem(DASH_KEY, JSON.stringify(active)); setEditing(false); setAddOpen(false); };
-  const resetLayout = () => { setActive(DASH_DEFAULT); localStorage.removeItem(DASH_KEY); };
+  const resetLayout = () => { setActive(defaults); localStorage.removeItem(DASH_KEY); };
   const remove = (id: string) => setActive((a) => a.filter((x) => x !== id));
   const add = (id: string) => { setActive((a) => [...a, id]); setAddOpen(false); };
   const move = (i: number, dir: number) => setActive((a) => {
@@ -420,8 +450,8 @@ function DashboardGrid({ d }: { d: DashData }) {
         </div>
       );
       case 'adspend':
-        // Pay-per-lead clients must not see ad spend at all (Sam 2026-06-15).
-        if (!d.isManaged) return null;
+        // Pay-per-lead clients never reach here: the block is filtered out of
+        // `blocks` when adSpendVisible is false (Sam 2026-06-15).
         return d.adSpend.length > 0
           ? <AdSpendCard d={d} />
           : <div className="dash-empty">No ad-spend data for this month yet.</div>;
@@ -589,8 +619,6 @@ export function PortalDashboardPage() {
     // Sam 2026-06-15: only managed clients see ad spend. Pay-per-lead clients
     // get spend zeroed server-side; hide the card entirely so they don't see a
     // confusing "£0.00 / NaN%" panel.
-    const isManaged = dashboard.clientType === 'managed';
-
     return {
       go: () => {},
       companyName: dashboard.companyName,
@@ -598,7 +626,7 @@ export function PortalDashboardPage() {
       deliveries,
       adSpend,
       adSpendReal,
-      isManaged,
+      adSpendVisible: dashboard.clientType === 'managed',
       invoices: {
         outstanding,
         outstandingCount: outstandingInv.length,

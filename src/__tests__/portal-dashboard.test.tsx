@@ -30,6 +30,9 @@ const { dashboardFixture } = vi.hoisted(() => ({
   },
 }));
 
+// The dashboard page also pulls invoices, compliance, and leads (delivery /
+// spend / quality windows). Stub them all so the component renders; only the
+// dashboard fixture carries meaningful data for these assertions.
 vi.mock('@/lib/hooks/use-portal', () => ({
   usePortalDashboard: () => ({ data: dashboardFixture, isLoading: false, error: null }),
   usePortalInvoices: () => ({ data: [], isLoading: false, error: null }),
@@ -58,10 +61,11 @@ function renderPage() {
 
 describe('PortalDashboardPage', () => {
   beforeEach(() => {
-    // Reset to the default PPL fixture before each test so per-test mutations
-    // don't leak.
+    // Reset to the default pay-per-lead fixture before each test so per-test
+    // mutations don't leak. Clear any saved dashboard layout too.
     dashboardFixture.clientType = 'ppl';
     dashboardFixture.adSpendByPlatform = [];
+    localStorage.clear();
   });
 
   it('renders company name', () => {
@@ -82,7 +86,10 @@ describe('PortalDashboardPage', () => {
 
   it('renders Outstanding stat card', () => {
     renderPage();
-    expect(screen.getByText('Outstanding')).toBeInTheDocument();
+    // "Outstanding" appears both as the stat-card label and in the invoices
+    // snapshot; assert the stat-card label specifically.
+    const labels = screen.getAllByText('Outstanding');
+    expect(labels.some((el) => el.classList.contains('pstat-lab'))).toBe(true);
   });
 
   it('renders lead delivery chart heading', () => {
@@ -90,17 +97,40 @@ describe('PortalDashboardPage', () => {
     expect(screen.getByText('Recent Lead Deliveries')).toBeInTheDocument();
   });
 
-  // Sam Loom 2026-06-15 SUPERSEDES the 27-May "no ad-spend on the portal at
-  // all" rule: pay-per-lead clients must NOT see ad spend, but MANAGED clients
-  // now DO. PPL → the Ad Spend card is hidden entirely (not a confusing £0).
-  it('hides the Ad Spend card for pay-per-lead clients', () => {
+  // Sam 2026-06-15: the admin "Client type / Ad-spend visibility" toggle gates
+  // the portal Ad Spend card. ppl (pay-per-lead) → hidden; managed → visible.
+  // This SUPERSEDES the 27-May "no ad-spend on the portal at all" rule.
+  it('does NOT render the Ad Spend card for a pay-per-lead client', () => {
     dashboardFixture.clientType = 'ppl';
     dashboardFixture.adSpendByPlatform = [
       { platform: 'Google Ads', spend: 300, currency: 'GBP' },
     ];
     renderPage();
+    // Card removed entirely — not even the empty-state placeholder.
     expect(screen.queryByText('Ad Spend by Platform')).not.toBeInTheDocument();
-    expect(screen.queryByText('Google Ads')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No ad-spend data/)).not.toBeInTheDocument();
+  });
+
+  it('renders the Ad Spend card for a managed client', () => {
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
+    ];
+    renderPage();
+    expect(screen.getByText('Ad Spend by Platform')).toBeInTheDocument();
+    expect(screen.getByText('Google Ads')).toBeInTheDocument();
+  });
+
+  // When the toggle is turned on, the card must come back automatically even if
+  // the client had a saved layout that no longer listed it — no manual editing.
+  it('auto-adds the Ad Spend card when managed, even if a saved layout dropped it', () => {
+    localStorage.setItem('stato-portal-dash-v1', JSON.stringify(['stats', 'deliveries', 'snapshots']));
+    dashboardFixture.clientType = 'managed';
+    dashboardFixture.adSpendByPlatform = [
+      { platform: 'Google Ads', spend: 300, currency: 'GBP' },
+    ];
+    renderPage();
+    expect(screen.getByText('Ad Spend by Platform')).toBeInTheDocument();
   });
 
   it('shows the Ad Spend section for managed clients', () => {

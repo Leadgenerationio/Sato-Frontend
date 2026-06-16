@@ -22,6 +22,14 @@ vi.mock('@/lib/hooks/use-portal', () => ({
         { date: '2026-04-07', campaignId: CORK, campaignName: 'Audiology - Cork', leadCount: 5, validLeads: 5, invalidLeads: 0 },
         { date: '2026-04-05', campaignId: CLARE, campaignName: 'Audiology - Clare', leadCount: 3, validLeads: 3, invalidLeads: 0 },
       ],
+      // A 'custom' window (manual calendar range / YTD) now carries a real
+      // per-source breakdown — the FE must render the table regardless of
+      // whether the range mapped to a named preset.
+      bySource: [
+        { platform: 'facebook-ads', leads: 42, spend: 1200, currency: 'GBP' },
+        { platform: 'google-ads', leads: 18, spend: 800, currency: 'GBP' },
+      ],
+      bySourceWindow: { kind: 'custom' },
     },
     isLoading: false,
     error: null,
@@ -107,18 +115,21 @@ describe('PortalLeadsPage — date range presets', () => {
     vi.useRealTimers();
   });
 
+  // The preset chips are Statto-design buttons: active = 'b-dark', inactive =
+  // 'b-ghost' (see leads.tsx). (These assertions previously checked a shadcn
+  // Button's data-variant/border — stale since the page moved to .btn chips.)
   it('highlights the preset matching the default range (This month) on load', () => {
     renderPage();
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'default');
-    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('data-variant', 'outline');
-    expect(screen.getByRole('button', { name: 'This week' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-dark');
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveClass('b-ghost');
+    expect(screen.getByRole('button', { name: 'This week' })).toHaveClass('b-ghost');
   });
 
   it('moves the highlight to the preset that was clicked', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Today' }));
-    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('data-variant', 'default');
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveClass('b-dark');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-ghost');
   });
 
   it('highlights only the clicked preset when two presets share the same range', () => {
@@ -128,26 +139,48 @@ describe('PortalLeadsPage — date range presets', () => {
     vi.setSystemTime(new Date('2026-06-03T12:00:00'));
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'This week' }));
-    expect(screen.getByRole('button', { name: 'This week' })).toHaveAttribute('data-variant', 'default');
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'This week' })).toHaveClass('b-dark');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-ghost');
   });
 
-  it('keeps a border on the active chip so it does not resize when selected', () => {
-    // The active chip uses the filled (primary) look; without a border it is
-    // ~2px narrower than the outline chips and visibly jumps on click. It must
-    // keep a (transparent) border to occupy the same box as the others.
+  it('keeps the same base chip class on active and inactive so they do not resize', () => {
+    // Active and inactive chips share the 'btn b-sm' base so swapping the
+    // b-dark/b-ghost modifier doesn't change the box size on click.
     renderPage();
     const active = screen.getByRole('button', { name: 'This month' });
     const inactive = screen.getByRole('button', { name: 'Today' });
-    expect(active).toHaveClass('border');
-    expect(inactive).toHaveClass('border');
+    expect(active).toHaveClass('btn', 'b-sm');
+    expect(inactive).toHaveClass('btn', 'b-sm');
   });
 
   it('clears the highlight when the range is edited manually', () => {
     renderPage();
     // "This month" is highlighted on load; editing a date input must drop it.
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'default');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-dark');
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-06-10' } });
-    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveClass('b-ghost');
+  });
+});
+
+describe('PortalLeadsPage — By Source for any range', () => {
+  // Regression: custom calendar ranges (and YTD) used to show a "pick a preset"
+  // hint with leads stuck at 0. The breakdown is now real for any range, so the
+  // table must render — with per-source lead counts — even for a 'custom' window.
+  it('renders the By Source table with per-source leads for a custom window', () => {
+    renderPage();
+    const heading = screen.getByText('By Source');
+    const card = heading.closest('.card')! as HTMLElement;
+    // Facebook row shows its real lead count (42), not 0.
+    const fbRow = within(card).getByText('Facebook Ads').closest('tr')! as HTMLElement;
+    expect(within(fbRow).getByText('42')).toBeInTheDocument();
+    // Google row too.
+    const gRow = within(card).getByText('Google Ads').closest('tr')! as HTMLElement;
+    expect(within(gRow).getByText('18')).toBeInTheDocument();
+  });
+
+  it('shows the summed leads total (42 + 18 = 60), not 0', () => {
+    renderPage();
+    // The "Total Leads" summary tile derives from bySource when present.
+    expect(screen.getAllByText('60').length).toBeGreaterThan(0);
   });
 });
