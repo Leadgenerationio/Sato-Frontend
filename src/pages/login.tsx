@@ -173,22 +173,13 @@ export function LoginPage() {
         <div className="auth-orb" />
         <div className="auth-orb two" />
         <div className="auth-brand-inner">
-          <div className="auth-logo">
-            {brand.logoUrl ? (
-              <img className="auth-logo-img" src={brand.logoUrl} alt={brand.name} style={{ maxHeight: 40, width: 'auto' }} />
-            ) : (
-              <span className="auth-logo-word">{brand.name}</span>
-            )}
-          </div>
-          <div className="auth-headline">
-            <h1>{brand.name} <em>— {brand.tagline}</em></h1>
-            <p>Sign in to {brand.name}.</p>
-          </div>
-          <div className="auth-foot">
-            <span>© {new Date().getFullYear()} {brand.name}</span>
-            <a href="#">Privacy</a>
-            <a href="#">Security</a>
-          </div>
+          {/* Only the brand name, centered. Logo wordmark, tagline, sign-in
+              subtitle and footer were removed per request. */}
+          {brand.logoUrl ? (
+            <img className="auth-logo-img" src={brand.logoUrl} alt={brand.name} style={{ maxHeight: 56, width: 'auto' }} />
+          ) : (
+            <span className="auth-brand-name">{brand.name}</span>
+          )}
         </div>
       </div>
 
