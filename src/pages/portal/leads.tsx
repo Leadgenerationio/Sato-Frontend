@@ -96,14 +96,17 @@ export function PortalLeadsPage() {
 
   const summary = useMemo(() => {
     const distinctDays = new Set((leads ?? []).map((d) => d.date)).size;
-    if (bySource.length > 0) {
-      const total = bySource.reduce((s, r) => s + r.leads, 0);
-      const peak = leads ? leads.reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0) : 0;
-      return { total, avg: distinctDays > 0 ? Math.round(total / distinctDays) : 0, peak };
-    }
-    if (!leads || leads.length === 0) return { total: 0, avg: 0, peak: 0 };
-    const total = leads.reduce((s, d) => s + d.validLeads, 0);
-    const peak = leads.reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0);
+    // Total valid leads from the daily lead_deliveries rows — the reliable
+    // per-day source (also drives Peak Day).
+    const dailyTotal = (leads ?? []).reduce((s, d) => s + d.validLeads, 0);
+    // The LeadByte by-source total matches the admin /reports view, so prefer it
+    // WHEN it actually carries lead counts. But for YTD / custom ranges LeadByte's
+    // supplier report returns spend without per-source valid leads, so the
+    // by-source total is 0 — fall back to the daily total then, otherwise Total
+    // Leads showed 0 while Peak Day showed real data.
+    const bySourceTotal = bySource.reduce((s, r) => s + r.leads, 0);
+    const total = bySourceTotal > 0 ? bySourceTotal : dailyTotal;
+    const peak = (leads ?? []).reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0);
     return { total, avg: distinctDays > 0 ? Math.round(total / distinctDays) : 0, peak };
   }, [leads, bySource]);
 
