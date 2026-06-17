@@ -184,7 +184,7 @@
 
 /* ---------- LEAD CHART ---------- */
 .statto-portal .lead-card { display: flex; flex-direction: column; }
-.statto-portal .lead-chart { position: relative; padding-left: 34px; }
+.statto-portal .lead-chart { position: relative; padding-left: 34px; padding-right: 8px; }
 .statto-portal .lc-yaxis { position: absolute; left: 0; top: 0; bottom: 26px; width: 30px; }
 .statto-portal .lc-yaxis span { position: absolute; right: 8px; transform: translateY(-50%);
   font-size: 12px; color: var(--fg3); font-variant-numeric: tabular-nums; }
