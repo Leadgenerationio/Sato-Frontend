@@ -119,30 +119,6 @@ class ApiClient {
   put<T>(path: string, body?: unknown) { return this.request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }); }
   patch<T>(path: string, body?: unknown) { return this.request<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }); }
   delete<T>(path: string) { return this.request<T>(path, { method: 'DELETE' }); }
-
-  // Fetch a binary response (e.g. a PDF) as a Blob. Mirrors request()'s auth +
-  // 401-refresh handling, but returns the raw body instead of parsing JSON. On
-  // error the server still replies with a JSON envelope, so we parse that for a
-  // useful message.
-  async getBlob(path: string, retried = false): Promise<Blob> {
-    const response = await fetch(`${API_URL}${path}`, { method: 'GET', headers: this.buildHeaders({ method: 'GET' }) });
-
-    if (response.status === 401 && !retried && this.token && !path.startsWith('/api/v1/auth/')) {
-      const newToken = await this.tryRefresh();
-      if (newToken) return this.getBlob(path, true);
-    }
-
-    if (!response.ok) {
-      let data: ApiResponse<unknown> | null = null;
-      try { data = (await response.json()) as ApiResponse<unknown>; } catch { /* non-JSON / empty body */ }
-      const message = data
-        ? buildErrorMessage(data, statusMessage(response.status, 'Download failed'))
-        : statusMessage(response.status, 'Download failed');
-      throw new ApiError(message, response.status, data?.code);
-    }
-
-    return response.blob();
-  }
 }
 
 export class ApiError extends Error {
