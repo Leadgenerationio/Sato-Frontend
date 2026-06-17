@@ -7,6 +7,10 @@ export interface AutoInvoiceRun {
   periodTo: string;
   triggeredBy: 'scheduled' | 'manual' | string;
   status: 'running' | 'completed' | 'failed' | 'skipped' | string;
+  // Field names mirror the DB columns but now describe the Xero reconciliation:
+  //   clientsBilled   → clients reconciled against Xero
+  //   invoicesCreated → new Xero invoices imported
+  //   totalAmount     → always '0'; amounts live on the per-invoice rows from Xero
   clientsBilled: number;
   clientsSkipped: number;
   clientsFailed: number;
@@ -26,7 +30,12 @@ export interface AutoInvoiceClientDetail {
   currency: string;
   invoiceId?: string;
   invoiceNumber?: string;
-  status: 'invoiced' | 'no_deliveries' | 'no_lead_price' | 'failed';
+  // Xero-sync counts — the cron now pulls invoices from Xero rather than
+  // fabricating them, so these describe what the reconciliation did.
+  synced?: number;       // new Xero invoices imported
+  updated?: number;      // existing invoices re-synced
+  totalRemote?: number;  // total invoices Xero holds for the client
+  status: 'synced' | 'no_deliveries' | 'no_xero_invoices' | 'failed';
   reason?: string;
 }
 
