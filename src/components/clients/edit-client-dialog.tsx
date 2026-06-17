@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Pencil, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   useUpdateClient,
+  useDeleteClient,
   type ClientDetail,
   type ClientContactInput,
   type ContactType,
@@ -504,6 +506,98 @@ export function EditClientButton({ client }: EditClientButtonProps) {
         Edit Client
       </Button>
       <EditClientDialog client={client} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+// ─── Remove client (owner-only) ──────────────────────────────────────────────
+// Hard delete — irreversible. The admin must re-type the company name to arm
+// the button, the same guardrail GitHub/Stripe use for destructive deletes.
+// Render only for the 'owner' role (gated at the call site in detail.tsx).
+
+interface RemoveClientButtonProps {
+  client: ClientDetail;
+}
+
+export function RemoveClientButton({ client }: RemoveClientButtonProps) {
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const navigate = useNavigate();
+  const deleteClient = useDeleteClient();
+
+  const armed = confirmText.trim() === client.companyName.trim();
+
+  async function handleDelete() {
+    if (!armed || deleteClient.isPending) return;
+    try {
+      await deleteClient.mutateAsync(client.id);
+      toast.success(`${client.companyName} removed`);
+      navigate('/clients');
+    } catch (err) {
+      logError('Delete client failed', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to remove client');
+    }
+  }
+
+  // Reset the typed confirmation whenever the dialog is toggled so a previous
+  // attempt never leaves the button armed.
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) setConfirmText('');
+  }
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setOpen(true)}
+        className="text-red-600 hover:text-red-600 border-red-200 hover:bg-red-50"
+      >
+        <Trash2 className="size-4 mr-1.5" />
+        Remove Client
+      </Button>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove client</DialogTitle>
+            <DialogDescription>
+              This permanently deletes <strong>{client.companyName}</strong> along with its
+              contacts, documents, invoices, credit history, activity and portal logins. Campaigns
+              are kept but unlinked. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-client-name">
+              Type <span className="font-semibold">{client.companyName}</span> to confirm
+            </Label>
+            <Input
+              id="confirm-client-name"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={client.companyName}
+              autoComplete="off"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!armed || deleteClient.isPending}
+              onClick={handleDelete}
+            >
+              {deleteClient.isPending ? (
+                <Loader2 className="size-4 mr-1.5 animate-spin" />
+              ) : (
+                <Trash2 className="size-4 mr-1.5" />
+              )}
+              Remove Client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

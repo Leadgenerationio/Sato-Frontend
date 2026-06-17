@@ -146,6 +146,23 @@ export function useUpdateClient() {
   });
 }
 
+// Owner-only hard delete. Removes the client and everything tied to it on
+// the backend (invoices, credit checks, documents, contacts, activity, …);
+// campaigns/workflows are unlinked rather than destroyed. Irreversible.
+export function useDeleteClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete<{ deleted: boolean }>(`/api/v1/clients/${id}`);
+      return unwrap(res).deleted;
+    },
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['clients'] });
+      qc.removeQueries({ queryKey: ['client', id] });
+    },
+  });
+}
+
 export function useCreditHistory(clientId: string) {
   return useQuery({
     queryKey: ['credit-history', clientId],

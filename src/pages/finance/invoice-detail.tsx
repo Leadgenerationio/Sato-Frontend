@@ -99,15 +99,19 @@ export function InvoiceDetailPage() {
             {invoice.status}
             {invoice.daysOverdue > 0 && ` (${invoice.daysOverdue} days overdue)`}
           </span>
-          <button
-            className="btn b-ghost b-sm"
-            onClick={() => handleDownloadPdf(invoice)}
-            disabled={downloadPdf.isPending}
-            title="Download the original invoice from Xero"
-          >
-            {downloadPdf.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Download className="size-[15px]" />}
-            Download PDF
-          </button>
+          {/* The PDF is the Xero-rendered document, so it only exists once the
+              invoice has been pushed to Xero — hide the button otherwise. */}
+          {invoice.xeroInvoiceId && (
+            <button
+              className="btn b-ghost b-sm"
+              onClick={() => handleDownloadPdf(invoice)}
+              disabled={downloadPdf.isPending}
+              title="Download the original invoice from Xero"
+            >
+              {downloadPdf.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Download className="size-[15px]" />}
+              Download PDF
+            </button>
+          )}
           {invoice.xeroInvoiceId ? (
             <span className="pill p-xero"><Check className="size-3" /> In Xero</span>
           ) : (
