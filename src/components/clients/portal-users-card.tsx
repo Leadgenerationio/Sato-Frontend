@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/shared/empty-state';
-import { UserPlus, Users, Mail, Loader2, ShieldCheck, ShieldOff, Crown, User as UserIcon, Settings2 } from 'lucide-react';
+import { UserPlus, Users, Mail, Loader2, ShieldCheck, ShieldOff, Crown, User as UserIcon, Settings2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/providers/auth-provider';
 import { API_URL } from '@/lib/env';
@@ -144,6 +144,37 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
       toast.error('Failed to change role');
     } finally {
       setPromoting(null);
+    }
+  }
+
+  // Sam (2026-06-17): permanently remove a portal user. Confirm first — it's a
+  // hard delete of the login (their creative sign-off records are kept but
+  // anonymised server-side; see migration 0038).
+  const [removeTarget, setRemoveTarget] = useState<PortalUser | null>(null);
+  const [removing, setRemoving] = useState(false);
+  async function handleRemove() {
+    if (!removeTarget) return;
+    setRemoving(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/users/${removeTarget.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data: ApiResponse<unknown> = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        toast.error(data.message || 'Failed to remove portal user');
+        return;
+      }
+      toast.success(`${removeTarget.name} removed — their portal login is deleted`);
+      // Optimistic: drop the row immediately, then reconcile with the server.
+      setUsers((prev) => prev.filter((u) => u.id !== removeTarget.id));
+      setRemoveTarget(null);
+      fetchUsers();
+    } catch (err) {
+      logError('removePortalUser failed', err);
+      toast.error('Failed to remove portal user');
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -321,6 +352,16 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                           : <Crown className="size-3.5 mr-1.5" />}
                       {isAdmin ? 'Demote' : 'Make admin'}
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => setRemoveTarget(u)}
+                      title="Permanently remove this portal user"
+                    >
+                      <Trash2 className="size-3.5 mr-1.5" />
+                      Remove
+                    </Button>
                   </div>
                 </div>
                 );
@@ -457,6 +498,29 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
             <Button onClick={handleSavePermissions} disabled={permsLoading}>
               {permsLoading ? <Loader2 className="size-4 mr-1.5 animate-spin" /> : <Settings2 className="size-4 mr-1.5" />}
               Save permissions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={removeTarget !== null} onOpenChange={(o) => { if (!o) setRemoveTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove portal user?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes <span className="font-medium">{removeTarget?.name}</span>'s
+              login (<code>{removeTarget?.email}</code>) — they'll lose access to{' '}
+              <span className="font-medium">{clientName}</span>'s portal immediately. Their past
+              creative sign-offs are kept on record but no longer attributed to them. This can't be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRemoveTarget(null)} disabled={removing}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemove} disabled={removing}>
+              {removing ? <Loader2 className="size-4 mr-1.5 animate-spin" /> : <Trash2 className="size-4 mr-1.5" />}
+              Remove user
             </Button>
           </DialogFooter>
         </DialogContent>
