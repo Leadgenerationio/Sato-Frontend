@@ -81,6 +81,39 @@ class ApiClient {
     return data;
   }
 
+  /**
+   * Authenticated binary GET — returns the raw response Blob (used for
+   * downloading the original Xero invoice PDF, which the server streams behind
+   * auth rather than exposing a public URL). Mirrors request()'s 401→refresh
+   * retry, but parses errors as JSON only when the failed response carries it.
+   */
+  async getBlob(path: string, retried = false): Promise<Blob> {
+    const headers: Record<string, string> = {};
+    if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+
+    const response = await fetch(`${API_URL}${path}`, { method: 'GET', headers });
+
+    if (response.status === 401 && !retried && this.token) {
+      const newToken = await this.tryRefresh();
+      if (newToken) return this.getBlob(path, true);
+    }
+
+    if (!response.ok) {
+      let message = statusMessage(response.status, 'Download failed');
+      let code: string | undefined;
+      try {
+        const data = (await response.json()) as ApiResponse<unknown>;
+        message = buildErrorMessage(data, message);
+        code = data.code;
+      } catch {
+        // Non-JSON error body — keep the status-derived message.
+      }
+      throw new ApiError(message, response.status, code);
+    }
+
+    return response.blob();
+  }
+
   get<T>(path: string) { return this.request<T>(path, { method: 'GET' }); }
   post<T>(path: string, body?: unknown) { return this.request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }); }
   put<T>(path: string, body?: unknown) { return this.request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }); }

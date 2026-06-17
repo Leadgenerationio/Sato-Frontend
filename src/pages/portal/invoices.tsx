@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ReceiptText, CircleCheckBig, Printer, ChevronDown } from 'lucide-react';
-import { usePortalInvoices, type PortalInvoice } from '@/lib/hooks/use-portal';
+import { ReceiptText, CircleCheckBig, Download, Loader2, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
+import { usePortalInvoices, useDownloadPortalInvoicePdf, type PortalInvoice } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { toMoney } from '@/lib/hooks/use-invoices';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,8 +20,6 @@ const statusPill = (s: string) => {
   return 'p-warn';
 };
 
-const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
@@ -28,41 +27,22 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function handleViewInvoice(inv: PortalInvoice) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-  printWindow.document.write(`
-    <!DOCTYPE html><html><head><title>${escapeHtml(inv.invoiceNumber)}</title>
-    <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111; }
-      h1 { font-size: 24px; margin-bottom: 4px; }
-      .meta { color: #666; font-size: 14px; margin-bottom: 24px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-      th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e5e5; font-size: 14px; }
-      th { font-weight: 600; background: #f5f5f5; }
-      .text-right { text-align: right; }
-      .total-row td { font-weight: 700; font-size: 16px; border-top: 2px solid #111; }
-      @media print { body { padding: 20px; } }
-    </style></head><body>
-      <h1>Invoice ${escapeHtml(inv.invoiceNumber)}</h1>
-      <div class="meta">${escapeHtml(statusLabel(inv.status))}${inv.daysOverdue > 0 ? ` (${escapeHtml(inv.daysOverdue)} days overdue)` : ''}</div>
-      <table>
-        <tr><th>Detail</th><th class="text-right">Value</th></tr>
-        <tr><td>Currency</td><td class="text-right">${escapeHtml(inv.currency)}</td></tr>
-        <tr><td>Due Date</td><td class="text-right">${escapeHtml(formatDate(inv.dueDate))}</td></tr>
-        ${inv.paidDate ? `<tr><td>Paid Date</td><td class="text-right">${escapeHtml(formatDate(inv.paidDate))}</td></tr>` : ''}
-      </table>
-      <table><tr class="total-row"><td>Total</td><td class="text-right">${escapeHtml(formatCurrency(toMoney(inv.total), inv.currency))}</td></tr></table>
-      <script>window.onload = function() { window.print(); }</script>
-    </body></html>`);
-  printWindow.document.close();
-}
-
 const PORTAL_HIDDEN_INVOICE_STATUSES = new Set(['draft', 'voided', 'deleted']);
 
 export function PortalInvoicesPage() {
   usePageTitle('Stato — Invoices');
   const { data: rawInvoices, isLoading } = usePortalInvoices();
+  const downloadPdf = useDownloadPortalInvoicePdf();
+
+  function handleDownloadInvoice(inv: PortalInvoice) {
+    downloadPdf.mutate(
+      { id: inv.id, invoiceNumber: inv.invoiceNumber },
+      {
+        onError: (err) =>
+          toast.error(err instanceof Error ? err.message : 'Could not download the invoice PDF.'),
+      },
+    );
+  }
   const invoices = rawInvoices?.filter((i) => !PORTAL_HIDDEN_INVOICE_STATUSES.has((i.status ?? '').toLowerCase()));
 
   const years = Array.from(new Set((invoices ?? []).map((i) => new Date(i.dueDate).getFullYear().toString()))).sort().reverse();
@@ -123,7 +103,16 @@ export function PortalInvoicesPage() {
                     <td className="mono" style={{ fontWeight: 600 }}>{formatCurrency(toMoney(inv.total), inv.currency)}</td>
                     <td><span className={'pill ' + statusPill(inv.status)}>{statusLabel(inv.status)}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}</span></td>
                     <td style={{ textAlign: 'right' }}>
-                      <button className="link-btn" title="View / print" onClick={() => handleViewInvoice(inv)}><Printer className="size-4" /></button>
+                      <button
+                        className="link-btn"
+                        title="Download the original Xero invoice"
+                        disabled={downloadPdf.isPending && downloadPdf.variables?.id === inv.id}
+                        onClick={() => handleDownloadInvoice(inv)}
+                      >
+                        {downloadPdf.isPending && downloadPdf.variables?.id === inv.id
+                          ? <Loader2 className="size-4 animate-spin" />
+                          : <Download className="size-4" />}
+                      </button>
                     </td>
                   </tr>
                 ))}

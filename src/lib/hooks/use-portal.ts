@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
+import { saveBlob } from '@/lib/download';
 
 export type PortalClientType = 'managed' | 'ppl';
 
@@ -197,6 +198,21 @@ export function usePortalInvoices() {
     queryFn: async () => {
       const res = await api.get<{ invoices: PortalInvoice[] }>('/api/v1/portal/invoices');
       return unwrap(res).invoices;
+    },
+  });
+}
+
+/**
+ * Download the buyer's ORIGINAL Xero invoice PDF (Sam, 2026-06-17). Streams the
+ * exact document Xero issued — the one large customers keep on record — instead
+ * of the old client-side print-window lookalike. `variables.id` lets the table
+ * show a per-row spinner.
+ */
+export function useDownloadPortalInvoicePdf() {
+  return useMutation({
+    mutationFn: async ({ id, invoiceNumber }: { id: string; invoiceNumber: string }) => {
+      const blob = await api.getBlob(`/api/v1/portal/invoices/${id}/pdf`);
+      saveBlob(blob, `${invoiceNumber || 'invoice'}.pdf`);
     },
   });
 }
