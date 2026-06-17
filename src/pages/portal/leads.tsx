@@ -167,7 +167,7 @@ export function PortalLeadsPage() {
           {bySource.length > 0 && (
             <div className="card pad">
               <h3 className="statto-title" style={{ marginBottom: 4 }}>By Source</h3>
-              <p className="lc-sub" style={{ marginBottom: 16 }}>Valid leads from LeadByte and ad spend from Catchr — same numbers as the admin /reports campaign view.</p>
+              <p className="lc-sub" style={{ marginBottom: 16 }}>{showSpend ? 'Valid leads from LeadByte and ad spend from Catchr — same numbers as the admin /reports campaign view.' : 'Valid leads from LeadByte — same numbers as the admin /reports campaign view.'}</p>
               <div className="table-scroll">
                 <table>
                   <thead><tr><th>Source</th><th style={{ textAlign: 'right' }}>Leads</th>{showSpend && <th style={{ textAlign: 'right' }}>Ad spend</th>}</tr></thead>

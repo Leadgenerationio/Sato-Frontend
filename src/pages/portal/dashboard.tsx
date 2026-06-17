@@ -21,12 +21,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const PALETTE = ['var(--statto-ink)', 'var(--lime-500)', 'var(--green-300)', 'var(--lime-600)', 'var(--green-500)'];
 
+// Build a clean y-axis: evenly-spaced, whole-number ticks (high → low, ending
+// at 0) on a "nice" step (1/2/5 × 10ⁿ). Each label is a distinct round number
+// so they never collide, and the top sits above the peak with headroom so the
+// tallest bar never touches the top gridline.
+//
+// Was: quartered the rounded-up top and Math.round()'d each quarter — that
+// produced non-round, sometimes near-equal labels that overlapped at the top
+// (e.g. an 11-high axis rendered 11/8/6/3 crammed together).
 function niceTicks(maxValue: number): number[] {
-  const safe = Math.max(maxValue, 1);
-  const pow = Math.pow(10, Math.floor(Math.log10(safe)));
-  const top = Math.ceil(safe / pow) * pow;
-  // 5 evenly-spaced ticks, high → low (matches the design's 28/21/14/7/0).
-  return [4, 3, 2, 1, 0].map((i) => Math.round((top / 4) * i));
+  const peak = Math.max(Math.ceil(maxValue), 1);
+  const rough = peak / 4; // aim for ~4 intervals
+  const pow = Math.pow(10, Math.floor(Math.log10(rough || 1)));
+  const norm = rough / pow; // 1..10
+  // Nearest nice step (geometric thresholds), then clamp to whole leads.
+  let step = (norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10) * pow;
+  step = Math.max(Math.round(step), 1);
+  // Top = step multiple above the peak, with ~15% headroom.
+  let top = Math.ceil(peak / step) * step;
+  while (peak > top * 0.85) top += step;
+  const ticks: number[] = [];
+  for (let v = top; v >= 0; v -= step) ticks.push(v);
+  return ticks;
 }
 
 function MockTag({ label = 'sample' }: { label?: string }) {
@@ -98,6 +114,12 @@ function LeadChart({ deliveries }: { deliveries: { d: string; v: number }[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const ticks = useMemo(() => niceTicks(Math.max(...deliveries.map((d) => d.v), 0)), [deliveries]);
   const max = ticks[0] || 1;
+  const n = deliveries.length;
+  // One label per bar overflows the card once there are more than ~8 days, so
+  // show at most ~8 evenly-spaced labels. Anchor the cadence at the LAST day so
+  // it's always labelled (and right-aligned below, so it can't spill past the
+  // card edge).
+  const labelStep = Math.max(1, Math.ceil(n / 8));
 
   return (
     <div className="lead-chart">
@@ -127,7 +149,14 @@ function LeadChart({ deliveries }: { deliveries: { d: string; v: number }[] }) {
         </div>
       </div>
       <div className="lc-xaxis">
-        {deliveries.map((d, i) => <span key={d.d + i}>{d.d}</span>)}
+        {deliveries.map((d, i) => {
+          const show = (n - 1 - i) % labelStep === 0; // cadence anchored at the last day
+          // Keep edge labels inside the card: with >1 column, left-align the
+          // first and right-align the last; otherwise (single bar) centre it
+          // under its centred bar.
+          const textAlign = n > 1 && i === n - 1 ? 'right' : n > 1 && i === 0 ? 'left' : 'center';
+          return <span key={d.d + i} style={{ textAlign }}>{show ? d.d : ''}</span>;
+        })}
       </div>
     </div>
   );
