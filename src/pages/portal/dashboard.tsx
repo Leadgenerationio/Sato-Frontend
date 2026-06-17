@@ -151,9 +151,10 @@ function LeadChart({ deliveries }: { deliveries: { d: string; v: number }[] }) {
       <div className="lc-xaxis">
         {deliveries.map((d, i) => {
           const show = (n - 1 - i) % labelStep === 0; // cadence anchored at the last day
-          // Keep edge labels inside the card: left-align the first, right-align
-          // the last; centre the rest.
-          const textAlign = i === 0 ? 'left' : i === n - 1 ? 'right' : 'center';
+          // Keep edge labels inside the card: with >1 column, left-align the
+          // first and right-align the last; otherwise (single bar) centre it
+          // under its centred bar.
+          const textAlign = n > 1 && i === n - 1 ? 'right' : n > 1 && i === 0 ? 'left' : 'center';
           return <span key={d.d + i} style={{ textAlign }}>{show ? d.d : ''}</span>;
         })}
       </div>
