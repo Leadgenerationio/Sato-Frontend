@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
+import { saveBlob } from '@/lib/download';
 
 export interface LineItem {
   description: string;
@@ -141,6 +142,21 @@ export function usePushInvoiceToXero() {
     onSuccess: (_, invoiceId) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+    },
+  });
+}
+
+/**
+ * Download the ORIGINAL Xero invoice PDF (Sam, 2026-06-17). The server streams
+ * the exact document Xero issued — not a Stato-rendered HTML lookalike — so the
+ * file the client saves matches what Xero sent the customer. `variables.id`
+ * lets a list distinguish which row is mid-download.
+ */
+export function useDownloadInvoicePdf() {
+  return useMutation({
+    mutationFn: async ({ id, invoiceNumber }: { id: string; invoiceNumber: string }) => {
+      const blob = await api.getBlob(`/api/v1/invoices/${id}/pdf`);
+      saveBlob(blob, `${invoiceNumber || 'invoice'}.pdf`);
     },
   });
 }

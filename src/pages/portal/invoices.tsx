@@ -1,10 +1,9 @@
 import { useState } from 'react';
+import { ReceiptText, CircleCheckBig, Download, Loader2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-import { ReceiptText, CircleCheckBig, Download, ChevronDown } from 'lucide-react';
-import { usePortalInvoices, type PortalInvoice } from '@/lib/hooks/use-portal';
+import { usePortalInvoices, useDownloadPortalInvoicePdf, type PortalInvoice } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { toMoney } from '@/lib/hooks/use-invoices';
-import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 
@@ -28,29 +27,22 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Download the real Xero-rendered invoice PDF (not a print dialog). The backend
-// streams the branded document from Xero; we save it as a .pdf file.
-async function handleDownloadInvoice(inv: PortalInvoice) {
-  try {
-    const blob = await api.getBlob(`/api/v1/portal/invoices/${inv.id}/pdf`);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${inv.invoiceNumber || 'invoice'}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    toast.error(err instanceof Error ? err.message : 'Could not download the invoice.');
-  }
-}
-
 const PORTAL_HIDDEN_INVOICE_STATUSES = new Set(['draft', 'voided', 'deleted']);
 
 export function PortalInvoicesPage() {
   usePageTitle('Stato — Invoices');
   const { data: rawInvoices, isLoading } = usePortalInvoices();
+  const downloadPdf = useDownloadPortalInvoicePdf();
+
+  function handleDownloadInvoice(inv: PortalInvoice) {
+    downloadPdf.mutate(
+      { id: inv.id, invoiceNumber: inv.invoiceNumber },
+      {
+        onError: (err) =>
+          toast.error(err instanceof Error ? err.message : 'Could not download the invoice PDF.'),
+      },
+    );
+  }
   const invoices = rawInvoices?.filter((i) => !PORTAL_HIDDEN_INVOICE_STATUSES.has((i.status ?? '').toLowerCase()));
 
   const years = Array.from(new Set((invoices ?? []).map((i) => new Date(i.dueDate).getFullYear().toString()))).sort().reverse();
@@ -111,7 +103,16 @@ export function PortalInvoicesPage() {
                     <td className="mono" style={{ fontWeight: 600 }}>{formatCurrency(toMoney(inv.total), inv.currency)}</td>
                     <td><span className={'pill ' + statusPill(inv.status)}>{statusLabel(inv.status)}{inv.daysOverdue > 0 ? ` (${inv.daysOverdue}d)` : ''}</span></td>
                     <td style={{ textAlign: 'right' }}>
-                      <button className="link-btn" title="Download invoice" onClick={() => handleDownloadInvoice(inv)}><Download className="size-4" /></button>
+                      <button
+                        className="link-btn"
+                        title="Download the original Xero invoice"
+                        disabled={downloadPdf.isPending && downloadPdf.variables?.id === inv.id}
+                        onClick={() => handleDownloadInvoice(inv)}
+                      >
+                        {downloadPdf.isPending && downloadPdf.variables?.id === inv.id
+                          ? <Loader2 className="size-4 animate-spin" />
+                          : <Download className="size-4" />}
+                      </button>
                     </td>
                   </tr>
                 ))}

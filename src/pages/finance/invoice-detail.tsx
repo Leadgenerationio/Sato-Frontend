@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import {
   useInvoice,
   usePushInvoiceToXero,
+  useDownloadInvoicePdf,
   useAddInvoiceAttachment,
   useRemoveInvoiceAttachment,
   toMoney,
@@ -12,7 +13,6 @@ import {
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
-import { api } from '@/lib/api';
 
 import { logError } from '../../lib/log';
 
@@ -33,29 +33,21 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Download the real Xero-rendered invoice PDF (not a print dialog). The backend
-// streams the branded document straight from Xero; we save it as a .pdf file.
-async function handleDownloadPdf(invoice: InvoiceDetail) {
-  try {
-    const blob = await api.getBlob(`/api/v1/invoices/${invoice.id}/pdf`);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${invoice.invoiceNumber || 'invoice'}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    logError('Invoice PDF download failed', err);
-    toast.error(err instanceof Error ? err.message : 'Could not download the invoice.');
-  }
-}
-
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: invoice, isLoading, error } = useInvoice(id!);
   const pushToXero = usePushInvoiceToXero();
+  const downloadPdf = useDownloadInvoicePdf();
+
+  function handleDownloadPdf(inv: InvoiceDetail) {
+    downloadPdf.mutate(
+      { id: inv.id, invoiceNumber: inv.invoiceNumber },
+      {
+        onError: (err) =>
+          toast.error(err instanceof Error ? err.message : 'Could not download the invoice PDF.'),
+      },
+    );
+  }
 
   async function handlePushToXero() {
     if (!id) return;
@@ -107,11 +99,17 @@ export function InvoiceDetailPage() {
             {invoice.status}
             {invoice.daysOverdue > 0 && ` (${invoice.daysOverdue} days overdue)`}
           </span>
-          {/* PDF is the branded Xero-rendered document, so it only exists once
-              the invoice has been pushed to Xero. Hide the button otherwise. */}
+          {/* The PDF is the Xero-rendered document, so it only exists once the
+              invoice has been pushed to Xero — hide the button otherwise. */}
           {invoice.xeroInvoiceId && (
-            <button className="btn b-ghost b-sm" onClick={() => handleDownloadPdf(invoice)}>
-              <Download className="size-[15px]" /> Download PDF
+            <button
+              className="btn b-ghost b-sm"
+              onClick={() => handleDownloadPdf(invoice)}
+              disabled={downloadPdf.isPending}
+              title="Download the original invoice from Xero"
+            >
+              {downloadPdf.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Download className="size-[15px]" />}
+              Download PDF
             </button>
           )}
           {invoice.xeroInvoiceId ? (
