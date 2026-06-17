@@ -31,7 +31,8 @@ import {
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type UploadFolder } from '@/lib/hooks/use-uploads';
 import { SendAgreementDialog } from '@/pages/agreements';
-import { EditClientButton } from '@/components/clients/edit-client-dialog';
+import { EditClientButton, RemoveClientButton } from '@/components/clients/edit-client-dialog';
+import { useAuth } from '@/components/providers/auth-provider';
 import { features } from '@/config/features';
 
 import { logError } from '../../lib/log';
@@ -135,6 +136,7 @@ const CLIENT_TABS = [
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
   const { data: client, isLoading, error } = useClient(id!);
   const { data: creditHistory, isLoading: creditLoading } = useCreditHistory(id!);
   // Documents count drives the onboarding stage indicator — see
@@ -234,6 +236,8 @@ export function ClientDetailPage() {
         <div className="page-actions">
           <span className={'pill p-' + (statusPill[displayed] ?? 'gray') + ' cl-status-pill'}>{statusLabels[displayed] ?? displayed}</span>
           <EditClientButton client={client} />
+          {/* Hard delete is owner-only — mirrors the backend route guard. */}
+          {user?.role === 'owner' && <RemoveClientButton client={client} />}
           {/* Sam request 2026-06-15: hide the "Create Agreement" button (hide,
               don't delete — flip to `true` to restore). The dialog itself is
               left mounted so the auto-open flow from /clients/create still

@@ -12,6 +12,7 @@ import {
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
+import { api } from '@/lib/api';
 
 import { logError } from '../../lib/log';
 
@@ -24,10 +25,6 @@ const statusPill: Record<string, string> = {
   overdue: 'neg',
 };
 
-// Escape any user-provided string before interpolating into the print-window HTML.
-// Without this, a malicious clientName / lineItem.description could inject script.
-const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
@@ -36,136 +33,23 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function handleDownloadPdf(invoice: InvoiceDetail) {
-  const lineItemsHtml = invoice.lineItems.map((item) => `
-    <tr>
-      <td>${escapeHtml(item.description)}</td>
-      <td class="text-right">${escapeHtml(item.quantity)}</td>
-      <td class="text-right">${escapeHtml(new Intl.NumberFormat('en-GB', { style: 'currency', currency: invoice.currency }).format(item.unitPrice))}</td>
-      <td class="text-right">${escapeHtml(new Intl.NumberFormat('en-GB', { style: 'currency', currency: invoice.currency }).format(item.amount))}</td>
-    </tr>
-  `).join('');
-
-  const fmt = (v: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: invoice.currency }).format(v);
-  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${escapeHtml(invoice.invoiceNumber)}</title>
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111; max-width: 800px; margin: 0 auto; }
-        h1 { font-size: 24px; margin-bottom: 4px; }
-        .subtitle { color: #666; font-size: 14px; margin-bottom: 32px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 32px; margin-bottom: 32px; font-size: 14px; }
-        .info-grid dt { color: #666; }
-        .info-grid dd { font-weight: 500; margin: 0; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e5e5; font-size: 14px; }
-        th { font-weight: 600; background: #f5f5f5; }
-        .text-right { text-align: right; }
-        .total-section { margin-top: 8px; border-top: 2px solid #111; }
-        .total-section td { font-weight: 600; padding: 8px 12px; }
-        .total-section .grand-total td { font-size: 16px; font-weight: 700; }
-        .status { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; text-transform: capitalize; }
-        .status-paid { background: #d1fae5; color: #059669; }
-        .status-sent { background: #dbeafe; color: #2563eb; }
-        .status-overdue { background: #fee2e2; color: #dc2626; }
-        .status-draft { background: #f3f4f6; color: #6b7280; }
-        .status-authorised { background: #e0e7ff; color: #4f46e5; }
-        @media print { body { padding: 20px; } }
-      </style>
-    </head>
-    <body id="invoice-print-root">
-      <h1>Invoice ${escapeHtml(invoice.invoiceNumber)}</h1>
-      <div class="subtitle">
-        ${escapeHtml(invoice.clientName)} &middot;
-        <span class="status status-${escapeHtml(invoice.status)}">${escapeHtml(invoice.status)}${invoice.daysOverdue > 0 ? ` (${escapeHtml(invoice.daysOverdue)} days overdue)` : ''}</span>
-      </div>
-
-      <dl class="info-grid">
-        <dt>Client</dt><dd>${escapeHtml(invoice.clientName)}</dd>
-        <dt>Email</dt><dd>${escapeHtml(invoice.clientEmail)}</dd>
-        <dt>Currency</dt><dd>${escapeHtml(invoice.currency)}</dd>
-        <dt>VAT</dt><dd>${invoice.vatRegistered ? 'Yes (20%)' : 'No'}</dd>
-        <dt>Due Date</dt><dd>${escapeHtml(fmtDate(invoice.dueDate))}</dd>
-        ${invoice.paidDate ? `<dt>Paid Date</dt><dd>${escapeHtml(fmtDate(invoice.paidDate))}</dd>` : ''}
-        <dt>Created</dt><dd>${escapeHtml(fmtDate(invoice.createdAt))}</dd>
-      </dl>
-
-      <table>
-        <thead>
-          <tr><th>Description</th><th class="text-right">Qty</th><th class="text-right">Unit Price</th><th class="text-right">Amount</th></tr>
-        </thead>
-        <tbody>${lineItemsHtml}</tbody>
-      </table>
-
-      <table class="total-section">
-        <tr><td class="text-right" colspan="3">Subtotal</td><td class="text-right">${escapeHtml(fmt(toMoney(invoice.subtotal)))}</td></tr>
-        ${toMoney(invoice.vatAmount) > 0 ? `<tr><td class="text-right" colspan="3">VAT (20%)</td><td class="text-right">${escapeHtml(fmt(toMoney(invoice.vatAmount)))}</td></tr>` : ''}
-        <tr class="grand-total"><td class="text-right" colspan="3">Total</td><td class="text-right">${escapeHtml(fmt(toMoney(invoice.total)))}</td></tr>
-      </table>
-    </body>
-    </html>
-  `;
-
-  // Render into a hidden same-origin iframe and print from it. This avoids
-  // popup blockers (which silently killed the old window.open approach) and
-  // reliably opens the browser's print / "Save as PDF" dialog.
-  const iframe = document.createElement('iframe');
-  iframe.setAttribute('aria-hidden', 'true');
-  // Off-screen but with real A4-ish dimensions. A 0×0 / display:none iframe
-  // never gets a layout box and prints blank in several browsers.
-  iframe.style.position = 'fixed';
-  iframe.style.left = '-10000px';
-  iframe.style.top = '0';
-  iframe.style.width = '794px';
-  iframe.style.height = '1123px';
-  iframe.style.border = '0';
-
-  let printed = false;
-  let cleaned = false;
-  function onFocus() { cleanup(); }
-  function cleanup() {
-    if (cleaned) return;
-    cleaned = true;
-    window.removeEventListener('focus', onFocus);
-    iframe.remove();
+// Download the real Xero-rendered invoice PDF (not a print dialog). The backend
+// streams the branded document straight from Xero; we save it as a .pdf file.
+async function handleDownloadPdf(invoice: InvoiceDetail) {
+  try {
+    const blob = await api.getBlob(`/api/v1/invoices/${invoice.id}/pdf`);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${invoice.invoiceNumber || 'invoice'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    logError('Invoice PDF download failed', err);
+    toast.error(err instanceof Error ? err.message : 'Could not download the invoice.');
   }
-
-  iframe.onload = () => {
-    const win = iframe.contentWindow;
-    const doc = win?.document;
-    // Guard against the iframe's initial about:blank load (which fires on
-    // insertion before srcdoc applies in some browsers): only print once the
-    // real invoice document is in place, and only once.
-    if (printed || !win || !doc || !doc.getElementById('invoice-print-root')) return;
-    printed = true;
-    try {
-      // Clean up only AFTER the print dialog is dismissed — print() isn't
-      // reliably blocking, so a fixed short timer can tear the document out
-      // mid-print and produce a blank PDF. afterprint covers most browsers;
-      // the window 'focus' handler covers the rest (focus returns to the page
-      // when the dialog closes); a long timeout is just a leak-safety net.
-      // We intentionally do NOT call win.focus() — focusing a hidden iframe can
-      // bounce focus straight back to the page and tear it out mid-print.
-      win.onafterprint = cleanup;
-      window.addEventListener('focus', onFocus);
-      win.print();
-    } catch (err) {
-      logError('Invoice PDF print failed', err);
-      toast.error('Could not open the print dialog.');
-      cleanup();
-      return;
-    }
-    setTimeout(cleanup, 60000);
-  };
-
-  // Set srcdoc before inserting so the iframe's first (and only) load is the
-  // real document, not about:blank.
-  iframe.srcdoc = html;
-  document.body.appendChild(iframe);
 }
 
 export function InvoiceDetailPage() {

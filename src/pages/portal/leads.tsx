@@ -164,33 +164,30 @@ export function PortalLeadsPage() {
             ))}
           </div>
 
-          {bySource.length > 0 && (
+          {/* By Source is the ad-spend breakdown — hide the whole card for PPL
+              clients (showSpend off), not just the spend column. */}
+          {showSpend && bySource.length > 0 && (
             <div className="card pad">
               <h3 className="statto-title" style={{ marginBottom: 4 }}>By Source</h3>
-              <p className="lc-sub" style={{ marginBottom: 16 }}>{showSpend ? 'Valid leads from LeadByte and ad spend from Catchr — same numbers as the admin /reports campaign view.' : 'Valid leads from LeadByte — same numbers as the admin /reports campaign view.'}</p>
+              <p className="lc-sub" style={{ marginBottom: 16 }}>Valid leads from LeadByte and ad spend from Catchr — same numbers as the admin /reports campaign view.</p>
               <div className="table-scroll">
                 <table>
-                  <thead><tr><th>Source</th><th style={{ textAlign: 'right' }}>Leads</th>{showSpend && <th style={{ textAlign: 'right' }}>Ad spend</th>}</tr></thead>
+                  <thead><tr><th>Source</th><th style={{ textAlign: 'right' }}>Leads</th><th style={{ textAlign: 'right' }}>Ad spend</th></tr></thead>
                   <tbody>
                     {bySource.map((row) => (
                       <tr key={`${row.platform}-${row.currency}`}>
                         <td style={{ fontWeight: 600 }}>{platformLabel(row.platform)}</td>
                         <td className="mono" style={{ textAlign: 'right' }}>{row.leads.toLocaleString()}</td>
-                        {showSpend && <td className="mono" style={{ textAlign: 'right', fontWeight: 600 }}>{formatMoney(row.spend, row.currency)}</td>}
+                        <td className="mono" style={{ textAlign: 'right', fontWeight: 600 }}>{formatMoney(row.spend, row.currency)}</td>
                       </tr>
                     ))}
-                    {showSpend ? totalSpendByCurrency(bySource).map(({ currency, total }, idx) => (
+                    {totalSpendByCurrency(bySource).map(({ currency, total }, idx) => (
                       <tr key={`total-${currency}`} style={{ background: 'var(--gray-50)' }}>
                         <td style={{ fontWeight: 700 }}>Total</td>
                         <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{idx === 0 ? summary.total.toLocaleString() : ''}</td>
                         <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(total, currency)}</td>
                       </tr>
-                    )) : (
-                      <tr style={{ background: 'var(--gray-50)' }}>
-                        <td style={{ fontWeight: 700 }}>Total</td>
-                        <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{summary.total.toLocaleString()}</td>
-                      </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
