@@ -229,6 +229,13 @@
 .cmp-banner-text span { font-size: 13.5px; color: var(--fg2); line-height: 1.5; }
 .cmp-banner-link { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--warning); white-space: nowrap; flex-shrink: 0; margin-left: auto; align-self: center; }
 .cmp-banner-link:hover { color: #c98318; }
+/* Mobile: stack the banner — icon centred at the top, text and link centred
+   below it — instead of the icon-left row. */
+@media (max-width: 640px) {
+  .cmp-banner { flex-direction: column; align-items: center; text-align: center; }
+  .cmp-banner-text { flex: 0 1 auto; align-items: center; }
+  .cmp-banner-link { margin-left: 0; align-self: center; }
+}
 
 .cmp-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .cmp-toggle { display: inline-flex; background: var(--gray-50); border-radius: 14px; padding: 4px; gap: 2px; }
