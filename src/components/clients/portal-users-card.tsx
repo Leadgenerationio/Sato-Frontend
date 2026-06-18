@@ -150,6 +150,30 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
   // Sam (2026-06-17): permanently remove a portal user. Confirm first — it's a
   // hard delete of the login (their creative sign-off records are kept but
   // anonymised server-side; see migration 0038).
+  // Sam (2026-06-18): (re)send the branded portal welcome/invite email so a
+  // new client can set their password and sign in for the first time.
+  const [sendingWelcome, setSendingWelcome] = useState<string | null>(null);
+  async function sendWelcome(user: PortalUser) {
+    setSendingWelcome(user.id);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/users/${user.id}/welcome-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      const data: ApiResponse<unknown> = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        toast.error(data.message || 'Failed to send welcome email');
+        return;
+      }
+      toast.success(`Welcome email sent to ${user.email}`);
+    } catch (err) {
+      logError('sendWelcome failed', err);
+      toast.error('Failed to send welcome email');
+    } finally {
+      setSendingWelcome(null);
+    }
+  }
+
   const [removeTarget, setRemoveTarget] = useState<PortalUser | null>(null);
   const [removing, setRemoving] = useState(false);
   async function handleRemove() {
@@ -338,6 +362,18 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                         Permissions
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => sendWelcome(u)}
+                      disabled={sendingWelcome === u.id}
+                      title="Email this user a branded welcome with a set-password link"
+                    >
+                      {sendingWelcome === u.id
+                        ? <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                        : <Mail className="size-3.5 mr-1.5" />}
+                      Send welcome
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
