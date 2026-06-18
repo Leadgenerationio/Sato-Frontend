@@ -242,7 +242,7 @@ export function PortalCompliancePage() {
           <p className="lc-sub" style={{ marginBottom: 16 }}>
             {visibleRows.length} item{visibleRows.length === 1 ? '' : 's'} in {batches.length} batch{batches.length === 1 ? '' : 'es'}
           </p>
-          <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)]">
             <div className="space-y-3 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
               {/* FIX 3: each batch is a collapsible section keyed by upload day. */}
               {batches.map((batch) => {

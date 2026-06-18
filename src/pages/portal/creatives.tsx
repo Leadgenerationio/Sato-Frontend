@@ -109,7 +109,7 @@ function SideBySideSection({ title, description, items, selectedId, onSelect, em
       {items.length === 0 ? (
         <EmptyState icon={FileText} title="Nothing here yet" description={emptyHint} size="compact" />
       ) : (
-        <div className="grid gap-4 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)]">
           <div className="space-y-3 md:max-h-[70vh] md:overflow-y-auto md:pr-1">
             {batches.map((batch) => {
               const isCollapsed = collapsed[batch.dayKey] ?? false;
