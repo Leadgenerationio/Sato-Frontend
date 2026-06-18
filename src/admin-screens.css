@@ -238,8 +238,12 @@
 .cmp-tg.on .lic { color: var(--statto-ink); }
 .cmp-search { margin-left: auto; width: 280px; }
 
-.cmp-group { padding: 6px 8px; overflow-x: auto; }
-.cmp-group-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 16px 14px; text-align: left; }
+/* No overflow-x here: the expanded table scrolls inside its own .table-scroll
+   wrapper. A scroll container on the group too produced a second scrollbar. */
+.cmp-group { padding: 6px 8px; }
+/* Wrap so the totals drop below the name/buyers on narrow screens instead of
+   overflowing the card (which previously forced the group to scroll). */
+.cmp-group-head { width: 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 16px 14px; text-align: left; }
 .cmp-group-head > .lic:first-child { color: var(--fg2); }
 .cmp-vstack { color: var(--fg2); display: inline-flex; }
 .cmp-vname { font-size: 17px; font-weight: 600; color: var(--fg1); }
