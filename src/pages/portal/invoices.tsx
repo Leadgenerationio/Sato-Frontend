@@ -6,11 +6,13 @@ import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { toMoney } from '@/lib/hooks/use-invoices';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
+import { formatCurrency, totalsByCurrency } from '@/lib/currency';
 
 // Sam T8 (2026-05-20): client-facing label map — Xero's "authorised" reads as
-// legalese to a buyer, surface as "Pending Payment".
+// legalese to a buyer, surface as "Pending Payment". "submitted" is the Xero
+// pre-authorised state; same buyer-facing meaning — payment is coming.
 const STATUS_LABEL: Record<string, string> = {
-  draft: 'Draft', sent: 'Pending Payment', authorised: 'Pending Payment', paid: 'Paid', overdue: 'Overdue',
+  draft: 'Draft', submitted: 'Pending Payment', sent: 'Pending Payment', authorised: 'Pending Payment', paid: 'Paid', overdue: 'Overdue',
 };
 const statusLabel = (s: string) => STATUS_LABEL[s.toLowerCase()] ?? s;
 const statusPill = (s: string) => {
@@ -20,9 +22,6 @@ const statusPill = (s: string) => {
   return 'p-warn';
 };
 
-function formatCurrency(value: number, currency = 'GBP') {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
-}
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
@@ -50,9 +49,31 @@ export function PortalInvoicesPage() {
   const [yearOpen, setYearOpen] = useState(false);
   const rows = (invoices ?? []).filter((i) => year === 'all' || new Date(i.dueDate).getFullYear().toString() === year);
 
-  const totalOutstanding = invoices?.filter((i) => i.status !== 'paid').reduce((s, i) => s + toMoney(i.total), 0) ?? 0;
-  const totalPaid = invoices?.filter((i) => i.status === 'paid').reduce((s, i) => s + toMoney(i.total), 0) ?? 0;
+  // Finding #12: never sum across differing currencies into one (£GBP) figure.
+  // Group sums BY currency, preserving first-seen order, via the shared
+  // totalsByCurrency helper. A single-currency client gets one clean total; a
+  // mixed-currency client gets a per-currency breakdown rather than a
+  // misleading conflated £ figure.
+  //
+  // Finding #10: round each per-currency total to 2 decimals (mirroring the
+  // backend's Math.round(x*100)/100) so the portal Invoices tile can't disagree
+  // with the dashboard by a float-drift penny.
+  const sumByCurrency = (rows: PortalInvoice[]) =>
+    totalsByCurrency(
+      rows,
+      (i) => toMoney(i.total),
+      (i) => i.currency || 'GBP',
+    ).map((g) => ({ ...g, total: Math.round(g.total * 100) / 100 }));
+  const outstandingByCurrency = sumByCurrency((invoices ?? []).filter((i) => i.status !== 'paid'));
+  const paidByCurrency = sumByCurrency((invoices ?? []).filter((i) => i.status === 'paid'));
   const paidCount = invoices?.filter((i) => i.status === 'paid').length ?? 0;
+
+  // Render one money line per currency; empty → a single zero line in GBP so
+  // the stat tile is never blank.
+  const renderTotals = (groups: { currency: string; total: number }[]) =>
+    (groups.length ? groups : [{ currency: 'GBP', total: 0 }]).map((g) => (
+      <div key={g.currency} className="pstat-val mono">{formatCurrency(g.total, g.currency)}</div>
+    ));
 
   if (isLoading) {
     return <div className="screen"><div className="stat-row two"><Skeleton className="h-[168px] rounded-3xl" /><Skeleton className="h-[168px] rounded-3xl" /></div><Skeleton className="h-72 rounded-3xl" /></div>;
@@ -63,11 +84,11 @@ export function PortalInvoicesPage() {
       <div className="stat-row two">
         <div className="pstat">
           <div className="pstat-top"><span className="pstat-ic"><ReceiptText className="size-5" /></span></div>
-          <div className="pstat-val mono">{formatCurrency(totalOutstanding)}</div><div className="pstat-lab">Outstanding</div>
+          {renderTotals(outstandingByCurrency)}<div className="pstat-lab">Outstanding</div>
         </div>
         <div className="pstat">
           <div className="pstat-top"><span className="pstat-ic"><CircleCheckBig className="size-5" /></span>{paidCount > 0 && <span className="pill p-soft">{paidCount} paid</span>}</div>
-          <div className="pstat-val mono">{formatCurrency(totalPaid)}</div><div className="pstat-lab">Total Paid</div>
+          {renderTotals(paidByCurrency)}<div className="pstat-lab">Total Paid</div>
         </div>
       </div>
 

@@ -19,6 +19,11 @@ export interface PortalDashboard {
   pendingInvoices: number;
   overdueInvoices: number;
   totalOutstanding: number;
+  // Currency for `totalOutstanding` (and the portal "Outstanding" tiles). The
+  // BE now sends this so the dashboard doesn't silently default every client to
+  // GBP. Optional on the wire so a Vercel-first deploy (FE new, BE not yet
+  // redeployed) doesn't TypeError on the old response shape; treat missing as GBP.
+  totalOutstandingCurrency?: string;
   agreementSigned: boolean;
   recentLeads: { date: string; leads: number }[];
   // Per-platform ad spend (MTD), populated only for managed clients; empty
@@ -173,8 +178,17 @@ export interface PortalLeadsResponse {
    *  this to override the By Campaign table when the preset window matches —
    *  otherwise the table sums lead_deliveries.valid_lead_count which
    *  includes Direct + unmapped suppliers, producing 144 vs the tile's 110.
-   *  Undefined for custom date ranges that don't map to a LeadByte preset. */
+   *  Undefined for custom date ranges that don't map to a LeadByte preset.
+   *  MAY also be an empty object `{}` (preset matched but no Catchr-mapped
+   *  suppliers) — treat an empty map identically to absent. */
   validLeadsByCampaign?: Record<string, number>;
+  /** True only when LeadByte was unreachable while computing the by-source
+   *  breakdown. The FE renders a distinct "couldn't load" state for the
+   *  By-Source section instead of the genuinely-empty copy. */
+  bySourceFetchError?: boolean;
+  /** Sum of the by-source rows' `leads` (the attributed/ad-platform-mapped
+   *  valid leads). Omitted on early returns; fall back to summing the rows. */
+  attributedLeadsTotal?: number;
 }
 
 export function usePortalLeads(filter?: { from?: string; to?: string }) {
@@ -285,7 +299,9 @@ export interface PortalReviewCreative {
   signedUrl?: string | null;
   uploadedAt: string;
   section: 'media' | 'copy_lp';
-  approval: CreativeApprovalState;
+  // Optional (mirrors PortalCreative) so a FE-ahead-of-BE deploy can't crash on
+  // the old response shape. Treat missing as "pending"; consumers must `?.`-guard.
+  approval?: CreativeApprovalState;
   /** Parent-campaign MTD performance — same shape as PortalCreative. */
   campaignMetrics?: PortalCreativeCampaignMetrics | null;
 }

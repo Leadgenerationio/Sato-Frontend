@@ -10,14 +10,18 @@
  * formatting, then to a plain number, so a bad code can never take a page
  * down. The backend also sanitises, but the UI must be crash-proof regardless.
  */
-export function formatCurrency(value: number, currency = 'GBP'): string {
+export function formatCurrency(
+  value: number,
+  currency = 'GBP',
+  opts: { maximumFractionDigits?: number } = {},
+): string {
   try {
-    return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency, ...opts }).format(value);
   } catch {
     try {
-      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', ...opts }).format(value);
     } catch {
-      return value.toFixed(2);
+      return opts.maximumFractionDigits === 0 ? Math.round(value).toString() : value.toFixed(2);
     }
   }
 }
@@ -52,14 +56,17 @@ export function formatPercentCapped(
  * Never sums across currencies — a client running ads in more than one
  * currency gets one total line per currency.
  */
-export function totalsByCurrency(
-  rows: { spend: number; currency: string }[],
+export function totalsByCurrency<T extends { spend?: number; currency?: string }>(
+  rows: T[],
+  amountOf: (row: T) => number = (r) => r.spend ?? 0,
+  currencyOf: (row: T) => string = (r) => r.currency ?? 'GBP',
 ): { currency: string; total: number }[] {
   const order: string[] = [];
   const totals = new Map<string, number>();
   for (const r of rows) {
-    if (!totals.has(r.currency)) order.push(r.currency);
-    totals.set(r.currency, (totals.get(r.currency) ?? 0) + r.spend);
+    const cur = currencyOf(r);
+    if (!totals.has(cur)) order.push(cur);
+    totals.set(cur, (totals.get(cur) ?? 0) + amountOf(r));
   }
   return order.map((currency) => ({ currency, total: totals.get(currency)! }));
 }

@@ -21,6 +21,7 @@ import {
 } from '@/lib/hooks/use-reports';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
+import { formatCurrency } from '@/lib/currency';
 
 // Sam Loom #72-85 — the unified leadreports.io-style report. One row per
 // (campaign × supplier). Sum of row revenue = campaign revenue. Filters:
@@ -31,22 +32,28 @@ import { ErrorState } from '@/components/shared/error-state';
 // campaign filters client-side so the totals strip stays consistent with
 // the visible table.
 
-function formatCurrency(value: number, currency = 'GBP') {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
-}
+// Finding #12: UnifiedReportTotals/rows have no currency field — this report
+// is GBP-denominated, so GBP is the documented default. All money goes through
+// the guarded formatCurrency (src/lib/currency.ts), which falls back gracefully
+// rather than throwing a RangeError on a bad code (Finding #15).
 
 // Tile-friendly currency: integer pounds below 1M, compact ("£4.2M") at/above.
 // The full precise value goes into the tooltip on the tile so nothing is lost.
 // Exported for unit tests — the 1M threshold is a magic number worth locking in.
+// Guarded against malformed currency codes (Finding #15) so a tile can't crash.
 export function formatTileCurrency(value: number, currency = 'GBP') {
-  if (Math.abs(value) >= 1_000_000) {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1,
-    }).format(value);
+  const opts: Intl.NumberFormatOptions = Math.abs(value) >= 1_000_000
+    ? { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }
+    : { style: 'currency', currency, maximumFractionDigits: 0 };
+  try {
+    return new Intl.NumberFormat('en-GB', opts).format(value);
+  } catch {
+    try {
+      return new Intl.NumberFormat('en-GB', { ...opts, currency: 'GBP' }).format(value);
+    } catch {
+      return Math.round(value).toString();
+    }
   }
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency', currency, maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export function formatTileNumber(value: number) {

@@ -45,6 +45,7 @@ const DASHBOARD: PortalDashboard = {
   pendingInvoices: 1,
   overdueInvoices: 0,
   totalOutstanding: 1708.2,
+  totalOutstandingCurrency: 'GBP',
   agreementSigned: true,
   recentLeads: recentLeadDays(),
   adSpendByPlatform: [
@@ -85,6 +86,8 @@ const LEADS_RESPONSE: PortalLeadsResponse = {
   ],
   bySourceWindow: { kind: 'preset', preset: 'this_month' },
   validLeadsByCampaign: { [CAMPAIGN_ID]: 62 },
+  bySourceFetchError: false,
+  attributedLeadsTotal: 62,
 };
 
 const approval = (status: CreativeApprovalState['status'], by?: string, at?: string, feedback?: string): CreativeApprovalState => ({

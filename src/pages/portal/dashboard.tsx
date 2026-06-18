@@ -169,13 +169,17 @@ interface DashData {
   deliveries: { d: string; v: number }[];
   adSpend: { platform: string; amount: number; leads: number; currency: string; color: string }[];
   adSpendReal: boolean;
+  // Finding #18: true when LeadByte was unreachable for the spend window, so the
+  // ad-spend block shows a distinct "couldn't load" state instead of the
+  // genuinely-empty "No ad-spend data" copy.
+  adSpendFetchError: boolean;
   // Sam 2026-06-15: the admin "Client type / Ad-spend visibility" toggle.
   // managed → client sees the Ad Spend card; ppl (pay-per-lead) → it's removed
   // from the dashboard entirely. Backend already empties the spend data for
   // ppl; this also hides the card outright (the by-source lead rows would
   // otherwise keep an all-zero card alive).
   adSpendVisible: boolean;
-  invoices: { outstanding: number; outstandingCount: number; paidCount: number; nextDue?: { number: string; due: string; total: number; currency: string } };
+  invoices: { outstanding: number; outstandingCurrency: string; outstandingCount: number; paidCount: number; nextDue?: { number: string; due: string; total: number; currency: string } };
   leadsThisMonth: number;
   activeCampaigns: number;
   quality: { valid: number; invalid: number; rate: number } | null;
@@ -282,7 +286,7 @@ function SnapshotGrid({ d }: { d: DashData }) {
         </Snap>
 
         <Snap icon={ReceiptText} title="Invoices" onClick={() => d.go('invoices')}>
-          <div className="snap-amt mono">{formatCurrency(d.invoices.outstanding)}</div>
+          <div className="snap-amt mono">{formatCurrency(d.invoices.outstanding, d.invoices.outstandingCurrency)}</div>
           <div className="snap-sub">{d.invoices.nextDue ? `Outstanding · due ${d.invoices.nextDue.due}` : 'Outstanding'}</div>
           <div className="snap-tags">
             {d.invoices.outstandingCount > 0 && <span className="pill p-warn">{d.invoices.outstandingCount} outstanding</span>}
@@ -481,8 +485,10 @@ function DashboardGrid({ d }: { d: DashData }) {
       case 'adspend':
         // Pay-per-lead clients never reach here: the block is filtered out of
         // `blocks` when adSpendVisible is false (Sam 2026-06-15).
-        return d.adSpend.length > 0
-          ? <AdSpendCard d={d} />
+        if (d.adSpend.length > 0) return <AdSpendCard d={d} />;
+        // Finding #18: distinguish a LeadByte outage from a genuinely-empty month.
+        return d.adSpendFetchError
+          ? <div className="dash-empty">Couldn't load report data — please retry.</div>
           : <div className="dash-empty">No ad-spend data for this month yet.</div>;
       case 'snapshots': return <SnapshotGrid d={d} />;
       case 'invoice': return <InvoiceDueCard d={d} />;
@@ -580,10 +586,20 @@ export function PortalDashboardPage() {
   const dashData = useMemo<DashData | null>(() => {
     if (!dashboard) return null;
 
+    // Finding #6: align "Leads This Month" to the SAME lead_deliveries valid-
+    // leads basis the leads-page headline uses (sum of leads[].validLeads over
+    // the month range), so the same client/period shows the same number on both
+    // pages. Fall back to the dashboard's precomputed count if the monthly leads
+    // query hasn't resolved yet.
+    const monthDays = leadsData?.leads ?? [];
+    const leadsThisMonth = monthDays.length > 0
+      ? monthDays.reduce((s, x) => s + x.validLeads, 0)
+      : dashboard.totalLeadsThisMonth;
+
     const stats: DashData['stats'] = [
       { id: 'campaigns', icon: Megaphone, value: String(dashboard.activeCampaigns), label: 'Active Campaigns' },
-      { id: 'leads', icon: Users, value: dashboard.totalLeadsThisMonth.toLocaleString(), label: 'Leads This Month' },
-      { id: 'owed', icon: ReceiptText, value: formatCurrency(dashboard.totalOutstanding), label: 'Outstanding' },
+      { id: 'leads', icon: Users, value: leadsThisMonth.toLocaleString(), label: 'Leads This Month' },
+      { id: 'owed', icon: ReceiptText, value: formatCurrency(dashboard.totalOutstanding, dashboard.totalOutstandingCurrency), label: 'Outstanding' },
       { id: 'agreement', icon: BadgeCheck, value: dashboard.agreementSigned ? 'Signed' : 'Pending', label: 'Agreement', badge: dashboard.agreementSigned ? 'Active' : 'Action', lime: dashboard.agreementSigned },
     ];
 
@@ -616,10 +632,10 @@ export function PortalDashboardPage() {
       adSpendReal = false;
     }
 
-    // Lead quality — valid vs invalid from the leads daily rows.
-    const days = leadsData?.leads ?? [];
-    const valid = days.reduce((s, x) => s + x.validLeads, 0);
-    const invalid = days.reduce((s, x) => s + x.invalidLeads, 0);
+    // Lead quality — valid vs invalid from the leads daily rows (same monthly
+    // basis as leadsThisMonth above).
+    const valid = monthDays.reduce((s, x) => s + x.validLeads, 0);
+    const invalid = monthDays.reduce((s, x) => s + x.invalidLeads, 0);
     const quality = valid + invalid > 0 ? { valid, invalid, rate: Math.round((valid / (valid + invalid)) * 100) } : null;
 
     // Invoices summary
@@ -655,14 +671,17 @@ export function PortalDashboardPage() {
       deliveries,
       adSpend,
       adSpendReal,
+      adSpendFetchError: spendLeads?.bySourceFetchError ?? false,
       adSpendVisible: dashboard.clientType === 'managed',
       invoices: {
         outstanding,
+        // Finding #12: use the BE-supplied currency instead of defaulting to GBP.
+        outstandingCurrency: dashboard.totalOutstandingCurrency ?? 'GBP',
         outstandingCount: outstandingInv.length,
         paidCount,
         nextDue: nextDueInv ? { number: nextDueInv.invoiceNumber, due: fmtDate(nextDueInv.dueDate), total: toMoney(nextDueInv.total), currency: nextDueInv.currency } : undefined,
       },
-      leadsThisMonth: dashboard.totalLeadsThisMonth,
+      leadsThisMonth,
       activeCampaigns: dashboard.activeCampaigns,
       quality,
       compliance: complianceSummary,

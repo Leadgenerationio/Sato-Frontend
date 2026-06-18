@@ -93,22 +93,41 @@ export function PortalLeadsPage() {
   const leads = data?.leads;
   const bySource = data?.bySource ?? [];
   const validLeadsByCampaign = data?.validLeadsByCampaign;
+  const bySourceFetchError = data?.bySourceFetchError ?? false;
+  // Attributed = the valid leads the by-source rows account for. Prefer the BE's
+  // explicit field; fall back to summing the rows when it's omitted (early
+  // returns). This is a SUBSET of the headline total — by-source drops campaigns
+  // with no ad-platform mapping, so it can't be the headline (Finding #1/#5).
+  const attributedLeadsTotal = data?.attributedLeadsTotal ?? bySource.reduce((s, r) => s + r.leads, 0);
 
   const summary = useMemo(() => {
     const distinctDays = new Set((leads ?? []).map((d) => d.date)).size;
-    // Total valid leads from the daily lead_deliveries rows — the reliable
-    // per-day source (also drives Peak Day).
+    // Total valid leads from the daily lead_deliveries rows — the TRUE delivered
+    // count and the single source of truth for the headline, Avg/Day and Peak.
+    // (Finding #1/#4/#5: the by-source total undercounts because it drops
+    // campaigns with no ad-platform mapping, so the headline must never use it.)
     const dailyTotal = (leads ?? []).reduce((s, d) => s + d.validLeads, 0);
-    // The LeadByte by-source total matches the admin /reports view, so prefer it
-    // WHEN it actually carries lead counts. But for YTD / custom ranges LeadByte's
-    // supplier report returns spend without per-source valid leads, so the
-    // by-source total is 0 — fall back to the daily total then, otherwise Total
-    // Leads showed 0 while Peak Day showed real data.
-    const bySourceTotal = bySource.reduce((s, r) => s + r.leads, 0);
-    const total = bySourceTotal > 0 ? bySourceTotal : dailyTotal;
+    const total = dailyTotal;
     const peak = (leads ?? []).reduce((m, d) => (d.validLeads > m ? d.validLeads : m), 0);
     return { total, avg: distinctDays > 0 ? Math.round(total / distinctDays) : 0, peak };
-  }, [leads, bySource]);
+  }, [leads]);
+
+  // Unattributed = delivered valid leads not accounted for by any by-source row
+  // (campaigns with no ad-platform mapping). Adding this row makes the By-Source
+  // rows + Unattributed reconcile to the headline (Finding #1/#5).
+  const unattributedLeads = Math.max(summary.total - attributedLeadsTotal, 0);
+
+  // The By-Source table must reconcile to ITSELF: its Total row = the sum of the
+  // visible rows (attributed source rows + Unattributed). Do NOT print
+  // summary.total here (Finding #2 regression). For preset windows
+  // attributedLeadsTotal comes from LeadByte's per-supplier valid counts — a
+  // DIFFERENT basis than the daily lead_deliveries total — so it can exceed
+  // dailyTotal. When it does, unattributedLeads clamps to 0 (no Unattributed
+  // row) and printing summary.total would be LESS than the visible source rows,
+  // making the table contradict itself. Summing the visible rows keeps it
+  // internally consistent. Normal case (attributed ≤ dailyTotal): this equals
+  // dailyTotal = the headline tile, so it also matches the headline.
+  const bySourceTotal = attributedLeadsTotal + unattributedLeads;
 
   const chartData = useMemo(
     () => (leads ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)).map((d) => ({ date: formatDayShort(d.date), leads: d.validLeads })),
@@ -117,7 +136,10 @@ export function PortalLeadsPage() {
 
   const deliveries = useMemo(() => {
     const groups = groupByDelivery(leads ?? []);
-    if (!validLeadsByCampaign) return groups;
+    // An empty object is truthy, so the old `!validLeadsByCampaign` guard let an
+    // empty map fall through and zero out every campaign. Treat empty/absent the
+    // same (Finding #19).
+    if (!validLeadsByCampaign || Object.keys(validLeadsByCampaign).length === 0) return groups;
     return groups
       .map((g) => { const o = validLeadsByCampaign[g.campaignId]; return o != null ? { ...g, validLeads: o } : g; })
       .sort((a, b) => b.validLeads - a.validLeads);
@@ -165,11 +187,18 @@ export function PortalLeadsPage() {
           </div>
 
           {/* By Source is the ad-spend breakdown — hide the whole card for PPL
-              clients (showSpend off), not just the spend column. */}
-          {showSpend && bySource.length > 0 && (
+              clients (showSpend off), not just the spend column. When LeadByte
+              was unreachable show a distinct error state rather than the
+              genuinely-empty copy (Finding #18). */}
+          {showSpend && (bySourceFetchError || bySource.length > 0) && (
             <div className="card pad">
               <h3 className="statto-title" style={{ marginBottom: 4 }}>By Source</h3>
               <p className="lc-sub" style={{ marginBottom: 16 }}>Valid leads from LeadByte and ad spend from Catchr — same numbers as the admin /reports campaign view.</p>
+              {bySourceFetchError ? (
+                <div style={{ textAlign: 'center', color: 'var(--fg2)', padding: 32 }}>
+                  Couldn't load report data — please retry.
+                </div>
+              ) : (
               <div className="table-scroll">
                 <table>
                   <thead><tr><th>Source</th><th style={{ textAlign: 'right' }}>Leads</th><th style={{ textAlign: 'right' }}>Ad spend</th></tr></thead>
@@ -181,16 +210,27 @@ export function PortalLeadsPage() {
                         <td className="mono" style={{ textAlign: 'right', fontWeight: 600 }}>{formatMoney(row.spend, row.currency)}</td>
                       </tr>
                     ))}
+                    {/* Reconcile the by-source rows to the headline: leads not
+                        attributed to any ad-platform mapping show as Unattributed
+                        so rows + Unattributed = Total = the headline (Finding #1/#5). */}
+                    {unattributedLeads > 0 && (
+                      <tr>
+                        <td style={{ fontWeight: 600 }}>Unattributed</td>
+                        <td className="mono" style={{ textAlign: 'right' }}>{unattributedLeads.toLocaleString()}</td>
+                        <td className="mono" style={{ textAlign: 'right' }}>—</td>
+                      </tr>
+                    )}
                     {totalSpendByCurrency(bySource).map(({ currency, total }, idx) => (
                       <tr key={`total-${currency}`} style={{ background: 'var(--gray-50)' }}>
                         <td style={{ fontWeight: 700 }}>Total</td>
-                        <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{idx === 0 ? summary.total.toLocaleString() : ''}</td>
+                        <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{idx === 0 ? bySourceTotal.toLocaleString() : ''}</td>
                         <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(total, currency)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           )}
 

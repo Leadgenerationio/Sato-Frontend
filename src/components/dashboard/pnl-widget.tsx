@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { api, unwrap } from '@/lib/api';
-import { formatPercentCapped } from '@/lib/currency';
+import { formatCurrency, formatPercentCapped } from '@/lib/currency';
 
 interface PnlSummary {
   fromDate: string;
@@ -35,9 +35,13 @@ function toMoney(s: string | number | null | undefined): number {
 // mix £305,840 (tile) with £305,840.32 (this widget). Real money values are
 // preserved exactly server-side; this is a display-only rounding so values
 // across the Dashboard read as one consistent unit.
-function formatCurrency(value: number, currency = 'GBP') {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
-}
+//
+// Finding #7: use the shared guarded formatCurrency (src/lib/currency.ts) with
+// { maximumFractionDigits: 0 } rather than a local copy. The shared helper is
+// crash-proof against malformed currency codes (bad code → GBP → plain number),
+// so a single bad code can never white-screen the dashboard.
+const formatMoney = (value: number, currency = 'GBP') =>
+  formatCurrency(value, currency, { maximumFractionDigits: 0 });
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -123,7 +127,7 @@ export function PnlWidget() {
           <p
             className={`font-bold tabular-nums text-[clamp(1rem,10cqi,1.875rem)] ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}
           >
-            {formatCurrency(netProfit, data.currency)}
+            {formatMoney(netProfit, data.currency)}
           </p>
           <p className="mt-1 flex items-center justify-center gap-1 text-xs text-muted-foreground">
             {isPositive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
@@ -141,7 +145,7 @@ export function PnlWidget() {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
           <span className="text-muted-foreground">Revenue (paid invoices)</span>
           <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-emerald-600">
-            +{formatCurrency(revenue, data.currency)}
+            +{formatMoney(revenue, data.currency)}
           </span>
         </div>
 
@@ -150,27 +154,27 @@ export function PnlWidget() {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="text-muted-foreground">Fixed costs</span>
             <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
-              -{formatCurrency(fixed, data.currency)}
+              -{formatMoney(fixed, data.currency)}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="text-muted-foreground">One-off costs</span>
             <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
-              -{formatCurrency(oneOff, data.currency)}
+              -{formatMoney(oneOff, data.currency)}
             </span>
           </div>
           {advertising > 0 && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
               <span className="text-muted-foreground" title="Bank-fed advertising rows (Facebook/Google bills you categorised as 'advertising')">Advertising (bank)</span>
               <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
-                -{formatCurrency(advertising, data.currency)}
+                -{formatMoney(advertising, data.currency)}
               </span>
             </div>
           )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="text-muted-foreground" title="Ad spend pulled from Catchr (Facebook/Google ad-account APIs)">Ad spend (Catchr)</span>
             <span className="ml-auto whitespace-nowrap font-medium tabular-nums text-red-600">
-              -{formatCurrency(adSpend, data.currency)}
+              -{formatMoney(adSpend, data.currency)}
             </span>
           </div>
           {data.unattributedSpendRows && data.unattributedSpendRows > 0 ? (
@@ -184,7 +188,7 @@ export function PnlWidget() {
           <Separator />
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 font-medium">
             <span>Total costs</span>
-            <span className="ml-auto whitespace-nowrap tabular-nums">-{formatCurrency(totalCosts, data.currency)}</span>
+            <span className="ml-auto whitespace-nowrap tabular-nums">-{formatMoney(totalCosts, data.currency)}</span>
           </div>
         </div>
 

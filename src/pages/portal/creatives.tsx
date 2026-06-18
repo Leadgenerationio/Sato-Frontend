@@ -18,6 +18,15 @@ import {
 import type { PortalCreativeCampaignMetrics } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { groupIntoBatches } from '@/lib/portal-batches';
+import type { CreativeApprovalState } from '@/lib/hooks/use-portal';
+
+// Finding #20: a creative may arrive without an `approval` object (FE-ahead-of-
+// BE deploy / legacy rows). Mirror the compliance page's guard — treat a missing
+// approval as a fully-pending state — so reads can't crash the page.
+const PENDING_APPROVAL: CreativeApprovalState = {
+  status: 'pending', decidedAt: null, decidedByName: null, feedback: null,
+};
+const approvalOf = (c: PortalReviewCreative): CreativeApprovalState => c.approval ?? PENDING_APPROVAL;
 
 function adaptMetrics(m: PortalCreativeCampaignMetrics | null | undefined): CampaignMetrics | null | undefined {
   if (m === undefined) return undefined;
@@ -60,7 +69,7 @@ function toListItem(c: PortalReviewCreative): CreativeListItemData {
     uploadedAt: c.uploadedAt,
     campaignName: c.campaignName,
     signedUrl: c.signedUrl,
-    approval: c.approval,
+    approval: approvalOf(c),
   };
 }
 
@@ -73,7 +82,7 @@ function toDetail(c: PortalReviewCreative): CreativeDetailData {
     campaignName: c.campaignName,
     signedUrl: c.signedUrl,
     fileUrl: c.fileUrl,
-    approval: c.approval,
+    approval: approvalOf(c),
   };
 }
 
@@ -174,11 +183,11 @@ export function PortalCreativesPage() {
   const { data, isLoading } = usePortalCreatives();
 
   const media = useMemo(
-    () => (data?.media ?? []).filter((c) => c.approval.status === 'approved'),
+    () => (data?.media ?? []).filter((c) => (c.approval?.status ?? 'pending') === 'approved'),
     [data?.media],
   );
   const copyLp = useMemo(
-    () => (data?.copyLp ?? []).filter((c) => c.approval.status === 'approved'),
+    () => (data?.copyLp ?? []).filter((c) => (c.approval?.status ?? 'pending') === 'approved'),
     [data?.copyLp],
   );
 

@@ -2,6 +2,7 @@ import { FileSignature, Eye } from 'lucide-react';
 import { usePortalAgreement } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -14,8 +15,24 @@ export function PortalAgreementPage() {
   usePageTitle('Stato — Agreement');
   const { data: agreement, isLoading } = usePortalAgreement();
 
-  if (isLoading || !agreement) {
+  // Finding #17: only show the skeleton WHILE loading. The backend returns
+  // `agreement: null` (a successful response) when no agreement exists — gating
+  // on `!agreement` here left the skeleton spinning forever. Distinguish the
+  // two states: loading → skeleton; loaded-but-empty → proper empty state.
+  if (isLoading) {
     return <div className="screen"><Skeleton className="h-[360px] rounded-3xl" style={{ maxWidth: 720 }} /></div>;
+  }
+
+  if (!agreement) {
+    return (
+      <div className="screen">
+        <EmptyState
+          icon={FileSignature}
+          title="No agreement available"
+          description="Your lead generation agreement hasn't been set up yet. Please contact your account manager."
+        />
+      </div>
+    );
   }
 
   // The backend already resolves the effective signed state (row status,

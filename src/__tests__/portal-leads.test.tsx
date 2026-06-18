@@ -178,9 +178,29 @@ describe('PortalLeadsPage — By Source for any range', () => {
     expect(within(gRow).getByText('18')).toBeInTheDocument();
   });
 
-  it('shows the summed leads total (42 + 18 = 60), not 0', () => {
+  it('shows the daily-delivered Total Leads headline (true count), not the by-source subset', () => {
     renderPage();
-    // The "Total Leads" summary tile derives from bySource when present.
-    expect(screen.getAllByText('60').length).toBeGreaterThan(0);
+    // Finding #1/#5: the headline "Total Leads" is now ALWAYS the daily
+    // lead_deliveries valid-lead sum (Dublin 11+8 + Cork 5 + Clare 3 = 27) —
+    // the by-source total (42+18=60) is a different, ad-platform-mapped subset
+    // and must NOT drive the headline.
+    const totalTile = screen.getByText('Total Leads').closest('.pstat') as HTMLElement;
+    expect(within(totalTile).getByText('27')).toBeInTheDocument();
+  });
+
+  it('reconciles the By-Source Total row to the sum of its own rows, independent of the headline', () => {
+    renderPage();
+    // Finding #2 regression: the by-source rows (42+18=60) come from LeadByte's
+    // per-supplier valid counts — a DIFFERENT basis than the daily total (27).
+    // Here attributed (60) > dailyTotal (27), so unattributed clamps to 0 and no
+    // Unattributed row renders. The By-Source "Total" row must show the sum of
+    // its visible rows (60), NOT summary.total (27) — otherwise the table would
+    // print a Total smaller than the rows above it and contradict itself.
+    const card = screen.getByText('By Source').closest('.card')! as HTMLElement;
+    const totalRow = within(card).getByText('Total').closest('tr')! as HTMLElement;
+    expect(within(totalRow).getByText('60')).toBeInTheDocument();
+    // The headline tile stays the daily total (27), matching the Daily Volume chart.
+    const totalTile = screen.getByText('Total Leads').closest('.pstat') as HTMLElement;
+    expect(within(totalTile).getByText('27')).toBeInTheDocument();
   });
 });
