@@ -199,7 +199,7 @@ export function PortalLeadsPage() {
             <p className="lc-sub" style={{ marginBottom: 16 }}>Leads delivered per day</p>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
+                <AreaChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="leadArea" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#84D451" stopOpacity={0.5} />
@@ -208,7 +208,7 @@ export function PortalLeadsPage() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E3E3E6" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#7B7B7B' }} interval="preserveStartEnd" minTickGap={16} />
-                  <YAxis tick={{ fontSize: 11, fill: '#7B7B7B' }} />
+                  <YAxis width={34} tick={{ fontSize: 11, fill: '#7B7B7B' }} />
                   <Tooltip />
                   <Area type="monotone" dataKey="leads" stroke="#66B534" strokeWidth={2.5} fill="url(#leadArea)" name="Leads" />
                 </AreaChart>

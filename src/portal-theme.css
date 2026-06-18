@@ -144,7 +144,9 @@
 /* ---------- CARD PRIMITIVES ---------- */
 .statto-portal .card { background: #fff; border-radius: 24px; box-shadow: var(--shadow-md); }
 .statto-portal .pad { padding: 22px 24px; }
-.statto-portal .lc-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 26px; }
+.statto-portal .lc-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 26px; }
+/* Let the title block shrink/wrap so it can't collide with the period dropdown. */
+.statto-portal .lc-head > div:first-child { min-width: 0; }
 .statto-portal .lc-sub { font-size: 13.5px; color: var(--fg2); margin-top: 3px; }
 
 .statto-portal .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
@@ -200,8 +202,8 @@
 .statto-portal .lc-grid { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed var(--border); transform: translateY(-50%); }
 .statto-portal .lc-grid.base { border-top: 1px solid var(--border-strong); }
 .statto-portal .lc-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.statto-portal .lc-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 14px; }
-.statto-portal .lc-col { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.statto-portal .lc-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: clamp(3px, 1vw, 14px); }
+.statto-portal .lc-col { position: relative; flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .statto-portal .lc-bar { width: 100%; max-width: 46px; background: var(--statto-lime); border-radius: 8px 8px 0 0;
   transition: background var(--transition), filter var(--transition); min-height: 2px; }
 .statto-portal .lc-bar.empty { min-height: 0; }
@@ -212,8 +214,10 @@
   background: var(--statto-ink); color: #fff; border-radius: 10px; padding: 7px 11px; font-size: 12.5px; white-space: nowrap; box-shadow: var(--shadow-lg); pointer-events: none; }
 .statto-portal .lc-tip strong { color: var(--statto-lime); }
 .statto-portal .lc-tip span { display: block; font-size: 11px; color: #9FB3AC; margin-top: 1px; }
-.statto-portal .lc-xaxis { display: flex; gap: 14px; margin-top: 12px; }
-.statto-portal .lc-xaxis span { flex: 1; text-align: center; font-size: 12px; color: var(--fg3); }
+.statto-portal .lc-xaxis { display: flex; gap: clamp(3px, 1vw, 14px); margin-top: 12px; }
+/* min-width:0 keeps the flex row exactly container-width so the last (right-
+   aligned) label can't be pushed past the card edge. */
+.statto-portal .lc-xaxis span { flex: 1; min-width: 0; text-align: center; font-size: 12px; color: var(--fg3); }
 
 /* ---------- AD SPEND ---------- */
 .statto-portal .spend-card { display: flex; flex-direction: column; }
