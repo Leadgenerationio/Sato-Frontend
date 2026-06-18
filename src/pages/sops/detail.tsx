@@ -105,7 +105,7 @@ export function SopDetailPage() {
           {sop.screenshots.length > 0 && (
             <div className="card pad acard">
               <h3 className="statto-title csop-loom" style={{ marginBottom: 16 }}><ImageIcon className="size-[18px]" /> Screenshots ({sop.screenshots.length})</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              <div className="grid grid-cols-2 sm:grid-cols-3" style={{ gap: 12 }}>
                 {sop.screenshots.map((s) => (
                   <ScreenshotThumb key={s.key} screenshot={s} />
                 ))}

@@ -106,6 +106,13 @@
     @apply bg-background text-foreground;
     font-family: 'Manrope', sans-serif;
   }
+  /* Responsive backstop: stop accidental horizontal page scroll on small
+     screens. `clip` (not `hidden`) is deliberate — `overflow-x: hidden`
+     computes `overflow-y` to `auto`, which would make the page a scroll
+     container and break the sticky admin/portal sidebars. `clip` is exempt. */
+  html {
+    overflow-x: clip;
+  }
 }
 
 /* ─── Login page animations ─── */

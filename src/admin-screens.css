@@ -656,4 +656,42 @@
 .ag-upload:hover { background: var(--gray-100); }
 .ag-modal-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .ag-modal-foot .btn[disabled] { opacity: .5; cursor: default; }
+
+/* ============================================================
+   RESPONSIVE — tablet + small mobile.
+   Many stat/data grids collapse to 2-col at 1080px but never to a
+   single column; some never collapse at all; several pages set inline
+   `gridTemplateColumns` that beats stylesheet media queries (hence the
+   scoped `!important` below — it is the only way to override inline).
+   ============================================================ */
+@media (max-width: 1080px) {
+  /* `.lbd-stats` had no collapse rule — was 4-col even on tablets. */
+  .lbd-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .airun-stats,
+  .lbd-stats,
+  .wf-stat-row,
+  .tk-stat-row,
+  .tk-board,
+  .rpt-kpi-row,
+  .nc-grid2,
+  .nc-grid3,
+  .rpt-filters,
+  .grid-2-1 { grid-template-columns: 1fr !important; }
+
+  /* Invoice-create line items: hide the desktop header row and reflow each
+     line into a 2-col mini-form with the description spanning full width. */
+  .ci-line-head { display: none; }
+  .ci-line { grid-template-columns: 1fr 1fr; gap: 10px 12px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  .ci-line > *:first-child { grid-column: 1 / -1; }
+
+  /* Permissions matrix is too wide to stack meaningfully — let it scroll. */
+  .set-matrix { overflow-x: auto; }
+  .set-matrix-row { min-width: 520px; }
+
+  /* Page header + actions stack so action buttons don't overflow. */
+  .page-head { flex-direction: column; }
+  .page-actions { width: 100%; flex-wrap: wrap; }
+}
 }

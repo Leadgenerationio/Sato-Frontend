@@ -96,7 +96,7 @@
 .statto-portal .statto-h2 { font-weight: 600; font-size: 28px; line-height: 1.25; letter-spacing: -.01em; color: var(--fg1); }
 
 /* ---------- SHELL ---------- */
-.statto-portal.app { display: flex; min-height: 100vh; }
+.statto-portal.app { display: flex; min-height: 100vh; overflow-x: clip; }
 .statto-portal .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .statto-portal .viewport { flex: 1; padding: 0 0 56px; }
 .statto-portal .screen { max-width: 1280px; margin: 0 auto; padding: 0 40px; display: flex; flex-direction: column; gap: 22px; }
@@ -396,6 +396,27 @@
   .statto-portal .snap-grid { grid-template-columns: 1fr; }
   .statto-portal .creative-grid { grid-template-columns: 1fr; }
   .statto-portal .sidebar { width: 64px; }
+}
+
+/* ---------- SMALL MOBILE (≤640px) ----------
+   `!important` overrides pages that set inline `gridTemplateColumns`
+   (leads.tsx, compliance.tsx) which would otherwise win over the media query. */
+@media (max-width: 640px) {
+  .statto-portal .screen, .statto-portal .portal-header { padding-left: 16px; padding-right: 16px; }
+  .statto-portal .stat-row,
+  .statto-portal .stat-row.two,
+  .statto-portal .snap-grid,
+  .statto-portal .creative-grid { grid-template-columns: 1fr !important; }
+
+  /* Ad-spend rows: the fixed 4-track grid overflows narrow screens — stack it. */
+  .statto-portal .spend-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+  .statto-portal .spend-amt, .statto-portal .spend-pct { text-align: left; }
+
+  /* Header wraps instead of forcing a nowrap 30px title past the edge. */
+  .statto-portal .portal-header { flex-wrap: wrap; }
+  .statto-portal .ph-title { font-size: 24px; white-space: normal; }
+  .statto-portal .statto-h2 { font-size: 23px; }
+  .statto-portal .sidebar { width: 56px; }
 }
 
 /* Shared FilterSelect menu (also used in admin) — keep in sync with admin-theme. */

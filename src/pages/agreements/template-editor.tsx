@@ -73,8 +73,8 @@ export function TemplateEditorPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-4 flex-1 min-h-0">
-        <div className="col-span-3 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
+        <div className="lg:col-span-3 overflow-y-auto">
           <div className="card pad acard space-y-2">
               <h3 className="statto-title flex items-center gap-2" style={{ fontSize: 15 }}><Variable className="size-4" /> Variables</h3>
               <p className="ac-sub">Click to add to page 0 at a default position.</p>
@@ -140,7 +140,7 @@ export function TemplateEditorPage() {
           </div>
         </div>
 
-        <div className="col-span-9 overflow-y-auto">
+        <div className="lg:col-span-9 overflow-y-auto">
           <div className="card pad acard">
               <h3 className="statto-title mb-2" style={{ fontSize: 15 }}>PDF preview</h3>
               <p className="ac-sub mb-3">

@@ -52,7 +52,7 @@
 .statto-admin .dd svg { width: 15px; height: 15px; color: var(--fg2); }
 
 /* ---------- SHELL ---------- */
-.statto-admin.aapp { display: flex; min-height: 100vh; background: var(--bg); color: var(--fg1); }
+.statto-admin.aapp { display: flex; min-height: 100vh; background: var(--bg); color: var(--fg1); overflow-x: clip; }
 .statto-admin .asb { width: 248px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; transition: width var(--transition); }
 .statto-admin.is-collapsed .asb { width: 74px; }
 .statto-admin .asb-top { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 18px; border-bottom: 1px solid var(--border); }
@@ -346,6 +346,14 @@
   .statto-admin .aview-inner { padding: 20px 16px 56px; }
   .statto-admin .kpi-row { grid-template-columns: 1fr; }
   .statto-admin .ahead { flex-direction: column; }
+}
+
+/* ---------- SMALL MOBILE (≤640px) ---------- */
+@media (max-width: 640px) {
+  .statto-admin .ahead-title { font-size: 23px; }
+  .statto-admin .ahead-actions { width: 100%; }
+  .statto-admin .aview-inner { padding: 16px 14px 56px; }
+  .statto-admin .pad { padding: 18px 16px; }
 }
 
 /* ============================================================
