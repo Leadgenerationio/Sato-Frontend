@@ -208,7 +208,7 @@ export function PortalLeadsPage() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E3E3E6" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#7B7B7B' }} interval="preserveStartEnd" minTickGap={16} />
-                  <YAxis width={34} tick={{ fontSize: 11, fill: '#7B7B7B' }} />
+                  <YAxis width={38} tickFormatter={(v: number) => (v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : String(v))} tick={{ fontSize: 11, fill: '#7B7B7B' }} />
                   <Tooltip />
                   <Area type="monotone" dataKey="leads" stroke="#66B534" strokeWidth={2.5} fill="url(#leadArea)" name="Leads" />
                 </AreaChart>
