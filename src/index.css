@@ -195,3 +195,17 @@
 .delay-600 { animation-delay: 600ms; }
 .delay-700 { animation-delay: 700ms; }
 .delay-800 { animation-delay: 800ms; }
+
+/* Toaster (sonner) — on phones a bottom-anchored toast would overlap the client
+   portal's fixed bottom tab bar (and the admin SOS button). Lift bottom-position
+   toasts above them, clearing the iOS home indicator. Sonner reads
+   `--offset-bottom` (desktop, >600px) and `--mobile-offset-bottom` (≤600px), and
+   sets them via inline style, so the override needs `!important`. The toaster
+   renders at the document root (outside the .statto-* skins), hence this global
+   rule. Scoped to ≤768px so desktop spacing is unchanged. */
+@media (max-width: 768px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    --offset-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+    --mobile-offset-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+  }
+}
