@@ -82,6 +82,12 @@ export function PortalLayout() {
           </Link>
         ))}
         <div className="nav-spacer" />
+        {/* User avatar pinned above logout — initials in the rail, full name on
+            hover (Sam 2026-06-18). On mobile this is the primary identity since
+            the header user block is hidden to declutter. */}
+        <div className="nav-avatar" data-name={user?.name ?? 'Account'} title={user?.name} aria-label={user?.name}>
+          {getInitials(user?.name)}
+        </div>
         <button className="nav-btn" title="Sign out" aria-label="Sign out" onClick={handleLogout}>
           <LogOut className="size-[22px]" />
         </button>

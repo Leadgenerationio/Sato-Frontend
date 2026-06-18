@@ -103,7 +103,7 @@
 
 /* ---------- SIDEBAR ---------- */
 .statto-portal .sidebar { width: 80px; background: var(--statto-ink); display: flex; flex-direction: column;
-  align-items: center; padding: 22px 0; gap: 8px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; }
+  align-items: center; padding: 22px 0; gap: 8px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; z-index: 50; }
 .statto-portal .brand-dot { width: 42px; height: 42px; border-radius: 13px; background: var(--statto-lime);
   display: flex; align-items: center; justify-content: center; margin-bottom: 18px; color: var(--statto-ink); }
 .statto-portal .nav-btn { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
@@ -111,6 +111,14 @@
 .statto-portal .nav-btn:hover { color: #CFE0DA; background: rgba(255,255,255,.05); }
 .statto-portal .nav-btn.active { color: var(--statto-ink); background: var(--statto-lime); }
 .statto-portal .nav-spacer { flex: 1; }
+
+/* Rail user avatar (above logout) — initials, full name on hover */
+.statto-portal .nav-avatar { width: 44px; height: 44px; border-radius: 999px; background: var(--statto-lime); color: var(--statto-ink);
+  display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0; position: relative; cursor: default; margin-bottom: 6px; }
+.statto-portal .nav-avatar::after { content: attr(data-name); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+  background: var(--statto-ink); color: #fff; font-size: 12.5px; font-weight: 500; white-space: nowrap; padding: 6px 11px; border-radius: 9px;
+  box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none; transition: opacity var(--transition); z-index: 80; }
+.statto-portal .nav-avatar:hover::after, .statto-portal .nav-avatar:focus-visible::after { opacity: 1; }
 
 /* ---------- PORTAL HEADER ---------- */
 .statto-portal .portal-header { max-width: 1280px; margin: 0 auto; padding: 30px 40px 22px;
@@ -417,6 +425,9 @@
   .statto-portal .ph-title { font-size: 24px; white-space: normal; }
   .statto-portal .statto-h2 { font-size: 23px; }
   .statto-portal .sidebar { width: 56px; }
+  /* Identity (avatar + name + logout) lives in the rail on mobile — drop the
+     duplicate header user block so the title row stays clean. */
+  .statto-portal .ph-user { display: none; }
 }
 
 /* Shared FilterSelect menu (also used in admin) — keep in sync with admin-theme. */
