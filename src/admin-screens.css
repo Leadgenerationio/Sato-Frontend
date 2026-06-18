@@ -237,6 +237,9 @@
 .cmp-tg .lic { color: var(--fg3); }
 .cmp-tg.on .lic { color: var(--statto-ink); }
 .cmp-search { margin-left: auto; width: 280px; }
+/* On mobile the toolbar wraps; drop the right-push and go full-width so the
+   search aligns left with the filter rows above it instead of floating right. */
+@media (max-width: 768px) { .cmp-search { margin-left: 0; width: 100%; } }
 
 /* No overflow-x here: the expanded table scrolls inside its own .table-scroll
    wrapper. A scroll container on the group too produced a second scrollbar. */
