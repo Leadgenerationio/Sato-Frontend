@@ -71,7 +71,7 @@ function MetricsCard({ metrics }: { metrics: CampaignMetrics | null }) {
   return (
     <div style={{ background: 'var(--gray-50)', borderRadius: 16, padding: '16px 18px' }}>
       <p className="lc-sub" style={{ marginBottom: 10, fontWeight: 500 }}>Campaign performance · this month</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-3" style={{ gap: 12 }}>
         {cell(fmtMoney(metrics.spend, metrics.spendCurrency), 'Spend', metrics.notes?.spend)}
         {cell(metrics.validLeads.toLocaleString('en-GB'), 'Valid leads', metrics.notes?.leads)}
         {cell(cpl === null ? '—' : fmtMoney(cpl, metrics.spendCurrency), 'Cost per lead')}

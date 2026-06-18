@@ -229,7 +229,7 @@ function ScreenshotList({ items, onRemove }: { items: SopScreenshot[]; onRemove:
     );
   }
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+    <div className="grid grid-cols-2 sm:grid-cols-3" style={{ gap: 8 }}>
       {items.map((s) => (
         <ScreenshotThumb key={s.key} screenshot={s} onRemove={() => onRemove(s.key)} />
       ))}

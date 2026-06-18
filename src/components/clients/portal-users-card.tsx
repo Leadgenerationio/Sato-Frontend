@@ -425,7 +425,7 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                   Dashboard and Account are always visible. Toggle the rest per user.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 {PORTAL_TAB_OPTIONS.map((tab) => (
                   <label
                     key={tab.slug}
@@ -470,7 +470,7 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {PORTAL_TAB_OPTIONS.map((tab) => (
                 <label
                   key={tab.slug}
