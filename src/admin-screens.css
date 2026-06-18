@@ -220,12 +220,14 @@
 .attio-empty code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; background: var(--gray-100); color: var(--statto-ink); padding: 2px 7px; border-radius: 6px; }
 
 /* ---------- CAMPAIGNS ---------- */
-.cmp-banner { display: flex; align-items: center; gap: 16px; background: var(--warning-bg); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent); border-radius: 16px; padding: 16px 20px; }
+/* Icon top-aligned with the heading; wrap so the link drops below (and the
+   text keeps full width) instead of squeezing the copy into a narrow column. */
+.cmp-banner { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 14px 16px; background: var(--warning-bg); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent); border-radius: 16px; padding: 16px 20px; }
 .cmp-banner-ic { width: 40px; height: 40px; border-radius: 11px; background: color-mix(in srgb, var(--warning) 18%, white); color: var(--warning); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.cmp-banner-text { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.cmp-banner-text strong { font-size: 15px; font-weight: 600; color: var(--fg1); }
+.cmp-banner-text { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cmp-banner-text strong { font-size: 15px; font-weight: 600; color: var(--fg1); line-height: 1.35; }
 .cmp-banner-text span { font-size: 13.5px; color: var(--fg2); line-height: 1.5; }
-.cmp-banner-link { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--warning); white-space: nowrap; }
+.cmp-banner-link { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--warning); white-space: nowrap; flex-shrink: 0; margin-left: auto; align-self: center; }
 .cmp-banner-link:hover { color: #c98318; }
 
 .cmp-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
