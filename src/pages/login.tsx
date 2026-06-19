@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
@@ -124,6 +124,7 @@ export function LoginPage() {
         toast.success('Password reset', { description: 'You can now sign in with your new password.' });
         setPassword('');
         setMode('signin');
+        setWelcome(false);
       } else {
         setFpError(data.message || 'Could not reset password — start again');
       }
@@ -131,6 +132,34 @@ export function LoginPage() {
       setFpError('Network error — please try again');
     } finally { setFpLoading(false); }
   }
+
+  // ─── Welcome / set-password deep link (Sam 2026-06-19) ───
+  // The invite email's "Set your password & sign in" link lands here with
+  // ?welcome=1&email=…. The client doesn't know the admin's temporary password,
+  // so drop them straight into the password-set (OTP reset) flow: pre-fill their
+  // email, auto-send the code, and jump to the code step. Guarded so it fires once.
+  const [welcome, setWelcome] = useState(false);
+  const welcomeRan = useRef(false);
+  useEffect(() => {
+    if (welcomeRan.current) return;
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('welcome') !== '1') return;
+    welcomeRan.current = true;
+    const em = (p.get('email') || '').trim();
+    setWelcome(true);
+    setFpEmail(em);
+    if (em && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+      fetch(`${API_URL}/api/v1/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: em }),
+      }).catch(() => {});
+      toast.success('Check your email', { description: `We sent a 6-digit code to ${em} — enter it below to set your password.` });
+      setMode('fp-code');
+    } else {
+      setMode('fp-email');
+    }
+  }, []);
 
   if (user) {
     const isPortal = user.role === 'client' || user.role === 'client_admin';
@@ -242,11 +271,12 @@ export function LoginPage() {
               <ArrowLeft className="size-[14px]" /> Back to sign in
             </button>
 
-            <h1 className="auth-title">Reset your password</h1>
+            <h1 className="auth-title">{welcome ? `Welcome to ${brand.name}` : 'Reset your password'}</h1>
             <p className="auth-sub">
+              {welcome && mode !== 'fp-newpw' && 'Set your password to access your portal. '}
               {mode === 'fp-email' && 'Enter your work email and we’ll send a 6-digit code.'}
               {mode === 'fp-code' && `Enter the 6-digit code sent to ${fpEmail}.`}
-              {mode === 'fp-newpw' && 'Choose a new password for your account.'}
+              {mode === 'fp-newpw' && 'Choose a password for your account.'}
             </p>
 
             {fpError && (
