@@ -81,9 +81,9 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
 
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState<{
-    name: string; email: string; password: string;
+    name: string; email: string;
     tabs: TabToggles;
-  }>({ name: '', email: '', password: '', tabs: { ...ALL_TABS_ON } });
+  }>({ name: '', email: '', tabs: { ...ALL_TABS_ON } });
   const [addError, setAddError] = useState('');
   const [addLoading, setAddLoading] = useState(false);
 
@@ -206,19 +206,20 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
 
   async function handleAdd() {
     setAddError('');
-    if (!addForm.name.trim() || !addForm.email.trim() || addForm.password.length < 6) {
-      setAddError('Name + email + 6-character password are required.');
+    if (!addForm.name.trim() || !addForm.email.trim()) {
+      setAddError('Name + email are required.');
       return;
     }
     setAddLoading(true);
     try {
+      // No password field — the backend generates a temporary one and the user
+      // sets their own via the welcome email's "Set your password" link.
       const res = await fetch(`${API_URL}/api/v1/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           email: addForm.email.trim(),
           name: addForm.name.trim(),
-          password: addForm.password,
           role: 'client',
           clientId,
           allowedTabs: togglesToArray(addForm.tabs),
@@ -230,9 +231,9 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
         setAddLoading(false);
         return;
       }
-      toast.success(`Portal user added — ${addForm.email}`);
+      toast.success(`Portal user added — welcome email sent to ${addForm.email}`);
       setAddOpen(false);
-      setAddForm({ name: '', email: '', password: '', tabs: { ...ALL_TABS_ON } });
+      setAddForm({ name: '', email: '', tabs: { ...ALL_TABS_ON } });
       fetchUsers();
     } catch (err) {
       logError('createPortalUser failed', err);
@@ -440,20 +441,9 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                 disabled={addLoading}
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="pu-password">Initial password</Label>
-              <Input
-                id="pu-password"
-                type="text"
-                value={addForm.password}
-                onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))}
-                placeholder="At least 6 characters — share securely"
-                disabled={addLoading}
-              />
-              <p className="text-xs text-muted-foreground">
-                You'll need to send this to the user out-of-band — outbound email is still pending DNS.
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              No password needed — we'll email them a branded welcome with a link to set their own password and sign in.
+            </p>
             <div className="rounded-md border p-3 space-y-2">
               <div>
                 <p className="text-sm font-medium">Tabs they can see</p>
