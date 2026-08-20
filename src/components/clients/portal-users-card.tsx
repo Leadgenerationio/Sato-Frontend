@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/shared/empty-state';
-import { UserPlus, Users, Mail, Loader2, ShieldCheck, ShieldOff, Crown, User as UserIcon, Settings2, Trash2 } from 'lucide-react';
+import { UserPlus, Users, Mail, Loader2, ShieldCheck, ShieldOff, Crown, User as UserIcon, Settings2, Trash2, MailCheck, MailWarning, MailX, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/providers/auth-provider';
 import { API_URL } from '@/lib/env';
@@ -69,6 +69,66 @@ interface PortalUser {
   allowedTabs: PortalTabSlug[] | null;
 }
 
+// Sam (2026-08-20): "I tried inviting Barry at media-active.org.uk ... he
+// hasn't received his welcome email. I tested on my email and it came
+// through." Resend had ACCEPTED both sends, so the card said "sent" for an
+// invite that Barry's Microsoft 365 tenant quarantined silently. This surfaces
+// the real outcome per user from the email_deliveries ledger.
+interface EmailStatus {
+  status: string | null;
+  failureType: string | null;
+  failureReason: string | null;
+  sentAt: string | null;
+  // Accepted by Resend but never confirmed delivered — the only signal a
+  // silent M365/Google quarantine gives us (no bounce event is ever sent).
+  suspectedFiltered: boolean;
+}
+
+export function describeEmailStatus(s: EmailStatus): {
+  label: string; tone: string; icon: typeof MailCheck; hint: string;
+} | null {
+  if (s.suspectedFiltered) {
+    return {
+      label: 'Not confirmed delivered',
+      tone: 'bg-amber-500/10 text-amber-700 border-amber-200',
+      icon: MailWarning,
+      hint: 'Accepted by our email provider but never confirmed delivered — most likely filtered into the recipient’s spam or quarantine. Ask them to check junk, or send them the invite link directly.',
+    };
+  }
+  switch (s.status) {
+    case 'delivered':
+    case 'opened':
+    case 'clicked':
+      return {
+        label: 'Invite delivered',
+        tone: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
+        icon: MailCheck,
+        hint: 'Their mail server accepted and delivered the invite.',
+      };
+    case 'bounced':
+    case 'failed':
+    case 'complained':
+      return {
+        label: s.status === 'complained' ? 'Marked as spam' : 'Invite bounced',
+        tone: 'bg-red-500/10 text-red-700 border-red-200',
+        icon: MailX,
+        hint: s.failureReason
+          ? `${s.failureType ?? 'Failed'}: ${s.failureReason}`
+          : 'Their mail server rejected the invite.',
+      };
+    case 'sent':
+    case 'delayed':
+      return {
+        label: 'Invite in flight',
+        tone: 'bg-sky-500/10 text-sky-700 border-sky-200',
+        icon: Mail,
+        hint: 'Handed to our email provider — waiting on delivery confirmation.',
+      };
+    default:
+      return null;
+  }
+}
+
 interface Props {
   clientId: string;
   clientName: string;
@@ -94,6 +154,27 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
   const [permsTabs, setPermsTabs] = useState<TabToggles>({ ...ALL_TABS_ON });
   const [permsLoading, setPermsLoading] = useState(false);
 
+  // Delivery outcome per portal user id (Sam 2026-08-20 / Barry).
+  const [emailStatuses, setEmailStatuses] = useState<Record<string, EmailStatus>>({});
+
+  const fetchEmailStatuses = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const entries = await Promise.all(ids.map(async (id) => {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/users/${id}/email-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data: ApiResponse<EmailStatus> = await res.json();
+        if (data.status === 'success' && data.data) return [id, data.data] as const;
+      } catch (err) {
+        // Non-fatal: the card still works without delivery badges.
+        logError('fetchEmailStatus failed', err);
+      }
+      return null;
+    }));
+    setEmailStatuses(Object.fromEntries(entries.filter((e): e is readonly [string, EmailStatus] => e !== null)));
+  }, [token]);
+
   const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/api/v1/users`, {
@@ -103,16 +184,18 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
       if (data.status === 'success' && data.data) {
         // BE doesn't filter — narrow to portal-role users (client OR
         // client_admin) tied to THIS client.
-        setUsers(data.data.users.filter(
+        const portalUsers = data.data.users.filter(
           (u) => (u.role === 'client' || u.role === 'client_admin') && u.clientId === clientId,
-        ));
+        );
+        setUsers(portalUsers);
+        void fetchEmailStatuses(portalUsers.map((u) => u.id));
       }
     } catch (err) {
       logError('fetchPortalUsers failed', err);
     } finally {
       setLoading(false);
     }
-  }, [token, clientId]);
+  }, [token, clientId, fetchEmailStatuses]);
 
   // Sam (2026-05-27 portal meeting): promote/demote a portal user
   // between role=client and role=client_admin. client_admin gains the
@@ -166,11 +249,28 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
         return;
       }
       toast.success(`Welcome email sent to ${user.email}`);
+      // Re-read the ledger so the badge reflects THIS send, not the previous one.
+      void fetchEmailStatuses([user.id]);
     } catch (err) {
       logError('sendWelcome failed', err);
       toast.error('Failed to send welcome email');
     } finally {
       setSendingWelcome(null);
+    }
+  }
+
+  // Sam (2026-08-20): when a recipient's mail server silently quarantines the
+  // invite, the onboarding doesn't have to wait on deliverability — this is the
+  // exact link the email contains, so it can be sent over any channel.
+  async function copyInviteLink(user: PortalUser) {
+    const url = `${window.location.origin}/login?welcome=1&email=${encodeURIComponent(user.email)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Invite link copied — send it to them directly');
+    } catch {
+      // Clipboard API needs a secure context / permission; show it so the
+      // admin can still copy it by hand rather than hitting a dead end.
+      toast.info(url, { duration: 20000 });
     }
   }
 
@@ -333,6 +433,21 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                           <ShieldOff className="size-3 mr-1" /> Inactive
                         </Badge>
                       )}
+                      {/* Sam 2026-08-20 (Barry @ media-active.org.uk): show
+                          whether the invite actually LANDED, not just that we
+                          handed it to Resend. */}
+                      {(() => {
+                        const st = emailStatuses[u.id];
+                        if (!st) return null;
+                        const d = describeEmailStatus(st);
+                        if (!d) return null;
+                        const Icon = d.icon;
+                        return (
+                          <Badge className={`${d.tone} text-xs`} title={d.hint}>
+                            <Icon className="size-3 mr-1" /> {d.label}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
@@ -374,6 +489,17 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                         ? <Loader2 className="size-3.5 mr-1.5 animate-spin" />
                         : <Mail className="size-3.5 mr-1.5" />}
                       Send welcome
+                    </Button>
+                    {/* Fallback route when their mail server filters the
+                        invite — same link the email contains. */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyInviteLink(u)}
+                      title="Copy this user's set-password link — send it over WhatsApp/Teams if their email is being filtered"
+                    >
+                      <Link2 className="size-3.5 mr-1.5" />
+                      Copy invite link
                     </Button>
                     <Button
                       variant="outline"
