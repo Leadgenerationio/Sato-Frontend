@@ -43,6 +43,7 @@ const SosAdminPage = lazy(() => import('@/pages/sos/index').then((m) => ({ defau
 // Slice 4 Day 3 — the 5 split reports were folded into UnifiedReportPage.
 // Old routes still resolve so deep links from Sam, dashboards, or external
 // docs don't 404 — they redirect to /reports/unified.
+import { LEGACY_REPORT_PATHS } from '@/pages/reports/report-views';
 const UnifiedReportPage = lazy(() => import('@/pages/reports/unified').then((m) => ({ default: m.UnifiedReportPage })));
 const PortalDashboardPage = lazy(() => import('@/pages/portal/dashboard').then((m) => ({ default: m.PortalDashboardPage })));
 const PortalLeadsPage = lazy(() => import('@/pages/portal/leads').then((m) => ({ default: m.PortalLeadsPage })));
@@ -280,11 +281,10 @@ export default function App() {
                 links from sidebar caches, dashboards, integrations.tsx, and
                 Sam's bookmarks keep working. */}
             <Route path="/reports" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/campaign" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/client-pnl" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/supplier" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/financial" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/ad-spend" element={<Navigate to="/reports/unified" replace />} />
+            {/* N5: each legacy path opens the matching section (report-views.ts). */}
+            {LEGACY_REPORT_PATHS.map((v) => (
+              <Route key={v} path={`/reports/${v}`} element={<Navigate to={`/reports/unified?view=${v}`} replace />} />
+            ))}
             <Route
               path="/reports/unified"
               element={
