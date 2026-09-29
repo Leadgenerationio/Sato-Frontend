@@ -7,8 +7,7 @@ import {
 import { toast } from 'sonner';
 import {
   useClients, useAttioConfigured, downloadClientsCsv,
-  type ClientSummary, type ClientSortKey, type SortDir, type ClientListFilters,
-} from '@/lib/hooks/use-clients';
+  type ClientSummary, type ClientSortKey, type SortDir, type ClientListFilters, useClientAddedByOptions } from '@/lib/hooks/use-clients';
 import { saveBlob } from '@/lib/download';
 import { logError } from '@/lib/log';
 import './clients.css';
@@ -87,6 +86,8 @@ export function ClientsPage() {
   const statusFilter = searchParams.get('status') ?? 'all';
   const currencyFilter = searchParams.get('currency') ?? '';
   const countryParam = searchParams.get('country') ?? '';
+  const addedByFilter = searchParams.get('addedBy') ?? '';
+  const { data: addedByOptions } = useClientAddedByOptions();
   const sortParam = searchParams.get('sort') as ClientSortKey | null;
   const sort: ClientSortKey = sortParam && SORT_KEYS.includes(sortParam) ? sortParam : 'created';
   const dir: SortDir = searchParams.get('dir') === 'asc' ? 'asc' : 'desc';
@@ -128,7 +129,7 @@ export function ClientsPage() {
 
   const filters: ClientListFilters = {
     status: statusFilter, search: urlSearch, currency: currencyFilter || undefined,
-    country: countryParam, sort, dir,
+    country: countryParam, addedBy: addedByFilter || undefined, sort, dir,
   };
   const { data, isLoading, error } = useClients({ ...filters, page, limit });
   const clients = data?.clients;
@@ -141,7 +142,7 @@ export function ClientsPage() {
     const firstDir: SortDir = id === 'company' || id === 'status' ? 'asc' : 'desc';
     patch({ sort: id, dir: sort === id ? (dir === 'asc' ? 'desc' : 'asc') : firstDir });
   };
-  const filtered = !!(urlSearch || statusFilter !== 'all' || currencyFilter || countryParam);
+  const filtered = !!(urlSearch || statusFilter !== 'all' || currencyFilter || countryParam || addedByFilter);
 
   const handleExport = async () => {
     if (exporting) return;
@@ -235,6 +236,16 @@ export function ClientsPage() {
             aria-label="Filter by country (contains)"
           />
         </label>
+        {/* S14: hidden on an older backend that can't answer the options call. */}
+        {addedByOptions && addedByOptions.length > 0 && (
+          <label className="cl-filter">
+            <span>Added by</span>
+            <select value={addedByFilter} onChange={(e) => patch({ addedBy: e.target.value || null })}>
+              <option value="">Anyone</option>
+              {addedByOptions.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.count})</option>)}
+            </select>
+          </label>
+        )}
         <label className="cl-filter">
           <span>Per page</span>
           <select value={limit} onChange={(e) => patch({ limit: e.target.value === '10' ? null : e.target.value })}>
@@ -245,7 +256,7 @@ export function ClientsPage() {
           <button
             type="button"
             className="btn b-ghost b-sm"
-            onClick={() => { setSearch(''); setCountry(''); patch({ status: null, currency: null, country: null, q: null }); }}
+            onClick={() => { setSearch(''); setCountry(''); patch({ status: null, currency: null, country: null, addedBy: null, q: null }); }}
           >
             Clear filters
           </button>

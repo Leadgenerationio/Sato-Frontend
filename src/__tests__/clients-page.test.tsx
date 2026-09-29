@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   useClients: vi.fn(),
   downloadClientsCsv: vi.fn(async (_filters: Record<string, unknown>) => new Blob(['a,b\r\n'], { type: 'text/csv' })),
   attio: { configured: undefined as boolean | undefined },
+  addedBy: { options: undefined as undefined | { id: string; name: string; count: number }[] },
   clientsResult: null as unknown,
 }));
 
@@ -21,6 +22,7 @@ vi.mock('@/lib/download', () => ({ saveBlob: vi.fn() }));
 
 vi.mock('@/lib/hooks/use-clients', () => ({
   useAttioConfigured: () => h.attio.configured,
+  useClientAddedByOptions: () => ({ data: h.addedBy.options }),
   downloadClientsCsv: h.downloadClientsCsv,
   useClients: (filters: unknown) => { h.useClients(filters); return h.clientsResult; },
 }));
@@ -48,6 +50,7 @@ beforeEach(() => {
   h.useClients.mockClear();
   h.downloadClientsCsv.mockClear();
   h.attio.configured = undefined;
+  h.addedBy.options = undefined;
 });
 
 function lastFilters() {
@@ -161,6 +164,22 @@ describe('ClientsPage', () => {
     await waitFor(() => expect(h.downloadClientsCsv).toHaveBeenCalledTimes(1));
     expect(h.downloadClientsCsv.mock.calls[0][0]).toMatchObject({ sort: 'revenue', dir: 'desc', currency: 'EUR' });
     expect(h.downloadClientsCsv.mock.calls[0][0]).not.toHaveProperty('page');
+  });
+
+  it('filters by "Added by" (feedback S14) and sends it with the CSV', async () => {
+    h.addedBy.options = [{ id: 'u-1', name: 'Sam Owner', count: 3 }, { id: 'unknown', name: 'Unknown (added before tracking)', count: 5 }];
+    renderPage();
+    const select = screen.getByLabelText('Added by');
+    fireEvent.change(select, { target: { value: 'unknown' } });
+    await waitFor(() => expect(lastFilters()).toMatchObject({ addedBy: 'unknown' }));
+    fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
+    await waitFor(() => expect(h.downloadClientsCsv).toHaveBeenCalledTimes(1));
+    expect(h.downloadClientsCsv.mock.calls[0][0]).toMatchObject({ addedBy: 'unknown' });
+  });
+
+  it('hides "Added by" on an older backend that has no options endpoint', () => {
+    renderPage();
+    expect(screen.queryByLabelText('Added by')).toBeNull();
   });
 
   it('labels the icon buttons (pager + open client)', () => {
