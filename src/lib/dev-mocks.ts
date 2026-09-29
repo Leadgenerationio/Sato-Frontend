@@ -306,7 +306,8 @@ const ADMIN_INVOICES_FULL = [
   mkInvoice('INV-0388', 'UK Energy Saving Network', 'paid', '12480.00', 50),
 ];
 const ADMIN_INVOICE_CLIENTS = [
-  { id: 'cl-copious', name: 'Copious Limited', email: 'finance@copious.io', vatRegistered: true, currency: 'GBP' },
+  { id: 'cl-copious', name: 'Copious Limited', email: 'finance@copious.io', status: 'active', vatRegistered: false, vatTreatment: 'outside_scope', vatRate: 20, currency: 'GBP', paymentTermsDays: 4 },
+  { id: 'cl-sonova', name: 'Sonova audiological care polska sp. z o.o', email: 'sam@wynnetradingco.com', status: 'onboarding', vatRegistered: true, vatTreatment: 'reverse_charge', vatRate: 20, currency: 'EUR', paymentTermsDays: 30 },
   { id: 'cl-uesn', name: 'UK Energy Saving Network', email: 'accounts@ukenergysaving.co.uk', vatRegistered: true, currency: 'GBP' },
   { id: 'cl-bgl', name: 'Benson Goldstein Ltd', email: 'coby@bensongoldstein.co.uk', vatRegistered: false, currency: 'GBP' },
   { id: 'cl-clearhear', name: 'ClearHear Solutions', email: 'tom@clearhear.co.uk', vatRegistered: true, currency: 'GBP' },
