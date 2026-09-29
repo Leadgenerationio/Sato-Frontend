@@ -101,6 +101,35 @@ describe('useServerPreference()', () => {
     expect(uploads).not.toContainEqual({ taskFilters: 'all' });
   });
 
+  // The other hook is mounted at the same time, so it is still waiting on the (cancelled) first GET.
+  // Only the refetch after the save can give it the server's answer: dropping that invalidate leaves it stuck.
+  it('after a mid-fetch change, a hook that was already mounted still syncs from the server', async () => {
+    api.get.mockReturnValueOnce(new Promise(() => {}));
+    api.get.mockResolvedValue({ data: { preferences: { taskFilters: 'mine' } } });
+    localStorage.setItem('stato:tasks:scope', 'all');
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const w = ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    const tasksDecode = (raw: unknown) => (raw === 'mine' || raw === 'all' ? raw : undefined);
+    const both = renderHook(() => ({
+      grouping: useServerPreference('campaignGrouping', KEY, decode, 'vertical'),
+      tasks: useServerPreference('taskFilters', 'stato:tasks:scope', tasksDecode, 'all'),
+    }), { wrapper: w });
+    act(() => both.result.current.grouping[1]('flat'));
+    await waitFor(() => expect(both.result.current.tasks[0]).toBe('mine'));
+    expect(api.put.mock.calls.map((c) => c[1])).not.toContainEqual({ taskFilters: 'all' });
+  });
+
+  it('a failed save does not trigger a follow-up fetch (offline / older backend)', async () => {
+    api.get.mockReturnValueOnce(new Promise(() => {}));
+    api.put.mockReset().mockRejectedValue(new Error('offline'));
+    const { result } = renderHook(() => useServerPreference('campaignGrouping', KEY, decode, 'vertical'), { wrapper: wrapper() });
+    act(() => result.current[1]('flat'));
+    await waitFor(() => expect(api.put).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 30));
+    expect(api.get).toHaveBeenCalledTimes(1); // only the original (cancelled) GET
+    expect(result.current[0]).toBe('flat'); // the local change stands
+  });
+
   it('keeps working from localStorage when the preferences call fails (older backend)', async () => {
     localStorage.setItem(KEY, 'flat');
     api.get.mockRejectedValue(new Error('404'));
