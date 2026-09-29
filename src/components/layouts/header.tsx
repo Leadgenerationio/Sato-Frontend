@@ -27,7 +27,7 @@ export function Header() {
         </button>
         <span className="atop-role">{user.role.replace('_', ' ')}</span>
         <span className="atop-avatar" aria-hidden="true">{initials}</span>
-        <span className="atop-name">{user.name}</span>
+        <span className="atop-name" title={user.name}><span className="name-full">{user.name}</span><span className="name-first">{user.name.trim().split(/\s+/)[0]}</span></span>
         <button
           className="atop-logout"
           title="Sign out"

@@ -21,6 +21,7 @@ import {
 } from '@/lib/hooks/use-campaigns';
 import { fetchCreativeSignedUrl, useCreatives, useCreateCreative, useDeleteCreative, useSubmitCreative, type CreativeStatus } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
+import { CREATIVE_MEDIA_RULE, CREATIVE_COPY_RULE } from '@/lib/upload-rules';
 import { type PresignedUpload } from '@/lib/hooks/use-uploads';
 import { Image as ImageIcon, Video, FileText, Download, Trash2, Save, Loader2, Pencil, Users as UsersIcon, Plus } from 'lucide-react';
 import type { CampaignLinkedClient } from '@/lib/hooks/use-campaigns';
@@ -69,6 +70,11 @@ function windowRange(win: DeliveryWindow): { start: Date; end: Date } {
 }
 
 const statusPill = (s: string) => (s === 'active' ? 'pos' : s === 'paused' ? 'warn' : 'gray');
+
+/** Non-GBP currencies the campaign's buyers are billed in (M3 label). */
+export function buyerCurrencies(linked: { currency?: string | null }[] | undefined): string[] {
+  return [...new Set((linked ?? []).map((c) => (c.currency || 'GBP').toUpperCase()).filter((c) => c !== 'GBP'))].sort();
+}
 
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
@@ -188,6 +194,13 @@ export function CampaignDetailPage() {
             {buildSubtitle(campaign.clientName, campaign.vertical) && (
               <p className="ahead-sub">{buildSubtitle(campaign.clientName, campaign.vertical)}</p>
             )}
+            {/* M3 (29 Sep 2026): LeadByte revenue and Catchr spend are reported in GBP,
+                even for CH/IE/PL campaigns — say so instead of implying local money.
+                Per-buyer lead prices below stay in each buyer's own currency. */}
+            <p className="ahead-sub" data-testid="campaign-currency-note">
+              Figures in GBP
+              {buyerCurrencies(campaign.linkedClients).length > 0 && ` · buyers billed in ${buyerCurrencies(campaign.linkedClients).join(', ')}`}
+            </p>
           </div>
         </div>
         <div className="page-actions">
@@ -491,7 +504,7 @@ function CatchrMultiAccountPicker({
           isLoading
             ? 'Loading accounts…'
             : !configured
-              ? 'Catchr not configured — paste NCP URL'
+              ? 'Ad accounts not connected — paste the account link'
               : platform === 'other'
                 ? 'Paste a reference URL (optional)'
                 : `No ${platform} accounts found in Catchr — paste NCP URL`
@@ -1026,10 +1039,11 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
         contentType: result.contentType,
         section: uploadSection,
       });
-      toast.success(`Uploaded ${file.name} (${uploadSection === 'media' ? 'Media' : 'Copy / LP'})`);
     } catch (err) {
       logError('Operation failed', err);
-      toast.error('Failed to upload creative');
+      // Rethrow so FileUpload marks this file failed and says why (Sam S9/S10)
+      // — the file is stored but the creative record wasn't created.
+      throw new Error(`couldn't be added to the campaign: ${err instanceof Error ? err.message : 'please try again.'}`);
     }
   };
 
@@ -1066,8 +1080,9 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
   return (
     <div className="card pad acard">
       <div className="ac-head" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 14 }}>
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
-          <div>
+        {/* Wraps so the per-file upload list drops below the copy on phones. */}
+        <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
+          <div style={{ flex: '1 1 280px', minWidth: 0 }}>
             <h3 className="statto-title">Creatives</h3>
             <p className="ac-sub">
               Assets live on the <span style={{ fontWeight: 600 }}>campaign</span> (this vertical) and are
@@ -1076,7 +1091,17 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
               captured per decision for audit.
             </p>
           </div>
-          <FileUpload folder="creatives" maxSizeMB={50} label="Upload creative" onUploaded={handleUploaded} />
+          <FileUpload
+            folder="creatives"
+            maxSizeMB={50}
+            multiple
+            // Sam S9: media section takes images/videos only; copy & LP takes
+            // documents + screenshots. Server enforces the union.
+            rule={uploadSection === 'media' ? CREATIVE_MEDIA_RULE : CREATIVE_COPY_RULE}
+            label={uploadSection === 'media' ? 'Upload images / videos' : 'Upload copy / LP files'}
+            onUploaded={handleUploaded}
+            className="max-w-full"
+          />
         </div>
         {/* Sam #9/#11 buyer-review section picker. Drives which card the
             upload appears under on the buyer's review tab. */}

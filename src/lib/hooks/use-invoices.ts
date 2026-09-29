@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import { saveBlob } from '@/lib/download';
+import type { VatTreatment } from '@/lib/vat-treatment';
 
 export interface LineItem {
   description: string;
@@ -24,7 +25,18 @@ export interface InvoiceSummary {
   paidDate: string | null;
   daysOverdue: number;
   createdAt: string;
+  /**
+   * The invoice's own date (Xero `Date`). Feedback S12: Xero imports showed
+   * the import time as "Created". Null for invoices raised in Stato and not
+   * yet synced back, and absent on older backends — use `invoiceDateOf()`.
+   */
+  invoiceDate?: string | null;
   xeroInvoiceId: string | null;
+}
+
+/** The date to show for an invoice: Xero's invoice date, else when Stato created it. */
+export function invoiceDateOf(inv: { invoiceDate?: string | null; createdAt: string }): string {
+  return inv.invoiceDate ?? inv.createdAt;
 }
 
 export function toMoney(value: string | number | null | undefined): number {
@@ -58,6 +70,12 @@ export interface InvoiceClient {
   email: string;
   vatRegistered: boolean;
   currency: string;
+  // M7 (Sam feedback 2026-09-29) — New Invoice fills these from the client
+  // record. Optional so an API that predates them still type-checks.
+  status?: string;
+  vatTreatment?: VatTreatment;
+  vatRate?: number;
+  paymentTermsDays?: number;
 }
 
 export interface PaginatedInvoices {
@@ -122,7 +140,16 @@ export function useInvoiceClients() {
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { clientId: string; currency: string; lineItems: LineItem[]; addVat: boolean; dueDate?: string }) => {
+    mutationFn: async (data: {
+      clientId: string;
+      currency: string;
+      lineItems: LineItem[];
+      addVat: boolean;
+      /** YYYY-MM-DD */
+      dueDate?: string;
+      /** Required by the API when currency differs from the client's. */
+      confirmCurrencyMismatch?: boolean;
+    }) => {
       const res = await api.post<{ invoice: InvoiceDetail }>('/api/v1/invoices', data);
       return unwrap(res).invoice;
     },

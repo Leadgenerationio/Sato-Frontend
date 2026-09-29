@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StatCardSkeleton, UserTableSkeleton, PermissionMatrixSkeleton } from '@/components/shared/loading-skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -6,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   Shield, Users, ChevronDown, UserCheck, UserX, Loader2, Crown,
   Calculator, Briefcase, Eye, User, AlertTriangle, Plus, Pencil,
-  KeyRound, EyeOff,
+  KeyRound, EyeOff, CalendarClock, Sparkles,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { API_URL } from '@/lib/env';
@@ -25,7 +26,22 @@ interface UserItem {
   clientId: string | null;
   isActive: boolean;
   isPrimaryOwner?: boolean;
+  /** S8: end of access (ISO), or null = no end date. */
+  accessExpiresAt?: string | null;
   createdAt: string;
+}
+
+/** S8: "Access ends" helpers — a login past its end date can't sign in. */
+export function accessState(iso: string | null | undefined, now = new Date()): { label: string; expired: boolean } {
+  if (!iso) return { label: 'No end date', expired: false };
+  const d = new Date(iso);
+  const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return { label, expired: d.getTime() <= now.getTime() };
+}
+
+/** A picked calendar day ends at the END of that day, UK time — access lasts through it. */
+export function endOfDayIso(day: string): string {
+  return new Date(`${day}T23:59:59`).toISOString();
 }
 
 type ConfirmAction =
@@ -122,6 +138,35 @@ export function UsersManagement() {
   const [resetShow, setResetShow] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+
+  // S8: "Access ends" inline editor — one row at a time.
+  const [expiryEdit, setExpiryEdit] = useState<{ userId: string; day: string } | null>(null);
+  const [expirySaving, setExpirySaving] = useState(false);
+
+  async function saveExpiry(u: UserItem, day: string | null) {
+    setExpirySaving(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/users/${u.id}/access-expiry`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accessExpiresAt: day ? endOfDayIso(day) : null }),
+      });
+      const data: ApiResponse<{ user: { accessExpiresAt: string | null } }> & { message?: string } = await res.json();
+      if (!res.ok || data.status !== 'success' || !data.data) {
+        toast.error("Couldn't save the end date", { description: data.message || 'Nothing was changed. Try again.' });
+        return;
+      }
+      const next = data.data.user.accessExpiresAt;
+      setUsers((p) => p.map((x) => (x.id === u.id ? { ...x, accessExpiresAt: next } : x)));
+      setExpiryEdit(null);
+      toast.success(next ? 'Access end date saved' : 'End date removed', {
+        description: next ? `${u.name} can sign in until ${accessState(next).label}.` : `${u.name} has no end date.`,
+      });
+    } catch (err) {
+      logError('Save access expiry failed', err);
+      toast.error("Couldn't reach the server — nothing was saved.");
+    } finally { setExpirySaving(false); }
+  }
 
   // Permissions state
   const [sections, setSections] = useState<MatrixSection[]>([]);
@@ -352,7 +397,12 @@ export function UsersManagement() {
 
   return (
     <div className="screen-page">
-      <div className="set-users-bar">
+      <div className="set-users-bar page-actions">
+        {/* S8 + N6: resolve demo/test logins and test data in one place. */}
+        <Link to="/settings/cleanup" className="btn b-ghost b-sm">
+          <Sparkles className="size-[15px]" aria-hidden />
+          Clean up test data
+        </Link>
         <button className="btn b-dark b-sm" onClick={openAddDialog}>
           <Plus className="size-[15px]" />
           Add User
@@ -457,6 +507,7 @@ export function UsersManagement() {
                   <th>User</th>
                   <th>Role</th>
                   <th>Status</th>
+                  <th>Access ends</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -511,6 +562,49 @@ export function UsersManagement() {
                       </td>
                       <td>
                         <span className={'pill ' + (u.isActive ? 'p-pos' : 'p-neg')}>{u.isActive ? 'Active' : 'Inactive'}</span>
+                      </td>
+                      <td data-label="Access ends">
+                        {(() => {
+                          const st = accessState(u.accessExpiresAt);
+                          if (expiryEdit?.userId === u.id) {
+                            return (
+                              <div className="usr-expiry-edit">
+                                <input
+                                  type="date"
+                                  className="nc-input"
+                                  aria-label={`Access end date for ${u.name}`}
+                                  min={new Date().toISOString().slice(0, 10)}
+                                  value={expiryEdit.day}
+                                  onChange={(e) => setExpiryEdit({ userId: u.id, day: e.target.value })}
+                                />
+                                <button className="btn b-dark b-xs" disabled={expirySaving || !expiryEdit.day} onClick={() => saveExpiry(u, expiryEdit.day)}>
+                                  {expirySaving ? <Loader2 className="size-3 animate-spin" aria-hidden /> : 'Save'}
+                                </button>
+                                {u.accessExpiresAt && (
+                                  <button className="btn b-ghost b-xs" disabled={expirySaving} onClick={() => saveExpiry(u, null)}>No end date</button>
+                                )}
+                                <button className="btn b-ghost b-xs" disabled={expirySaving} onClick={() => setExpiryEdit(null)}>Cancel</button>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              {st.expired
+                                ? <span className="pill p-neg" title="This login can no longer sign in">Ended {st.label}</span>
+                                : <span className={u.accessExpiresAt ? 'pill p-warn' : 'usr-expiry-none'}>{u.accessExpiresAt ? `Until ${st.label}` : st.label}</span>}
+                              {!isSelf && !u.isPrimaryOwner && (
+                                <button
+                                  className="btn b-ghost b-xs"
+                                  aria-label={`Set access end date for ${u.name}`}
+                                  title="Set an end date — the login stops working after it"
+                                  onClick={() => setExpiryEdit({ userId: u.id, day: u.accessExpiresAt ? u.accessExpiresAt.slice(0, 10) : '' })}
+                                >
+                                  <CalendarClock className="size-3" aria-hidden /> {u.accessExpiresAt ? 'Change' : 'Set'}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>

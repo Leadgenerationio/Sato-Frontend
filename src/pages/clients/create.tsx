@@ -1,25 +1,32 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Plus, X, Check, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateClient, type ClientContactInput, type ContactType } from '@/lib/hooks/use-clients';
 import { useLbBuyers } from '@/lib/hooks/use-leadbyte';
+import {
+  findCountry, defaultsForCountry, checkPhone, checkPostcode, companyIdLabel,
+  phonePlaceholder, postcodePlaceholder, type FieldCheck,
+} from '@/lib/client-locale';
+import { VAT_TREATMENT_OPTIONS, type VatTreatment } from '@/lib/vat-treatment';
+import { CountrySelect, CurrencySelect, VatTreatmentSelect, FieldMessage } from '@/components/clients/client-locale-fields';
 
 import { logError } from '../../lib/log';
 
 // Statto form field wrapper — label + control (+ optional hint), matching
 // the design's <Field> helper.
 function Field({
-  label, req, children, hint,
+  label, req, children, hint, htmlFor,
 }: {
   label?: React.ReactNode;
   req?: boolean;
   children: React.ReactNode;
   hint?: React.ReactNode;
+  htmlFor?: string;
 }) {
   return (
     <div className="nc-field">
-      {(label || req) && <label className="nc-label">{label}{req && <span className="req"> *</span>}</label>}
+      {(label || req) && <label className="nc-label" htmlFor={htmlFor}>{label}{req && <span className="req"> *</span>}</label>}
       {children}
       {hint && <span className="nc-hint">{hint}</span>}
     </div>
@@ -57,8 +64,10 @@ export function ClientCreatePage() {
     addressPostcode: '',
     currency: 'GBP',
     paymentTermsDays: 30,
-    vatRegistered: false,
-    addVatToInvoices: false,
+    // M5/S4 (Sam feedback 2026-09-29) — one VAT treatment instead of a tick
+    // that silently set two different settings. The backend derives the
+    // legacy vatRegistered / addVatToInvoices flags from it.
+    vatTreatment: 'uk_standard' as VatTreatment,
     vatNumber: '',
     vatRate: 20,
     leadPrice: 0,
@@ -69,20 +78,52 @@ export function ClientCreatePage() {
     notes: '',
   });
 
-  // Default: jump straight into the Send Agreement dialog after creation.
-  // Sam's #1 ask was making this an "error free" single-flow onboarding —
-  // staff who skip this step are the source of most missed agreements.
-  const [sendAgreementAfter, setSendAgreementAfter] = useState(true);
+  // S5 (Sam feedback 2026-09-29): this opens the Send Agreement dialog on
+  // the new client's page (detail.tsx reads ?send-agreement=1). It is not
+  // part of the save itself, so it now defaults OFF — ticking it is a
+  // conscious "take me to the agreement next".
+  const [sendAgreementAfter, setSendAgreementAfter] = useState(false);
+
+  // M5 — country drives defaults, labels, placeholders and validation.
+  const country = findCountry(form.addressCountry);
+  const isUk = country?.code === 'GB';
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const touch = (key: string) => setTouched((t) => (t[key] ? t : { ...t, [key]: true }));
+  const shown = (key: string, check: FieldCheck): FieldCheck | undefined =>
+    submitted || touched[key] ? check : undefined;
+
+  const checks = useMemo(() => ({
+    postcode: checkPostcode(form.addressPostcode, country),
+    phones: contacts.map((c) => checkPhone(c.phone, country)),
+  }), [form.addressPostcode, contacts, country]);
+  const hasBlockingError = !!checks.postcode.error || checks.phones.some((c) => !!c.error);
 
   function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Picking a country pre-fills its billing currency and VAT treatment. The
+  // user can still change either afterwards.
+  function handleCountryChange(name: string) {
+    const next = findCountry(name);
+    setForm((prev) => ({
+      ...prev,
+      addressCountry: name,
+      ...(next ? defaultsForCountry(next) : {}),
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitted(true);
     const primary = contacts.find((c) => c.contactType === 'primary');
     if (!form.companyName || !primary || !primary.name || !primary.email) {
       toast.error('Please fill in company name + primary contact name + email');
+      return;
+    }
+    if (hasBlockingError) {
+      toast.error('Please fix the highlighted fields');
       return;
     }
     try {
@@ -120,28 +161,47 @@ export function ClientCreatePage() {
         <div className="card pad acard">
           <h3 className="statto-title nc-h">Company Information</h3>
           <div className="nc-grid2">
-            <Field label="Company Name" req>
-              <input className="nc-input" value={form.companyName} onChange={(e) => update('companyName', e.target.value)} placeholder="Acme Ltd" />
+            <Field label="Company Name" req htmlFor="nc-company-name">
+              <input id="nc-company-name" className="nc-input" value={form.companyName} onChange={(e) => update('companyName', e.target.value)} placeholder="Acme Ltd" />
             </Field>
-            <Field label="Company Number">
-              <input className="nc-input" value={form.companyNumber} onChange={(e) => update('companyNumber', e.target.value)} placeholder="12345678" />
+            {/* N3 — this is clients.company_number: the number the credit
+                check and Xero contact matching use. Label follows the country
+                (Companies House / CRO / UID / KRS…). */}
+            <Field label={companyIdLabel(country)} htmlFor="nc-company-number" hint={isUk ? 'Used for credit checks and Xero matching' : undefined}>
+              <input id="nc-company-number" className="nc-input" maxLength={20} value={form.companyNumber} onChange={(e) => update('companyNumber', e.target.value)} placeholder={country?.companyIdPlaceholder ?? ''} />
             </Field>
           </div>
-          <Field label="Address Line">
-            <input className="nc-input" value={form.addressLine} onChange={(e) => update('addressLine', e.target.value)} placeholder="10 Fleet Street" />
+          <Field label="Address Line" htmlFor="nc-address-line">
+            <input id="nc-address-line" className="nc-input" value={form.addressLine} onChange={(e) => update('addressLine', e.target.value)} placeholder={isUk ? '10 Fleet Street' : 'Street and number'} />
           </Field>
           <div className="nc-grid2">
-            <Field label="Town / City">
-              <input className="nc-input" value={form.addressTown} onChange={(e) => update('addressTown', e.target.value)} placeholder="London" />
+            <Field label="Town / City" htmlFor="nc-town">
+              <input id="nc-town" className="nc-input" value={form.addressTown} onChange={(e) => update('addressTown', e.target.value)} placeholder={isUk ? 'London' : ''} />
             </Field>
-            <Field label="County">
-              <input className="nc-input" value={form.addressCounty} onChange={(e) => update('addressCounty', e.target.value)} placeholder="Greater London" />
+            <Field label={country?.regionLabel ?? 'Region'} htmlFor="nc-region">
+              <input id="nc-region" className="nc-input" value={form.addressCounty} onChange={(e) => update('addressCounty', e.target.value)} placeholder={isUk ? 'Greater London' : ''} />
             </Field>
-            <Field label="Country">
-              <input className="nc-input" value={form.addressCountry} onChange={(e) => update('addressCountry', e.target.value)} placeholder="United Kingdom" />
+          </div>
+          {/* Address order (Yash review): line → town + county → postcode + country. */}
+          <div className="nc-grid2">
+            <Field label="Postcode" htmlFor="nc-postcode">
+              <input
+                id="nc-postcode"
+                className="nc-input"
+                value={form.addressPostcode}
+                onChange={(e) => update('addressPostcode', e.target.value)}
+                onBlur={() => touch('postcode')}
+                placeholder={postcodePlaceholder(country)}
+                aria-invalid={!!shown('postcode', checks.postcode)?.error}
+                aria-describedby="nc-postcode-msg"
+              />
+              <FieldMessage id="nc-postcode-msg" check={shown('postcode', checks.postcode)} />
             </Field>
-            <Field label="Postcode">
-              <input className="nc-input" value={form.addressPostcode} onChange={(e) => update('addressPostcode', e.target.value)} placeholder="EC4Y 1AA" />
+            <Field label="Country" htmlFor="nc-country" hint={country && !isUk ? `Currency and VAT set for ${country.name} — change below if needed.` : undefined}>
+              <div className="nc-select-wrap">
+                <CountrySelect id="nc-country" className="nc-select" value={form.addressCountry} onChange={handleCountryChange} />
+                <ChevronDown className="size-[15px]" />
+              </div>
             </Field>
           </div>
         </div>
@@ -154,9 +214,10 @@ export function ClientCreatePage() {
               {idx > 0 && (
                 <button type="button" className="nc-contact-x" onClick={() => removeContact(idx)} title="Remove contact"><X className="size-[15px]" /></button>
               )}
-              <Field label="Type">
+              <Field label="Type" htmlFor={`nc-contact-type-${idx}`}>
                 <div className="nc-select-wrap">
                   <select
+                    id={`nc-contact-type-${idx}`}
                     className="nc-select"
                     value={c.contactType}
                     onChange={(e) => updateContact(idx, { contactType: e.target.value as ContactType })}
@@ -171,17 +232,28 @@ export function ClientCreatePage() {
                 </div>
               </Field>
               <div className="nc-grid2">
-                <Field label={<span>Name {c.contactType === 'primary' && '*'}</span>}>
-                  <input className="nc-input" value={c.name} onChange={(e) => updateContact(idx, { name: e.target.value })} placeholder="Jamie Roberts" />
+                <Field label={<span>Name {c.contactType === 'primary' && '*'}</span>} htmlFor={`nc-contact-name-${idx}`}>
+                  <input id={`nc-contact-name-${idx}`} className="nc-input" value={c.name} onChange={(e) => updateContact(idx, { name: e.target.value })} placeholder="Jamie Roberts" />
                 </Field>
-                <Field label="Role / Title">
-                  <input className="nc-input" value={c.role} onChange={(e) => updateContact(idx, { role: e.target.value })} placeholder="National Sales Director" />
+                <Field label="Role / Title" htmlFor={`nc-contact-role-${idx}`}>
+                  <input id={`nc-contact-role-${idx}`} className="nc-input" value={c.role} onChange={(e) => updateContact(idx, { role: e.target.value })} placeholder="National Sales Director" />
                 </Field>
-                <Field label={<span>Email {c.contactType === 'primary' && '*'}</span>}>
-                  <input className="nc-input" type="email" value={c.email} onChange={(e) => updateContact(idx, { email: e.target.value })} placeholder="jamie@uken.co.uk" />
+                <Field label={<span>Email {c.contactType === 'primary' && '*'}</span>} htmlFor={`nc-contact-email-${idx}`}>
+                  <input id={`nc-contact-email-${idx}`} className="nc-input" type="email" value={c.email} onChange={(e) => updateContact(idx, { email: e.target.value })} placeholder={isUk ? 'jamie@uken.co.uk' : 'name@company.com'} />
                 </Field>
-                <Field label="Phone">
-                  <input className="nc-input" value={c.phone} onChange={(e) => updateContact(idx, { phone: e.target.value })} placeholder="+44 20 1234 5678" />
+                <Field label="Phone" htmlFor={`nc-phone-${idx}`}>
+                  <input
+                    id={`nc-phone-${idx}`}
+                    className="nc-input"
+                    type="tel"
+                    value={c.phone}
+                    onChange={(e) => updateContact(idx, { phone: e.target.value })}
+                    onBlur={() => touch(`phone-${idx}`)}
+                    placeholder={phonePlaceholder(country)}
+                    aria-invalid={!!shown(`phone-${idx}`, checks.phones[idx] ?? {})?.error}
+                    aria-describedby={`nc-phone-${idx}-msg`}
+                  />
+                  <FieldMessage id={`nc-phone-${idx}-msg`} check={shown(`phone-${idx}`, checks.phones[idx] ?? {})} />
                 </Field>
               </div>
             </div>
@@ -193,23 +265,21 @@ export function ClientCreatePage() {
           </div>
         </div>
 
-        <div className="grid-1-2 nc-row">
+        {/* Billing and External IDs share the row equally: at 1fr/1.6fr the
+            Billing card was too narrow and cut off "GBP (£)" / "30 days". */}
+        <div className="nc-row nc-billing-row">
           <div className="card pad acard">
             <h3 className="statto-title nc-h">Billing Settings</h3>
-            <div className="nc-grid3">
-              <Field label="Currency">
+            <div className="nc-grid2">
+              <Field label="Currency" htmlFor="nc-currency">
                 <div className="nc-select-wrap">
-                  <select className="nc-select" value={form.currency} onChange={(e) => update('currency', e.target.value)}>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
-                  </select>
+                  <CurrencySelect id="nc-currency" className="nc-select" value={form.currency} onChange={(v) => update('currency', v)} />
                   <ChevronDown className="size-[15px]" />
                 </div>
               </Field>
-              <Field label="Payment Terms">
+              <Field label="Payment Terms" htmlFor="nc-terms">
                 <div className="nc-select-wrap">
-                  <select className="nc-select" value={form.paymentTermsDays} onChange={(e) => update('paymentTermsDays', Number(e.target.value))}>
+                  <select id="nc-terms" className="nc-select" value={form.paymentTermsDays} onChange={(e) => update('paymentTermsDays', Number(e.target.value))}>
                     <option value={4}>4 days (Mon issue → Fri due)</option>
                     <option value={7}>7 days</option>
                     <option value={14}>14 days</option>
@@ -219,21 +289,22 @@ export function ClientCreatePage() {
                   <ChevronDown className="size-[15px]" />
                 </div>
               </Field>
-              <Field label="Lead Price">
-                <input className="nc-input" type="number" min={0} step={0.01} value={form.leadPrice} onChange={(e) => update('leadPrice', Number(e.target.value))} />
-              </Field>
             </div>
+            {/* Full row — the treatment labels are long. */}
+            <Field
+              label="VAT treatment"
+              htmlFor="nc-vat-treatment"
+              hint={VAT_TREATMENT_OPTIONS.find((o) => o.value === form.vatTreatment)?.hint}
+            >
+              <div className="nc-select-wrap">
+                <VatTreatmentSelect id="nc-vat-treatment" className="nc-select" value={form.vatTreatment} onChange={(v) => update('vatTreatment', v)} />
+                <ChevronDown className="size-[15px]" />
+              </div>
+            </Field>
             <div className="nc-grid2" style={{ marginTop: 4 }}>
-              <Field label="VAT Registered">
-                <label className="nc-check">
-                  <input type="checkbox" checked={form.vatRegistered} onChange={(e) => { update('vatRegistered', e.target.checked); update('addVatToInvoices', e.target.checked); }} />
-                  <span className="nc-check-box"><Check className="size-[13px]" strokeWidth={3} /></span>
-                  <span>Charge VAT on invoices</span>
-                </label>
-              </Field>
-              <Field label="Billing Workflow">
+              <Field label="Billing Workflow" htmlFor="nc-billing-workflow">
                 <div className="nc-select-wrap">
-                  <select className="nc-select" value={form.billingWorkflow} onChange={(e) => update('billingWorkflow', e.target.value)}>
+                  <select id="nc-billing-workflow" className="nc-select" value={form.billingWorkflow} onChange={(e) => update('billingWorkflow', e.target.value)}>
                     <option value="weekly_auto">Weekly Auto</option>
                     <option value="monthly_validated">Monthly Validated</option>
                     <option value="custom">Custom</option>
@@ -241,15 +312,20 @@ export function ClientCreatePage() {
                   <ChevronDown className="size-[15px]" />
                 </div>
               </Field>
+              <Field label="Lead Price" htmlFor="nc-lead-price">
+                <input id="nc-lead-price" className="nc-input" type="number" min={0} step={0.01} value={form.leadPrice} onChange={(e) => update('leadPrice', Number(e.target.value))} />
+              </Field>
             </div>
-            {form.vatRegistered && (
+            {form.vatTreatment !== 'outside_scope' && (
               <div className="nc-grid2">
-                <Field label="VAT Number">
-                  <input className="nc-input" value={form.vatNumber} onChange={(e) => update('vatNumber', e.target.value)} placeholder="GB123456789" />
+                <Field label="VAT Number" htmlFor="nc-vat-number">
+                  <input id="nc-vat-number" className="nc-input" value={form.vatNumber} onChange={(e) => update('vatNumber', e.target.value)} placeholder={country?.vatNumberPlaceholder ?? 'VAT / tax number'} />
                 </Field>
-                <Field label="VAT Rate (%)">
-                  <input className="nc-input" type="number" min={0} max={100} step={0.01} value={form.vatRate} onChange={(e) => update('vatRate', Number(e.target.value))} />
-                </Field>
+                {form.vatTreatment === 'uk_standard' && (
+                  <Field label="VAT Rate (%)" htmlFor="nc-vat-rate">
+                    <input id="nc-vat-rate" className="nc-input" type="number" min={0} max={100} step={0.01} value={form.vatRate} onChange={(e) => update('vatRate', Number(e.target.value))} />
+                  </Field>
+                )}
               </div>
             )}
           </div>
@@ -260,8 +336,12 @@ export function ClientCreatePage() {
             <Field label="LeadByte Buyer">
               <LeadByteBuyerSelect value={form.leadbyteClientId} onChange={(v) => update('leadbyteClientId', v)} />
             </Field>
-            <Field label="Companies House number">
-              <input className="nc-input" value={form.endoleCompanyId} onChange={(e) => update('endoleCompanyId', e.target.value)} placeholder="UK Companies House number used for credit checks" />
+            {/* N3 (Sam feedback 2026-09-29): this was labelled "Companies House
+                number" but it's clients.endole_company_id — the credit
+                provider's own record id, written back after a check. The
+                registration number the check uses is the field above. */}
+            <Field label="Credit check provider ID (Endole)" hint="Filled in automatically after the first credit check. Leave blank.">
+              <input className="nc-input" value={form.endoleCompanyId} onChange={(e) => update('endoleCompanyId', e.target.value)} placeholder="Set after credit check" />
             </Field>
             <Field label="Xero Contact ID">
               <input className="nc-input" value={form.xeroContactId} onChange={(e) => update('xeroContactId', e.target.value)} placeholder="Populated after Xero sync" />
@@ -293,15 +373,11 @@ export function ClientCreatePage() {
             <span className="nc-check-box"><Check className="size-[13px]" strokeWidth={3} /></span>
             <span className="nc-foot-text">
               <strong>Send agreement immediately after creation</strong>
-              {sendAgreementAfter && (
-                // Sam #27: he hit "no agreement to send" because nothing was
-                // uploaded yet. Make the prereq visible inline so staff know
-                // what the dialog will need.
-                <>
-                  <br />
-                  <span className="nc-foot-sub">You'll need an agreement PDF ready to upload, or this dialog will be empty.</span>
-                </>
-              )}
+              <br />
+              {/* S5 — plain wording: what ticking it actually does. */}
+              <span className="nc-foot-sub">
+                After saving, open the Send Agreement step for this client. You'll need the agreement PDF ready.
+              </span>
             </span>
           </label>
         </div>

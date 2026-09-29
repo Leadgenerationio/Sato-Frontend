@@ -10,12 +10,13 @@
  * formatting, then to a plain number, so a bad code can never take a page
  * down. The backend also sanitises, but the UI must be crash-proof regardless.
  */
-export function formatCurrency(value: number, currency = 'GBP'): string {
+export function formatCurrency(value: number, currency = 'GBP', maximumFractionDigits?: number): string {
+  const digits = maximumFractionDigits === undefined ? {} : { minimumFractionDigits: 0, maximumFractionDigits };
   try {
-    return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency, ...digits }).format(value);
   } catch {
     try {
-      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', ...digits }).format(value);
     } catch {
       return value.toFixed(2);
     }
@@ -62,4 +63,68 @@ export function totalsByCurrency(
     totals.set(r.currency, (totals.get(r.currency) ?? 0) + r.spend);
   }
   return order.map((currency) => ({ currency, total: totals.get(currency)! }));
+}
+
+/**
+ * Render one figure per currency, e.g. "£23,250 · €34,860". Amounts in
+ * different currencies are never added together (feedback M3, 29 Sep 2026) —
+ * a single converted £ total would need a dated FX rate, which we don't have.
+ * An empty list renders as a zero in `emptyCurrency`.
+ */
+export function formatCurrencyTotals(
+  totals: { currency: string; total: number }[],
+  opts: { maximumFractionDigits?: number; emptyCurrency?: string; separator?: string } = {},
+): string {
+  const { maximumFractionDigits, emptyCurrency = 'GBP', separator = ' · ' } = opts;
+  if (totals.length === 0) return formatCurrency(0, emptyCurrency, maximumFractionDigits);
+  return totals.map((t) => formatCurrency(t.total, t.currency, maximumFractionDigits)).join(separator);
+}
+
+/** Group amounts by currency (first-seen order), never summing across currencies. */
+export function groupByCurrency<T>(
+  rows: T[],
+  amount: (r: T) => number,
+  currency: (r: T) => string,
+): { currency: string; total: number; count: number }[] {
+  const order: string[] = [];
+  const acc = new Map<string, { total: number; count: number }>();
+  for (const r of rows) {
+    const c = currency(r) || 'GBP';
+    if (!acc.has(c)) { order.push(c); acc.set(c, { total: 0, count: 0 }); }
+    const a = acc.get(c)!;
+    a.total += amount(r);
+    a.count += 1;
+  }
+  return order.map((c) => ({ currency: c, ...acc.get(c)! }));
+}
+
+/**
+ * Feedback M3 (29 Sep 2026): a total converted to GBP by the backend at ECB
+ * reference rates. Always shown WITH the rate and its date — never silently.
+ */
+export interface ConvertedTotal {
+  amount: number;
+  currency: 'GBP';
+  rates: { currency: string; rate: number; rateDate: string; source: string }[];
+  parts?: { currency: string; total: number; gbp: number }[];
+}
+
+function fmtRateDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+/**
+ * "converted at ECB rates of 28 Sep 2026: €1 = £0.8578, zł1 = £0.1962".
+ * Rates are stored as 1 GBP = rate × currency, so 1 unit = £1/rate.
+ */
+export function describeConversion(c: ConvertedTotal): string {
+  if (!c.rates.length) return '';
+  const dates = [...new Set(c.rates.map((r) => r.rateDate))];
+  const source = c.rates[0]!.source.replace(/ via .*/, '');
+  const each = c.rates.map((r) => {
+    const unit = formatCurrency(1, r.currency, 0).replace(/[\d.,\s]+/g, '').trim() || r.currency;
+    return `${unit}1 = £${(1 / r.rate).toFixed(4)}`;
+  });
+  return `converted at ${source} rates of ${dates.map(fmtRateDate).join(' / ')}: ${each.join(', ')}`;
 }

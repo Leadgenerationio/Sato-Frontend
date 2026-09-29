@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 // Vite's ?raw import keeps this test free of Node types (tsc checks tests too).
 import app from '../App.tsx?raw';
-import { Sidebar, navItems, settingsItem, navForRole, isGroup } from '../components/layouts/sidebar';
+import { Sidebar, navItems, navForRole, isGroup } from '../components/layouts/sidebar';
+import { useUiStore } from '@/stores/ui-store';
 import type { UserRole } from '@/types';
 
 let mockRole: UserRole = 'owner';
@@ -54,7 +55,7 @@ describe('Sidebar nav (feedback round 1, M6)', () => {
     renderSidebar();
     expect(screen.queryByText('Settings')).not.toBeInTheDocument();
     expect(screen.queryByText('Finance')).not.toBeInTheDocument();
-    expect(screen.getByText('Operations')).toBeInTheDocument();
+    expect(screen.getByText('Notifications')).toBeInTheDocument();
   });
 
   it('no longer repeats the role badge in the sidebar (N4 — it is in the top bar)', () => {
@@ -62,34 +63,86 @@ describe('Sidebar nav (feedback round 1, M6)', () => {
     expect(within(container.querySelector('.asb') as HTMLElement).queryByText(/^owner$/i)).not.toBeInTheDocument();
   });
 
-  it('nothing is hidden any more', () => {
-    const all = navItems.flatMap((i) => (isGroup(i) ? [i, ...i.children] : [i]));
-    expect(all.filter((i) => i.hidden).map((i) => i.label)).toEqual([]);
+  it('a role only sees entries whose API it can load (no dead links)', () => {
+    mockRole = 'readonly';
+    renderSidebar();
+    // Tasks / SOPs are 403 for readonly on the backend, so Operations is not offered.
+    expect(screen.queryByText('Operations')).not.toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Notifications')).toBeInTheDocument();
+  });
+
+  it('Finance Admin sees Bank Feed and Auto-invoice (backend #54 removed the shadowing guard); Ops does not', () => {
+    mockRole = 'finance_admin';
+    const { unmount } = renderSidebar();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    expect(screen.getByText('Bank Feed')).toBeInTheDocument();
+    expect(screen.getByText('Auto-invoice')).toBeInTheDocument();
+    unmount();
+    mockRole = 'ops_manager';
+    renderSidebar();
+    expect(screen.queryByText('Bank Feed')).not.toBeInTheDocument();
+  });
+
+  it('the first click on a group that is open only because of the route closes it', () => {
+    mockRole = 'ops_manager';
+    renderSidebar('/tasks');
+    expect(screen.getByRole('link', { name: 'Tasks' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Operations' }));
+    expect(screen.queryByRole('link', { name: 'Tasks' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Operations' }));
+    expect(screen.getByRole('link', { name: 'Tasks' })).toBeInTheDocument();
+  });
+
+  it('a group keeps its children in the DOM when the desktop rail flag is collapsed (the phone drawer shows them)', () => {
+    useUiStore.setState({ sidebarOpen: false });
+    try {
+      renderSidebar();
+      expect(screen.getByRole('link', { name: 'Invoices' })).toBeInTheDocument();
+    } finally {
+      useUiStore.setState({ sidebarOpen: true });
+    }
   });
 });
 
 // Every role that sees a menu entry must be able to open it. Parse the
 // <ProtectedRoute allowedRoles> guards out of App.tsx so a future change to
-// either side fails here instead of shipping a dead link.
+// either side fails here instead of shipping a dead link. The parser throws on
+// anything it cannot read, rather than falling back to a permissive default.
 describe('Sidebar roles match the App.tsx route guards', () => {
-  const LAYOUT_ROLES: UserRole[] = ['owner', 'finance_admin', 'ops_manager', 'readonly'];
+  const parseRoles = (raw: string, where: string): UserRole[] => {
+    const m = /^\s*\[([^\]]*)\]\s*$/.exec(raw);
+    if (!m) throw new Error(`${where}: allowedRoles must be an inline array literal, got ${raw}`);
+    return m[1].split(',').map((r) => r.trim().replace(/'/g, '') as UserRole).filter(Boolean);
+  };
+
+  // Split into one chunk per <Route ...>, so attribute order doesn't matter.
+  const chunks = app.split(/<Route\b/).slice(1);
+
+  // The only pathless guards are the two layout wrappers; any other one would
+  // silently guard routes this parser attributes to the layout.
+  const pathless = chunks.filter((c) => !/^\s*(path|index)\b/.test(c) && /element=\{\s*<ProtectedRoute/.test(c.slice(0, 200)));
+  const layoutGuard = /allowedRoles=\{([^}]*\])\}/;
+  const staffLayout = parseRoles(layoutGuard.exec(pathless[0])?.[1] ?? '', 'staff layout guard');
+
+  it('has exactly the two known layout guards (staff shell, client portal)', () => {
+    expect(pathless).toHaveLength(2);
+  });
 
   function routeRoles(href: string): UserRole[] {
-    const esc = href.replace(/[/-]/g, (c) => `\\${c}`);
-    const m = new RegExp(`path="${esc}"[\\s\\S]{0,200}?allowedRoles=\\{\\[([^\\]]*)\\]`).exec(app);
-    const guardedWithin = m && !/<Route\b/.test(m[0].slice(0, m[0].indexOf('allowedRoles')));
-    if (!m || !guardedWithin) {
-      expect(app, `no route for ${href}`).toContain(`path="${href}"`);
-      return LAYOUT_ROLES;
-    }
-    return m[1].split(',').map((r) => r.trim().replace(/'/g, '') as UserRole).filter((r) => LAYOUT_ROLES.includes(r));
+    const own = chunks.filter((c) => new RegExp(`\\bpath="${href.replace(/[/:.-]/g, (ch) => `\\${ch}`)}"`).test(c.slice(0, 200)));
+    if (own.length !== 1) throw new Error(`expected exactly one <Route path="${href}">, found ${own.length}`);
+    const chunk = own[0].split(/\/>\s*\n/)[0];
+    const guard = /allowedRoles=\{([^}]*\])\}/.exec(chunk);
+    if (/allowedRoles=/.test(chunk) && !guard) throw new Error(`${href}: unreadable allowedRoles`);
+    return guard ? parseRoles(guard[1], href) : staffLayout; // unguarded → the staff shell's own guard
   }
 
-  const leaves = [...navItems.flatMap((i) => (isGroup(i) ? i.children : [i])), settingsItem];
+  const leaves = navItems.flatMap((i) => (isGroup(i) ? i.children : [i]));
   it.each(leaves.map((l) => [l.href, l] as const))('%s', (_href, leaf) => {
-    const allowed = routeRoles(leaf.href);
-    const visibleTo = LAYOUT_ROLES.filter((r) => navForRole(r).some((e) => (isGroup(e) ? e.children : [e]).some((c) => c.href === leaf.href)) || (leaf === settingsItem && settingsItem.roles.includes(r)));
-    expect(visibleTo.sort()).toEqual([...allowed].sort());
+    const allowed = routeRoles(leaf.href).filter((r) => staffLayout.includes(r));
+    const visibleTo = staffLayout.filter((r) => navForRole(r).some((e) => (isGroup(e) ? e.children : [e]).some((c) => c.href === leaf.href)));
+    expect([...visibleTo].sort()).toEqual([...allowed].sort());
   });
 });
 
