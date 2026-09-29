@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resolveReportView } from './report-views';
+import { useAuth } from '@/components/providers/auth-provider';
 import { ChevronDown, Check, ExternalLink, Info, Sparkles, TrendingUp } from 'lucide-react';
 
 // Shared explanation for the cost-concept column tooltips. "Spend" on this
@@ -77,6 +78,9 @@ export function UnifiedReportPage() {
   // and breaks under stricter no-shadow/no-redeclare configs (OCT-44).
   const [searchParams] = useSearchParams();
   const view = resolveReportView(searchParams.get('view'));
+  // /campaigns is owner / ops_manager only; finance_admin would bounce to the dashboard.
+  const { user } = useAuth();
+  const canOpenCampaigns = user?.role === 'owner' || user?.role === 'ops_manager';
   const [reportWindow, setReportWindow] = useState<DeliveryWindow>('this_month');
   const [supplier, setSupplier] = useState('');
   const [campaign, setCampaign] = useState('');
@@ -451,9 +455,13 @@ export function UnifiedReportPage() {
                   return (
                     <tr key={g.name}>
                       <td className="rpt-camp">
-                        <Link to={`/campaigns?search=${encodeURIComponent(g.name)}`} className="underline-offset-2 hover:underline" title={g.name}>
-                          {g.name}
-                        </Link>
+                        {canOpenCampaigns ? (
+                          <Link to={`/campaigns?search=${encodeURIComponent(g.name)}`} className="underline-offset-2 hover:underline" title={g.name}>
+                            {g.name}
+                          </Link>
+                        ) : (
+                          <span title={g.name}>{g.name}</span>
+                        )}
                       </td>
                       <td><span className="rpt-vert">{g.vertical}</span></td>
                       <td className="r mono">{g.rows.length}</td>

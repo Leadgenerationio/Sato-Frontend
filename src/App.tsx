@@ -144,7 +144,7 @@ export default function App() {
             <Route
               path="/finance/bank-feed"
               element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
+                <ProtectedRoute allowedRoles={['owner']}>
                   <BankFeedPage />
                 </ProtectedRoute>
               }
@@ -152,7 +152,7 @@ export default function App() {
             <Route
               path="/finance/auto-invoice"
               element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
+                <ProtectedRoute allowedRoles={['owner']}>
                   <AutoInvoicePage />
                 </ProtectedRoute>
               }
@@ -160,7 +160,7 @@ export default function App() {
             <Route
               path="/finance/auto-invoice/:id"
               element={
-                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
+                <ProtectedRoute allowedRoles={['owner']}>
                   <AutoInvoiceRunDetailPage />
                 </ProtectedRoute>
               }
@@ -237,9 +237,30 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/tasks/create" element={<TaskCreatePage />} />
-            <Route path="/tasks/:id" element={<TaskDetailPage />} />
+            <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <TasksPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks/create"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <TaskCreatePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <TaskDetailPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/sos"
               element={
@@ -248,10 +269,38 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/sops" element={<SopsPage />} />
-            <Route path="/sops/create" element={<SopCreatePage />} />
-            <Route path="/sops/:id/edit" element={<SopEditPage />} />
-            <Route path="/sops/:id" element={<SopDetailPage />} />
+            <Route
+              path="/sops"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <SopsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sops/create"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <SopCreatePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sops/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <SopEditPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sops/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <SopDetailPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/staff"
               element={

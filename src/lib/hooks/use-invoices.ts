@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import { saveBlob } from '@/lib/download';
+import type { VatTreatment } from '@/lib/vat-treatment';
 
 export interface LineItem {
   description: string;
@@ -58,6 +59,12 @@ export interface InvoiceClient {
   email: string;
   vatRegistered: boolean;
   currency: string;
+  // M7 (Sam feedback 2026-09-29) — New Invoice fills these from the client
+  // record. Optional so an API that predates them still type-checks.
+  status?: string;
+  vatTreatment?: VatTreatment;
+  vatRate?: number;
+  paymentTermsDays?: number;
 }
 
 export interface PaginatedInvoices {
@@ -122,7 +129,16 @@ export function useInvoiceClients() {
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { clientId: string; currency: string; lineItems: LineItem[]; addVat: boolean; dueDate?: string }) => {
+    mutationFn: async (data: {
+      clientId: string;
+      currency: string;
+      lineItems: LineItem[];
+      addVat: boolean;
+      /** YYYY-MM-DD */
+      dueDate?: string;
+      /** Required by the API when currency differs from the client's. */
+      confirmCurrencyMismatch?: boolean;
+    }) => {
       const res = await api.post<{ invoice: InvoiceDetail }>('/api/v1/invoices', data);
       return unwrap(res).invoice;
     },

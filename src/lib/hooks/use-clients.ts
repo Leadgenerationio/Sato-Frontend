@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import type { InvoiceSummary } from './use-invoices';
+import type { VatTreatment } from '@/lib/vat-treatment';
 
 export interface ClientSummary {
   id: string;
@@ -11,11 +12,13 @@ export interface ClientSummary {
   currency: string;
   creditScore: number | null;
   activeCampaigns: number;
+  /** Paid revenue in the client's own `currency` only (BE ≥ feedback-M3). */
   totalRevenue: number;
+  /** Paid revenue per invoice currency. Absent on older backends. */
+  revenueByCurrency?: Record<string, number>;
   createdAt: string;
-  // Reality-check fields so the clients list applies the same badge logic
-  // as the detail page (status='active' only displays as "Active Client"
-  // when docs + signed agreement are both present).
+  // Drive the "No signed agreement" / "No documents" warning badges shown
+  // next to an active client's (stored, never relabelled) status.
   agreementSigned: boolean;
   documentsCount: number;
 }
@@ -59,6 +62,9 @@ export interface ClientDetail extends ClientSummary {
   addVatToInvoices: boolean;
   vatNumber: string;
   vatRate: number;
+  // Sam feedback 2026-09-29 (M5/S4). Optional so an API that predates
+  // clients.vat_treatment still type-checks — read it via resolveVatTreatment().
+  vatTreatment?: VatTreatment;
   leadPrice: number;
   billingWorkflow: string;
   onboardingStatus: string;
