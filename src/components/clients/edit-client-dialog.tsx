@@ -132,11 +132,10 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
           sit ~2,640px down on a phone. */}
       <DialogContent
         className="sm:max-w-2xl max-h-[90dvh] flex flex-col gap-0 overflow-hidden p-0"
-        aria-describedby="edit-client-description"
       >
         <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
           <DialogTitle>Edit Client</DialogTitle>
-          <DialogDescription id="edit-client-description">
+          <DialogDescription>
             Update {client.companyName}'s details. Nothing is saved until you click Save Changes.
           </DialogDescription>
         </DialogHeader>
