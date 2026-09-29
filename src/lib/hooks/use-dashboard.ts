@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import type { ConvertedTotal } from '@/lib/currency';
 import { api, unwrap } from '@/lib/api';
-import type { InvoiceSummary } from './use-invoices';
+import { invoiceDateOf, type InvoiceSummary } from './use-invoices';
 
 export interface FinancialOverviewRow {
   month: string;
@@ -23,6 +24,11 @@ export interface FinancialOverviewRow {
    * rows so users don't read them as completed-month figures.
    */
   isPartial?: boolean;
+  /**
+   * Non-GBP recognised revenue this month, e.g. { EUR: 34860 } — NOT in
+   * `revenue`, which is GBP only (feedback M3). Absent on older backends.
+   */
+  otherCurrencyRevenue?: Record<string, number>;
 }
 
 export function useFinancialOverview(opts: { window?: DashboardWindow } = {}) {
@@ -104,6 +110,17 @@ export interface DashboardStats {
    */
   rollingRevenue365d?: number;
   rollingCost90d?: number;
+  /**
+   * Feedback M3/S12 (29 Sep 2026): revenue figures are in `revenueCurrency`
+   * (GBP) only. Other-currency revenue in the window is listed here and never
+   * added in. Optional — older backends summed every currency.
+   */
+  revenueCurrency?: string;
+  otherCurrencyRevenue?: { currency: string; total: number }[];
+  /** What Net Profit / Margin are built from (they differ from the P&L card). */
+  profitBasis?: { revenueDays: number; costDays: number; costSource: string };
+  /** M3: GBP + other currencies converted at ECB rates (null = no rate). */
+  convertedRevenueGbp?: ConvertedTotal | null;
   recentInvoices: InvoiceSummary[];
 }
 
@@ -154,6 +171,17 @@ interface BackendStats {
   revenueChange?: number | null;
   /** Period-over-period leads change as a percentage. Null when last month had zero baseline. */
   leadsChange?: number | null;
+  /**
+   * Feedback M3/S12 (29 Sep 2026): revenue figures are in `revenueCurrency`
+   * (GBP) only. Other-currency revenue in the window is listed here and never
+   * added in. Optional — older backends summed every currency.
+   */
+  revenueCurrency?: string;
+  otherCurrencyRevenue?: { currency: string; total: number }[];
+  /** What Net Profit / Margin are built from (they differ from the P&L card). */
+  profitBasis?: { revenueDays: number; costDays: number; costSource: string };
+  /** M3: GBP + other currencies converted at ECB rates (null = no rate). */
+  convertedRevenueGbp?: ConvertedTotal | null;
   asOf: string;
 }
 
@@ -185,7 +213,8 @@ export function useDashboardStats(opts: { window?: DashboardWindow } = {}) {
       const invoices = invoiceRes.data?.invoices ?? [];
 
       const recentInvoices = [...invoices]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        // Newest by the invoice's own date (S12), not the Xero import time.
+        .sort((a, b) => new Date(invoiceDateOf(b)).getTime() - new Date(invoiceDateOf(a)).getTime())
         .slice(0, 5);
 
       return {
@@ -211,6 +240,10 @@ export function useDashboardStats(opts: { window?: DashboardWindow } = {}) {
         profitMargin: stats.profitMargin,
         rollingRevenue365d: stats.rollingRevenue365d,
         rollingCost90d: stats.rollingCost90d,
+        revenueCurrency: stats.revenueCurrency,
+        otherCurrencyRevenue: stats.otherCurrencyRevenue,
+        convertedRevenueGbp: stats.convertedRevenueGbp ?? null,
+        profitBasis: stats.profitBasis,
         recentInvoices,
       } as DashboardStats;
     },

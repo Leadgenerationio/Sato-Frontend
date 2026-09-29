@@ -5,6 +5,7 @@ import './index.css';
 import './portal-theme.css';
 import './admin-theme.css';
 import './admin-screens.css';
+import './mobile-polish.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

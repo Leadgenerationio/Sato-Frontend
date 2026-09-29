@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, ExternalLink, Plus, Download, ArrowUp, ArrowDown, ChevronsUpDown, Calendar } from 'lucide-react';
-import { useInvoices, toMoney, type InvoiceSummary, type InvoiceSortBy, type SortDir } from '@/lib/hooks/use-invoices';
+import { useInvoices, toMoney, invoiceDateOf, type InvoiceSummary, type InvoiceSortBy, type SortDir } from '@/lib/hooks/use-invoices';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Pagination } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,9 +33,9 @@ function exportCsv(invoices: InvoiceSummary[]) {
   // Quote + escape every field — client names routinely contain commas
   // ("Acme, Inc.") which would otherwise shift columns and corrupt the CSV.
   const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const header = 'Invoice,Client,Status,Currency,Subtotal,VAT,Total,Due Date,Created\n';
+  const header = 'Invoice,Client,Status,Currency,Subtotal,VAT,Total,Due Date,Invoice Date\n';
   const rows = invoices.map((inv) =>
-    [inv.invoiceNumber, inv.clientName, inv.status, inv.currency, inv.subtotal, inv.vatAmount, inv.total, formatDate(inv.dueDate), formatDate(inv.createdAt)]
+    [inv.invoiceNumber, inv.clientName, inv.status, inv.currency, inv.subtotal, inv.vatAmount, inv.total, formatDate(inv.dueDate), formatDate(invoiceDateOf(inv))]
       .map(q)
       .join(','),
   ).join('\n');
@@ -210,7 +210,7 @@ export function InvoiceListPage() {
                 <th className="r">VAT</th>
                 <SortableHead id="total" label="Total" align="right" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
                 <SortableHead id="dueDate" label="Due Date" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
-                <SortableHead id="createdAt" label="Created" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
+                <SortableHead id="createdAt" label="Invoice date" sortBy={sortBy} sortDir={sortDir} onToggle={handleSort} />
                 <th></th>
               </tr>
             </thead>
@@ -232,7 +232,8 @@ export function InvoiceListPage() {
                   <td className="r mono inv-num">{formatCurrency(toMoney(inv.vatAmount), inv.currency)}</td>
                   <td className="r mono inv-total">{formatCurrency(toMoney(inv.total), inv.currency)}</td>
                   <td className="inv-date">{formatDate(inv.dueDate)}</td>
-                  <td className="inv-date">{formatDate(inv.createdAt)}</td>
+                  {/* S12: Xero's own invoice date, not the import time. */}
+                  <td className="inv-date">{formatDate(invoiceDateOf(inv))}</td>
                   <td className="r">
                     <Link to={`/finance/invoices/${inv.id}`} className="inv-open" title="Open invoice">
                       <ExternalLink className="size-4" />

@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import { EmptyState } from '@/components/shared/empty-state';
 import { cn } from '@/lib/utils';
+import { formatCurrencyTotals, groupByCurrency } from '@/lib/currency';
 
 type Bucket = 'all' | 'due' | 'overdue';
 
@@ -18,6 +19,7 @@ interface OutstandingResponse {
   invoices: InvoiceSummary[];
   count: number;
   totalOutstanding: string;
+  totalsByCurrency?: { currency: string; total: string; count: number }[];
 }
 
 function formatCurrency(value: number, currency = 'GBP') {
@@ -50,7 +52,10 @@ export function InvoicesOwedWidget() {
 
   const invoices = data?.invoices ?? [];
   const count = data?.count ?? 0;
-  const total = toMoney(data?.totalOutstanding ?? '0');
+  // Feedback M3: one total per currency, never a cross-currency sum.
+  const totals = data?.totalsByCurrency
+    ? data.totalsByCurrency.map((t) => ({ currency: t.currency, total: toMoney(t.total) }))
+    : groupByCurrency(invoices, (i) => toMoney(i.total), (i) => i.currency);
   const top = invoices.slice(0, 4);
   const currentBucket = BUCKETS.find((b) => b.id === bucket)!;
 
@@ -90,7 +95,7 @@ export function InvoicesOwedWidget() {
           {isLoading ? (
             <Skeleton className="h-8 w-32 mx-auto" />
           ) : (
-            <p className="text-3xl font-bold tabular-nums">{formatCurrency(total)}</p>
+            <p className="text-3xl font-bold tabular-nums">{formatCurrencyTotals(totals)}</p>
           )}
           <p className="text-xs text-muted-foreground mt-1">Total outstanding</p>
         </div>

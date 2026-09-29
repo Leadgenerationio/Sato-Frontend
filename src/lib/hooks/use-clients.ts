@@ -1,9 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import type { InvoiceSummary } from './use-invoices';
+import type { VatTreatment } from '@/lib/vat-treatment';
 
 export interface ClientSummary {
   id: string;
+  /** S14: who added the client (null = before this was recorded). Absent on older backends. */
+  createdBy?: { id: string; name: string } | null;
   companyName: string;
   contactName: string;
   contactEmail: string;
@@ -11,11 +14,13 @@ export interface ClientSummary {
   currency: string;
   creditScore: number | null;
   activeCampaigns: number;
+  /** Paid revenue in the client's own `currency` only (BE ≥ feedback-M3). */
   totalRevenue: number;
+  /** Paid revenue per invoice currency. Absent on older backends. */
+  revenueByCurrency?: Record<string, number>;
   createdAt: string;
-  // Reality-check fields so the clients list applies the same badge logic
-  // as the detail page (status='active' only displays as "Active Client"
-  // when docs + signed agreement are both present).
+  // Drive the "No signed agreement" / "No documents" warning badges shown
+  // next to an active client's (stored, never relabelled) status.
   agreementSigned: boolean;
   documentsCount: number;
 }
@@ -59,6 +64,9 @@ export interface ClientDetail extends ClientSummary {
   addVatToInvoices: boolean;
   vatNumber: string;
   vatRate: number;
+  // Sam feedback 2026-09-29 (M5/S4). Optional so an API that predates
+  // clients.vat_treatment still type-checks — read it via resolveVatTreatment().
+  vatTreatment?: VatTreatment;
   leadPrice: number;
   billingWorkflow: string;
   onboardingStatus: string;
@@ -89,13 +97,62 @@ export interface PaginatedClients {
   pageSize: number;
 }
 
-export function useClients(filters?: { status?: string; search?: string; page?: number; limit?: number }) {
+// Feedback S14 (29 Sep 2026): server-side sort + currency/country filters,
+// and a CSV export of exactly the filtered, sorted list.
+export type ClientSortKey = 'company' | 'status' | 'revenue' | 'campaigns' | 'credit' | 'created';
+export type SortDir = 'asc' | 'desc';
+
+export interface ClientListFilters {
+  status?: string;
+  search?: string;
+  currency?: string;
+  country?: string;
+  /** S14: user id who added the client, or 'unknown' for older rows. */
+  addedBy?: string;
+  sort?: ClientSortKey;
+  dir?: SortDir;
+  page?: number;
+  limit?: number;
+}
+
+export function clientListParams(filters?: ClientListFilters, withPaging = true): URLSearchParams {
   const params = new URLSearchParams();
   if (filters?.status && filters.status !== 'all') params.set('status', filters.status);
   if (filters?.search) params.set('search', filters.search);
-  if (filters?.page) params.set('page', String(filters.page));
-  if (filters?.limit) params.set('limit', String(filters.limit));
-  const qs = params.toString();
+  if (filters?.currency) params.set('currency', filters.currency);
+  if (filters?.country?.trim()) params.set('country', filters.country.trim());
+  if (filters?.addedBy) params.set('addedBy', filters.addedBy);
+  if (filters?.sort) params.set('sort', filters.sort);
+  if (filters?.dir) params.set('dir', filters.dir);
+  if (withPaging && filters?.page) params.set('page', String(filters.page));
+  if (withPaging && filters?.limit) params.set('limit', String(filters.limit));
+  return params;
+}
+
+/** Download the filtered + sorted list (all pages) as CSV. */
+export async function downloadClientsCsv(filters: ClientListFilters): Promise<Blob> {
+  const qs = clientListParams(filters, false).toString();
+  return api.getBlob(`/api/v1/clients/export.csv${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * Whether Attio import is set up on the backend (feedback S16: the Import
+ * button used to show even when it could only fail). `undefined` while
+ * loading or on an older backend without the endpoint — callers keep the
+ * button visible then, as before.
+ */
+export function useAttioConfigured(): boolean | undefined {
+  const { data } = useQuery({
+    queryKey: ['attio', 'status'],
+    queryFn: async () => unwrap(await api.get<{ configured: boolean }>('/api/v1/clients/import/attio/status')).configured,
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+  return data;
+}
+
+export function useClients(filters?: ClientListFilters) {
+  const qs = clientListParams(filters).toString();
 
   return useQuery({
     queryKey: ['clients', filters],
@@ -302,5 +359,15 @@ export function useCreditAlerts() {
       const res = await api.get<{ alerts: CreditAlert[] }>('/api/v1/clients/credit-alerts');
       return unwrap(res).alerts;
     },
+  });
+}
+
+// S14: "Added by" filter options — users who added ≥1 client, plus Unknown.
+export function useClientAddedByOptions() {
+  return useQuery({
+    queryKey: ['clients', 'added-by-options'],
+    queryFn: async () => unwrap(await api.get<{ options: { id: string; name: string; count: number }[] }>('/api/v1/clients/added-by-options')).options,
+    staleTime: 60_000,
+    retry: false,
   });
 }

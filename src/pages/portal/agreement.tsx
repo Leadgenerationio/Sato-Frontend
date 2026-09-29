@@ -2,6 +2,7 @@ import { FileSignature, Eye } from 'lucide-react';
 import { usePortalAgreement } from '@/lib/hooks/use-portal';
 import { usePageTitle } from '@/lib/hooks/use-page-title';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/shared/empty-state';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -12,10 +13,27 @@ function formatDate(iso: string) {
 
 export function PortalAgreementPage() {
   usePageTitle('Stato — Agreement');
-  const { data: agreement, isLoading } = usePortalAgreement();
+  const { data: agreement, isLoading, isError } = usePortalAgreement();
 
-  if (isLoading || !agreement) {
+  // Loading, failed and "no agreement yet" used to share one branch, so a
+  // client without an agreement saw a grey loading box forever.
+  if (isLoading) {
     return <div className="screen"><Skeleton className="h-[360px] rounded-3xl" style={{ maxWidth: 720 }} /></div>;
+  }
+  if (isError || !agreement) {
+    return (
+      <div className="screen">
+        <div className="card pad agreement-card">
+          <EmptyState
+            icon={FileSignature}
+            title={isError ? "Couldn't load your agreement" : 'No agreement yet'}
+            description={isError
+              ? 'Something went wrong reaching the server. Please refresh the page, or contact your account manager if it keeps happening.'
+              : 'Your account manager will send your agreement to sign. It will appear here once it has been sent.'}
+          />
+        </div>
+      </div>
+    );
   }
 
   // The backend already resolves the effective signed state (row status,

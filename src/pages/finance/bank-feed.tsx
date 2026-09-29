@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import { Pagination } from '@/components/ui/pagination';
 import { Banknote, RefreshCw, Plus, Loader2, Search, AlertTriangle, Sparkles } from 'lucide-react';
@@ -284,6 +284,7 @@ function TransactionRow({ tx, categories }: { tx: BankTransaction; categories: C
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Apply category?</DialogTitle>
+            <DialogDescription className="sr-only">Confirm the category for this transaction.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p>
@@ -359,6 +360,7 @@ function CategoryDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add cost category</DialogTitle>
+          <DialogDescription className="sr-only">Name a new category for bank transactions.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="nc-field">
