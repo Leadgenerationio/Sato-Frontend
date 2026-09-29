@@ -23,6 +23,7 @@ const DashboardPage = lazy(() => import('@/pages/dashboard').then((m) => ({ defa
 const SettingsPage = lazy(() => import('@/pages/settings').then((m) => ({ default: m.SettingsPage })));
 const CampaignsPage = lazy(() => import('@/pages/campaigns/index').then((m) => ({ default: m.CampaignsPage })));
 const CampaignDetailPage = lazy(() => import('@/pages/campaigns/detail').then((m) => ({ default: m.CampaignDetailPage })));
+const AdAccountsPage = lazy(() => import('@/pages/ad-accounts/index').then((m) => ({ default: m.AdAccountsPage })));
 const InvoiceListPage = lazy(() => import('@/pages/finance/invoices').then((m) => ({ default: m.InvoiceListPage })));
 const InvoiceDetailPage = lazy(() => import('@/pages/finance/invoice-detail').then((m) => ({ default: m.InvoiceDetailPage })));
 const InvoiceCreatePage = lazy(() => import('@/pages/finance/invoice-create').then((m) => ({ default: m.InvoiceCreatePage })));
@@ -209,6 +210,15 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
                   <CampaignDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Sam S13: bulk-link ad accounts to clients (owner/ops can save; the API also lets finance read). */}
+            <Route
+              path="/ad-accounts"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
+                  <AdAccountsPage />
                 </ProtectedRoute>
               }
             />

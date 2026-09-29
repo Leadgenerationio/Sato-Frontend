@@ -40,7 +40,13 @@ export interface CampaignSummary {
 export interface CampaignWindowTotals {
   leads: number;
   revenue: number;
+  /** Full cost for the window: leadbyteCost + adSpend (Sam S11). Older
+   *  backends sent LeadByte cost only and no split. */
   cost: number;
+  /** What LeadByte paid out to suppliers in the window. */
+  leadbyteCost?: number;
+  /** Catchr ad spend of this campaign's linked accounts in the window. */
+  adSpend?: number;
 }
 
 export type CampaignWindowKey =
@@ -75,17 +81,29 @@ export interface CampaignDetail extends CampaignSummary {
     validLeads: number;
     invalidLeads: number;
     revenue: number;
+    /** Includes that day's ad spend on newer backends (Sam S11). */
     cost: number;
+    adSpend?: number;
   }[];
   windowReports?: Record<CampaignWindowKey, CampaignWindowTotals>;
-  suppliers: {
-    id: string;
-    name: string;
-    platform: string;
-    totalSpend: number;
-    totalLeads: number;
-    cpl: number;
-  }[];
+  suppliers: CampaignSupplier[];
+}
+
+/** One traffic source on a campaign, last 30 days. LeadByte suppliers and
+ *  Catchr platforms that name the same ad platform are one row (Sam S11). */
+export interface CampaignSupplier {
+  id: string;
+  name: string;
+  platform: string;
+  /** leadbyteCost + adSpend. */
+  totalSpend: number;
+  /** Absent on older backends (they sent LeadByte payout as totalSpend). */
+  leadbyteCost?: number;
+  adSpend?: number;
+  totalLeads: number;
+  revenue?: number;
+  /** null when the source has no leads. */
+  cpl: number | null;
 }
 
 export interface PaginatedCampaigns {
@@ -201,6 +219,12 @@ export interface TrafficSource {
   // the same response so the table is one round-trip.
   revenue: number;
   netProfit: number;
+  /** Where leads / revenue / CPL / profit came from (Sam S11):
+   *  'platform' = LeadByte's last-30-days figures for this row's platform;
+   *  'shared' = another row is on the same platform, so they can't be split
+   *  (the figures are 0 — render "—"); 'unavailable' = LeadByte unreachable.
+   *  Absent on older backends. */
+  attribution?: 'platform' | 'shared' | 'unavailable';
   createdAt: string;
 }
 
