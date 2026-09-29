@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import type { InvoiceSummary } from './use-invoices';
+import type { VatTreatment } from '@/lib/vat-treatment';
 
 export interface ClientSummary {
   id: string;
@@ -61,6 +62,9 @@ export interface ClientDetail extends ClientSummary {
   addVatToInvoices: boolean;
   vatNumber: string;
   vatRate: number;
+  // Sam feedback 2026-09-29 (M5/S4). Optional so an API that predates
+  // clients.vat_treatment still type-checks — read it via resolveVatTreatment().
+  vatTreatment?: VatTreatment;
   leadPrice: number;
   billingWorkflow: string;
   onboardingStatus: string;
