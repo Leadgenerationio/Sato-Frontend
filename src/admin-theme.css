@@ -16,10 +16,20 @@
   --green-500: #2E5249; --green-700: #123F36; --green-900: #062F28;
   --white: #FFFFFF; --gray-50: #F6F6F7; --gray-100: #ECECEE; --gray-150: #E7E7E9;
   --gray-200: #DDDDE0; --gray-300: #C9C9CD; --gray-400: #A9A9AF; --gray-500: #7B7B7B; --gray-600: #5C5C60;
-  --positive: #66B534; --positive-bg: #E9F8DC; --negative: #E5575B; --negative-bg: #FCE6E6;
-  --warning: #E8A13A; --warning-bg: #FBF0DC; --info: #3E7E8C; --info-bg: #E3F0F2;
+  /* Status colours (Sam feedback round 1, S15). The plain tokens are used as
+     TEXT almost everywhere (CSS and inline styles), so they are the text-safe
+     shades: >= 4.5:1 on white, gray-50, gray-150 and their own -bg tint. The
+     original brand shades live on as -fill, for dots, bars, borders and
+     accents where no text sits on them. */
+  --positive: #3A7520; --positive-fill: #66B534; --positive-bg: #E9F8DC;
+  --negative: #B83237; --negative-fill: #E5575B; --negative-bg: #FCE6E6;
+  --warning: #8A5A00; --warning-fill: #E8A13A; --warning-bg: #FBF0DC;
+  --info: #2C6571; --info-fill: #3E7E8C; --info-bg: #E3F0F2;
+  --lime-text: #3A7520;
   --bg: var(--gray-150); --surface: var(--white); --surface-2: var(--gray-50);
-  --fg1: var(--statto-ink); --fg2: var(--gray-500); --fg3: var(--gray-400);
+  /* fg2 was gray-500 (#7B7B7B, 4.2:1 on white) and fg3 gray-400 (#A9A9AF,
+     2.3:1) — below the 4.5:1 minimum for body text (S15). */
+  --fg1: var(--statto-ink); --fg2: var(--gray-600); --fg3: #67676C;
   --fg-on-ink: #EAF3EF; --border: #E3E3E6; --border-strong: #D2D2D6;
   --r-md: 16px; --r-xl: 24px;
   --shadow-xs: 0 1px 2px rgba(6,47,40,.04); --shadow-sm: 0 2px 8px rgba(6,47,40,.05);
@@ -103,7 +113,7 @@
 .statto-admin .range-menu { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 40; min-width: 190px; }
 .statto-admin .range-opt { width: 100%; text-align: left; padding: 9px 12px; border-radius: 9px; font-size: 13.5px; color: var(--fg1); transition: var(--transition); border: none; background: none; cursor: pointer; font-family: inherit; }
 .statto-admin .range-opt:hover { background: var(--gray-50); }
-.statto-admin .range-opt.on { background: var(--lime-50); color: var(--lime-600); font-weight: 600; }
+.statto-admin .range-opt.on { background: var(--lime-50); color: var(--lime-text); font-weight: 600; }
 
 /* ---------- EDIT / DRAG ---------- */
 .statto-admin .edit-hint { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--green-700); background: var(--lime-50); border: 1px solid var(--lime-200); border-radius: 14px; padding: 12px 16px; }
@@ -117,7 +127,7 @@
 .statto-admin .dblock-bar { position: absolute; top: -13px; left: 16px; right: 16px; z-index: 6; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
 .statto-admin .dhandle { display: inline-flex; align-items: center; gap: 5px; background: var(--statto-ink); color: #fff; font-size: 11.5px; font-weight: 600; padding: 4px 11px; border-radius: 999px; box-shadow: var(--shadow-sm); }
 .statto-admin .dhandle .lic { color: var(--statto-lime); }
-.statto-admin .dremove { pointer-events: auto; width: 26px; height: 26px; border-radius: 999px; background: var(--negative); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); transition: var(--transition); border: none; cursor: pointer; }
+.statto-admin .dremove { pointer-events: auto; width: 26px; height: 26px; border-radius: 999px; background: var(--negative-fill); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); transition: var(--transition); border: none; cursor: pointer; }
 .statto-admin .dremove:hover { background: #c8484d; transform: scale(1.06); }
 .statto-admin .dblock.editing .card, .statto-admin .dblock.editing .kpi, .statto-admin .dblock.editing .acard { pointer-events: none; }
 .statto-admin .dblock-move { position: absolute; top: 50%; right: -16px; transform: translateY(-50%); z-index: 6; display: flex; flex-direction: column; gap: 6px; }
@@ -129,7 +139,7 @@
 .statto-admin .addcard-dd { position: relative; }
 .statto-admin .addcard-menu { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 40; min-width: 230px; }
 .statto-admin .addcard-opt { width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; padding: 9px 12px; border-radius: 9px; font-size: 13.5px; font-weight: 500; color: var(--fg1); transition: var(--transition); border: none; background: none; cursor: pointer; font-family: inherit; }
-.statto-admin .addcard-opt:hover { background: var(--lime-50); color: var(--lime-600); }
+.statto-admin .addcard-opt:hover { background: var(--lime-50); color: var(--lime-text); }
 .statto-admin .dash-empty { text-align: center; color: var(--fg2); font-size: 14px; padding: 40px; border: 1.5px dashed var(--border-strong); border-radius: 16px; }
 .statto-admin .dash-empty strong { color: var(--statto-ink); font-weight: 600; }
 
@@ -169,7 +179,7 @@
 .statto-admin .p-neg { background: var(--negative-bg); color: var(--negative); }
 .statto-admin .p-neg.solid { background: var(--negative); color: #fff; }
 .statto-admin .p-gray { background: var(--gray-100); color: var(--fg2); }
-.statto-admin .p-soft { background: var(--lime-50); color: var(--lime-600); }
+.statto-admin .p-soft { background: var(--lime-50); color: var(--lime-text); }
 .statto-admin .p-pos { background: var(--positive-bg); color: var(--positive); }
 
 /* ---------- CHARTS ---------- */
@@ -263,7 +273,7 @@
 .statto-admin .pnl-margin { margin-top: 16px; }
 .statto-admin .pnl-margin-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--fg2); margin-bottom: 8px; }
 .statto-admin .pnl-bar { height: 9px; border-radius: 999px; background: var(--gray-100); overflow: hidden; }
-.statto-admin .pnl-bar span { display: block; height: 100%; background: var(--positive); border-radius: 999px; }
+.statto-admin .pnl-bar span { display: block; height: 100%; background: var(--positive-fill); border-radius: 999px; }
 .statto-admin .credit-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
 .statto-admin .credit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--border); border-radius: 14px; padding: 15px 16px; }
 .statto-admin .credit-meta { display: flex; flex-direction: column; gap: 3px; }
@@ -277,8 +287,8 @@
 .statto-admin .notif-list { display: flex; flex-direction: column; gap: 4px; }
 .statto-admin .notif-row { display: flex; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--gray-100); }
 .statto-admin .notif-row:last-child { border-bottom: none; }
-.statto-admin .notif-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--info); flex-shrink: 0; margin-top: 6px; }
-.statto-admin .notif-dot.warning { background: var(--warning); } .statto-admin .notif-dot.error { background: var(--negative); }
+.statto-admin .notif-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--info-fill); flex-shrink: 0; margin-top: 6px; }
+.statto-admin .notif-dot.warning { background: var(--warning-fill); } .statto-admin .notif-dot.error { background: var(--negative-fill); }
 .statto-admin .notif-meta { flex: 1; min-width: 0; }
 .statto-admin .notif-title { font-size: 13.5px; font-weight: 600; color: var(--fg1); }
 .statto-admin .notif-msg { font-size: 12.5px; color: var(--fg2); line-height: 1.45; }
@@ -379,14 +389,14 @@
 .statto-admin .auth-foot a:hover { color: var(--statto-lime); }
 .statto-admin .auth-form-wrap { display: flex; align-items: center; justify-content: center; padding: 40px; }
 .statto-admin .auth-card { width: 100%; max-width: 408px; }
-.statto-admin .auth-eyebrow { font-size: 13px; font-weight: 600; color: var(--lime-600); letter-spacing: .02em; }
+.statto-admin .auth-eyebrow { font-size: 13px; font-weight: 600; color: var(--lime-text); letter-spacing: .02em; }
 .statto-admin .auth-title { font-size: 27px; font-weight: 600; letter-spacing: -.02em; color: var(--fg1); margin: 8px 0 6px; }
 .statto-admin .auth-sub { font-size: 14.5px; color: var(--fg2); line-height: 1.55; margin-bottom: 28px; }
 .statto-admin .field { margin-bottom: 18px; }
 .statto-admin .field-label { display: block; font-size: 13px; font-weight: 600; color: var(--fg1); margin-bottom: 8px; }
 .statto-admin .field-input { position: relative; display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 0 14px; transition: border-color var(--transition), box-shadow var(--transition); }
 .statto-admin .field-input:focus-within { border-color: var(--statto-ink); box-shadow: 0 0 0 4px rgba(6,47,40,.07); }
-.statto-admin .field-input.err { border-color: var(--negative); }
+.statto-admin .field-input.err { border-color: var(--negative-fill); }
 .statto-admin .field-input.err:focus-within { box-shadow: 0 0 0 4px rgba(229,87,91,.12); }
 .statto-admin .field-input > .lic { color: var(--fg3); flex-shrink: 0; }
 .statto-admin .field-input input { flex: 1; border: none; outline: none; background: none; font-family: inherit; font-size: 15px; color: var(--fg1); padding: 13px 0; min-width: 0; }
@@ -403,14 +413,14 @@
 .statto-admin .checkbox .box .lic, .statto-admin .checkbox .box svg { width: 13px; height: 13px; opacity: 0; }
 .statto-admin .checkbox input:checked + .box .lic, .statto-admin .checkbox input:checked + .box svg { opacity: 1; }
 .statto-admin .checkbox input:focus-visible + .box { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
-.statto-admin .link { font-size: 13.5px; font-weight: 600; color: var(--lime-600); text-decoration: none; }
+.statto-admin .link { font-size: 13.5px; font-weight: 600; color: var(--lime-text); text-decoration: none; }
 .statto-admin .link:hover { color: var(--green-700); }
 .statto-admin .auth-card .btn { padding: 14px 18px; font-size: 15px; }
 .statto-admin .auth-divider { display: flex; align-items: center; gap: 14px; margin: 22px 0; color: var(--fg3); font-size: 12.5px; }
 .statto-admin .auth-divider::before, .statto-admin .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .statto-admin .auth-switch { text-align: center; font-size: 13.5px; color: var(--fg2); margin-top: 28px; }
 .statto-admin .auth-switch a { color: var(--statto-ink); font-weight: 600; text-decoration: none; cursor: pointer; }
-.statto-admin .auth-switch a:hover { color: var(--lime-600); }
+.statto-admin .auth-switch a:hover { color: var(--lime-text); }
 .statto-admin .spinner { width: 17px; height: 17px; border-radius: 999px; border: 2.2px solid rgba(6,47,40,.25); border-top-color: var(--statto-ink); animation: astospin .7s linear infinite; }
 @keyframes astospin { to { transform: rotate(360deg); } }
 @media (max-width: 880px) {

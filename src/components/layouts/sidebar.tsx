@@ -8,10 +8,12 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useUiStore } from '@/stores/ui-store';
 import { useState, useMemo } from 'react';
 import type { UserRole } from '@/types';
+import { useMySections } from '@/lib/hooks/use-permissions';
 
 // `hidden` removes an item from the sidebar without deleting it or its route —
 // flip the flag to re-enable (one-line change).
-interface NavLeaf { href: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; hidden?: boolean; }
+// `section` is the Role Access Matrix key (backend src/config/sections.ts).
+interface NavLeaf { href: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; section: string; hidden?: boolean; }
 interface NavGroup { key: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; children: NavLeaf[]; hidden?: boolean; }
 export type NavEntry = NavLeaf | NavGroup;
 export const isGroup = (entry: NavEntry): entry is NavGroup => 'children' in entry;
@@ -32,51 +34,74 @@ const FINANCE: UserRole[] = ['owner', 'finance_admin'];
 const OPS: UserRole[] = ['owner', 'ops_manager'];
 
 export const navItems: NavEntry[] = [
-  { href: '/', label: 'Dashboard', icon: LayoutGrid, roles: STAFF },
+  { href: '/', label: 'Dashboard', icon: LayoutGrid, roles: STAFF, section: 'dashboard' },
   {
     key: 'finance', label: 'Finance', icon: Banknote, roles: FINANCE,
     children: [
-      { href: '/finance/invoices', label: 'Invoices', icon: FileSignature, roles: FINANCE },
-      { href: '/finance/bank-feed', label: 'Bank Feed', icon: Banknote, roles: FINANCE },
-      { href: '/finance/auto-invoice', label: 'Auto-invoice', icon: Banknote, roles: FINANCE },
-      { href: '/reports/unified', label: 'Reports', icon: BarChart3, roles: FINANCE },
+      { href: '/finance/invoices', label: 'Invoices', icon: FileSignature, roles: FINANCE, section: 'invoices' },
+      { href: '/finance/bank-feed', label: 'Bank Feed', icon: Banknote, roles: FINANCE, section: 'bank_feed' },
+      { href: '/finance/auto-invoice', label: 'Auto-invoice', icon: Banknote, roles: FINANCE, section: 'auto_invoice' },
+      { href: '/reports/unified', label: 'Reports', icon: BarChart3, roles: FINANCE, section: 'reports' },
     ],
   },
-  { href: '/clients', label: 'Clients', icon: Users, roles: ['owner', 'finance_admin', 'ops_manager'] },
-  { href: '/campaigns', label: 'Campaigns', icon: Megaphone, roles: OPS },
-  { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: OPS },
+  { href: '/clients', label: 'Clients', icon: Users, roles: ['owner', 'finance_admin', 'ops_manager'], section: 'clients' },
+  { href: '/campaigns', label: 'Campaigns', icon: Megaphone, roles: OPS, section: 'campaigns' },
+  { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: OPS, section: 'agreements' },
   {
     key: 'leadbyte', label: 'LeadByte', icon: Database, roles: OPS,
     children: [
-      { href: '/leadbyte/buyers', label: 'Buyers', icon: Database, roles: OPS },
-      { href: '/leadbyte/deliveries', label: 'Deliveries', icon: Database, roles: OPS },
+      { href: '/leadbyte/buyers', label: 'Buyers', icon: Database, roles: OPS, section: 'leadbyte' },
+      { href: '/leadbyte/deliveries', label: 'Deliveries', icon: Database, roles: OPS, section: 'leadbyte' },
     ],
   },
   {
     key: 'operations', label: 'Operations', icon: CheckSquare, roles: STAFF,
     children: [
-      { href: '/tasks', label: 'Tasks', icon: CheckSquare, roles: STAFF },
-      { href: '/sops', label: 'SOPs', icon: BookOpen, roles: STAFF },
-      { href: '/workflows', label: 'Workflows', icon: Workflow, roles: OPS },
-      { href: '/staff', label: 'Staff', icon: UsersRound, roles: OPS },
-      { href: '/sos', label: 'SOS Queue', icon: LifeBuoy, roles: ['owner', 'finance_admin', 'ops_manager'] },
+      { href: '/tasks', label: 'Tasks', icon: CheckSquare, roles: STAFF, section: 'tasks' },
+      { href: '/sops', label: 'SOPs', icon: BookOpen, roles: STAFF, section: 'sops' },
+      { href: '/workflows', label: 'Workflows', icon: Workflow, roles: OPS, section: 'workflows' },
+      { href: '/staff', label: 'Staff', icon: UsersRound, roles: OPS, section: 'staff' },
+      { href: '/sos', label: 'SOS Queue', icon: LifeBuoy, roles: ['owner', 'finance_admin', 'ops_manager'], section: 'sos' },
     ],
   },
-  { href: '/notifications', label: 'Notifications', icon: Bell, roles: STAFF },
-  { href: '/integrations', label: 'Integrations', icon: Plug, roles: ['owner'] },
+  { href: '/notifications', label: 'Notifications', icon: Bell, roles: STAFF, section: 'notifications' },
+  { href: '/integrations', label: 'Integrations', icon: Plug, roles: ['owner'], section: 'integrations' },
 ];
 
 // Pinned to the bottom of the sidebar so it can never scroll or be filtered
 // out of reach (M6: "Settings and User Management must always be reachable").
-export const settingsItem: NavLeaf = { href: '/settings', label: 'Settings', icon: Settings, roles: ['owner', 'finance_admin', 'ops_manager'] };
+export const settingsItem: NavLeaf = { href: '/settings', label: 'Settings', icon: Settings, roles: ['owner', 'finance_admin', 'ops_manager'], section: 'settings' };
 
-/** The menu a given role actually sees — hidden entries and empty groups dropped. */
-export function navForRole(role: UserRole | undefined): NavEntry[] {
+/**
+ * The menu a given role actually sees — hidden entries and empty groups
+ * dropped. `sections` is the Role Access Matrix answer from
+ * /permissions/me (S7); when it's missing (loading, or the call failed) the
+ * static role lists above — the route guards — decide on their own.
+ */
+export function navForRole(role: UserRole | undefined, sections?: readonly string[]): NavEntry[] {
   if (!role) return [];
+  const allowed = (leaf: NavLeaf) => !leaf.hidden && leaf.roles.includes(role) && (!sections || sections.includes(leaf.section));
   return navItems
     .filter((item) => !item.hidden && item.roles.includes(role))
-    .map((item) => (isGroup(item) ? { ...item, children: item.children.filter((c) => !c.hidden && c.roles.includes(role)) } : item))
+    .filter((item) => isGroup(item) || allowed(item))
+    .map((item) => (isGroup(item) ? { ...item, children: item.children.filter(allowed) } : item))
     .filter((item) => !isGroup(item) || item.children.length > 0);
+}
+
+/**
+ * The matrix section a URL belongs to — the nav leaf with the longest href
+ * that prefixes it (sub-pages like /finance/invoices/new count as Invoices).
+ * Leaves that share a section (LeadByte's two pages) resolve the same way.
+ */
+export function sectionForPath(pathname: string): string | undefined {
+  const leaves = [...navItems.flatMap((i) => (isGroup(i) ? i.children : [i])), settingsItem];
+  const hit = leaves
+    .filter((l) => (l.href === '/' ? pathname === '/' : pathname === l.href || pathname.startsWith(l.href + '/')))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  if (hit) return hit.section;
+  // Section roots whose menu entry points at a sub-page (/reports → /reports/unified, /leadbyte → /leadbyte/buyers).
+  const root = leaves.find((l) => l.href !== '/' && pathname.startsWith('/' + l.href.split('/')[1] + '/'));
+  return root?.section;
 }
 
 function isLeafActive(pathname: string, href: string): boolean {
@@ -94,7 +119,8 @@ export function Sidebar() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ finance: true });
   const collapsed = !sidebarOpen;
 
-  const filteredNav = useMemo(() => navForRole(user?.role), [user]);
+  const { data: sections } = useMySections(!!user);
+  const filteredNav = useMemo(() => navForRole(user?.role, sections), [user, sections]);
   const showSettings = !!user && settingsItem.roles.includes(user.role);
 
   const closeMobile = () => setMobileSidebarOpen(false);
