@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, ReceiptText } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, unwrap } from '@/lib/api';
+import { useAuth } from '@/components/providers/auth-provider';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -27,7 +28,14 @@ export const TREATMENT_ROWS: { key: VatTreatmentKey; label: string; hint: string
 const CUSTOM = '__custom__';
 const CODE = /^[A-Z0-9]{2,20}$/;
 
+/** Owner-only — gates itself so callers don't need their own role check. */
 export function XeroTaxCodes() {
+  const { user } = useAuth();
+  if (user?.role !== 'owner') return null;
+  return <XeroTaxCodesPanel />;
+}
+
+function XeroTaxCodesPanel() {
   const qc = useQueryClient();
   const { data, isLoading, isError } = useQuery({
     queryKey: ['settings', 'xero-tax-types'],

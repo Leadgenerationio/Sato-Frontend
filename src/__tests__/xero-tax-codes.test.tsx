@@ -3,6 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+// The panel gates itself to Owners.
+vi.mock('@/components/providers/auth-provider', () => ({ useAuth: () => ({ user: { role: 'owner' } }) }));
+
 // S4 (Sam feedback 2026-09-29): Owner sets the Xero tax type per VAT treatment.
 const get = vi.fn();
 const put = vi.fn();

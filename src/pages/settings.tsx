@@ -122,7 +122,7 @@ function XeroIntegration() {
           Xero credentials are set but authentication failed. Check the backend log for details.
         </p>
       )}
-      {isOwner && <XeroTaxCodes />}
+      <XeroTaxCodes />
     </div>
   );
 }
