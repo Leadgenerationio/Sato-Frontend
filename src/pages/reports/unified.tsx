@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { resolveReportView } from './report-views';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ChevronDown, Check, ExternalLink, Info, Sparkles, TrendingUp } from 'lucide-react';
 
@@ -75,6 +76,8 @@ export function UnifiedReportPage() {
   // name worked thanks to React function scoping, but `window.replace(...)`
   // in JSX (lines below) reads ambiguously, lint-flags as a global shadow,
   // and breaks under stricter no-shadow/no-redeclare configs (OCT-44).
+  const [searchParams] = useSearchParams();
+  const view = resolveReportView(searchParams.get('view'));
   // /campaigns is owner / ops_manager only; finance_admin would bounce to the dashboard.
   const { user } = useAuth();
   const canOpenCampaigns = user?.role === 'owner' || user?.role === 'ops_manager';
@@ -188,6 +191,17 @@ export function UnifiedReportPage() {
       .sort((a, b) => b.revenue - a.revenue);
   }, [rows]);
 
+  // N5: scroll to the section the legacy URL asked for once rows are in.
+  const scrolledFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!view?.sectionTestId || isLoading || scrolledFor.current === view.id) return;
+    const el = document.querySelector(`[data-testid="${view.sectionTestId}"]`);
+    if (el && typeof (el as HTMLElement).scrollIntoView === 'function') {
+      (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      scrolledFor.current = view.id;
+    }
+  }, [view, isLoading, rows.length]);
+
   return (
     <div className="screen-page">
       <div className="page-head">
@@ -199,6 +213,13 @@ export function UnifiedReportPage() {
         </div>
         <span className="rpt-new"><Sparkles className="size-[13px]" /> New</span>
       </div>
+
+      {view && (
+        <div className="ai-banner ok" role="status" data-testid="report-view-note">
+          <Info className="size-4 lic" />
+          <span>{view.note}</span>
+        </div>
+      )}
 
       {/* Window selector */}
       <div className="rpt-tabs">
@@ -269,7 +290,7 @@ export function UnifiedReportPage() {
       )}
 
       {/* Main table */}
-      <div className="card pad acard">
+      <div className="card pad acard" data-testid="report-main-table">
         <h3 className="statto-title">
           {rows.length === 0 ? 'No matching rows' : `${rows.length} row${rows.length === 1 ? '' : 's'}`}
         </h3>
