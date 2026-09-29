@@ -138,7 +138,7 @@ export function PortalLayout() {
             <div className="ph-user">
               <span className="hdr-avatar" aria-hidden="true">{getInitials(user?.name)}</span>
               <div className="ph-user-meta">
-                <span className="ph-user-name" title={user?.name}>{user?.name}</span>
+                <span className="ph-user-name" title={user?.name}><span className="name-full">{user?.name}</span><span className="name-first">{user?.name?.trim().split(/\s+/)[0]}</span></span>
                 <span className="ph-user-role">{user?.isPrimaryOwner ? 'Account Owner' : 'Portal User'}</span>
               </div>
               <button className="ph-logout" title="Sign out" aria-label="Sign out" onClick={handleLogout}>
