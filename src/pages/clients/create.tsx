@@ -264,10 +264,12 @@ export function ClientCreatePage() {
           </div>
         </div>
 
-        <div className="grid-1-2 nc-row">
+        {/* Billing and External IDs share the row equally: at 1fr/1.6fr the
+            Billing card was too narrow and cut off "GBP (£)" / "30 days". */}
+        <div className="nc-row nc-billing-row">
           <div className="card pad acard">
             <h3 className="statto-title nc-h">Billing Settings</h3>
-            <div className="nc-grid3">
+            <div className="nc-grid2">
               <Field label="Currency" htmlFor="nc-currency">
                 <div className="nc-select-wrap">
                   <CurrencySelect id="nc-currency" className="nc-select" value={form.currency} onChange={(v) => update('currency', v)} />
@@ -286,11 +288,8 @@ export function ClientCreatePage() {
                   <ChevronDown className="size-[15px]" />
                 </div>
               </Field>
-              <Field label="Lead Price" htmlFor="nc-lead-price">
-                <input id="nc-lead-price" className="nc-input" type="number" min={0} step={0.01} value={form.leadPrice} onChange={(e) => update('leadPrice', Number(e.target.value))} />
-              </Field>
             </div>
-            {/* Full row — the treatment labels are long and the Billing card is narrow. */}
+            {/* Full row — the treatment labels are long. */}
             <Field
               label="VAT treatment"
               htmlFor="nc-vat-treatment"
@@ -311,6 +310,9 @@ export function ClientCreatePage() {
                   </select>
                   <ChevronDown className="size-[15px]" />
                 </div>
+              </Field>
+              <Field label="Lead Price" htmlFor="nc-lead-price">
+                <input id="nc-lead-price" className="nc-input" type="number" min={0} step={0.01} value={form.leadPrice} onChange={(e) => update('leadPrice', Number(e.target.value))} />
               </Field>
             </div>
             {form.vatTreatment !== 'outside_scope' && (
