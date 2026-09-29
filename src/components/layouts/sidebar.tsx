@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutGrid, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Banknote, Users, UsersRound, Megaphone, Workflow, CheckSquare,
-  BookOpen, BarChart3, Bell, Database, FileSignature, Plug, LifeBuoy,
+  BookOpen, BarChart3, Bell, Database, FileSignature, Plug, LifeBuoy, Link2,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useUiStore } from '@/stores/ui-store';
@@ -46,6 +46,8 @@ export const navItems: NavEntry[] = [
   },
   { href: '/clients', label: 'Clients', icon: Users, roles: ['owner', 'finance_admin', 'ops_manager'], section: 'clients' },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone, roles: OPS, section: 'campaigns' },
+  // S13: bulk-link ad accounts to clients/campaigns. Same section as Campaigns.
+  { href: '/ad-accounts', label: 'Link ad accounts', icon: Link2, roles: OPS, section: 'campaigns' },
   { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: OPS, section: 'agreements' },
   {
     key: 'leadbyte', label: 'LeadByte', icon: Database, roles: OPS,
