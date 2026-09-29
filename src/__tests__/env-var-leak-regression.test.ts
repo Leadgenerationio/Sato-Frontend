@@ -28,6 +28,17 @@ const BANNED = [
   'XERO_CLIENT_ID',
   'XERO_CLIENT_SECRET',
   'LEADBYTE_API_KEY',
+  // Sam feedback S16 (29 Sep 2026): "Attio not configured — Add
+  // ATTIO_API_KEY to the backend environment" reached the Owner's screen.
+  'ATTIO_API_KEY',
+  'CREDITSAFE_API_KEY',
+  'ENDOLE_API_KEY',
+  'RESEND_API_KEY',
+  'CATCHR_API_KEY',
+  'SIGNNOW_CLIENT_ID',
+  'R2_ACCESS_KEY_ID',
+  'backend environment',
+  'Missing r2Key',
   // Anchored Railway phrases rather than the bare word "Railway" — every
   // historical leak fit one of these two shapes ("grep Railway logs" /
   // "set X on Railway"). A bare "Railway" ban would false-positive on any
@@ -62,23 +73,10 @@ function isTestPath(p: string): boolean {
  * Match is by path SUFFIX so the test works the same on Windows and POSIX
  * separators without normalising both sides.
  */
-const EXEMPTIONS: Array<{ pathSuffix: string; banned: string; reason: string }> = [
-  {
-    pathSuffix: 'pages/settings.tsx',
-    banned: 'XERO_CLIENT_ID',
-    reason: 'Role-gated to owner (the deploy admin who sets env-vars) — see XeroIntegration.',
-  },
-  {
-    pathSuffix: 'pages/settings.tsx',
-    banned: 'XERO_CLIENT_SECRET',
-    reason: 'Role-gated to owner (the deploy admin who sets env-vars) — see XeroIntegration.',
-  },
-  {
-    pathSuffix: 'pages/settings.tsx',
-    banned: 'LEADBYTE_API_KEY',
-    reason: 'Role-gated to owner (the deploy admin who sets env-vars) — see LeadByteIntegration.',
-  },
-];
+// Sam S16 removed the OCT-53 owner exemption for settings.tsx — the Owner
+// is the business owner, not the deploy admin. Add an entry only with a
+// reason the string can never reach a screen.
+const EXEMPTIONS: Array<{ pathSuffix: string; banned: string; reason: string }> = [];
 
 function isExempt(path: string, banned: string): boolean {
   // Normalize both directions so the suffix match works regardless of OS.

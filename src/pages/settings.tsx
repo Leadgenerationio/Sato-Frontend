@@ -53,15 +53,11 @@ interface XeroStatus {
 }
 
 function XeroIntegration() {
-  // OCT-53: settings.tsx is the only surface in this codebase where the
-  // literal env-var names stay legal — but ONLY for the owner, who is
-  // typically the deploy admin and needs the exact key to set in their
-  // hosting environment. finance_admin / ops_manager see the opacified
-  // "ask your administrator" copy because they can't act on env-vars
-  // anyway. The regression test in env-var-leak-regression.test.ts
-  // allow-lists settings.tsx explicitly for this exact reason.
-  const { user } = useAuth();
-  const isOwner = user?.role === 'owner';
+  // Sam feedback S16 (29 Sep 2026) reverses OCT-53's owner exemption: the
+  // Owner is the business owner, not the deploy admin, and env-var names read
+  // as developer noise. Every role sees the same plain copy; the variable
+  // names live in Sato-Backend's .env.example. Guarded by
+  // env-var-leak-regression.test.ts (no exemptions left).
   const [status, setStatus] = useState<XeroStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,15 +94,9 @@ function XeroIntegration() {
         )}
       </div>
       {!status?.configured ? (
-        isOwner ? (
-          <p className="set-intg-note">
-            Xero credentials are not configured on the server. Set <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>XERO_CLIENT_ID</code> and <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>XERO_CLIENT_SECRET</code> in the backend environment.
-          </p>
-        ) : (
-          <p className="set-intg-note">
-            Xero credentials are not configured on the server. Ask your administrator to add the Xero Custom Connection credentials to the backend configuration.
-          </p>
-        )
+        <p className="set-intg-note">
+          Xero isn't set up yet. Ask your administrator to connect your Xero account.
+        </p>
       ) : status?.connected ? (
         <>
           {status.tenantName && (
@@ -137,11 +127,7 @@ interface LeadByteStatus {
 }
 
 function LeadByteIntegration() {
-  // OCT-53: same role-gating as XeroIntegration — owner sees the literal
-  // env-var name (they deploy and set it), other roles see the opacified
-  // hand-off copy.
-  const { user } = useAuth();
-  const isOwner = user?.role === 'owner';
+  // Same plain copy for every role — see XeroIntegration (Sam S16).
   const [status, setStatus] = useState<LeadByteStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -216,13 +202,9 @@ function LeadByteIntegration() {
             Refresh Now
           </button>
         </>
-      ) : isOwner ? (
-        <p className="set-intg-note">
-          Running in mock mode with sample data. Set <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>LEADBYTE_API_KEY</code> in the backend environment to connect to LeadByte and enable hourly lead sync.
-        </p>
       ) : (
         <p className="set-intg-note">
-          Running in mock mode with sample data. Ask your administrator to add the LeadByte API key to the backend configuration to connect LeadByte and enable hourly lead sync.
+          LeadByte isn't connected yet, so the figures shown are sample data. Ask your administrator to connect LeadByte to start the hourly lead sync.
         </p>
       )}
     </div>
@@ -287,7 +269,7 @@ function CreditCheckIntegration() {
         </>
       ) : (
         <p className="set-intg-note">
-          Running in mock mode. Auto-selects provider on backend: <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>CREDITSAFE_API_KEY</code> (preferred) or <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>ENDOLE_API_KEY</code>.
+          Credit checks aren't connected yet. Ask your administrator to connect Creditsafe or Endole.
         </p>
       )}
     </div>
@@ -306,14 +288,13 @@ type SetIntgTint = 'blue' | 'orange' | 'purple' | 'green';
 const greenTintStyle = { background: 'var(--positive-bg)', color: 'var(--positive)' };
 
 function SimpleIntegrationCard<T extends { configured: boolean }>({
-  title, description, icon: Icon, tint, endpoint, envHint, renderDetails,
+  title, description, icon: Icon, tint, endpoint, renderDetails,
 }: {
   title: string;
   description: string;
   icon: React.ElementType;
   tint: SetIntgTint;
   endpoint: string;
-  envHint: string;
   renderDetails?: (data: T) => React.ReactNode;
 }) {
   const [data, setData] = useState<T | null>(null);
@@ -354,7 +335,7 @@ function SimpleIntegrationCard<T extends { configured: boolean }>({
       {isConnected && data && renderDetails?.(data)}
       {!isConnected && (
         <p className="set-intg-note">
-          Add <code className="rounded px-1 py-0.5 text-xs" style={{ background: 'var(--gray-100)', color: 'var(--fg1)' }}>{envHint}</code> to the backend environment to enable this integration.
+          {title} isn't set up yet. Ask your administrator to connect it.
         </p>
       )}
     </div>
@@ -369,7 +350,6 @@ function ResendIntegration() {
       icon={Send}
       tint="purple"
       endpoint="/api/v1/integrations/resend/status"
-      envHint="RESEND_API_KEY"
       renderDetails={(d) => (
         <>
           {d.fromEmail && (
@@ -391,7 +371,6 @@ function SignNowIntegration() {
       icon={FileSignature}
       tint="green"
       endpoint="/api/v1/integrations/signnow/status"
-      envHint="SIGNNOW_CLIENT_ID + SIGNNOW_CLIENT_SECRET + SIGNNOW_USERNAME + SIGNNOW_PASSWORD"
       renderDetails={(d) => (
         <>
           {d.username && (
@@ -413,7 +392,6 @@ function CatchrIntegration() {
       icon={HardDrive}
       tint="blue"
       endpoint="/api/v1/integrations/catchr/status"
-      envHint="CATCHR_API_KEY + CATCHR_MCP_URL"
       renderDetails={(d) => (
         <>
           {d.mcpUrl && (
@@ -437,7 +415,6 @@ function R2Integration() {
       icon={HardDrive}
       tint="orange"
       endpoint="/api/v1/integrations/r2/status"
-      envHint="R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY + R2_BUCKET + R2_ACCOUNT_ID"
       renderDetails={(d) => (
         <>
           {d.bucket && (

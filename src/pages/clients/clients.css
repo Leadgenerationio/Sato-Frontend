@@ -1,0 +1,20 @@
+/* Feedback S14/S3 (29 Sep 2026): Clients list filter bar + activity diff. Own file so
+   it doesn't collide with the shared admin stylesheets other changes touch. */
+.cl-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 12px 0 14px; }
+.cl-filter { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--fg2); }
+.cl-filter select,
+.cl-filter input {
+  height: 38px; min-width: 150px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: #fff; font: inherit; font-size: 13.5px; font-weight: 400; color: var(--fg1);
+}
+.cl-filter select:focus-visible,
+.cl-filter input:focus-visible { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
+.inv-table th .inv-sort:focus-visible { outline: 2px solid var(--statto-ink); outline-offset: 2px; border-radius: 4px; }
+@media (max-width: 640px) {
+  .cl-filters { display: grid; grid-template-columns: 1fr 1fr; }
+  .cl-filter select, .cl-filter input { min-width: 0; width: 100%; height: 44px; }
+  .cl-filters > .btn { grid-column: 1 / -1; min-height: 44px; }
+}
+/* S3: "Field: old → new" lines under an activity entry. */
+.cl-tl-diff { margin: 4px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--fg2); display: flex; flex-direction: column; gap: 2px; }
+.cl-tl-diff strong { color: var(--fg1); font-weight: 600; }

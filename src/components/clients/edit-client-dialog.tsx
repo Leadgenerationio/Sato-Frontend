@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pencil, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,6 +21,14 @@ import {
   type ClientContactInput,
   type ContactType,
 } from '@/lib/hooks/use-clients';
+import {
+  findCountry, defaultsForCountry, checkPhone, checkPostcode, companyIdLabel,
+  phonePlaceholder, postcodePlaceholder, type FieldCheck,
+} from '@/lib/client-locale';
+import { resolveVatTreatment, VAT_TREATMENT_OPTIONS } from '@/lib/vat-treatment';
+import { CountrySelect, CurrencySelect, VatTreatmentSelect, FieldMessage } from '@/components/clients/client-locale-fields';
+
+const selectClass = 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm';
 
 interface EditClientDialogProps {
   client: ClientDetail;
@@ -45,6 +53,8 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
     if (next) {
       setForm(buildFormState(client));
       setContacts(buildContactsState(client));
+      setSubmitted(false);
+      setTouched({});
     }
     onOpenChange(next);
   }
@@ -52,6 +62,27 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
   function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
+
+  // M5 — the country drives labels, placeholders and validation. Defaults
+  // (currency, VAT treatment) are applied only when the user CHANGES the
+  // country, so opening an existing client (e.g. country "United Kingdom"
+  // with EUR billing) never rewrites what's stored.
+  const country = findCountry(form.addressCountry);
+  const isUk = country?.code === 'GB';
+  function handleCountryChange(name: string) {
+    const next = findCountry(name);
+    setForm((prev) => ({ ...prev, addressCountry: name, ...(next ? defaultsForCountry(next) : {}) }));
+  }
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const touch = (key: string) => setTouched((t) => (t[key] ? t : { ...t, [key]: true }));
+  const shown = (key: string, check: FieldCheck): FieldCheck | undefined =>
+    submitted || touched[key] ? check : undefined;
+  const checks = useMemo(() => ({
+    postcode: checkPostcode(form.addressPostcode, country),
+    phones: contacts.map((c) => checkPhone(c.phone, country)),
+  }), [form.addressPostcode, contacts, country]);
+  const hasBlockingError = !!checks.postcode.error || checks.phones.some((c) => !!c.error);
 
   function updateContact(idx: number, patch: Partial<ClientContactInput>) {
     setContacts((prev) => prev.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
@@ -65,12 +96,27 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitted(true);
     if (!form.companyName.trim()) {
       toast.error('Company name is required');
       return;
     }
+    if (hasBlockingError) {
+      toast.error('Please fix the highlighted fields');
+      return;
+    }
+    // S3 (Sam feedback 2026-09-29): send only what changed, so the Activity
+    // log reads "VAT treatment: outside scope → reverse charge" instead of
+    // "updated" + all 20 fields. Contacts go only if the set changed.
+    const changes = diffForm(buildFormState(client), form);
+    const contactsChanged = JSON.stringify(buildContactsState(client)) !== JSON.stringify(contacts);
+    if (Object.keys(changes).length === 0 && !contactsChanged) {
+      toast.info('No changes to save');
+      onOpenChange(false);
+      return;
+    }
     try {
-      await updateClient.mutateAsync({ id: client.id, ...form, contacts });
+      await updateClient.mutateAsync({ id: client.id, ...changes, ...(contactsChanged ? { contacts } : {}) });
       toast.success(`${form.companyName} updated`);
       onOpenChange(false);
     } catch (err) {
@@ -81,18 +127,21 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
+      {/* S2 (Sam feedback 2026-09-29): the dialog is a flex column — header
+          and Save/Cancel footer stay put, only the fields scroll. Save used to
+          sit ~2,640px down on a phone. */}
       <DialogContent
-        className="sm:max-w-2xl max-h-[90dvh] overflow-y-auto"
-        aria-describedby="edit-client-description"
+        className="sm:max-w-2xl max-h-[90dvh] flex flex-col gap-0 overflow-hidden p-0"
       >
-        <DialogHeader>
+        <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
           <DialogTitle>Edit Client</DialogTitle>
-          <DialogDescription id="edit-client-description">
-            Update {client.companyName}'s details. Changes are saved immediately.
+          <DialogDescription>
+            Update {client.companyName}'s details. Nothing is saved until you click Save Changes.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-2">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-6 pt-2" data-testid="edit-client-body">
           {/* ── Company Information ─────────────────────────────── */}
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Company Information</h3>
@@ -106,12 +155,15 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 />
               </div>
               <div className="space-y-2">
-                <Label>Company Number</Label>
+                <Label htmlFor="edit-company-number">{companyIdLabel(country)}</Label>
                 <Input
+                  id="edit-company-number"
+                  maxLength={20}
                   value={form.companyNumber}
                   onChange={(e) => update('companyNumber', e.target.value)}
-                  placeholder="12345678"
+                  placeholder={country?.companyIdPlaceholder ?? ''}
                 />
+                {isUk && <p className="text-xs text-muted-foreground">Used for credit checks and Xero matching</p>}
               </div>
             </div>
             <div className="space-y-2">
@@ -119,7 +171,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
               <Input
                 value={form.addressLine}
                 onChange={(e) => update('addressLine', e.target.value)}
-                placeholder="10 Fleet Street"
+                placeholder={isUk ? '10 Fleet Street' : 'Street and number'}
               />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -128,34 +180,36 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 <Input
                   value={form.addressTown}
                   onChange={(e) => update('addressTown', e.target.value)}
-                  placeholder="London"
+                  placeholder={isUk ? 'London' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label>County</Label>
+                <Label>{country?.regionLabel ?? 'Region'}</Label>
                 <Input
                   value={form.addressCounty}
                   onChange={(e) => update('addressCounty', e.target.value)}
-                  placeholder="Greater London"
+                  placeholder={isUk ? 'Greater London' : ''}
                 />
               </div>
             </div>
+            {/* Same order as New Client: line → town + county → postcode + country. */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Country</Label>
+                <Label htmlFor="edit-postcode">Postcode</Label>
                 <Input
-                  value={form.addressCountry}
-                  onChange={(e) => update('addressCountry', e.target.value)}
-                  placeholder="United Kingdom"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Postcode</Label>
-                <Input
+                  id="edit-postcode"
                   value={form.addressPostcode}
                   onChange={(e) => update('addressPostcode', e.target.value)}
-                  placeholder="EC4Y 1AA"
+                  onBlur={() => touch('postcode')}
+                  placeholder={postcodePlaceholder(country)}
+                  aria-invalid={!!shown('postcode', checks.postcode)?.error}
+                  aria-describedby="edit-postcode-msg"
                 />
+                <FieldMessage id="edit-postcode-msg" check={shown('postcode', checks.postcode)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-country">Country</Label>
+                <CountrySelect id="edit-country" className={selectClass} value={form.addressCountry} onChange={handleCountryChange} />
               </div>
             </div>
           </section>
@@ -169,10 +223,12 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 <select
                   value={form.status}
                   onChange={(e) => update('status', e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  className={selectClass}
                 >
                   <option value="onboarding">Onboarding</option>
                   <option value="active">Active</option>
+                  {/* M4 (Sam feedback 2026-09-29) — Paused shown as Paused. */}
+                  <option value="paused">Paused</option>
                   <option value="churned">Churned</option>
                 </select>
               </div>
@@ -209,16 +265,8 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
             <h3 className="text-sm font-semibold text-foreground">Billing Settings</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label>Currency</Label>
-                <select
-                  value={form.currency}
-                  onChange={(e) => update('currency', e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                >
-                  <option value="GBP">GBP (£)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="USD">USD ($)</option>
-                </select>
+                <Label htmlFor="edit-currency">Currency</Label>
+                <CurrencySelect id="edit-currency" className={selectClass} value={form.currency} onChange={(v) => update('currency', v)} />
               </div>
               <div className="space-y-2">
                 <Label>Payment Terms</Label>
@@ -245,54 +293,37 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="edit-vat-registered">VAT Registered</Label>
-                <input
-                  id="edit-vat-registered"
-                  type="checkbox"
-                  checked={form.vatRegistered}
-                  onChange={(e) => {
-                    update('vatRegistered', e.target.checked);
-                    update('addVatToInvoices', e.target.checked);
-                  }}
-                  className="size-4 rounded border-input"
-                />
-              </div>
-              {form.vatRegistered && (
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="edit-add-vat">Add VAT to Invoices</Label>
-                  <input
-                    id="edit-add-vat"
-                    type="checkbox"
-                    checked={form.addVatToInvoices}
-                    onChange={(e) => update('addVatToInvoices', e.target.checked)}
-                    className="size-4 rounded border-input"
-                  />
-                </div>
-              )}
+            {/* M5/S4 — one VAT treatment, same labels as New Client. */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-vat-treatment">VAT treatment</Label>
+              <VatTreatmentSelect id="edit-vat-treatment" className={selectClass} value={form.vatTreatment} onChange={(v) => update('vatTreatment', v)} />
+              <p className="text-xs text-muted-foreground">{VAT_TREATMENT_OPTIONS.find((o) => o.value === form.vatTreatment)?.hint}</p>
             </div>
-            {form.vatRegistered && (
+            {form.vatTreatment !== 'outside_scope' && (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>VAT Number</Label>
+                  <Label htmlFor="edit-vat-number">VAT Number</Label>
                   <Input
+                    id="edit-vat-number"
                     value={form.vatNumber}
                     onChange={(e) => update('vatNumber', e.target.value)}
-                    placeholder="GB123456789"
+                    placeholder={country?.vatNumberPlaceholder ?? 'VAT / tax number'}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>VAT Rate (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.01}
-                    value={form.vatRate}
-                    onChange={(e) => update('vatRate', Number(e.target.value))}
-                  />
-                </div>
+                {form.vatTreatment === 'uk_standard' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-vat-rate">VAT Rate (%)</Label>
+                    <Input
+                      id="edit-vat-rate"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.01}
+                      value={form.vatRate}
+                      onChange={(e) => update('vatRate', Number(e.target.value))}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -355,16 +386,22 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                       type="email"
                       value={c.email}
                       onChange={(e) => updateContact(idx, { email: e.target.value })}
-                      placeholder="jamie@uken.co.uk"
+                      placeholder={isUk ? 'jamie@uken.co.uk' : 'name@company.com'}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Phone</Label>
+                    <Label htmlFor={`edit-phone-${idx}`}>Phone</Label>
                     <Input
+                      id={`edit-phone-${idx}`}
+                      type="tel"
                       value={c.phone}
                       onChange={(e) => updateContact(idx, { phone: e.target.value })}
-                      placeholder="+44 20 1234 5678"
+                      onBlur={() => touch(`phone-${idx}`)}
+                      placeholder={phonePlaceholder(country)}
+                      aria-invalid={!!shown(`phone-${idx}`, checks.phones[idx] ?? {})?.error}
+                      aria-describedby={`edit-phone-${idx}-msg`}
                     />
+                    <FieldMessage id={`edit-phone-${idx}-msg`} check={shown(`phone-${idx}`, checks.phones[idx] ?? {})} />
                   </div>
                 </div>
               </div>
@@ -420,7 +457,9 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
             />
           </section>
 
-          <DialogFooter>
+          </div>
+
+          <DialogFooter className="shrink-0 border-t bg-background px-6 py-4">
             <Button
               type="button"
               variant="outline"
@@ -453,8 +492,7 @@ function buildFormState(client: ClientDetail) {
     addressPostcode: client.addressPostcode ?? '',
     currency: client.currency,
     paymentTermsDays: client.paymentTermsDays,
-    vatRegistered: client.vatRegistered,
-    addVatToInvoices: client.addVatToInvoices,
+    vatTreatment: resolveVatTreatment(client),
     vatNumber: client.vatNumber ?? '',
     vatRate: client.vatRate,
     leadPrice: client.leadPrice,
@@ -465,6 +503,19 @@ function buildFormState(client: ClientDetail) {
     xeroContactId: client.xeroContactId ?? '',
     notes: client.notes ?? '',
   };
+}
+
+type EditForm = ReturnType<typeof buildFormState>;
+
+/** Only the fields whose value differs from what was loaded (S3). */
+export function diffForm(before: EditForm, after: EditForm): Partial<EditForm> {
+  const out: Partial<EditForm> = {};
+  for (const key of Object.keys(after) as (keyof EditForm)[]) {
+    if (String(after[key] ?? '') !== String(before[key] ?? '')) {
+      (out as Record<string, unknown>)[key] = after[key];
+    }
+  }
+  return out;
 }
 
 function buildContactsState(client: ClientDetail): ClientContactInput[] {

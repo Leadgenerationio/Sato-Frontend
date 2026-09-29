@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   Users, UserCheck, Briefcase, Calendar, ChevronDown, ChevronRight, Check, X, Plus, Loader2, Pencil, Network,
   FileText, Download, Trash2,
@@ -136,7 +136,7 @@ function AddStaffDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> Add Staff</button></DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Add Staff Member</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Add Staff Member</DialogTitle><DialogDescription className="sr-only">Enter the new staff member's details.</DialogDescription></DialogHeader>
         <div className="nc-grid2" style={{ marginTop: 8 }}>
           <div className="nc-field"><label className="nc-label">Name</label><input className="nc-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></div>
           <div className="nc-field"><label className="nc-label">Email</label><input className="nc-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@company.com" /></div>
@@ -185,7 +185,7 @@ function EditStaffDialog({ member }: { member: StaffMember }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><button className="inv-open" title="Edit"><Pencil className="size-4" /></button></DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Edit {member.name}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Edit {member.name}</DialogTitle><DialogDescription className="sr-only">Update this staff member's details.</DialogDescription></DialogHeader>
         <div className="nc-grid2" style={{ marginTop: 8 }}>
           <div className="nc-field"><label className="nc-label">Name</label><input className="nc-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="nc-field"><label className="nc-label">Email</label><input className="nc-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
@@ -250,7 +250,7 @@ function CreateJobDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> New Job</button></DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Create Job Posting</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Create Job Posting</DialogTitle><DialogDescription className="sr-only">Describe the role you're hiring for.</DialogDescription></DialogHeader>
         <div style={{ marginTop: 8 }}>
           <div className="nc-field"><label className="nc-label">Job Title</label><input className="nc-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g., Senior Content Writer" /></div>
           <div className="nc-field"><label className="nc-label">Department</label>
@@ -291,7 +291,7 @@ function RequestHolidayDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> Request Holiday</button></DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Request Holiday</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Request Holiday</DialogTitle><DialogDescription className="sr-only">Choose the dates you want to take off.</DialogDescription></DialogHeader>
         <div style={{ marginTop: 8 }}>
           <div className="nc-field"><label className="nc-label">Staff Member</label>
             <div className="nc-select-wrap">

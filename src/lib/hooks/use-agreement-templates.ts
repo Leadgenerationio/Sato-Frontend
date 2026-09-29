@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import { API_URL } from '@/lib/env';
+import { getAccessToken } from '@/lib/token-store';
 
 export interface FieldLayoutItem {
   id: string;
@@ -99,8 +100,8 @@ export function useDuplicateAgreementTemplate() {
 /**
  * Fetch a populated PDF preview. Returns a Blob (binary).
  * Uses raw fetch (not the api client) because the response is binary, not JSON.
- * Token key is 'accessToken' — matches api.ts which reads localStorage.getItem('accessToken')
- * via tryRefresh and stores with localStorage.setItem('accessToken', ...).
+ * Token comes from token-store.ts (localStorage or sessionStorage depending on
+ * "Keep me signed in") — the same source api.ts uses.
  */
 export function usePreviewAgreementTemplate() {
   return useMutation({
@@ -109,7 +110,7 @@ export function usePreviewAgreementTemplate() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken') ?? ''}`,
+          Authorization: `Bearer ${getAccessToken() ?? ''}`,
         },
         body: JSON.stringify({ clientId, overrides, effectiveDate }),
       });
