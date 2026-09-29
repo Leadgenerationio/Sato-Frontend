@@ -68,7 +68,7 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
   const [signerRole, setSignerRole] = useState('');
   const [uploaded, setUploaded] = useState<{ key: string; name: string } | null>(null);
   // Template picker state
-  const { data: templates } = useAgreementTemplates();
+  const { data: templates, isError: templatesUnavailable } = useAgreementTemplates();
   const preview = usePreviewAgreementTemplate();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [effectiveDate, setEffectiveDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -260,6 +260,13 @@ export function SendAgreementDialog({ prefill, lockClient = false, trigger, open
                 The legal capacity they sign in — appears under the signature line + in the audit trail.
               </span>
             </div>
+
+            {/* The templates API is owner/finance_admin only; say so instead of silently dropping the picker. */}
+            {templatesUnavailable && (
+              <span className="nc-hint" style={{ display: 'block', marginBottom: 18 }}>
+                Templates aren't available for your role — upload a PDF below.
+              </span>
+            )}
 
             {/* Template picker — only shown when templates exist */}
             {templates && templates.length > 0 && (

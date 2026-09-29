@@ -5,8 +5,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useUnlinkClientCampaign } from '@/lib/hooks/use-client-campaigns';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  ArrowLeft, TrendingUp, TrendingDown, PoundSterling, Users, Target, ExternalLink,
+  ArrowLeft, TrendingUp, TrendingDown, PoundSterling, Users, Target, ExternalLink, Link2,
 } from 'lucide-react';
+import { adAccountTotals, chartableSuppliers, isAttributed, suppliersWithoutLeads } from '@/lib/campaign-figures';
+import type { CampaignWindowTotals } from '@/lib/hooks/use-campaigns';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -19,6 +21,7 @@ import {
 } from '@/lib/hooks/use-campaigns';
 import { fetchCreativeSignedUrl, useCreatives, useCreateCreative, useDeleteCreative, useSubmitCreative, type CreativeStatus } from '@/lib/hooks/use-creatives';
 import { FileUpload } from '@/components/shared/file-upload';
+import { CREATIVE_MEDIA_RULE, CREATIVE_COPY_RULE } from '@/lib/upload-rules';
 import { type PresignedUpload } from '@/lib/hooks/use-uploads';
 import { Image as ImageIcon, Video, FileText, Download, Trash2, Save, Loader2, Pencil, Users as UsersIcon, Plus } from 'lucide-react';
 import type { CampaignLinkedClient } from '@/lib/hooks/use-campaigns';
@@ -156,13 +159,22 @@ export function CampaignDetailPage() {
     { leads: 0, revenue: 0, cost: 0 },
   );
 
-  // Supplier bar chart data
-  const supplierData = campaign.suppliers.map((s) => ({
+  // Supplier bar chart data — only sources with leads and a cost can be a
+  // bar (Sam S11: every bar used to be £0). Spend-only sources are listed
+  // under the chart instead.
+  const supplierData = chartableSuppliers(campaign.suppliers).map((s) => ({
     name: s.name,
     cpl: s.cpl,
     leads: s.totalLeads,
     spend: s.totalSpend,
   }));
+  const spendWithoutLeads = suppliersWithoutLeads(campaign.suppliers);
+  const windowProfit = windowTotals.revenue - windowTotals.cost;
+  // Older backends sent LeadByte-only cost with no split — then the split
+  // line is hidden rather than claiming £0 ad spend.
+  const windowSplit: Partial<CampaignWindowTotals> = windowTotals;
+  const windowAdSpend = windowSplit.adSpend;
+  const windowLeadbyteCost = windowSplit.leadbyteCost;
 
   return (
     <div className="screen-page">
@@ -189,13 +201,13 @@ export function CampaignDetailPage() {
       {/* Stat Cards */}
       <div className="kpi-row">
         <StatCard
-          label="Total Revenue"
+          label="Revenue · year to date"
           value={formatCurrency(campaign.totalRevenue)}
           icon={PoundSterling}
           trend={{ value: `${campaign.margin}% margin`, positive: campaign.margin >= 40 }}
         />
         <StatCard
-          label="Profit"
+          label="Profit · year to date"
           value={formatCurrency(profit)}
           icon={TrendingUp}
           trend={{ value: formatCurrency(campaign.cpl) + ' CPL', positive: true }}
@@ -229,8 +241,22 @@ export function CampaignDetailPage() {
       {/* Window totals */}
       <div className="grid-3">
         <div className="card pad acard"><p className="ac-sub" style={{ marginTop: 0 }}>Leads</p><p className="kpi-val mono" style={{ fontSize: 24, marginTop: 6 }}>{windowTotals.leads.toLocaleString()}</p></div>
-        <div className="card pad acard"><p className="ac-sub" style={{ marginTop: 0 }}>Revenue</p><p className="kpi-val mono" style={{ fontSize: 24, marginTop: 6 }}>{formatCurrency(windowTotals.revenue)}</p></div>
-        <div className="card pad acard"><p className="ac-sub" style={{ marginTop: 0 }}>Cost</p><p className="kpi-val mono" style={{ fontSize: 24, marginTop: 6 }}>{formatCurrency(windowTotals.cost)}</p></div>
+        <div className="card pad acard">
+          <p className="ac-sub" style={{ marginTop: 0 }}>Revenue</p>
+          <p className="kpi-val mono" style={{ fontSize: 24, marginTop: 6 }}>{formatCurrency(windowTotals.revenue)}</p>
+          <p className="ac-sub" data-testid="window-profit">
+            Profit <span className={'mono ' + (windowProfit >= 0 ? 'm-pos' : 'm-neg')}>{formatCurrency(windowProfit)}</span>
+          </p>
+        </div>
+        <div className="card pad acard">
+          <p className="ac-sub" style={{ marginTop: 0 }}>Cost</p>
+          <p className="kpi-val mono" style={{ fontSize: 24, marginTop: 6 }}>{formatCurrency(windowTotals.cost)}</p>
+          {windowAdSpend !== undefined && (
+            <p className="ac-sub" data-testid="window-cost-split">
+              Ad spend {formatCurrency(windowAdSpend)} · LeadByte {formatCurrency(windowLeadbyteCost ?? 0)}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Sam #41 cost-per-lead editor + Slice 2 Day 1 buyer list */}
@@ -310,7 +336,7 @@ export function CampaignDetailPage() {
       {/* Revenue vs Cost Chart */}
       <div className="card pad acard">
         <div className="ac-head">
-          <div><h3 className="statto-title">Revenue vs Cost</h3><p className="ac-sub">Daily revenue and cost breakdown</p></div>
+          <div><h3 className="statto-title">Revenue vs Cost</h3><p className="ac-sub">Daily revenue and cost. Cost is LeadByte supplier cost plus the ad spend of the linked ad accounts.</p></div>
         </div>
         <div style={{ height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -328,12 +354,15 @@ export function CampaignDetailPage() {
       </div>
 
       {/* Supplier CPL Comparison */}
-      {supplierData.length > 0 && (
+      {(supplierData.length > 0 || spendWithoutLeads.length > 0) && (
         <div className="card pad acard">
           <div className="ac-head">
-            <div><h3 className="statto-title">Supplier CPL Comparison</h3><p className="ac-sub">Cost per lead by traffic source</p></div>
+            <div><h3 className="statto-title">Supplier CPL Comparison</h3><p className="ac-sub">Cost per lead by traffic source, last 30 days. Cost is ad spend on the linked ad accounts plus any LeadByte supplier cost.</p></div>
           </div>
-          <div style={{ height: 300 }}>
+          {supplierData.length === 0 ? (
+            <p className="ac-sub">No source has both leads and a cost in the last 30 days, so there is no cost per lead to compare yet.</p>
+          ) : (
+          <div style={{ height: Math.max(120, supplierData.length * 56 + 40) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={supplierData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -344,6 +373,13 @@ export function CampaignDetailPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          )}
+          {spendWithoutLeads.length > 0 && (
+            <p className="ac-sub" data-testid="spend-without-leads">
+              Spend with no leads recorded in LeadByte:{' '}
+              {spendWithoutLeads.map((s) => `${s.name} ${formatCurrency(s.totalSpend)}`).join(' · ')}
+            </p>
+          )}
         </div>
       )}
 
@@ -456,7 +492,7 @@ function CatchrMultiAccountPicker({
           isLoading
             ? 'Loading accounts…'
             : !configured
-              ? 'Catchr not configured — paste NCP URL'
+              ? 'Ad accounts not connected — paste the account link'
               : platform === 'other'
                 ? 'Paste a reference URL (optional)'
                 : `No ${platform} accounts found in Catchr — paste NCP URL`
@@ -593,15 +629,9 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
   }
 
   const rows = sources ?? [];
-  const totals = rows.reduce(
-    (acc, r) => ({
-      spend: acc.spend + r.totalSpend,
-      leads: acc.leads + r.totalLeads,
-      revenue: acc.revenue + r.revenue,
-      profit: acc.profit + r.netProfit,
-    }),
-    { spend: 0, leads: 0, revenue: 0, profit: 0 },
-  );
+  // Revenue/profit total only rows whose figures are their own (Sam S11);
+  // "shared" rows are named in the note below instead.
+  const totals = adAccountTotals(rows);
 
   const handleDelete = async (sourceId: string, name: string) => {
     try {
@@ -620,8 +650,25 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
           <p className="ac-sub">
             {rows.length === 0
               ? 'Link Catchr ad accounts (Facebook / Google / etc) to this campaign. Only spend from linked accounts counts toward this campaign — unlinked accounts appear in the diagnostic on /campaigns.'
-              : `${rows.length} source${rows.length === 1 ? '' : 's'} · spend ${formatCurrency(totals.spend)} · revenue ${formatCurrency(totals.revenue)} · profit ${formatCurrency(totals.profit)}`}
+              : (
+                <span data-testid="ad-links-totals">
+                  {rows.length} source{rows.length === 1 ? '' : 's'} · last 30 days · spend <span style={{ whiteSpace: 'nowrap' }}>{formatCurrency(totals.spend)}</span>
+                  {totals.shared > 0 || totals.unavailable
+                    ? <> · on rows with their own figures: revenue <span style={{ whiteSpace: 'nowrap' }}>{formatCurrency(totals.revenue)}</span>, profit <span style={{ whiteSpace: 'nowrap' }}>{formatCurrency(totals.profit)}</span></>
+                    : <> · revenue <span style={{ whiteSpace: 'nowrap' }}>{formatCurrency(totals.revenue)}</span> · profit <span style={{ whiteSpace: 'nowrap' }}>{formatCurrency(totals.profit)}</span></>}
+                </span>
+              )}
           </p>
+          {rows.length > 0 && (
+            <p className="ac-sub" data-testid="ad-links-note">
+              Leads and revenue are LeadByte's figures for each ad platform.
+              {totals.shared > 0 && ` ${totals.shared} rows share a platform, so their leads and revenue can't be split between them (shown as "—"; see Supplier CPL Comparison for the platform total).`}
+              {totals.unavailable && ' LeadByte could not be reached, so leads and revenue are not shown.'}{' '}
+              <Link to="/ad-accounts" className="link" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Link2 className="size-[14px]" />Link ad accounts to clients in bulk
+              </Link>
+            </p>
+          )}
         </div>
         <button className="btn b-primary b-sm" onClick={() => setIsAdding(true)} disabled={isAdding}>
           <Plus className="size-4" />Add source
@@ -688,12 +735,26 @@ function TrafficSourcesCard({ campaignId }: { campaignId: string }) {
                     />
                   </td>
                   <td className="r mono inv-num">{formatCurrency(s.totalSpend)}</td>
-                  <td className="r mono inv-num">{s.totalLeads.toLocaleString()}</td>
-                  <td className="r mono inv-num">{formatCurrency(s.cpl)}</td>
-                  <td className="r mono inv-total">{formatCurrency(s.revenue)}</td>
-                  <td className={'r mono cmp-margin ' + (s.netProfit >= 0 ? 'm-pos' : 'm-neg')}>
-                    {formatCurrency(s.netProfit)}
-                  </td>
+                  {isAttributed(s) ? (
+                    <>
+                      <td className="r mono inv-num">{s.totalLeads.toLocaleString()}</td>
+                      <td className="r mono inv-num">{s.totalLeads > 0 ? formatCurrency(s.cpl) : '—'}</td>
+                      <td className="r mono inv-total">{formatCurrency(s.revenue)}</td>
+                      <td className={'r mono cmp-margin ' + (s.netProfit >= 0 ? 'm-pos' : 'm-neg')}>
+                        {formatCurrency(s.netProfit)}
+                      </td>
+                    </>
+                  ) : (
+                    <td
+                      className="r cmp-client"
+                      colSpan={4}
+                      title={s.attribution === 'shared'
+                        ? 'Another ad account on this campaign is on the same platform. LeadByte records leads per platform, so they can\'t be split between the two.'
+                        : 'LeadByte could not be reached.'}
+                    >
+                      {s.attribution === 'shared' ? '— shared with another row on this platform' : '— unavailable'}
+                    </td>
+                  )}
                   <td className="r">
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                       <button className="inv-open" onClick={() => setEditingId(s.id)} aria-label="Edit">
@@ -966,10 +1027,11 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
         contentType: result.contentType,
         section: uploadSection,
       });
-      toast.success(`Uploaded ${file.name} (${uploadSection === 'media' ? 'Media' : 'Copy / LP'})`);
     } catch (err) {
       logError('Operation failed', err);
-      toast.error('Failed to upload creative');
+      // Rethrow so FileUpload marks this file failed and says why (Sam S9/S10)
+      // — the file is stored but the creative record wasn't created.
+      throw new Error(`couldn't be added to the campaign: ${err instanceof Error ? err.message : 'please try again.'}`);
     }
   };
 
@@ -1006,8 +1068,9 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
   return (
     <div className="card pad acard">
       <div className="ac-head" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 14 }}>
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
-          <div>
+        {/* Wraps so the per-file upload list drops below the copy on phones. */}
+        <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
+          <div style={{ flex: '1 1 280px', minWidth: 0 }}>
             <h3 className="statto-title">Creatives</h3>
             <p className="ac-sub">
               Assets live on the <span style={{ fontWeight: 600 }}>campaign</span> (this vertical) and are
@@ -1016,7 +1079,17 @@ function CreativesCard({ campaignId }: { campaignId: string }) {
               captured per decision for audit.
             </p>
           </div>
-          <FileUpload folder="creatives" maxSizeMB={50} label="Upload creative" onUploaded={handleUploaded} />
+          <FileUpload
+            folder="creatives"
+            maxSizeMB={50}
+            multiple
+            // Sam S9: media section takes images/videos only; copy & LP takes
+            // documents + screenshots. Server enforces the union.
+            rule={uploadSection === 'media' ? CREATIVE_MEDIA_RULE : CREATIVE_COPY_RULE}
+            label={uploadSection === 'media' ? 'Upload images / videos' : 'Upload copy / LP files'}
+            onUploaded={handleUploaded}
+            className="max-w-full"
+          />
         </div>
         {/* Sam #9/#11 buyer-review section picker. Drives which card the
             upload appears under on the buyer's review tab. */}

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pencil, Copy, Archive, FileText, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { FileUpload } from '@/components/shared/file-upload';
 import { EmptyState } from '@/components/shared/empty-state';
 import {
@@ -147,7 +147,7 @@ function CreateTemplateDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>New Template</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>New Template</DialogTitle><DialogDescription className="sr-only">Upload an agreement PDF and name the template.</DialogDescription></DialogHeader>
         <div className="py-2">
           <div className="nc-field">
             <label className="nc-label" htmlFor="name">Name</label>
