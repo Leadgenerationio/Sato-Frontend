@@ -21,6 +21,7 @@ import { LoginPage } from '@/pages/login';
 
 const DashboardPage = lazy(() => import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage })));
 const SettingsPage = lazy(() => import('@/pages/settings').then((m) => ({ default: m.SettingsPage })));
+const CleanupPage = lazy(() => import('@/pages/settings/cleanup').then((m) => ({ default: m.CleanupPage })));
 const CampaignsPage = lazy(() => import('@/pages/campaigns/index').then((m) => ({ default: m.CampaignsPage })));
 const CampaignDetailPage = lazy(() => import('@/pages/campaigns/detail').then((m) => ({ default: m.CampaignDetailPage })));
 const AdAccountsPage = lazy(() => import('@/pages/ad-accounts/index').then((m) => ({ default: m.AdAccountsPage })));
@@ -445,6 +446,15 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
                   <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* S8 + N6: Owner-only clean-up of demo/test logins and test data. */}
+            <Route
+              path="/settings/cleanup"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <CleanupPage />
                 </ProtectedRoute>
               }
             />
