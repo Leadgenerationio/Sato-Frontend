@@ -75,9 +75,8 @@
 .statto-admin .asb-subitem { text-align: left; padding: 8px 12px; border-radius: 9px; font-size: 13.5px; color: var(--fg2); transition: var(--transition); border: none; background: none; cursor: pointer; font-family: inherit; text-decoration: none; display: block; }
 .statto-admin .asb-subitem:hover { background: var(--gray-50); color: var(--statto-ink); }
 .statto-admin .asb-subitem.active { background: var(--statto-ink); color: #fff; font-weight: 600; }
-.statto-admin .asb-foot { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); font-size: 13.5px; font-weight: 600; color: var(--fg2); text-transform: capitalize; }
-.statto-admin .asb-foot-ic { color: var(--green-500); display: flex; }
-.statto-admin.is-collapsed .asb-foot { justify-content: center; padding: 16px 0; }
+/* Pinned footer: holds the Settings link so it is always reachable (M6). */
+.statto-admin .asb-foot { padding: 10px 12px; border-top: 1px solid var(--border); }
 
 .statto-admin .amain { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .statto-admin .atop { height: 64px; background: rgba(255,255,255,.85); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; padding: 0 28px; position: sticky; top: 0; z-index: 30; }
@@ -327,8 +326,7 @@
 .statto-admin.is-collapsed .asb-label,
 .statto-admin.is-collapsed .asb-word,
 .statto-admin.is-collapsed .asb-chev,
-.statto-admin.is-collapsed .asb-sub,
-.statto-admin.is-collapsed .asb-foot span { display: none; }
+.statto-admin.is-collapsed .asb-sub { display: none; }
 
 /* hamburger — desktop hidden */
 .statto-admin .atop-burger { display: none; width: 38px; height: 38px; border-radius: 10px; align-items: center; justify-content: center; color: var(--fg1); border: none; background: none; cursor: pointer; margin-right: auto; }
@@ -402,8 +400,9 @@
 .statto-admin .checkbox input { position: absolute; opacity: 0; pointer-events: none; }
 .statto-admin .checkbox .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--statto-ink); transition: var(--transition); }
 .statto-admin .checkbox input:checked + .box { background: var(--statto-lime); border-color: var(--statto-lime); }
-.statto-admin .checkbox .box .lic { width: 13px; height: 13px; opacity: 0; }
-.statto-admin .checkbox input:checked + .box .lic { opacity: 1; }
+.statto-admin .checkbox .box .lic, .statto-admin .checkbox .box svg { width: 13px; height: 13px; opacity: 0; }
+.statto-admin .checkbox input:checked + .box .lic, .statto-admin .checkbox input:checked + .box svg { opacity: 1; }
+.statto-admin .checkbox input:focus-visible + .box { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
 .statto-admin .link { font-size: 13.5px; font-weight: 600; color: var(--lime-600); text-decoration: none; }
 .statto-admin .link:hover { color: var(--green-700); }
 .statto-admin .auth-card .btn { padding: 14px 18px; font-size: 15px; }

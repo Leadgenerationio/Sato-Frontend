@@ -33,6 +33,8 @@
 .inv-search .lic { color: var(--fg3); flex-shrink: 0; }
 .inv-search input { border: none; outline: none; background: none; font-family: inherit; font-size: 14px; color: var(--fg1); flex: 1; min-width: 0; }
 .inv-search input::placeholder { color: var(--fg3); }
+/* S15: the input drops its own outline, so show keyboard focus on the wrapper. */
+.inv-search:has(input:focus-visible) { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
 
 .inv-card { padding: 8px 8px 4px; overflow-x: auto; }
 .inv-table { width: 100%; border-collapse: collapse; min-width: 720px; }
@@ -203,9 +205,13 @@
 .nc-check { display: inline-flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--fg1); cursor: pointer; user-select: none; }
 .nc-check input { position: absolute; opacity: 0; pointer-events: none; }
 .nc-check-box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--statto-ink); flex-shrink: 0; margin-top: 1px; transition: var(--transition); }
-.nc-check-box .lic { opacity: 0; }
+/* M1 (Sam 29 Sep): pages render the tick as a bare lucide <svg> (no .lic
+   wrapper), so hide the icon itself — an unticked box must be empty. */
+.nc-check-box .lic, .nc-check-box svg { opacity: 0; }
 .nc-check input:checked + .nc-check-box { background: var(--statto-lime); border-color: var(--statto-lime); }
-.nc-check input:checked + .nc-check-box .lic { opacity: 1; }
+.nc-check input:checked + .nc-check-box .lic, .nc-check input:checked + .nc-check-box svg { opacity: 1; }
+/* S15: the native input is visually hidden, so draw the keyboard focus on the box. */
+.nc-check input:focus-visible + .nc-check-box { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
 .nc-row { align-items: start; }
 .nc-foot { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 4px 2px 8px; }
 .nc-foot-text { font-size: 14px; color: var(--fg1); line-height: 1.4; }
