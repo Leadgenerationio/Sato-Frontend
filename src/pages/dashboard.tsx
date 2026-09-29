@@ -18,7 +18,7 @@ import { useCreditAlerts } from '@/lib/hooks/use-clients';
 import { useTaskStats } from '@/lib/hooks/use-tasks';
 import { useNotifications } from '@/lib/hooks/use-notifications';
 import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
-import { formatPercentCapped } from '@/lib/currency';
+import { formatPercentCapped, formatCurrency, formatCurrencyTotals, groupByCurrency } from '@/lib/currency';
 
 // ── Stato Admin dashboard, restyled to the Statto design (Admin Dashboard.html).
 // Editable card grid (drag/add/remove/save → localStorage) ported from
@@ -197,45 +197,93 @@ function InvoiceStatus({ rows }: { rows: FinancialOverviewRow[] }) {
 
 // ─────────── Finance cards (own queries) ───────────
 interface XeroBankAccount { name: string; currency: string; balance: string; balanceDate: string | null; }
+
+/**
+ * Accounts named "DO NOT USE…" are retired (e.g. "DO NOT USE - Mettle OLD") and
+ * must not count toward the bank total — feedback S12 (29 Sep 2026).
+ */
+export function isRetiredBankAccount(name: string): boolean {
+  return /^\s*do\s+not\s+use\b/i.test(name);
+}
+
+/** Bank balances per currency, excluding retired accounts. Never cross-summed. */
+export function bankTotals(accounts: XeroBankAccount[]): { currency: string; total: number; count: number }[] {
+  const live = accounts.filter((a) => !isRetiredBankAccount(a.name));
+  const totals = groupByCurrency(live, (a) => toMoney(a.balance), (a) => a.currency);
+  // GBP first (the reporting currency), then the rest in first-seen order.
+  return [...totals.filter((t) => t.currency === 'GBP'), ...totals.filter((t) => t.currency !== 'GBP')];
+}
+
 function BankCard() {
   const { data } = useQuery({
     queryKey: ['xero', 'bank-accounts'],
     queryFn: async () => unwrap(await api.get<{ configured: boolean; accounts: XeroBankAccount[] }>('/api/v1/integrations/xero/bank-accounts')),
   });
   const accounts = data?.accounts ?? [];
-  const total = accounts.filter((a) => a.currency === 'GBP').reduce((s, a) => s + toMoney(a.balance), 0);
-  const fmt = (a: XeroBankAccount) => {
-    const sym = a.currency === 'USD' ? 'US$' : a.currency === 'GBP' ? '£' : '';
-    return `${toMoney(a.balance) < 0 ? '-' : ''}${sym}${Math.abs(toMoney(a.balance)).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const totals = bankTotals(accounts);
+  const hasRetired = accounts.some((a) => isRetiredBankAccount(a.name));
   return (
     <div className="card pad acard">
       <CardHead title="Bank Accounts" sub="Statement balance · live from Xero" icon={Landmark} />
       <div className="bank-list">
-        {accounts.map((b, i) => (
-          <div key={i} className="bank-row">
-            <div className="bank-meta">
-              <span className="bank-name">{b.name}</span>
-              {b.balanceDate && <span className="bank-sub">Statement balance · as of {new Date(b.balanceDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+        {accounts.map((b, i) => {
+          const retired = isRetiredBankAccount(b.name);
+          return (
+            <div key={i} className="bank-row" style={retired ? { opacity: 0.5 } : undefined}>
+              <div className="bank-meta">
+                <span className="bank-name">{b.name}</span>
+                {retired
+                  ? <span className="bank-sub">Not counted in the total</span>
+                  : b.balanceDate && <span className="bank-sub">Statement balance · as of {new Date(b.balanceDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+              </div>
+              <span className={'bank-bal mono' + (toMoney(b.balance) < 0 ? ' neg' : '')}>{formatCurrency(toMoney(b.balance), b.currency)}</span>
             </div>
-            <span className={'bank-bal mono' + (toMoney(b.balance) < 0 ? ' neg' : '')}>{fmt(b)}</span>
-          </div>
-        ))}
+          );
+        })}
         {accounts.length === 0 && <p className="ac-sub">No bank accounts connected.</p>}
       </div>
-      <div className="bank-total"><span>Total (GBP)</span><strong className="mono">{gbp0(total).replace(/\.00$/, '')}</strong></div>
+      {(totals.length === 0 ? [{ currency: 'GBP', total: 0, count: 0 }] : totals).map((t) => (
+        <div key={t.currency} className="bank-total">
+          <span>Total ({t.currency}){hasRetired && t === totals[0] ? ' · excl. retired accounts' : ''}</span>
+          <strong className="mono">{formatCurrency(t.total, t.currency, 0)}</strong>
+        </div>
+      ))}
     </div>
   );
+}
+
+export interface OutstandingPayload {
+  invoices: InvoiceSummary[];
+  count: number;
+  totalOutstanding: string;
+  /** Added with feedback M3. Absent on an older backend. */
+  totalsByCurrency?: { currency: string; total: string; count: number }[];
+}
+
+/**
+ * Outstanding totals, one per currency — feedback M3 (29 Sep 2026): a €34,860
+ * invoice used to be shown as £34,860 and added into a "£58,110" total. Uses
+ * the backend's totalsByCurrency; on an older backend falls back to grouping
+ * the returned rows (the list is capped at 100, so `partial` flags a
+ * truncated fallback). Never adds different currencies together.
+ */
+export function outstandingTotals(data: OutstandingPayload | undefined): { totals: { currency: string; total: number }[]; partial: boolean } {
+  if (!data) return { totals: [], partial: false };
+  if (data.totalsByCurrency) {
+    return { totals: data.totalsByCurrency.map((t) => ({ currency: t.currency, total: toMoney(t.total) })), partial: false };
+  }
+  const totals = groupByCurrency(data.invoices, (i) => toMoney(i.total), (i) => i.currency);
+  return { totals, partial: data.invoices.length < data.count };
 }
 
 function InvoicesOwedCard({ go }: { go: (v: string) => void }) {
   const [bucket, setBucket] = useState<'all' | 'due' | 'overdue'>('all');
   const { data } = useQuery({
     queryKey: ['invoices', 'outstanding', bucket],
-    queryFn: async () => (await api.get<{ invoices: InvoiceSummary[]; count: number; totalOutstanding: string }>(`/api/v1/invoices/outstanding?bucket=${bucket}`)).data ?? { invoices: [], count: 0, totalOutstanding: '0' },
+    queryFn: async () => (await api.get<OutstandingPayload>(`/api/v1/invoices/outstanding?bucket=${bucket}`)).data ?? { invoices: [], count: 0, totalOutstanding: '0' },
   });
   const invoices = (data?.invoices ?? []).slice(0, 4);
-  const total = toMoney(data?.totalOutstanding ?? '0');
+  const { totals, partial } = outstandingTotals(data);
   return (
     <div className="card pad acard">
       <CardHead title="Invoices Owed In" sub={`${data?.count ?? 0} invoices awaiting payment`} icon={Wallet} tint="info" />
@@ -244,7 +292,19 @@ function InvoicesOwedCard({ go }: { go: (v: string) => void }) {
           <button key={t} className={'seg-btn' + (bucket === t ? ' on' : '')} onClick={() => setBucket(t)} style={{ textTransform: 'capitalize' }}>{t === 'all' ? 'All' : t}</button>
         ))}
       </div>
-      <div className="owed-total"><span className="owed-amt mono">{gbp0(total)}</span><span className="owed-lab">Total outstanding</span></div>
+      <div className="owed-total">
+        <span data-testid="owed-total" aria-label={`Total outstanding: ${formatCurrencyTotals(totals, { maximumFractionDigits: 0, separator: ' and ' })}`}>
+          {(totals.length ? totals : [{ currency: 'GBP', total: 0 }]).map((t) => (
+            <span key={t.currency} className="owed-amt mono" style={{ display: 'block', ...(totals.length > 1 ? { fontSize: 24 } : {}) }}>
+              {formatCurrency(t.total, t.currency, 0)}
+            </span>
+          ))}
+        </span>
+        <span className="owed-lab">
+          {totals.length > 1 ? 'Total outstanding, per currency (not converted)' : 'Total outstanding'}
+          {partial ? ' · first 100 invoices' : ''}
+        </span>
+      </div>
       <div className="owed-list">
         {invoices.map((o) => {
           const late = o.daysOverdue > 0;
@@ -252,7 +312,7 @@ function InvoicesOwedCard({ go }: { go: (v: string) => void }) {
             <div key={o.id} className="owed-row">
               <div className="owed-meta"><span className="owed-id">{o.invoiceNumber}</span><span className="owed-client">{o.clientName}</span></div>
               <span className={'pill p-' + (late ? 'warn' : 'infosoft')}>{late ? `${o.daysOverdue}d late` : o.status}</span>
-              <span className="owed-amt2 mono">{gbp0(toMoney(o.total))}</span>
+              <span className="owed-amt2 mono">{formatCurrency(toMoney(o.total), o.currency, 0)}</span>
             </div>
           );
         })}

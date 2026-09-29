@@ -28,7 +28,7 @@ vi.mock('@/lib/hooks/use-clients', () => ({
 
 // Minimal sonner mock so toast.success doesn't blow up in jsdom.
 vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
 const baseClient: ClientDetail = {
@@ -72,12 +72,12 @@ const baseClient: ClientDetail = {
   ],
 };
 
-function renderDialog(open = true, onOpenChange = vi.fn()) {
+function renderDialog(open = true, onOpenChange = vi.fn(), client: ClientDetail = baseClient) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <EditClientDialog client={baseClient} open={open} onOpenChange={onOpenChange} />
+        <EditClientDialog client={client} open={open} onOpenChange={onOpenChange} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -129,5 +129,85 @@ describe('EditClientDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(mockMutate).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  // ── Sam feedback 2026-09-29 ────────────────────────────────────────────
+  // Sonova-shaped legacy row: Polish client stored as "United Kingdom" + EUR.
+  const sonova: ClientDetail = {
+    ...baseClient,
+    id: 'client-sonova',
+    companyName: 'Yash Test Sonova',
+    currency: 'EUR',
+    addressCountry: 'United Kingdom',
+    vatRegistered: false,
+    addVatToInvoices: false,
+    status: 'onboarding',
+  };
+
+  it('M5 — a UK-country EUR client loads without being forced to change', () => {
+    renderDialog(true, vi.fn(), sonova);
+    expect((screen.getByLabelText('Currency') as HTMLSelectElement).value).toBe('EUR');
+    expect((screen.getByLabelText('Country') as HTMLSelectElement).value).toBe('United Kingdom');
+    expect((screen.getByLabelText('VAT treatment') as HTMLSelectElement).value).toBe('outside_scope');
+  });
+
+  it('S3 — sends only the fields that changed', async () => {
+    renderDialog(true, vi.fn(), sonova);
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'Poland' } });
+    // The stored UK postcode no longer fits — Save is blocked until it's fixed.
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(await screen.findByText('Poland postcodes look like 00-950.')).toBeInTheDocument();
+    expect(mockMutate).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('Postcode'), { target: { value: '00-950' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    // Poland defaults: PLN + reverse charge. Contacts untouched → not sent.
+    expect(mockMutate.mock.calls[0][0]).toEqual({
+      id: 'client-sonova',
+      addressCountry: 'Poland',
+      addressPostcode: '00-950',
+      currency: 'PLN',
+      vatTreatment: 'reverse_charge',
+    });
+  });
+
+  it('S3 — Save with nothing changed sends nothing', async () => {
+    const onOpenChange = vi.fn();
+    renderDialog(true, onOpenChange);
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it('S3 — sends contacts only when a contact changed', async () => {
+    renderDialog();
+    fireEvent.change(screen.getByDisplayValue('Director'), { target: { value: 'CEO' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    const body = mockMutate.mock.calls[0][0];
+    expect(Object.keys(body).sort()).toEqual(['contacts', 'id']);
+    expect(body.contacts[0].role).toBe('CEO');
+  });
+
+  it('S2 — wording matches behaviour and Save sits outside the scrolling body', () => {
+    renderDialog();
+    expect(screen.getByText(/nothing is saved until you click save changes/i)).toBeInTheDocument();
+    expect(screen.queryByText(/changes are saved immediately/i)).not.toBeInTheDocument();
+    const body = screen.getByTestId('edit-client-body');
+    expect(body.contains(screen.getByRole('button', { name: /save changes/i }))).toBe(false);
+    expect(body.className).toMatch(/overflow-y-auto/);
+  });
+
+  it('M4 — status offers Paused', () => {
+    renderDialog();
+    expect(screen.getByRole('option', { name: 'Paused' })).toHaveAttribute('value', 'paused');
+  });
+
+  it('M5 — a junk phone blocks the save', async () => {
+    renderDialog();
+    fireEvent.change(screen.getByDisplayValue('+44 20 1234 5678'), { target: { value: 'not-a-phone ###' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(await screen.findByText(/use digits only/i)).toBeInTheDocument();
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 });
