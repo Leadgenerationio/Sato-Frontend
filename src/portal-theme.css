@@ -496,3 +496,12 @@
 .statto-portal .range-opt { width: 100%; text-align: left; padding: 9px 12px; border-radius: 9px; font-size: 13.5px; color: var(--fg1); transition: var(--transition); border: none; background: none; cursor: pointer; font-family: inherit; }
 .statto-portal .range-opt:hover { background: var(--gray-50); }
 .statto-portal .range-opt.on { background: var(--lime-50); color: var(--lime-600); font-weight: 600; }
+
+/* Portal phone polish (Yash review of round 1): 44px tap targets, full-width
+   date fields and primary form buttons. */
+@media (max-width: 640px) {
+  .statto-portal .btn.b-sm, .statto-portal .dd { min-height: 44px; }
+  .statto-portal .acct-field:has(> .acct-input[type=date]) { flex: 1 1 0; min-width: 140px; }
+  .statto-portal .acct-input[type=date] { width: 100% !important; }
+  .statto-portal .acct-pw-btn { width: 100%; justify-content: center; }
+}

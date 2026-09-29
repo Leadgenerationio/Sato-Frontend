@@ -2,7 +2,7 @@
  * The onboarding stage strip (<OnboardingProgress>, "Stage X of 4") was
  * removed from the admin client-detail page on request (2026-06-15) — the
  * lifecycle is no longer surfaced inline above the tabs. This test pins that:
- * the strip must NOT render, and the page still shows its 7 tabs (Overview/
+ * the strip must NOT render, and the page shows its tabs (Overview/
  * Campaigns/Invoices/Credit/Documents/Emails/Activity) with no dedicated
  * "Onboarding" tab. (The <OnboardingProgress> component itself is still
  * exported and unit-tested directly in onboarding-progress.test.tsx.)
@@ -151,19 +151,19 @@ describe('ClientDetailPage — onboarding strip (feature-flagged)', () => {
     }
   });
 
-  it('has NO dedicated "Onboarding" tab — the 7 tabs are O/C/I/C/D/E/A', () => {
+  it('has NO dedicated "Onboarding" tab — 9 tabs incl. Creatives + Landing pages (M2)', () => {
     const { container } = renderPage();
     // Tabs render as `.seg-btn` <button> elements (not Radix role="tab").
     const triggers = Array.from(container.querySelectorAll('.seg.cl-detail-seg .seg-btn'));
-    expect(triggers).toHaveLength(7);
+    expect(triggers).toHaveLength(9);
     for (const trigger of triggers) {
       expect(trigger.textContent?.toLowerCase()).not.toBe('onboarding');
     }
-    // The 7 expected labels are the current contract.
+    // The expected labels are the current contract (Creatives + Landing pages added for M2).
     const labels = triggers.map((t) => t.textContent?.trim());
     expect(labels).toEqual([
       'Overview', 'Campaigns', 'Invoices', 'Credit',
-      'Documents', 'Emails', 'Activity',
+      'Documents', 'Emails', 'Activity', 'Creatives', 'Landing pages',
     ]);
   });
 });

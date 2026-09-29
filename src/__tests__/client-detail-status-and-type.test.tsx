@@ -140,7 +140,7 @@ describe('ClientDetailPage — stored status (M4)', () => {
   it('an active client with no signed agreement reads Active + warning badges, never Onboarding', () => {
     mockClient = makeClient({ status: 'active', agreementSigned: false });
     const { container } = renderPage();
-    const head = container.querySelector('.page-actions')!;
+    const head = container.querySelector('.page-head')!;
     const pills = Array.from(head.querySelectorAll('.pill')).map((p) => p.textContent?.trim());
     expect(pills).toEqual(['Active', 'No signed agreement', 'No documents']);
   });
@@ -148,7 +148,7 @@ describe('ClientDetailPage — stored status (M4)', () => {
   it('a paused client reads Paused', () => {
     mockClient = makeClient({ status: 'paused' });
     const { container } = renderPage();
-    expect(container.querySelector('.page-actions .pill')?.textContent).toBe('Paused');
+    expect(container.querySelector('.page-head .pill')?.textContent).toBe('Paused');
   });
 });
 

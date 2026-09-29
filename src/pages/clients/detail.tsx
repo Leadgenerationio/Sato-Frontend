@@ -23,6 +23,9 @@ import {
 } from '@/lib/hooks/use-client-campaigns';
 import { AddCampaignDialog } from '@/components/clients/add-campaign-dialog';
 import { PortalUsersCard } from '@/components/clients/portal-users-card';
+// M2: creative library + landing pages tabs.
+import { CreativeLibrary } from '@/components/creatives/creative-library';
+import { LandingPagesList } from '@/components/creatives/landing-pages-list';
 import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import {
   useClientActivity, useClientEmails, useLogClientEmail, useDeleteClientEmail,
@@ -98,6 +101,8 @@ const CLIENT_TABS = [
   { value: 'documents', label: 'Documents' },
   { value: 'emails', label: 'Emails' },
   { value: 'activity', label: 'Activity' },
+  { value: 'creatives', label: 'Creatives' },
+  { value: 'landing_pages', label: 'Landing pages' },
 ] as const;
 
 export function ClientDetailPage() {
@@ -227,15 +232,19 @@ export function ClientDetailPage() {
           <div>
             <h1 className="ahead-title">{client.companyName}</h1>
             <p className="ahead-sub">{client.contactName} · {client.companyNumber}</p>
+            {/* Status + warnings sit under the name: they describe the client,
+                and next to the buttons they squeezed the name onto 3 lines. */}
+            <div className="cl-status-row">
+              <span className={'pill p-' + clientStatusPill(client.status) + ' cl-status-pill'}>{clientStatusLabel(client.status)}</span>
+              {statusWarnings.map((w) => (
+                <span key={w} className="pill p-warn cl-status-pill" title={`Status is ${clientStatusLabel(client.status)}, but: ${w.toLowerCase()}`}>
+                  <AlertTriangle className="size-3" aria-hidden /> {w}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="page-actions">
-          <span className={'pill p-' + clientStatusPill(client.status) + ' cl-status-pill'}>{clientStatusLabel(client.status)}</span>
-          {statusWarnings.map((w) => (
-            <span key={w} className="pill p-warn cl-status-pill" title={`Status is ${clientStatusLabel(client.status)}, but: ${w.toLowerCase()}`}>
-              <AlertTriangle className="size-3" aria-hidden /> {w}
-            </span>
-          ))}
+        <div className="page-actions cl-head-actions">
           <EditClientButton client={client} />
           {/* Hard delete is owner-only — mirrors the backend route guard. */}
           {user?.role === 'owner' && <RemoveClientButton client={client} />}
@@ -509,6 +518,8 @@ export function ClientDetailPage() {
       {tab === 'documents' && <DocumentsTab clientId={id!} />}
       {tab === 'emails' && <EmailsTab clientId={id!} />}
       {tab === 'activity' && <ActivityTab clientId={id!} />}
+      {tab === 'creatives' && <CreativeLibrary clientId={id!} />}
+      {tab === 'landing_pages' && <LandingPagesList clientId={id!} />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { LEGACY_REPORT_PATHS, REPORT_VIEWS } from '../pages/reports/report-views';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UnifiedReportPage } from '../pages/reports/unified';
 
@@ -100,5 +101,44 @@ describe('UnifiedReportPage — "By source · profitability" roll-up', () => {
     renderPage();
     expect(screen.getByTestId('by-campaign-rollup')).toBeInTheDocument();
     expect(screen.getByText('By campaign · roll-up')).toBeInTheDocument();
+  });
+});
+
+// N5 (Sam feedback round 1): legacy report URLs land on the matching section
+// with a visible note instead of silently dropping the user at the top.
+function renderAt(path: string) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          {LEGACY_REPORT_PATHS.map((v) => (
+            <Route key={v} path={`/reports/${v}`} element={<Navigate to={`/reports/unified?view=${v}`} replace />} />
+          ))}
+          <Route path="/reports/unified" element={<UnifiedReportPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+describe('UnifiedReportPage — legacy report URLs (N5)', () => {
+  it.each(LEGACY_REPORT_PATHS)('/reports/%s shows its note and scrolls to its section', (v) => {
+    const scrolled: string[] = [];
+    // jsdom has no scrollIntoView — install a recording stub for this test.
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+      scrolled.push(this.getAttribute('data-testid') ?? '');
+    };
+    renderAt(`/reports/${v}`);
+    expect(screen.getByTestId('report-view-note')).toHaveTextContent(REPORT_VIEWS[v].note);
+    const target = REPORT_VIEWS[v].sectionTestId;
+    if (target) expect(scrolled).toContain(target);
+    else expect(scrolled).toEqual([]);
+    delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+  });
+
+  it('plain /reports/unified shows no note', () => {
+    renderAt('/reports/unified');
+    expect(screen.queryByTestId('report-view-note')).not.toBeInTheDocument();
   });
 });
