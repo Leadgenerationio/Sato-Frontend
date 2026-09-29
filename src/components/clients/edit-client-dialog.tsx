@@ -21,6 +21,15 @@ import {
   type ClientContactInput,
   type ContactType,
 } from '@/lib/hooks/use-clients';
+import {
+  COUNTRIES, VAT_TREATMENTS, VAT_TREATMENT_LABELS, VAT_TREATMENT_HINTS,
+  findCountry, validateLocale, vatFlagsFor, deriveVatTreatment, chargesVat, currencyOptions,
+  type VatTreatment,
+} from '@/lib/client-locale';
+
+// Country the stored text couldn't be matched to (e.g. "Narnia"): kept as its own option so
+// saving the dialog never rewrites it.
+const STORED_COUNTRY = '__stored__';
 
 interface EditClientDialogProps {
   client: ClientDetail;
@@ -45,9 +54,30 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
     if (next) {
       setForm(buildFormState(client));
       setContacts(buildContactsState(client));
+      setShowErrors(false);
     }
     onOpenChange(next);
   }
+
+  const [showErrors, setShowErrors] = useState(false);
+  const initial = buildFormState(client);
+  const initialContacts = buildContactsState(client);
+  const country = findCountry(form.countryCode);
+  const countryChanged = form.countryCode !== initial.countryCode;
+  // Only check what was edited: an old record with an odd phone or postcode must still be
+  // saveable when someone just changes the status.
+  const errors = validateLocale({
+    country: form.countryCode,
+    postcode: countryChanged || form.addressPostcode !== initial.addressPostcode ? form.addressPostcode : '',
+    companyNumber: form.companyNumber !== initial.companyNumber ? form.companyNumber : '',
+    contactPhones: contacts.map((c, i) =>
+      countryChanged || c.phone !== (initialContacts[i]?.phone ?? '') ? c.phone : ''),
+  });
+  const err = (key: string) => (showErrors ? errors[key] : undefined);
+  const fieldError = (key: string) => {
+    const msg = err(key);
+    return msg ? <p role="alert" className="text-xs text-red-600">{msg}</p> : null;
+  };
 
   function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -69,8 +99,21 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
       toast.error('Company name is required');
       return;
     }
+    if (Object.keys(errors).length > 0) {
+      setShowErrors(true);
+      toast.error('Please fix the highlighted fields');
+      return;
+    }
     try {
-      await updateClient.mutateAsync({ id: client.id, ...form, contacts });
+      const { countryCode, ...rest } = form;
+      await updateClient.mutateAsync({
+        id: client.id,
+        ...rest,
+        addressCountry: countryCode === STORED_COUNTRY ? client.addressCountry : country?.name ?? '',
+        // Legacy booleans too, so an older backend still saves the VAT choice.
+        ...vatFlagsFor(form.vatTreatment),
+        contacts,
+      });
       toast.success(`${form.companyName} updated`);
       onOpenChange(false);
     } catch (err) {
@@ -106,12 +149,15 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 />
               </div>
               <div className="space-y-2">
-                <Label>Company Number</Label>
+                <Label>{country?.companyId.label ?? 'Company Number'}</Label>
                 <Input
                   value={form.companyNumber}
                   onChange={(e) => update('companyNumber', e.target.value)}
-                  placeholder="12345678"
+                  placeholder={country?.companyId.placeholder ?? '12345678'}
+                  maxLength={20}
+                  aria-invalid={!!err('companyNumber')}
                 />
+                {fieldError('companyNumber')}
               </div>
             </div>
             <div className="space-y-2">
@@ -119,7 +165,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
               <Input
                 value={form.addressLine}
                 onChange={(e) => update('addressLine', e.target.value)}
-                placeholder="10 Fleet Street"
+                placeholder={country?.addressPlaceholders.line ?? '10 Fleet Street'}
               />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -128,34 +174,43 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 <Input
                   value={form.addressTown}
                   onChange={(e) => update('addressTown', e.target.value)}
-                  placeholder="London"
+                  placeholder={country?.addressPlaceholders.town ?? 'London'}
                 />
               </div>
               <div className="space-y-2">
-                <Label>County</Label>
+                <Label>County / Region</Label>
                 <Input
                   value={form.addressCounty}
                   onChange={(e) => update('addressCounty', e.target.value)}
-                  placeholder="Greater London"
+                  placeholder={country?.addressPlaceholders.county ?? 'Greater London'}
                 />
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Country</Label>
-                <Input
-                  value={form.addressCountry}
-                  onChange={(e) => update('addressCountry', e.target.value)}
-                  placeholder="United Kingdom"
-                />
+                <Label htmlFor="edit-country">Country</Label>
+                <select
+                  id="edit-country"
+                  value={form.countryCode}
+                  onChange={(e) => update('countryCode', e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                >
+                  <option value="">Select country…</option>
+                  {initial.countryCode === STORED_COUNTRY && (
+                    <option value={STORED_COUNTRY}>{client.addressCountry} (as stored)</option>
+                  )}
+                  {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
               </div>
               <div className="space-y-2">
                 <Label>Postcode</Label>
                 <Input
                   value={form.addressPostcode}
                   onChange={(e) => update('addressPostcode', e.target.value)}
-                  placeholder="EC4Y 1AA"
+                  placeholder={country?.postcode?.example ?? 'EC4Y 1AA'}
+                  aria-invalid={!!err('postcode')}
                 />
+                {fieldError('postcode')}
               </div>
             </div>
           </section>
@@ -173,6 +228,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 >
                   <option value="onboarding">Onboarding</option>
                   <option value="active">Active</option>
+                  <option value="paused">Paused</option>
                   <option value="churned">Churned</option>
                 </select>
               </div>
@@ -215,10 +271,15 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                   onChange={(e) => update('currency', e.target.value)}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                 >
-                  <option value="GBP">GBP (£)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="USD">USD ($)</option>
+                  {currencyOptions(client.currency).map((c) => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
                 </select>
+                {country && country.currency !== form.currency && (
+                  <p className="text-xs text-muted-foreground">
+                    {country.name} clients are usually billed in {country.currency}.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Payment Terms</Label>
@@ -245,54 +306,41 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="edit-vat-registered">VAT Registered</Label>
-                <input
-                  id="edit-vat-registered"
-                  type="checkbox"
-                  checked={form.vatRegistered}
-                  onChange={(e) => {
-                    update('vatRegistered', e.target.checked);
-                    update('addVatToInvoices', e.target.checked);
-                  }}
-                  className="size-4 rounded border-input"
-                />
-              </div>
-              {form.vatRegistered && (
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="edit-add-vat">Add VAT to Invoices</Label>
-                  <input
-                    id="edit-add-vat"
-                    type="checkbox"
-                    checked={form.addVatToInvoices}
-                    onChange={(e) => update('addVatToInvoices', e.target.checked)}
-                    className="size-4 rounded border-input"
-                  />
-                </div>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="edit-vat-treatment">VAT Treatment</Label>
+              <select
+                id="edit-vat-treatment"
+                value={form.vatTreatment}
+                onChange={(e) => update('vatTreatment', e.target.value as VatTreatment)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              >
+                {VAT_TREATMENTS.map((t) => <option key={t} value={t}>{VAT_TREATMENT_LABELS[t]}</option>)}
+              </select>
+              <p className="text-xs text-muted-foreground">{VAT_TREATMENT_HINTS[form.vatTreatment]}</p>
             </div>
-            {form.vatRegistered && (
+            {form.vatTreatment !== 'outside_scope' && (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>VAT Number</Label>
                   <Input
                     value={form.vatNumber}
                     onChange={(e) => update('vatNumber', e.target.value)}
-                    placeholder="GB123456789"
+                    placeholder={country?.vatNumberPlaceholder ?? 'GB123456789'}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>VAT Rate (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.01}
-                    value={form.vatRate}
-                    onChange={(e) => update('vatRate', Number(e.target.value))}
-                  />
-                </div>
+                {chargesVat(form.vatTreatment) && (
+                  <div className="space-y-2">
+                    <Label>VAT Rate (%)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.01}
+                      value={form.vatRate}
+                      onChange={(e) => update('vatRate', Number(e.target.value))}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -363,8 +411,10 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                     <Input
                       value={c.phone}
                       onChange={(e) => updateContact(idx, { phone: e.target.value })}
-                      placeholder="+44 20 1234 5678"
+                      placeholder={country?.phonePlaceholder ?? '+44 20 1234 5678'}
+                      aria-invalid={!!err(`phone-${idx}`)}
                     />
+                    {fieldError(`phone-${idx}`)}
                   </div>
                 </div>
               </div>
@@ -449,12 +499,12 @@ function buildFormState(client: ClientDetail) {
     addressLine: client.addressLine ?? '',
     addressTown: client.addressTown ?? '',
     addressCounty: client.addressCounty ?? '',
-    addressCountry: client.addressCountry ?? 'United Kingdom',
+    // Blank stays blank: it used to be rewritten to "United Kingdom" on every save.
+    countryCode: countryCodeFor(client.addressCountry),
     addressPostcode: client.addressPostcode ?? '',
     currency: client.currency,
     paymentTermsDays: client.paymentTermsDays,
-    vatRegistered: client.vatRegistered,
-    addVatToInvoices: client.addVatToInvoices,
+    vatTreatment: deriveVatTreatment(client.vatTreatment, client.addVatToInvoices, client.vatRegistered),
     vatNumber: client.vatNumber ?? '',
     vatRate: client.vatRate,
     leadPrice: client.leadPrice,
@@ -465,6 +515,11 @@ function buildFormState(client: ClientDetail) {
     xeroContactId: client.xeroContactId ?? '',
     notes: client.notes ?? '',
   };
+}
+
+function countryCodeFor(stored: string | null | undefined): string {
+  if (!stored || !stored.trim()) return '';
+  return findCountry(stored)?.code ?? STORED_COUNTRY;
 }
 
 function buildContactsState(client: ClientDetail): ClientContactInput[] {

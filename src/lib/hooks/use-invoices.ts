@@ -49,6 +49,8 @@ export interface InvoiceDetail extends InvoiceSummary {
   lastChasedAt: string | null;
   clientEmail: string;
   vatRegistered: boolean;
+  // Sato-Backend#49; absent from an older backend.
+  vatTreatment?: string;
   attachments: InvoiceAttachment[];
 }
 
@@ -58,6 +60,12 @@ export interface InvoiceClient {
   email: string;
   vatRegistered: boolean;
   currency: string;
+  // Sato-Backend#49 (M7): the client record drives the invoice defaults. All optional so an
+  // older backend still works (30-day terms, 20% VAT if registered).
+  status?: string;
+  vatTreatment?: string;
+  vatRate?: number;
+  paymentTermsDays?: number;
 }
 
 export interface PaginatedInvoices {
@@ -122,7 +130,7 @@ export function useInvoiceClients() {
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { clientId: string; currency: string; lineItems: LineItem[]; addVat: boolean; dueDate?: string }) => {
+    mutationFn: async (data: { clientId: string; currency: string; lineItems: LineItem[]; addVat: boolean; dueDate?: string; confirmCurrencyMismatch?: boolean }) => {
       const res = await api.post<{ invoice: InvoiceDetail }>('/api/v1/invoices', data);
       return unwrap(res).invoice;
     },

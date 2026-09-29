@@ -5,6 +5,8 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Plus, X, Loader2, Check, ChevronDown, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoiceClients, useCreateInvoice, type LineItem, type InvoiceClient } from '@/lib/hooks/use-invoices';
+import { ApiError } from '@/lib/api';
+import { currencyOptions, deriveVatTreatment, chargesVat, VAT_TREATMENT_LABELS } from '@/lib/client-locale';
 
 import { logError } from '../../lib/log';
 // Local row type — adds a stable id so we can key by id rather than array index.
@@ -28,6 +30,33 @@ function fromMinor(minor: number): number {
   return minor / 100;
 }
 
+// M7: the client record is the source of truth for currency, terms and VAT.
+function termsOf(c?: InvoiceClient): number {
+  return c?.paymentTermsDays ?? 30;
+}
+function vatRateOf(c?: InvoiceClient): number {
+  return c?.vatRate ?? 20;
+}
+function treatmentOf(c?: InvoiceClient) {
+  // An older backend only sends vatRegistered, which used to mean "add VAT".
+  return deriveVatTreatment(c?.vatTreatment, c?.vatRegistered, c?.vatRegistered);
+}
+function dueDateFromTerms(days: number): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+// Local calendar date, not toISOString(): that shifts the day for users east of UTC.
+function toDateOnly(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+const STATUS_LABEL: Record<string, string> = {
+  onboarding: 'Onboarding', prospect: 'Prospect', paused: 'Paused',
+};
+
 export function InvoiceCreatePage() {
   const navigate = useNavigate();
   const { data: clients, isLoading: clientsLoading } = useInvoiceClients();
@@ -36,17 +65,29 @@ export function InvoiceCreatePage() {
   const [selectedClientId, setSelectedClientId] = useState('');
   const [currency, setCurrency] = useState('GBP');
   const [addVat, setAddVat] = useState(false);
-  const [dueDate, setDueDate] = useState<Date | undefined>(new Date(Date.now() + 30 * 86400000));
+  const [dueDate, setDueDate] = useState<Date | undefined>(dueDateFromTerms(30));
   const [lines, setLines] = useState<EditableLine[]>([makeLine()]);
+  // Invoicing in a currency other than the client's needs an explicit yes.
+  const [confirmMismatch, setConfirmMismatch] = useState(false);
+  const [serverMismatch, setServerMismatch] = useState<string | null>(null);
 
   const selectedClient = clients?.find((c: InvoiceClient) => c.id === selectedClientId);
+  const treatment = treatmentOf(selectedClient);
+  const vatRate = vatRateOf(selectedClient);
+  const canAddVat = !selectedClient || chargesVat(treatment);
+  const currencyMismatch = !!selectedClient && currency !== selectedClient.currency;
+  const termsDate = selectedClient ? dueDateFromTerms(termsOf(selectedClient)) : undefined;
+  const dueDiffersFromTerms = !!termsDate && !!dueDate && toDateOnly(dueDate) !== toDateOnly(termsDate);
 
   function handleClientChange(clientId: string) {
     setSelectedClientId(clientId);
     const client = clients?.find((c: InvoiceClient) => c.id === clientId);
+    setConfirmMismatch(false);
+    setServerMismatch(null);
     if (client) {
       setCurrency(client.currency);
-      setAddVat(client.vatRegistered);
+      setAddVat(chargesVat(treatmentOf(client)));
+      setDueDate(dueDateFromTerms(termsOf(client)));
     }
   }
 
@@ -82,7 +123,7 @@ export function InvoiceCreatePage() {
   }
 
   const subtotalMinor = lines.reduce((sum, l) => sum + toMinor(l.amount), 0);
-  const vatMinor = addVat ? Math.round(subtotalMinor * 0.2) : 0;
+  const vatMinor = addVat && canAddVat ? Math.round(subtotalMinor * (vatRate / 100)) : 0;
   const totalMinor = subtotalMinor + vatMinor;
   const subtotal = fromMinor(subtotalMinor);
   const vatAmount = fromMinor(vatMinor);
@@ -98,6 +139,10 @@ export function InvoiceCreatePage() {
       toast.error('Please fill in all line items');
       return;
     }
+    if (currencyMismatch && !confirmMismatch) {
+      toast.error(`${selectedClient!.name} is billed in ${selectedClient!.currency}. Tick the box to invoice in ${currency}, or change the currency back.`);
+      return;
+    }
 
     try {
       // Strip local id from line items — backend only knows about the LineItem shape.
@@ -106,13 +151,17 @@ export function InvoiceCreatePage() {
         clientId: selectedClientId,
         currency,
         lineItems,
-        addVat,
-        dueDate: dueDate ? dueDate.toISOString() : undefined,
+        addVat: addVat && canAddVat,
+        dueDate: dueDate ? toDateOnly(dueDate) : undefined,
+        confirmCurrencyMismatch: currencyMismatch ? true : undefined,
       });
       toast.success(`Invoice ${invoice.invoiceNumber} created`);
       navigate(`/finance/invoices/${invoice.id}`);
     } catch (err) {
       logError('Create invoice failed', err);
+      // The server enforces the same two rules; show its wording if the client state was stale.
+      if (err instanceof ApiError && err.code === 'currency_mismatch') setServerMismatch(err.message);
+      if (err instanceof ApiError && err.code === 'vat_not_applicable') setAddVat(false);
       toast.error(err instanceof Error ? err.message : 'Failed to create invoice');
     }
   }
@@ -135,7 +184,7 @@ export function InvoiceCreatePage() {
           </Link>
           <div>
             <h1 className="ahead-title">Create Invoice</h1>
-            <p className="ahead-sub">Create a new invoice and push to Xero</p>
+            <p className="ahead-sub">Create a draft invoice. Push it to Xero from the invoice page.</p>
           </div>
         </div>
       </div>
@@ -192,7 +241,7 @@ export function InvoiceCreatePage() {
 
             <div className="ci-sep"></div>
             <div className="ci-total-row"><span>Subtotal</span><span className="mono">{formatCurrency(subtotal, currency)}</span></div>
-            {addVat && <div className="ci-total-row"><span>VAT (20%)</span><span className="mono">{formatCurrency(vatAmount, currency)}</span></div>}
+            {addVat && canAddVat && <div className="ci-total-row"><span>VAT ({vatRate}%)</span><span className="mono">{formatCurrency(vatAmount, currency)}</span></div>}
             <div className="ci-total-row grand"><span>Total</span><span className="mono">{formatCurrency(total, currency)}</span></div>
           </div>
 
@@ -210,7 +259,9 @@ export function InvoiceCreatePage() {
                   >
                     <option value="">Select a client…</option>
                     {clients?.map((c: InvoiceClient) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <option key={c.id} value={c.id}>
+                        {c.name}{c.status && STATUS_LABEL[c.status] ? ` (${STATUS_LABEL[c.status]})` : ''}
+                      </option>
                     ))}
                   </select>
                   <span className="lic"><ChevronDown className="size-[15px]" /></span>
@@ -220,10 +271,10 @@ export function InvoiceCreatePage() {
               <div className="nc-field">
                 <label className="nc-label">Currency</label>
                 <div className="nc-select-wrap">
-                  <select className="nc-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
+                  <select className="nc-select" aria-label="Currency" value={currency} onChange={(e) => { setCurrency(e.target.value); setConfirmMismatch(false); setServerMismatch(null); }}>
+                    {currencyOptions(selectedClient?.currency).map((c) => (
+                      <option key={c.code} value={c.code}>{c.label}</option>
+                    ))}
                   </select>
                   <span className="lic"><ChevronDown className="size-[15px]" /></span>
                 </div>
@@ -241,16 +292,38 @@ export function InvoiceCreatePage() {
                 </div>
               </div>
 
+              {dueDiffersFromTerms && termsDate && (
+                <p className="nc-hint" role="status">
+                  {selectedClient!.name}'s terms are {termsOf(selectedClient)} days (due {termsDate.toLocaleDateString('en-GB')}).{' '}
+                  <button type="button" className="btn b-ghost b-sm" onClick={() => setDueDate(termsDate)}>Use client terms</button>
+                </p>
+              )}
+
               <label className="nc-check ci-vat">
-                <input type="checkbox" checked={addVat} onChange={(e) => setAddVat(e.target.checked)} />
+                <input type="checkbox" checked={addVat && canAddVat} disabled={!canAddVat} onChange={(e) => setAddVat(e.target.checked)} />
                 <span className="nc-check-box"><Check className="size-[13px]" strokeWidth={3} /></span>
-                <span>Add VAT (20%)</span>
+                <span>Add VAT ({vatRate}%)</span>
               </label>
 
               {selectedClient && (
                 <p className="nc-hint" style={{ marginTop: 12 }}>
-                  {selectedClient.name} — {selectedClient.vatRegistered ? 'VAT registered' : 'Not VAT registered'}
+                  {selectedClient.name} — {VAT_TREATMENT_LABELS[treatment]}
+                  {!canAddVat && '. VAT can\'t be added to this invoice; change the VAT treatment on the client first if that is wrong.'}
+                  {canAddVat && !addVat && '. This invoice will have no VAT.'}
                 </p>
+              )}
+
+              {(currencyMismatch || serverMismatch) && selectedClient && (
+                <div className="nc-hint" role="alert" style={{ marginTop: 12, color: 'var(--danger, #b42318)' }}>
+                  <p style={{ margin: 0 }}>
+                    {serverMismatch ?? `${selectedClient.name} is billed in ${selectedClient.currency}, but this invoice is in ${currency}.`}
+                  </p>
+                  <label className="nc-check" style={{ marginTop: 8 }}>
+                    <input type="checkbox" checked={confirmMismatch} onChange={(e) => setConfirmMismatch(e.target.checked)} />
+                    <span className="nc-check-box"><Check className="size-[13px]" strokeWidth={3} /></span>
+                    <span>Yes, invoice in {currency} instead of {selectedClient.currency}</span>
+                  </label>
+                </div>
               )}
             </div>
 

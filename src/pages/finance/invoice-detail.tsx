@@ -33,6 +33,14 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// The rate actually charged on this invoice (the client's VAT rate is no longer always 20%).
+function vatRateLabel(invoice: { subtotal: string; vatAmount: string }): string {
+  const sub = toMoney(invoice.subtotal);
+  if (sub <= 0) return '0%';
+  const pct = Math.round((toMoney(invoice.vatAmount) / sub) * 10000) / 100;
+  return `${pct}%`;
+}
+
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: invoice, isLoading, error } = useInvoice(id!);
@@ -150,7 +158,7 @@ export function InvoiceDetailPage() {
           <div style={{ padding: '16px 16px 8px' }}>
             <div className="ci-total-row"><span>Subtotal</span><span className="mono">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</span></div>
             {toMoney(invoice.vatAmount) > 0 && (
-              <div className="ci-total-row"><span>VAT (20%)</span><span className="mono">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</span></div>
+              <div className="ci-total-row"><span>VAT ({vatRateLabel(invoice)})</span><span className="mono">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</span></div>
             )}
             <div className="ci-total-row grand"><span>Total</span><span className="mono">{formatCurrency(toMoney(invoice.total), invoice.currency)}</span></div>
           </div>
@@ -163,7 +171,7 @@ export function InvoiceDetailPage() {
             <DetailRow label="Client" value={invoice.clientName} />
             <DetailRow label="Email" value={invoice.clientEmail} />
             <DetailRow label="Currency" value={invoice.currency} />
-            <DetailRow label="VAT" value={invoice.vatRegistered ? 'Yes (20%)' : 'No'} />
+            <DetailRow label="VAT" value={toMoney(invoice.vatAmount) > 0 ? `Yes (${vatRateLabel(invoice)})` : 'No'} />
             <DetailRow label="Due Date" value={formatDate(invoice.dueDate)} />
             {invoice.paidDate && <DetailRow label="Paid Date" value={formatDate(invoice.paidDate)} valueClass="pos" />}
             <DetailRow label="Created" value={formatDate(invoice.createdAt)} last={invoice.chaseCount === 0} />

@@ -57,6 +57,8 @@ export interface ClientDetail extends ClientSummary {
   paymentTermsDays: number;
   vatRegistered: boolean;
   addVatToInvoices: boolean;
+  // Sato-Backend#49. Absent from an older backend: derive it from the two flags above.
+  vatTreatment?: string;
   vatNumber: string;
   vatRate: number;
   leadPrice: number;

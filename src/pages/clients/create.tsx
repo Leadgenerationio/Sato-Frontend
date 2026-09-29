@@ -4,24 +4,32 @@ import { ArrowLeft, Loader2, Plus, X, Check, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateClient, type ClientContactInput, type ContactType } from '@/lib/hooks/use-clients';
 import { useLbBuyers } from '@/lib/hooks/use-leadbyte';
+import {
+  COUNTRIES, CURRENCIES, VAT_TREATMENTS, VAT_TREATMENT_LABELS, VAT_TREATMENT_HINTS,
+  findCountry, defaultsForCountry, validateLocale, vatFlagsFor, chargesVat,
+  type VatTreatment,
+} from '@/lib/client-locale';
 
 import { logError } from '../../lib/log';
 
 // Statto form field wrapper — label + control (+ optional hint), matching
 // the design's <Field> helper.
 function Field({
-  label, req, children, hint,
+  label, req, children, hint, error,
 }: {
   label?: React.ReactNode;
   req?: boolean;
   children: React.ReactNode;
   hint?: React.ReactNode;
+  error?: string;
 }) {
   return (
     <div className="nc-field">
       {(label || req) && <label className="nc-label">{label}{req && <span className="req"> *</span>}</label>}
       {children}
-      {hint && <span className="nc-hint">{hint}</span>}
+      {error
+        ? <span className="nc-hint" role="alert" style={{ color: 'var(--danger, #b42318)' }}>{error}</span>
+        : hint && <span className="nc-hint">{hint}</span>}
     </div>
   );
 }
@@ -53,12 +61,12 @@ export function ClientCreatePage() {
     addressLine: '',
     addressTown: '',
     addressCounty: '',
-    addressCountry: 'United Kingdom',
+    countryCode: 'GB',
     addressPostcode: '',
     currency: 'GBP',
     paymentTermsDays: 30,
-    vatRegistered: false,
-    addVatToInvoices: false,
+    // M5/S4: one explicit VAT treatment instead of a single tick driving two settings.
+    vatTreatment: 'uk_standard' as VatTreatment,
     vatNumber: '',
     vatRate: 20,
     leadPrice: 0,
@@ -74,8 +82,36 @@ export function ClientCreatePage() {
   // staff who skip this step are the source of most missed agreements.
   const [sendAgreementAfter, setSendAgreementAfter] = useState(true);
 
+  // Errors only show once the user has tried to save, then follow their edits.
+  const [showErrors, setShowErrors] = useState(false);
+  // Changing the country suggests currency + VAT treatment, unless the user already chose one.
+  const [currencyTouched, setCurrencyTouched] = useState(false);
+  const [vatTouched, setVatTouched] = useState(false);
+
+  const country = findCountry(form.countryCode);
+  const errors = validateLocale({
+    country: form.countryCode,
+    postcode: form.addressPostcode,
+    companyNumber: form.companyNumber,
+    contactPhones: contacts.map((c) => c.phone),
+  });
+  const err = (key: string) => (showErrors ? errors[key] : undefined);
+
   function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleCountryChange(code: string) {
+    const next = findCountry(code);
+    setForm((prev) => {
+      const d = next ? defaultsForCountry(next) : null;
+      return {
+        ...prev,
+        countryCode: code,
+        currency: d && !currencyTouched ? d.currency : prev.currency,
+        vatTreatment: d && !vatTouched ? d.vatTreatment : prev.vatTreatment,
+      };
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -85,8 +121,21 @@ export function ClientCreatePage() {
       toast.error('Please fill in company name + primary contact name + email');
       return;
     }
+    if (Object.keys(errors).length > 0) {
+      setShowErrors(true);
+      toast.error('Please fix the highlighted fields');
+      return;
+    }
     try {
-      const client = await createClient.mutateAsync({ ...form, contacts });
+      const { countryCode, ...rest } = form;
+      // The legacy booleans are sent too so an older backend still saves the VAT choice;
+      // a backend with vatTreatment derives them itself and ignores these.
+      const client = await createClient.mutateAsync({
+        ...rest,
+        addressCountry: country?.name ?? '',
+        ...vatFlagsFor(form.vatTreatment),
+        contacts,
+      });
       // Backend fires credit check fire-and-forget; surface that to staff so
       // they don't think nothing happened.
       toast.success(
@@ -123,25 +172,31 @@ export function ClientCreatePage() {
             <Field label="Company Name" req>
               <input className="nc-input" value={form.companyName} onChange={(e) => update('companyName', e.target.value)} placeholder="Acme Ltd" />
             </Field>
-            <Field label="Company Number">
-              <input className="nc-input" value={form.companyNumber} onChange={(e) => update('companyNumber', e.target.value)} placeholder="12345678" />
+            <Field label={country?.companyId.label ?? 'Company registration number'} error={err('companyNumber')}>
+              <input className="nc-input" value={form.companyNumber} onChange={(e) => update('companyNumber', e.target.value)} placeholder={country?.companyId.placeholder ?? 'Local company number'} maxLength={20} aria-invalid={!!err('companyNumber')} />
             </Field>
           </div>
           <Field label="Address Line">
-            <input className="nc-input" value={form.addressLine} onChange={(e) => update('addressLine', e.target.value)} placeholder="10 Fleet Street" />
+            <input className="nc-input" value={form.addressLine} onChange={(e) => update('addressLine', e.target.value)} placeholder={country?.addressPlaceholders.line ?? 'Street and number'} />
           </Field>
           <div className="nc-grid2">
             <Field label="Town / City">
-              <input className="nc-input" value={form.addressTown} onChange={(e) => update('addressTown', e.target.value)} placeholder="London" />
+              <input className="nc-input" value={form.addressTown} onChange={(e) => update('addressTown', e.target.value)} placeholder={country?.addressPlaceholders.town ?? 'Town / City'} />
             </Field>
-            <Field label="County">
-              <input className="nc-input" value={form.addressCounty} onChange={(e) => update('addressCounty', e.target.value)} placeholder="Greater London" />
+            <Field label="County / Region">
+              <input className="nc-input" value={form.addressCounty} onChange={(e) => update('addressCounty', e.target.value)} placeholder={country?.addressPlaceholders.county ?? 'Region'} />
             </Field>
             <Field label="Country">
-              <input className="nc-input" value={form.addressCountry} onChange={(e) => update('addressCountry', e.target.value)} placeholder="United Kingdom" />
+              <div className="nc-select-wrap">
+                <select className="nc-select" aria-label="Country" value={form.countryCode} onChange={(e) => handleCountryChange(e.target.value)}>
+                  <option value="">Select country…</option>
+                  {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
+                <ChevronDown className="size-[15px]" />
+              </div>
             </Field>
-            <Field label="Postcode">
-              <input className="nc-input" value={form.addressPostcode} onChange={(e) => update('addressPostcode', e.target.value)} placeholder="EC4Y 1AA" />
+            <Field label="Postcode" error={err('postcode')}>
+              <input className="nc-input" value={form.addressPostcode} onChange={(e) => update('addressPostcode', e.target.value)} placeholder={country?.postcode?.example ?? 'Postcode'} aria-invalid={!!err('postcode')} />
             </Field>
           </div>
         </div>
@@ -180,8 +235,8 @@ export function ClientCreatePage() {
                 <Field label={<span>Email {c.contactType === 'primary' && '*'}</span>}>
                   <input className="nc-input" type="email" value={c.email} onChange={(e) => updateContact(idx, { email: e.target.value })} placeholder="jamie@uken.co.uk" />
                 </Field>
-                <Field label="Phone">
-                  <input className="nc-input" value={c.phone} onChange={(e) => updateContact(idx, { phone: e.target.value })} placeholder="+44 20 1234 5678" />
+                <Field label="Phone" error={err(`phone-${idx}`)}>
+                  <input className="nc-input" value={c.phone} onChange={(e) => updateContact(idx, { phone: e.target.value })} placeholder={country?.phonePlaceholder ?? '+… (with country code)'} aria-invalid={!!err(`phone-${idx}`)} />
                 </Field>
               </div>
             </div>
@@ -199,10 +254,8 @@ export function ClientCreatePage() {
             <div className="nc-grid3">
               <Field label="Currency">
                 <div className="nc-select-wrap">
-                  <select className="nc-select" value={form.currency} onChange={(e) => update('currency', e.target.value)}>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
+                  <select className="nc-select" value={form.currency} onChange={(e) => { setCurrencyTouched(true); update('currency', e.target.value); }}>
+                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
                   </select>
                   <ChevronDown className="size-[15px]" />
                 </div>
@@ -224,12 +277,13 @@ export function ClientCreatePage() {
               </Field>
             </div>
             <div className="nc-grid2" style={{ marginTop: 4 }}>
-              <Field label="VAT Registered">
-                <label className="nc-check">
-                  <input type="checkbox" checked={form.vatRegistered} onChange={(e) => { update('vatRegistered', e.target.checked); update('addVatToInvoices', e.target.checked); }} />
-                  <span className="nc-check-box"><Check className="size-[13px]" strokeWidth={3} /></span>
-                  <span>Charge VAT on invoices</span>
-                </label>
+              <Field label="VAT Treatment" hint={VAT_TREATMENT_HINTS[form.vatTreatment]}>
+                <div className="nc-select-wrap">
+                  <select className="nc-select" aria-label="VAT treatment" value={form.vatTreatment} onChange={(e) => { setVatTouched(true); update('vatTreatment', e.target.value as VatTreatment); }}>
+                    {VAT_TREATMENTS.map((t) => <option key={t} value={t}>{VAT_TREATMENT_LABELS[t]}</option>)}
+                  </select>
+                  <ChevronDown className="size-[15px]" />
+                </div>
               </Field>
               <Field label="Billing Workflow">
                 <div className="nc-select-wrap">
@@ -242,14 +296,16 @@ export function ClientCreatePage() {
                 </div>
               </Field>
             </div>
-            {form.vatRegistered && (
+            {form.vatTreatment !== 'outside_scope' && (
               <div className="nc-grid2">
                 <Field label="VAT Number">
-                  <input className="nc-input" value={form.vatNumber} onChange={(e) => update('vatNumber', e.target.value)} placeholder="GB123456789" />
+                  <input className="nc-input" value={form.vatNumber} onChange={(e) => update('vatNumber', e.target.value)} placeholder={country?.vatNumberPlaceholder ?? 'VAT number'} />
                 </Field>
-                <Field label="VAT Rate (%)">
-                  <input className="nc-input" type="number" min={0} max={100} step={0.01} value={form.vatRate} onChange={(e) => update('vatRate', Number(e.target.value))} />
-                </Field>
+                {chargesVat(form.vatTreatment) && (
+                  <Field label="VAT Rate (%)">
+                    <input className="nc-input" type="number" min={0} max={100} step={0.01} value={form.vatRate} onChange={(e) => update('vatRate', Number(e.target.value))} />
+                  </Field>
+                )}
               </div>
             )}
           </div>
@@ -260,9 +316,12 @@ export function ClientCreatePage() {
             <Field label="LeadByte Buyer">
               <LeadByteBuyerSelect value={form.leadbyteClientId} onChange={(v) => update('leadbyteClientId', v)} />
             </Field>
-            <Field label="Companies House number">
-              <input className="nc-input" value={form.endoleCompanyId} onChange={(e) => update('endoleCompanyId', e.target.value)} placeholder="UK Companies House number used for credit checks" />
-            </Field>
+            {(!country || country.code === 'GB') && (
+              // Credit checks (Endole / Creditsafe) only cover UK companies.
+              <Field label="Companies House number">
+                <input className="nc-input" value={form.endoleCompanyId} onChange={(e) => update('endoleCompanyId', e.target.value)} placeholder="UK Companies House number used for credit checks" />
+              </Field>
+            )}
             <Field label="Xero Contact ID">
               <input className="nc-input" value={form.xeroContactId} onChange={(e) => update('xeroContactId', e.target.value)} placeholder="Populated after Xero sync" />
             </Field>
