@@ -1,0 +1,19 @@
+/* S4: VAT tax codes on the Xero card (Settings → Integrations). */
+.statto-admin .xtc { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.statto-admin .xtc-head { display: flex; align-items: center; gap: 8px; color: var(--fg1); }
+.statto-admin .xtc-head h4 { font-size: 14px; font-weight: 600; margin: 0; }
+.statto-admin .xtc-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+.statto-admin .xtc-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.statto-admin .xtc-label { font-size: 13px; font-weight: 600; color: var(--fg1); }
+.statto-admin .xtc-inputs { display: flex; flex-direction: column; gap: 6px; }
+.statto-admin .xtc-select, .statto-admin .xtc-custom { width: 100%; }
+.statto-admin .xtc-hint { font-size: 12px; color: var(--fg2); margin: 0; }
+.statto-admin .xtc-err { font-size: 12px; color: var(--negative, #b42318); margin: 0; }
+.statto-admin .xtc-actions { display: flex; gap: 10px; margin-top: 4px; }
+.xtc-summary { margin: 4px 0 8px; padding-left: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 640px) {
+  .statto-admin .xtc-rows { grid-template-columns: 1fr; }
+  .statto-admin .xtc-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .statto-admin .xtc-actions .btn { width: 100%; justify-content: center; min-height: 44px; }
+  .statto-admin .xtc-select, .statto-admin .xtc-custom { min-height: 44px; }
+}

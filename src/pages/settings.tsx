@@ -9,6 +9,7 @@ import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
 import { WebhooksSettings } from '@/components/settings/webhooks-settings';
 
 import { logError, logWarn } from '../lib/log';
+import { XeroTaxCodes } from '@/components/settings/xero-tax-codes';
 
 const SETTINGS_TABS = ['profile', 'account', 'integrations', 'users', 'api_keys', 'webhooks'] as const;
 // Owner-only tabs (the API refuses the rest of the roles too).
@@ -117,6 +118,7 @@ function XeroIntegration() {
           Xero credentials are set but authentication failed. Check the backend log for details.
         </p>
       )}
+      <XeroTaxCodes />
     </div>
   );
 }
