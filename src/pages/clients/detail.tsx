@@ -23,6 +23,9 @@ import {
 } from '@/lib/hooks/use-client-campaigns';
 import { AddCampaignDialog } from '@/components/clients/add-campaign-dialog';
 import { PortalUsersCard } from '@/components/clients/portal-users-card';
+// M2: creative library + landing pages tabs.
+import { CreativeLibrary } from '@/components/creatives/creative-library';
+import { LandingPagesList } from '@/components/creatives/landing-pages-list';
 import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import {
   useClientActivity, useClientEmails, useLogClientEmail, useDeleteClientEmail,
@@ -98,6 +101,8 @@ const CLIENT_TABS = [
   { value: 'documents', label: 'Documents' },
   { value: 'emails', label: 'Emails' },
   { value: 'activity', label: 'Activity' },
+  { value: 'creatives', label: 'Creatives' },
+  { value: 'landing_pages', label: 'Landing pages' },
 ] as const;
 
 export function ClientDetailPage() {
@@ -513,6 +518,8 @@ export function ClientDetailPage() {
       {tab === 'documents' && <DocumentsTab clientId={id!} />}
       {tab === 'emails' && <EmailsTab clientId={id!} />}
       {tab === 'activity' && <ActivityTab clientId={id!} />}
+      {tab === 'creatives' && <CreativeLibrary clientId={id!} />}
+      {tab === 'landing_pages' && <LandingPagesList clientId={id!} />}
     </div>
   );
 }

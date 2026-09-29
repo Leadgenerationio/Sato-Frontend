@@ -5,16 +5,22 @@ import { ProfileSkeleton } from '@/components/shared/loading-skeleton';
 import { User, Mail, Shield, Building, Calendar, LogOut, Loader2, CheckCircle2, XCircle, RefreshCw, Send, FileSignature, HardDrive } from 'lucide-react';
 import { toast } from 'sonner';
 import { UsersManagement } from '@/pages/users';
+import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
+import { WebhooksSettings } from '@/components/settings/webhooks-settings';
 
 import { logError, logWarn } from '../lib/log';
 
-const SETTINGS_TABS = ['profile', 'account', 'integrations', 'users'] as const;
+const SETTINGS_TABS = ['profile', 'account', 'integrations', 'users', 'api_keys', 'webhooks'] as const;
+// Owner-only tabs (the API refuses the rest of the roles too).
+const OWNER_TABS: readonly SettingsTab[] = ['integrations', 'users', 'api_keys', 'webhooks'];
 type SettingsTab = (typeof SETTINGS_TABS)[number];
 const TAB_LABELS: Record<SettingsTab, string> = {
   profile: 'Profile',
   account: 'Account',
   integrations: 'Integrations',
   users: 'User Management',
+  api_keys: 'API keys',
+  webhooks: 'Webhooks',
 };
 
 function ProfileField({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
@@ -518,7 +524,7 @@ export function SettingsPage() {
 
   const isOwner = user.role === 'owner';
   // Hide owner-only tabs for non-owners; keep `tab` from landing on one.
-  const visibleTabs = SETTINGS_TABS.filter((t) => isOwner || (t !== 'integrations' && t !== 'users'));
+  const visibleTabs = SETTINGS_TABS.filter((t) => isOwner || !OWNER_TABS.includes(t));
   const activeTab = visibleTabs.includes(tab) ? tab : 'profile';
 
   const initials = user.name
@@ -664,6 +670,8 @@ export function SettingsPage() {
 
       {/* User Management Tab — owner only */}
       {isOwner && activeTab === 'users' && <UsersManagement />}
+      {isOwner && activeTab === 'api_keys' && <ApiKeysSettings />}
+      {isOwner && activeTab === 'webhooks' && <WebhooksSettings />}
     </div>
   );
 }
