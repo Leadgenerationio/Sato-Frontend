@@ -18,7 +18,7 @@ import { useServerPreference } from '@/lib/hooks/use-preferences';
 import { useCreditAlerts } from '@/lib/hooks/use-clients';
 import { useTaskStats } from '@/lib/hooks/use-tasks';
 import { useNotifications } from '@/lib/hooks/use-notifications';
-import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { toMoney, invoiceDateOf, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import { formatPercentCapped, formatCurrency, formatCurrencyTotals, groupByCurrency } from '@/lib/currency';
 
 // ── Stato Admin dashboard, restyled to the Statto design (Admin Dashboard.html).
@@ -491,7 +491,7 @@ function RecentInvoicesCard({ invoices }: { invoices: InvoiceSummary[] }) {
           <tbody>
             {invoices.slice(0, 5).map((iv) => (
               <tr key={iv.id}>
-                <td><span className="ri-id">{iv.invoiceNumber}</span><br /><span className="ri-date">{fmtDate(iv.createdAt)}</span></td>
+                <td><span className="ri-id">{iv.invoiceNumber}</span><br /><span className="ri-date">{fmtDate(invoiceDateOf(iv))}</span></td>
                 <td className="ri-client">{iv.clientName}</td>
                 <td><span className={'pill p-' + statusKind(iv.status)} style={{ textTransform: 'capitalize' }}>{iv.status}{iv.daysOverdue > 0 ? ` (${iv.daysOverdue}d)` : ''}</span></td>
                 <td className="r mono ri-amt">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: iv.currency }).format(toMoney(iv.total))}</td>

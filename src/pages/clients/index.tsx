@@ -49,6 +49,8 @@ function RevenueCell({ client }: { client: ClientSummary }) {
 }
 
 // Feedback S14 (29 Sep 2026): sortable columns, filters, page size, CSV.
+// Default order is newest client first (sort=created); there's no "Added"
+// column — at 1280px it pushed the open-client button out of the card.
 // Currencies offered in the filter — the ones clients are billed in.
 const CURRENCY_FILTERS = ['GBP', 'EUR', 'USD', 'CHF', 'PLN', 'SEK', 'NOK', 'DKK', 'CZK', 'AED'] as const;
 const PAGE_SIZES = [10, 25, 50, 100] as const;
@@ -284,8 +286,9 @@ export function ClientsPage() {
                     <SortableHead id="credit" label="Credit" align="right" sort={sort} dir={dir} onToggle={handleSort} />
                     <SortableHead id="campaigns" label="Campaigns" align="right" sort={sort} dir={dir} onToggle={handleSort} />
                     <SortableHead id="revenue" label="Revenue" align="right" sort={sort} dir={dir} onToggle={handleSort} />
-                    <SortableHead id="created" label="Added" align="right" sort={sort} dir={dir} onToggle={handleSort} />
-                    <th><span className="sr-only">Actions</span></th>
+                    {/* aria-label, not a .sr-only span: that span is position:absolute
+                        and escaped .table-scroll, making the page scroll sideways at 390px. */}
+                    <th aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
@@ -311,7 +314,6 @@ export function ClientsPage() {
                         <td className="r mono"><CreditCell score={c.creditScore} /></td>
                         <td className="r mono inv-num">{c.activeCampaigns}</td>
                         <td className="r mono inv-total"><RevenueCell client={c} /></td>
-                        <td className="r inv-date">{new Date(c.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                         <td className="r">
                           <Link to={`/clients/${c.id}`}>
                             <button className="inv-open" title="Open client" aria-label={`Open ${c.companyName}`}><ExternalLink className="size-4" /></button>

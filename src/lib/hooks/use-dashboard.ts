@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
-import type { InvoiceSummary } from './use-invoices';
+import { invoiceDateOf, type InvoiceSummary } from './use-invoices';
 
 export interface FinancialOverviewRow {
   month: string;
@@ -208,7 +208,8 @@ export function useDashboardStats(opts: { window?: DashboardWindow } = {}) {
       const invoices = invoiceRes.data?.invoices ?? [];
 
       const recentInvoices = [...invoices]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        // Newest by the invoice's own date (S12), not the Xero import time.
+        .sort((a, b) => new Date(invoiceDateOf(b)).getTime() - new Date(invoiceDateOf(a)).getTime())
         .slice(0, 5);
 
       return {
