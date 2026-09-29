@@ -8,8 +8,10 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useUiStore } from '@/stores/ui-store';
 import { useState, useMemo } from 'react';
 import type { UserRole } from '@/types';
+import { useMySections } from '@/lib/hooks/use-permissions';
 
-interface NavLeaf { href: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; pinned?: boolean; }
+// `section` is the Role Access Matrix key (backend src/config/sections.ts, S7).
+interface NavLeaf { href: string; label: string; icon: typeof LayoutGrid; roles: UserRole[]; section: string; pinned?: boolean; }
 interface NavGroup { key: string; label: string; icon: typeof LayoutGrid; children: NavLeaf[]; }
 export type NavEntry = NavLeaf | NavGroup;
 export const isGroup = (entry: NavEntry): entry is NavGroup => 'children' in entry;
@@ -21,9 +23,10 @@ export const isGroup = (entry: NavEntry): entry is NavGroup => 'children' in ent
 // parses the guards out of App.tsx and fails when the two disagree. A group
 // has no role list of its own: it shows while at least one child survives.
 //
-// Entries are also limited to what the API lets the role load: Bank Feed and
-// Auto-invoice are owner-only until the backend stops shadowing them behind
-// the creative router's owner/ops_manager guard (routes/index.ts).
+// Entries are also limited to what the API lets the role load. Bank Feed and
+// Auto-invoice are owner + finance_admin: backend #54 moved the creative
+// router's owner/ops_manager guard onto its own routes, so it no longer
+// shadows /finance/* for finance_admin.
 //
 // History: on 2026-06-15 Sam asked for a five-item menu and everything else
 // was hidden. Feedback round 1 (29 Sep, M6) reversed that — the hidden
@@ -37,49 +40,74 @@ export const OPS: UserRole[] = ['owner', 'ops_manager'];
 export const OWNER: UserRole[] = ['owner'];
 
 export const navItems: NavEntry[] = [
-  { href: '/', label: 'Dashboard', icon: LayoutGrid, roles: STAFF },
+  { href: '/', label: 'Dashboard', icon: LayoutGrid, roles: STAFF, section: 'dashboard' },
   {
     key: 'finance', label: 'Finance', icon: Banknote,
     children: [
-      { href: '/finance/invoices', label: 'Invoices', icon: FileSignature, roles: FINANCE },
-      { href: '/finance/bank-feed', label: 'Bank Feed', icon: Banknote, roles: OWNER },
-      { href: '/finance/auto-invoice', label: 'Auto-invoice', icon: Banknote, roles: OWNER },
-      { href: '/reports/unified', label: 'Reports', icon: BarChart3, roles: FINANCE },
+      { href: '/finance/invoices', label: 'Invoices', icon: FileSignature, roles: FINANCE, section: 'invoices' },
+      { href: '/finance/bank-feed', label: 'Bank Feed', icon: Banknote, roles: FINANCE, section: 'bank_feed' },
+      { href: '/finance/auto-invoice', label: 'Auto-invoice', icon: Banknote, roles: FINANCE, section: 'auto_invoice' },
+      { href: '/reports/unified', label: 'Reports', icon: BarChart3, roles: FINANCE, section: 'reports' },
     ],
   },
-  { href: '/clients', label: 'Clients', icon: Users, roles: INTERNAL },
-  { href: '/campaigns', label: 'Campaigns', icon: Megaphone, roles: OPS },
-  { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: OPS },
+  { href: '/clients', label: 'Clients', icon: Users, roles: INTERNAL, section: 'clients' },
+  { href: '/campaigns', label: 'Campaigns', icon: Megaphone, roles: OPS, section: 'campaigns' },
+  { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: OPS, section: 'agreements' },
   {
     key: 'leadbyte', label: 'LeadByte', icon: Database,
     children: [
-      { href: '/leadbyte/buyers', label: 'Buyers', icon: Database, roles: OPS },
-      { href: '/leadbyte/deliveries', label: 'Deliveries', icon: Database, roles: OPS },
+      { href: '/leadbyte/buyers', label: 'Buyers', icon: Database, roles: OPS, section: 'leadbyte' },
+      { href: '/leadbyte/deliveries', label: 'Deliveries', icon: Database, roles: OPS, section: 'leadbyte' },
     ],
   },
   {
     key: 'operations', label: 'Operations', icon: CheckSquare,
     children: [
-      { href: '/tasks', label: 'Tasks', icon: CheckSquare, roles: INTERNAL },
-      { href: '/sops', label: 'SOPs', icon: BookOpen, roles: INTERNAL },
-      { href: '/workflows', label: 'Workflows', icon: Workflow, roles: OPS },
-      { href: '/staff', label: 'Staff', icon: UsersRound, roles: OPS },
-      { href: '/sos', label: 'SOS Queue', icon: LifeBuoy, roles: INTERNAL },
+      { href: '/tasks', label: 'Tasks', icon: CheckSquare, roles: INTERNAL, section: 'tasks' },
+      { href: '/sops', label: 'SOPs', icon: BookOpen, roles: INTERNAL, section: 'sops' },
+      { href: '/workflows', label: 'Workflows', icon: Workflow, roles: OPS, section: 'workflows' },
+      { href: '/staff', label: 'Staff', icon: UsersRound, roles: OPS, section: 'staff' },
+      { href: '/sos', label: 'SOS Queue', icon: LifeBuoy, roles: INTERNAL, section: 'sos' },
     ],
   },
-  { href: '/notifications', label: 'Notifications', icon: Bell, roles: STAFF },
-  { href: '/integrations', label: 'Integrations', icon: Plug, roles: OWNER },
+  { href: '/notifications', label: 'Notifications', icon: Bell, roles: STAFF, section: 'notifications' },
+  { href: '/integrations', label: 'Integrations', icon: Plug, roles: OWNER, section: 'integrations' },
   // Pinned to the footer. User Management lives inside Settings and is
   // owner-only there, so other roles reach Settings without it.
-  { href: '/settings', label: 'Settings', icon: Settings, roles: INTERNAL, pinned: true },
+  { href: '/settings', label: 'Settings', icon: Settings, roles: INTERNAL, section: 'settings', pinned: true },
 ];
 
-/** The menu a given role actually sees — entries it may not open and empty groups dropped. */
-export function navForRole(role: UserRole | undefined): NavEntry[] {
+/** The Settings entry (pinned to the footer). */
+export const settingsItem = navItems.find((e): e is NavLeaf => !isGroup(e) && e.href === '/settings')!;
+
+/**
+ * The menu a given role actually sees — entries it may not open and empty
+ * groups dropped. `sections` is the Role Access Matrix answer from
+ * /permissions/me (S7); when it's missing (loading, or the call failed) the
+ * static role lists — the route guards — decide on their own. Settings is
+ * never switched off by the matrix.
+ */
+export function navForRole(role: UserRole | undefined, sections?: readonly string[]): NavEntry[] {
   if (!role) return [];
+  const allowed = (leaf: NavLeaf) => leaf.roles.includes(role) && (!sections || leaf.pinned || sections.includes(leaf.section));
   return navItems
-    .map((item) => (isGroup(item) ? { ...item, children: item.children.filter((c) => c.roles.includes(role)) } : item))
-    .filter((item) => (isGroup(item) ? item.children.length > 0 : item.roles.includes(role)));
+    .map((item) => (isGroup(item) ? { ...item, children: item.children.filter(allowed) } : item))
+    .filter((item) => (isGroup(item) ? item.children.length > 0 : allowed(item)));
+}
+
+/**
+ * The matrix section a URL belongs to — the nav leaf with the longest href
+ * that prefixes it (sub-pages like /finance/invoices/new count as Invoices).
+ */
+export function sectionForPath(pathname: string): string | undefined {
+  const leaves = navItems.flatMap((i) => (isGroup(i) ? i.children : [i]));
+  const hit = leaves
+    .filter((l) => (l.href === '/' ? pathname === '/' : pathname === l.href || pathname.startsWith(l.href + '/')))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  if (hit) return hit.section;
+  // Section roots whose menu entry points at a sub-page (/reports → /reports/unified, /leadbyte → /leadbyte/buyers).
+  const root = leaves.find((l) => l.href !== '/' && pathname.startsWith('/' + l.href.split('/')[1] + '/'));
+  return root?.section;
 }
 
 function isLeafActive(pathname: string, href: string): boolean {
@@ -97,7 +125,8 @@ export function Sidebar() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ finance: true });
   const collapsed = !sidebarOpen;
 
-  const filteredNav = useMemo(() => navForRole(user?.role), [user]);
+  const { data: sections } = useMySections(!!user);
+  const filteredNav = useMemo(() => navForRole(user?.role, sections), [user, sections]);
   const menu = filteredNav.filter((e) => isGroup(e) || !e.pinned);
   const pinned = filteredNav.filter((e): e is NavLeaf => !isGroup(e) && !!e.pinned);
 

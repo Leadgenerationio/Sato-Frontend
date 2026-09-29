@@ -3,6 +3,7 @@ import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { useUiStore } from '@/stores/ui-store';
 import { SosButton } from '@/components/shared/sos-button';
+import { SectionGuard } from '@/components/shared/section-guard';
 
 // Stato Admin shell — Statto green chrome (Admin Dashboard.html → dash-app.jsx).
 // Flex shell: sticky sidebar rail + main column (sticky top bar + scrolling
@@ -23,7 +24,7 @@ export function DashboardLayout() {
         <Header />
         <div className="aview">
           <div className="aview-inner">
-            <Outlet />
+            <SectionGuard><Outlet /></SectionGuard>
           </div>
         </div>
       </div>

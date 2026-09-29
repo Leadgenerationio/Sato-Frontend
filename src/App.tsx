@@ -145,7 +145,7 @@ export default function App() {
             <Route
               path="/finance/bank-feed"
               element={
-                <ProtectedRoute allowedRoles={['owner']}>
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
                   <BankFeedPage />
                 </ProtectedRoute>
               }
@@ -153,7 +153,7 @@ export default function App() {
             <Route
               path="/finance/auto-invoice"
               element={
-                <ProtectedRoute allowedRoles={['owner']}>
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
                   <AutoInvoicePage />
                 </ProtectedRoute>
               }
@@ -161,7 +161,7 @@ export default function App() {
             <Route
               path="/finance/auto-invoice/:id"
               element={
-                <ProtectedRoute allowedRoles={['owner']}>
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin']}>
                   <AutoInvoiceRunDetailPage />
                 </ProtectedRoute>
               }

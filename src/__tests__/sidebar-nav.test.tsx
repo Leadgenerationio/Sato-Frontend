@@ -18,11 +18,17 @@ vi.mock('@/components/providers/auth-provider', () => ({
   }),
 }));
 
+// /permissions/me (S7). undefined = not loaded / failed → static role lists.
+let mockSections: string[] | undefined;
+vi.mock('@/lib/hooks/use-permissions', () => ({
+  useMySections: () => ({ data: mockSections }),
+}));
+
 function renderSidebar(pathname = '/') {
   return render(<MemoryRouter initialEntries={[pathname]}><Sidebar /></MemoryRouter>);
 }
 
-beforeEach(() => { mockRole = 'owner'; });
+beforeEach(() => { mockRole = 'owner'; mockSections = undefined; });
 
 describe('Sidebar nav (feedback round 1, M6)', () => {
   it('shows the previously hidden sections to an owner', () => {
@@ -66,12 +72,16 @@ describe('Sidebar nav (feedback round 1, M6)', () => {
     expect(screen.getByText('Notifications')).toBeInTheDocument();
   });
 
-  it('Bank Feed and Auto-invoice are owner-only (finance_admin gets 403 from the API)', () => {
+  it('Finance Admin sees Bank Feed and Auto-invoice (backend #54 removed the shadowing guard); Ops does not', () => {
     mockRole = 'finance_admin';
-    renderSidebar();
+    const { unmount } = renderSidebar();
     expect(screen.getByText('Invoices')).toBeInTheDocument();
+    expect(screen.getByText('Bank Feed')).toBeInTheDocument();
+    expect(screen.getByText('Auto-invoice')).toBeInTheDocument();
+    unmount();
+    mockRole = 'ops_manager';
+    renderSidebar();
     expect(screen.queryByText('Bank Feed')).not.toBeInTheDocument();
-    expect(screen.queryByText('Auto-invoice')).not.toBeInTheDocument();
   });
 
   it('the first click on a group that is open only because of the route closes it', () => {
@@ -133,5 +143,53 @@ describe('Sidebar roles match the App.tsx route guards', () => {
     const allowed = routeRoles(leaf.href).filter((r) => staffLayout.includes(r));
     const visibleTo = staffLayout.filter((r) => navForRole(r).some((e) => (isGroup(e) ? e.children : [e]).some((c) => c.href === leaf.href)));
     expect([...visibleTo].sort()).toEqual([...allowed].sort());
+  });
+});
+
+// S7: the menu follows the Role Access Matrix the backend enforces.
+describe('Sidebar follows the Role Access Matrix (S7)', () => {
+  it('drops a section the Owner switched off for this role', () => {
+    mockRole = 'finance_admin';
+    mockSections = ['dashboard', 'invoices', 'auto_invoice', 'reports', 'clients', 'tasks', 'sops', 'sos', 'notifications', 'settings'];
+    renderSidebar();
+    expect(screen.queryByText('Bank Feed')).not.toBeInTheDocument();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    expect(screen.getByText('Auto-invoice')).toBeInTheDocument();
+  });
+
+  it('drops a whole group when every child is switched off', () => {
+    mockRole = 'finance_admin';
+    mockSections = ['dashboard', 'clients', 'settings'];
+    renderSidebar();
+    expect(screen.queryByText('Finance')).not.toBeInTheDocument();
+    expect(screen.getByText('Clients')).toBeInTheDocument();
+  });
+
+  it('never shows more than the route guards allow, even if the API says so', () => {
+    mockRole = 'readonly';
+    mockSections = ['dashboard', 'invoices', 'bank_feed', 'campaigns'];
+    renderSidebar();
+    expect(screen.queryByText('Invoices')).not.toBeInTheDocument();
+    expect(screen.queryByText('Campaigns')).not.toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+  });
+
+  it('falls back to the role lists when /permissions/me has no answer', () => {
+    mockRole = 'finance_admin';
+    mockSections = undefined;
+    renderSidebar();
+    expect(screen.getByText('Bank Feed')).toBeInTheDocument();
+  });
+
+  it('keeps Settings reachable whatever the matrix says (M6)', () => {
+    mockRole = 'ops_manager';
+    mockSections = [];
+    const { container } = renderSidebar();
+    expect(within(container.querySelector('.asb-foot') as HTMLElement).getByRole('link', { name: 'Settings' })).toBeInTheDocument();
+  });
+
+  it('every nav leaf names a matrix section', () => {
+    const leaves = navItems.flatMap((i) => (isGroup(i) ? i.children : [i]));
+    expect(leaves.filter((l) => !l.section)).toEqual([]);
   });
 });
