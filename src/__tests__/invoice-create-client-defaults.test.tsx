@@ -138,6 +138,20 @@ describe('New Invoice follows the client record (Sam M7)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/is billed in GBP/);
   });
 
+  it('sends the confirmation when only the server flagged a currency mismatch (stale client data)', async () => {
+    mockMutate.mockRejectedValueOnce(new ApiError('Copious Limited is billed in EUR, but this invoice is in GBP.', 422, 'currency_mismatch'));
+    renderPage();
+    pick('copious');
+    fillLine();
+    submit();
+    const box = await screen.findByLabelText(/invoice in GBP instead of GBP/);
+    expect(mockMutate.mock.calls[0][0].confirmCurrencyMismatch).toBeUndefined();
+    fireEvent.click(box);
+    submit();
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(2));
+    expect(mockMutate.mock.calls[1][0].confirmCurrencyMismatch).toBe(true);
+  });
+
   it('says drafts are pushed to Xero separately', () => {
     renderPage();
     expect(screen.getByText(/Push it to Xero from the invoice page/)).toBeInTheDocument();

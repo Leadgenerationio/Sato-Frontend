@@ -153,7 +153,8 @@ export function InvoiceCreatePage() {
         lineItems,
         addVat: addVat && canAddVat,
         dueDate: dueDate ? toDateOnly(dueDate) : undefined,
-        confirmCurrencyMismatch: currencyMismatch ? true : undefined,
+        // Also when only the server flagged it (stale client data): the tick must count then too.
+        confirmCurrencyMismatch: confirmMismatch || currencyMismatch ? true : undefined,
       });
       toast.success(`Invoice ${invoice.invoiceNumber} created`);
       navigate(`/finance/invoices/${invoice.id}`);

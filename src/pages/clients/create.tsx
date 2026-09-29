@@ -104,7 +104,8 @@ export function ClientCreatePage() {
   function handleCountryChange(code: string) {
     const next = findCountry(code);
     setForm((prev) => {
-      const d = next ? defaultsForCountry(next) : null;
+      // No suggestion for a country we have no rules for: keep what is on the form.
+      const d = next && !next.generic ? defaultsForCountry(next) : null;
       return {
         ...prev,
         countryCode: code,
@@ -133,6 +134,8 @@ export function ClientCreatePage() {
       const client = await createClient.mutateAsync({
         ...rest,
         addressCountry: country?.name ?? '',
+        // The Companies House field is hidden outside the UK; don't submit a value typed before switching.
+        endoleCompanyId: !country || country.code === 'GB' ? rest.endoleCompanyId : '',
         ...vatFlagsFor(form.vatTreatment),
         contacts,
       });

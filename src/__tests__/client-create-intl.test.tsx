@@ -133,6 +133,39 @@ describe('New Client: countries outside the UK (Sam M5)', () => {
     expect(screen.getByText('VAT Rate (%)')).toBeInTheDocument();
   });
 
+  it('a country with no local rules keeps the currency and VAT treatment already chosen', () => {
+    renderPage();
+    fireEvent.change(country(), { target: { value: 'BR' } });
+    expect(currency().value).toBe('GBP');
+    expect(vat().value).toBe('uk_standard');
+  });
+
+  it('Finland suggests EUR and reverse charge', () => {
+    renderPage();
+    fireEvent.change(country(), { target: { value: 'FI' } });
+    expect(currency().value).toBe('EUR');
+    expect(vat().value).toBe('reverse_charge');
+  });
+
+  it('does not submit a Companies House number typed before switching to a non-UK country', async () => {
+    renderPage();
+    fillRequired();
+    fireEvent.change(screen.getByPlaceholderText('UK Companies House number used for credit checks'), { target: { value: '12345678' } });
+    fireEvent.change(country(), { target: { value: 'CH' } });
+    fireEvent.click(screen.getByRole('button', { name: /create client/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    expect(mockMutate.mock.calls[0][0].endoleCompanyId).toBe('');
+  });
+
+  it('keeps a Companies House number for a UK client', async () => {
+    renderPage();
+    fillRequired();
+    fireEvent.change(screen.getByPlaceholderText('UK Companies House number used for credit checks'), { target: { value: '12345678' } });
+    fireEvent.click(screen.getByRole('button', { name: /create client/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    expect(mockMutate.mock.calls[0][0].endoleCompanyId).toBe('12345678');
+  });
+
   it('a UK client still saves as before (UK VAT, GBP)', async () => {
     renderPage();
     fillRequired();

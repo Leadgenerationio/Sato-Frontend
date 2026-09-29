@@ -59,6 +59,9 @@ export const CURRENCIES = [
   { code: 'AUD', label: 'AUD (A$)' },
   { code: 'CAD', label: 'CAD (C$)' },
   { code: 'AED', label: 'AED (د.إ)' },
+  { code: 'CZK', label: 'CZK (Kč)' },
+  { code: 'HUF', label: 'HUF (Ft)' },
+  { code: 'RON', label: 'RON (lei)' },
 ] as const;
 
 /** Currency options, plus the record's own code if it isn't in the list (never silently changed on save). */
@@ -85,6 +88,8 @@ export interface CountryProfile {
   addressPlaceholders: { line: string; town: string; county: string };
   /** EU member state (reverse charge applies to B2B supplies from the UK). */
   eu?: boolean;
+  /** No local rules known: nothing is suggested and only the lenient checks apply. */
+  generic?: boolean;
 }
 
 const eu = (
@@ -94,6 +99,25 @@ const eu = (
 ): CountryProfile => ({
   code, name, dial: [dial], currency, vat: 'reverse_charge', postcode, companyId,
   vatNumberPlaceholder, phonePlaceholder: `+${dial} …`, addressPlaceholders, eu: true,
+});
+
+
+const GENERIC_TEXT = {
+  companyId: { label: 'Company registration number', placeholder: 'Local company number' },
+  vatNumberPlaceholder: 'Local VAT / tax number',
+  phonePlaceholder: '+… (with country code)',
+  addressPlaceholders: { line: 'Street and number', town: 'Town / City', county: 'Region' },
+};
+
+/** EU member with no postcode format on file. */
+const euBasic = (
+  code: string, name: string, dial: string, companyLabel: string, companyPlaceholder: string,
+  vatNumberPlaceholder: string, currency = 'EUR',
+): CountryProfile => ({
+  code, name, dial: [dial], currency, vat: 'reverse_charge', eu: true,
+  companyId: { label: companyLabel, placeholder: companyPlaceholder },
+  vatNumberPlaceholder, phonePlaceholder: `+${dial} …`,
+  addressPlaceholders: GENERIC_TEXT.addressPlaceholders,
 });
 
 export const COUNTRY_PROFILES: CountryProfile[] = [
@@ -113,7 +137,7 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
   },
   {
     code: 'IE', name: 'Ireland', dial: ['353'], currency: 'EUR', vat: 'reverse_charge', eu: true,
-    postcode: { re: /^[A-Z]\d{2}\s?[A-Z\d]{4}$/i, example: 'D02 X285' },
+    postcode: { re: /^([AC-FHKNPRTV-Y]\d{2}|D6W)\s?[0-9AC-FHKNPRTV-Y]{4}$/i, example: 'D02 X285' },
     companyId: { label: 'CRO number (Irish company number)', placeholder: '123456' },
     vatNumberPlaceholder: 'IE1234567T', phonePlaceholder: '+353 1 234 5678',
     addressPlaceholders: { line: '1 Grafton Street', town: 'Dublin', county: 'Dublin' },
@@ -190,6 +214,26 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     vatNumberPlaceholder: 'Not applicable', phonePlaceholder: '+971 4 123 4567',
     addressPlaceholders: { line: 'Sheikh Zayed Road', town: 'Dubai', county: 'Dubai' },
   },
+  // Remaining EU members: no postcode format (lenient check), but the right suggestion.
+  euBasic('FI', 'Finland', '358', 'Business ID (Y-tunnus)', '1234567-8', 'FI12345678'),
+  euBasic('GR', 'Greece', '30', 'GEMI number', '123456789000', 'EL123456789'),
+  euBasic('LU', 'Luxembourg', '352', 'RCS number', 'B123456', 'LU12345678'),
+  euBasic('SK', 'Slovakia', '421', 'IČO', '12345678', 'SK1234567890'),
+  euBasic('SI', 'Slovenia', '386', 'Registration number', '1234567000', 'SI12345678'),
+  euBasic('EE', 'Estonia', '372', 'Registry code', '12345678', 'EE123456789'),
+  euBasic('LV', 'Latvia', '371', 'Registration number', '40003012345', 'LV40003012345'),
+  euBasic('LT', 'Lithuania', '370', 'Company code', '123456789', 'LT123456789012'),
+  euBasic('MT', 'Malta', '356', 'Company number (C)', 'C 12345', 'MT12345678'),
+  euBasic('CY', 'Cyprus', '357', 'Registration number (HE)', 'HE 123456', 'CY12345678A'),
+  euBasic('HR', 'Croatia', '385', 'OIB / MBS', '12345678901', 'HR12345678901'),
+  euBasic('BG', 'Bulgaria', '359', 'UIC (EIK)', '123456789', 'BG123456789'),
+  euBasic('CZ', 'Czechia', '420', 'IČO', '12345678', 'CZ12345678', 'CZK'),
+  euBasic('HU', 'Hungary', '36', 'Company registration number', '01-09-123456', 'HU12345678', 'HUF'),
+  euBasic('RO', 'Romania', '40', 'CUI', '12345678', 'RO12345678', 'RON'),
+  // Crown dependencies bill in sterling and are outside UK VAT's reach for B2B.
+  ...[['IM', 'Isle of Man', '44'], ['JE', 'Jersey', '44'], ['GG', 'Guernsey', '44']].map(([code, name, dial]) => ({
+    code, name, dial: [dial], currency: 'GBP', vat: 'outside_scope' as VatTreatment, ...GENERIC_TEXT,
+  })),
 ];
 
 /** Other ISO 3166-1 alpha-2 codes. No local formats: they fall back to the lenient checks. */
@@ -204,18 +248,11 @@ function regionName(code: string): string {
   }
 }
 
-const GENERIC = {
-  companyId: { label: 'Company registration number', placeholder: 'Local company number' },
-  vatNumberPlaceholder: 'Local VAT / tax number',
-  phonePlaceholder: '+… (with country code)',
-  addressPlaceholders: { line: 'Street and number', town: 'Town / City', county: 'Region' },
-};
-
 /** Every country the picker offers: the profiled ones first-class, the rest from ISO 3166. */
 export const COUNTRIES: CountryProfile[] = (() => {
   const known = new Set(COUNTRY_PROFILES.map((c) => c.code));
   const others: CountryProfile[] = OTHER_ISO_CODES.filter((c) => !known.has(c)).map((code) => ({
-    code, name: regionName(code), dial: [], currency: 'USD', vat: 'outside_scope' as VatTreatment, ...GENERIC,
+    code, name: regionName(code), dial: [], currency: 'USD', vat: 'outside_scope' as VatTreatment, generic: true, ...GENERIC_TEXT,
   }));
   return [...COUNTRY_PROFILES, ...others].sort((a, b) => a.name.localeCompare(b.name));
 })();
@@ -242,7 +279,9 @@ export function isUkCountry(stored: string | null | undefined): boolean {
 // ─── Validation ──────────────────────────────────────────────────────────────
 
 export function phoneProblem(raw: string, country?: CountryProfile): string | null {
-  const v = raw.trim();
+  // 0041 44 … is the same number as +41 44 …
+  const trimmed = raw.trim();
+  const v = /^00\d/.test(trimmed) ? `+${trimmed.slice(2)}` : trimmed;
   if (v === '') return null;
   if (!/^\+?[\d\s().-]+$/.test(v)) return 'Phone numbers can only contain digits, spaces and + ( ) . -';
   const digits = v.replace(/\D/g, '');

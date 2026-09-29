@@ -63,6 +63,35 @@ describe('client-locale (Sam M5)', () => {
     expect(postcodeProblem('', findCountry('AE'))).toBeNull();
   });
 
+  it('accepts every valid Irish Eircode routing key, including the D6W exception', () => {
+    expect(postcodeProblem('D6W 1234', ie)).toBeNull();
+    expect(postcodeProblem('D02 X285', ie)).toBeNull();
+    expect(postcodeProblem('A65 F4E2', ie)).toBeNull();
+    expect(postcodeProblem('B12 3456', ie)).toMatch(/Ireland/); // B is not a routing-key letter
+    expect(postcodeProblem('D6X 1234', ie)).toMatch(/Ireland/);
+  });
+
+  it('treats 00 as the international prefix', () => {
+    expect(phoneProblem('0041 44 668 18 00', ch)).toBeNull();
+    expect(phoneProblem('0044 20 1234 5678', ch)).toMatch(/\+41/);
+  });
+
+  it('gives every EU member the right suggestion, not USD / outside scope', () => {
+    for (const [code, cur] of [['FI', 'EUR'], ['GR', 'EUR'], ['LU', 'EUR'], ['HR', 'EUR'], ['BG', 'EUR'], ['CY', 'EUR'], ['MT', 'EUR'],
+      ['CZ', 'CZK'], ['HU', 'HUF'], ['RO', 'RON']] as const) {
+      const c = findCountry(code)!;
+      expect(c.generic, code).toBeUndefined();
+      expect(defaultsForCountry(c), code).toEqual({ currency: cur, vatTreatment: 'reverse_charge' });
+    }
+    expect(CURRENCIES.map((c) => c.code)).toEqual(expect.arrayContaining(['CZK', 'HUF', 'RON']));
+    expect(defaultsForCountry(findCountry('JE')!)).toEqual({ currency: 'GBP', vatTreatment: 'outside_scope' });
+  });
+
+  it('marks countries without local rules as generic', () => {
+    expect(findCountry('BR')?.generic).toBe(true);
+    expect(findCountry('CH')?.generic).toBeUndefined();
+  });
+
   it('collects per-field errors', () => {
     const errors = validateLocale({
       country: 'CH', postcode: '!!!!!!!!', companyNumber: 'x'.repeat(21), contactPhones: ['+41 44 668 18 00', 'not-a-phone ###'],
