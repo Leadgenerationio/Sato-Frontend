@@ -1,0 +1,47 @@
+/* Phone layout polish (Sam feedback round 1 — S15 / mobile review).
+   One place for the phone-only rules shared by every admin list page:
+   tabs as an even grid (no lone "Churned" on a second line, nothing running
+   off-screen), toolbars full width, paired action buttons equal width and
+   44px tall. Desktop is untouched. */
+@media (max-width: 640px) {
+  /* Tabs: even grid. 2 or 4 tabs → 2 columns, otherwise 3. */
+  .statto-admin .inv-tabs,
+  .statto-admin .seg {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+    gap: 4px;
+  }
+  .statto-admin .inv-tabs:has(> :nth-child(2):last-child),
+  .statto-admin .inv-tabs:has(> :nth-child(4):last-child),
+  .statto-admin .seg:has(> :nth-child(2):last-child),
+  .statto-admin .seg:has(> :nth-child(4):last-child) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .statto-admin .inv-tabs > .inv-tab,
+  .statto-admin .seg > .seg-btn {
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    min-height: 44px;
+    padding: 8px 6px;
+  }
+
+  /* Toolbars: every control spans the screen width. */
+  .statto-admin .inv-toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .statto-admin .inv-toolbar > * { width: 100%; max-width: 100%; }
+  .statto-admin .inv-toolbar > * > button,
+  .statto-admin .inv-toolbar > * > select { width: 100%; }
+  .statto-admin .inv-search { width: 100%; }
+  /* Controls grouped one level down (e.g. platform filter + search). */
+  .statto-admin .inv-toolbar > div > .tk-dd,
+  .statto-admin .inv-toolbar > div > .inv-search { flex: 1 1 100%; width: 100%; }
+
+  /* Page actions: equal-width buttons on one line, 44px tall. */
+  .statto-admin .page-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; width: 100%; }
+  .statto-admin .page-actions > * { min-width: 0; }
+  .statto-admin .page-actions button,
+  .statto-admin .page-actions .btn { width: 100%; justify-content: center; min-height: 44px; }
+}
