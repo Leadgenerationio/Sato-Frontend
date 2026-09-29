@@ -158,6 +158,7 @@ export function toCreativesRequest(input: CreateCreativesInput) {
       clientId: input.clientId,
       campaignId: input.campaignId,
       landingPageUrl: input.landingPageUrl,
+      // The uploader has already refused anything that is not an image or video (creativeFileError).
       mediaType: f.contentType.startsWith('video/') ? 'video' : 'image',
       r2Key: f.r2Key,
       name: f.name,
@@ -188,6 +189,8 @@ export function useCreateLibraryCreatives() {
         const answered = new Set<number>();
         try {
           const data = unwrap(await api.post<{ results?: CreateResult[] }>('/api/v1/creatives', toCreativesRequest({ ...input, files })));
+          // Backend createFromBody answers `{ results }` for any `{ creatives: [...] }` body, even one file
+          // (the bare `{ creative, created }` shape is only for a single-object body, which we never send).
           const results = Array.isArray(data?.results) ? data.results : [];
           results.forEach((r, i) => {
             // Batch-relative position; ignore an answer for a file already answered.
