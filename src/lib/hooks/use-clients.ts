@@ -196,9 +196,12 @@ export function useUpdateClient() {
       const res = await api.put<{ client: ClientDetail }>(`/api/v1/clients/${id}`, data);
       return unwrap(res).client;
     },
-    onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['clients'] });
-      qc.invalidateQueries({ queryKey: ['client', vars.id] });
+    onSuccess: async (_, vars) => {
+      void qc.invalidateQueries({ queryKey: ['clients'] });
+      // Awaited on purpose: the mutation settles only once the client on screen is fresh, so anything
+      // showing an optimistic value until "saved" (the client-type switch, S1) never snaps back to
+      // the old value for the moment between the save and the refetch.
+      await qc.invalidateQueries({ queryKey: ['client', vars.id] });
     },
   });
 }
