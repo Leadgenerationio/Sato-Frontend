@@ -11,11 +11,13 @@ export interface ClientSummary {
   currency: string;
   creditScore: number | null;
   activeCampaigns: number;
+  /** Paid revenue in the client's own `currency` only (BE ≥ feedback-M3). */
   totalRevenue: number;
+  /** Paid revenue per invoice currency. Absent on older backends. */
+  revenueByCurrency?: Record<string, number>;
   createdAt: string;
-  // Reality-check fields so the clients list applies the same badge logic
-  // as the detail page (status='active' only displays as "Active Client"
-  // when docs + signed agreement are both present).
+  // Drive the "No signed agreement" / "No documents" warning badges shown
+  // next to an active client's (stored, never relabelled) status.
   agreementSigned: boolean;
   documentsCount: number;
 }

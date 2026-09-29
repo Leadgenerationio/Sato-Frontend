@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Building2, Mail, Phone, MapPin, Shield, FileText, Megaphone,
@@ -34,6 +34,7 @@ import { SendAgreementDialog } from '@/pages/agreements';
 import { EditClientButton, RemoveClientButton } from '@/components/clients/edit-client-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { features } from '@/config/features';
+import { clientStatusLabel, clientStatusPill, clientStatusWarnings } from '@/lib/client-status';
 
 import { logError } from '../../lib/log';
 
@@ -45,46 +46,9 @@ const contactTypePill: Record<string, string> = {
   other: 'gray',
 };
 
-// Sam Loom #31 (13 May response) — only 3 statuses surfaced. 'prospect'
-// and 'paused' kept in the map for back-compat in case a legacy row
-// slipped through 0022; would render with the closest visual.
-const statusPill: Record<string, string> = {
-  onboarding: 'infosoft',
-  active: 'pos',
-  churned: 'gray',
-  // Legacy fallbacks — should be empty post-migration but kept for safety.
-  prospect: 'infosoft',
-  paused: 'warn',
-};
-
-/**
- * Display the "Active Client" badge only when reality backs it up — same
- * principle as the onboarding stage indicator (see resolveActualStage). If
- * status='active' was set by an operator but the client has no documents
- * uploaded or hasn't signed the agreement, the badge downgrades to
- * 'onboarding' so it doesn't disagree with the stage strip below it.
- *
- * Non-active statuses (churned, etc.) pass through unchanged — they're
- * intentional end states, not onboarding progress.
- */
-export function resolveDisplayedStatus(
-  status: string,
-  agreementSigned: boolean,
-  documentsCount: number,
-): string {
-  if (status === 'active' && (documentsCount === 0 || !agreementSigned)) {
-    return 'onboarding';
-  }
-  return status;
-}
-
-const statusLabels: Record<string, string> = {
-  onboarding: 'Onboarding',
-  active: 'Active Client',
-  churned: 'Client Churned',
-  prospect: 'Onboarding',
-  paused: 'Client Churned',
-};
+// Status label/pill/warnings live in @/lib/client-status (shared with the
+// Clients list). Feedback M4 (29 Sep 2026): the stored status is always shown
+// as-is; a missing agreement is a separate warning badge, not a relabel.
 
 const riskColors: Record<string, string> = {
   very_low: 'text-emerald-600',
@@ -153,17 +117,34 @@ export function ClientDetailPage() {
   // visibility on/off. clientType='managed' → client sees ad spend; 'ppl' →
   // hidden. The actual hiding is enforced server-side (getLeadsBySource); this
   // control just persists the editable type via the existing update mutation.
+  //
+  // Feedback S1 (29 Sep 2026): the switch only moved after the server replied,
+  // with no spinner, so it looked dead and got clicked repeatedly (18
+  // "updated clientType" entries in an hour). Now: it moves instantly
+  // (pendingClientType), shows a spinner, ignores clicks until the save
+  // settles, and snaps back with an explicit toast if the save fails.
+  const [pendingClientType, setPendingClientType] = useState<'managed' | 'ppl' | null>(null);
+  // Ref, not state: two clicks inside one render would both see state === null.
+  const clientTypeInFlight = useRef(false);
   const setClientType = async (clientType: 'managed' | 'ppl') => {
-    if (!client) return;
+    if (!client || clientTypeInFlight.current) return;
+    if (clientType === (client.clientType ?? 'ppl')) return;
+    clientTypeInFlight.current = true;
+    setPendingClientType(clientType);
     try {
       await updateClient.mutateAsync({ id: client.id, clientType });
       toast.success(
         clientType === 'managed'
-          ? 'Client set to Managed — ad spend is now visible in their portal.'
-          : 'Client set to Pay-per-lead — ad spend is hidden in their portal.',
+          ? 'Saved: Managed — ad spend is now visible in their portal.'
+          : 'Saved: Pay-per-lead — ad spend is now hidden in their portal.',
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update client type');
+      const previous = (client.clientType ?? 'ppl') === 'managed' ? 'Managed' : 'Pay-per-lead';
+      const reason = err instanceof Error && err.message ? ` (${err.message})` : '';
+      toast.error(`Couldn't change client type — it is still ${previous}. Nothing was saved${reason}.`);
+    } finally {
+      clientTypeInFlight.current = false;
+      setPendingClientType(null);
     }
   };
   // Admin override for the onboarding strip's "Mark as signed (external)" action.
@@ -221,7 +202,9 @@ export function ClientDetailPage() {
     }
   }
 
-  const displayed = resolveDisplayedStatus(client.status, client.agreementSigned, docsForStage?.length ?? 0);
+  // Only claim "No documents" once the documents query has actually loaded.
+  const statusWarnings = clientStatusWarnings(client.status, client.agreementSigned, docsForStage?.length);
+  const shownClientType = pendingClientType ?? client.clientType ?? 'ppl';
 
   return (
     <div className="screen-page">
@@ -231,10 +214,19 @@ export function ClientDetailPage() {
           <div>
             <h1 className="ahead-title">{client.companyName}</h1>
             <p className="ahead-sub">{client.contactName} · {client.companyNumber}</p>
+            {/* Status + warnings sit under the name: they describe the client,
+                and next to the buttons they squeezed the name onto 3 lines. */}
+            <div className="cl-status-row">
+              <span className={'pill p-' + clientStatusPill(client.status) + ' cl-status-pill'}>{clientStatusLabel(client.status)}</span>
+              {statusWarnings.map((w) => (
+                <span key={w} className="pill p-warn cl-status-pill" title={`Status is ${clientStatusLabel(client.status)}, but: ${w.toLowerCase()}`}>
+                  <AlertTriangle className="size-3" aria-hidden /> {w}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="page-actions">
-          <span className={'pill p-' + (statusPill[displayed] ?? 'gray') + ' cl-status-pill'}>{statusLabels[displayed] ?? displayed}</span>
+        <div className="page-actions cl-head-actions">
           <EditClientButton client={client} />
           {/* Hard delete is owner-only — mirrors the backend route guard. */}
           {user?.role === 'owner' && <RemoveClientButton client={client} />}
@@ -339,15 +331,21 @@ export function ClientDetailPage() {
                   <Switch
                     id="client-type-toggle"
                     aria-label="Client type / Ad-spend visibility"
-                    checked={(client.clientType ?? 'ppl') === 'managed'}
-                    disabled={updateClient.isPending}
+                    aria-busy={pendingClientType !== null}
+                    checked={shownClientType === 'managed'}
+                    disabled={pendingClientType !== null}
                     onCheckedChange={(v: boolean) => setClientType(v ? 'managed' : 'ppl')}
                   />
                   <span className="set-field-v" style={{ margin: 0 }}>
-                    {(client.clientType ?? 'ppl') === 'managed'
+                    {shownClientType === 'managed'
                       ? 'Managed — client sees ad spend'
                       : 'Pay-per-lead — ad spend hidden'}
                   </span>
+                  {pendingClientType !== null && (
+                    <span className="ac-sub" role="status" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                      <Loader2 className="size-3.5 animate-spin" aria-hidden /> Saving…
+                    </span>
+                  )}
                 </label>
               </div>
             </div>
