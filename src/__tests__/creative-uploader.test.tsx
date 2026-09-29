@@ -57,10 +57,13 @@ describe('CreativeUploader', () => {
     drop([new File(['abc'], 'one.png', { type: 'image/png' }), new File(['xyz'], 'two.png', { type: 'image/png' })]);
     fireEvent.click(screen.getByRole('button', { name: /Upload 2 files/ }));
     await waitFor(() => expect(screen.getAllByText(/Landing page URL is not valid\./)).toHaveLength(1));
-    // The refusal is shown under the second file only.
-    const second = screen.getByText('two.png').closest('li,div[class],div') as HTMLElement;
-    expect(within(second.parentElement as HTMLElement).getAllByText(/Landing page URL is not valid\./)).toHaveLength(1);
-    expect(screen.queryByText(/one\.png: .*Landing page URL/)).not.toBeInTheDocument();
+    // The refusal is on the second file's own row (named), and the first row is done and clean.
+    const rowOf = (name: string) => screen.getByText(name).closest('li.crl-file') as HTMLElement;
+    expect(rowOf('two.png')).toHaveAttribute('data-stage', 'error');
+    expect(within(rowOf('two.png')).getByText(/two\.png: Landing page URL is not valid\./)).toBeInTheDocument();
+    expect(rowOf('one.png')).toHaveAttribute('data-stage', 'done');
+    expect(within(rowOf('one.png')).queryByText(/Landing page URL/)).not.toBeInTheDocument();
+    expect(within(rowOf('two.png')).getByText(/Remove it and add it again to retry/)).toBeInTheDocument();
   });
 
   it('needs a client before uploading when none is fixed', () => {

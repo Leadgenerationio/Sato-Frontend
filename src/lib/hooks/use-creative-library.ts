@@ -171,21 +171,38 @@ export function toCreativesRequest(input: CreateCreativesInput) {
   };
 }
 
+/** POST /creatives accepts at most this many creatives per request (backend createCreativesBodySchema). */
+export const CREATIVES_PER_REQUEST = 50;
+
 export function useCreateLibraryCreatives() {
   const invalidate = useInvalidateLibrary();
   return useMutation({
     mutationFn: async (input: CreateCreativesInput): Promise<CreateCreativesResult> => {
-      const data = unwrap(await api.post<{ results?: CreateResult[] }>('/api/v1/creatives', toCreativesRequest(input)));
-      const results = data?.results ?? [];
       const failures: CreateCreativesResult['failures'] = [];
       const creatives: LibraryCreative[] = [];
       let duplicates = 0;
-      for (const r of results) {
-        if ('error' in r) failures.push({ index: r.index, message: r.error });
-        else {
-          if (r.creative) creatives.push(r.creative);
-          if (!r.created) duplicates += 1;
+      // The API takes up to 50 at a time, so a big drop goes in batches. Each batch answers on its
+      // own: a refused batch marks only its own files, and earlier batches stay saved.
+      for (let start = 0; start < input.files.length; start += CREATIVES_PER_REQUEST) {
+        const files = input.files.slice(start, start + CREATIVES_PER_REQUEST);
+        const answered = new Set<number>();
+        try {
+          const data = unwrap(await api.post<{ results?: CreateResult[] }>('/api/v1/creatives', toCreativesRequest({ ...input, files })));
+          const results = Array.isArray(data?.results) ? data.results : [];
+          results.forEach((r, i) => {
+            if ('error' in r) { failures.push({ index: start + (r.index ?? i), message: r.error }); answered.add(r.index ?? i); return; }
+            answered.add(i);
+            if (r.creative) creatives.push(r.creative);
+            if (!r.created) duplicates += 1;
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Couldn't save the creatives.";
+          files.forEach((_, i) => { if (!answered.has(i)) { failures.push({ index: start + i, message }); answered.add(i); } });
         }
+        // A 2xx that doesn't answer for every file must never read as "saved".
+        files.forEach((_, i) => {
+          if (!answered.has(i)) failures.push({ index: start + i, message: 'The server did not confirm this file.' });
+        });
       }
       return { creatives, duplicates, failures };
     },
