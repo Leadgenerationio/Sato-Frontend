@@ -25,7 +25,18 @@ export interface InvoiceSummary {
   paidDate: string | null;
   daysOverdue: number;
   createdAt: string;
+  /**
+   * The invoice's own date (Xero `Date`). Feedback S12: Xero imports showed
+   * the import time as "Created". Null for invoices raised in Stato and not
+   * yet synced back, and absent on older backends — use `invoiceDateOf()`.
+   */
+  invoiceDate?: string | null;
   xeroInvoiceId: string | null;
+}
+
+/** The date to show for an invoice: Xero's invoice date, else when Stato created it. */
+export function invoiceDateOf(inv: { invoiceDate?: string | null; createdAt: string }): string {
+  return inv.invoiceDate ?? inv.createdAt;
 }
 
 export function toMoney(value: string | number | null | undefined): number {

@@ -170,7 +170,8 @@ export function InvoiceDetailPage() {
             <DetailRow label="VAT" value={toMoney(invoice.vatAmount) > 0 ? `Yes${vatRate !== null ? ` (${vatRate}%)` : ''}` : 'No'} />
             <DetailRow label="Due Date" value={formatDate(invoice.dueDate)} />
             {invoice.paidDate && <DetailRow label="Paid Date" value={formatDate(invoice.paidDate)} valueClass="pos" />}
-            <DetailRow label="Created" value={formatDate(invoice.createdAt)} last={invoice.chaseCount === 0} />
+            {invoice.invoiceDate && <DetailRow label="Invoice Date" value={formatDate(invoice.invoiceDate)} />}
+            <DetailRow label={invoice.invoiceDate ? 'Added to Stato' : 'Created'} value={formatDate(invoice.createdAt)} last={invoice.chaseCount === 0} />
             {invoice.chaseCount > 0 && <DetailRow label="Chase Count" value={String(invoice.chaseCount)} valueClass="neg" last />}
           </div>
         </div>

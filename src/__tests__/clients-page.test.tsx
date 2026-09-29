@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ClientsPage } from '../pages/clients/index';
@@ -8,8 +8,24 @@ vi.mock('@/components/providers/auth-provider', () => ({
   useAuth: () => ({ user: { id: '1', email: 'owner@stato.app', name: 'Owner', role: 'owner', isActive: true, businessId: null, clientId: null }, token: 'test', loading: false, login: vi.fn(), logout: vi.fn() }),
 }));
 
+// Feedback S14/S16: spies so tests can assert the filters sent to the API,
+// the CSV export call, and the Attio button's visibility.
+const h = vi.hoisted(() => ({
+  useClients: vi.fn(),
+  downloadClientsCsv: vi.fn(async (_filters: Record<string, unknown>) => new Blob(['a,b\r\n'], { type: 'text/csv' })),
+  attio: { configured: undefined as boolean | undefined },
+  clientsResult: null as unknown,
+}));
+
+vi.mock('@/lib/download', () => ({ saveBlob: vi.fn() }));
+
 vi.mock('@/lib/hooks/use-clients', () => ({
-  useClients: () => ({
+  useAttioConfigured: () => h.attio.configured,
+  downloadClientsCsv: h.downloadClientsCsv,
+  useClients: (filters: unknown) => { h.useClients(filters); return h.clientsResult; },
+}));
+
+const clientsResult = {
     data: {
       clients: [
         { id: 'c-1', companyName: 'Apex Media Ltd', contactName: 'James Wright', contactEmail: 'billing@apex.co.uk', status: 'active', currency: 'GBP', creditScore: 82, activeCampaigns: 2, totalRevenue: 45200, createdAt: '2025-06-15' },
@@ -25,14 +41,24 @@ vi.mock('@/lib/hooks/use-clients', () => ({
     },
     isLoading: false,
     error: null,
-  }),
-}));
+};
+h.clientsResult = clientsResult;
 
-function renderPage() {
+beforeEach(() => {
+  h.useClients.mockClear();
+  h.downloadClientsCsv.mockClear();
+  h.attio.configured = undefined;
+});
+
+function lastFilters() {
+  return h.useClients.mock.calls.at(-1)![0] as Record<string, unknown>;
+}
+
+function renderPage(url = '/clients') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter><ClientsPage /></MemoryRouter>
+      <MemoryRouter initialEntries={[url]}><ClientsPage /></MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -89,5 +115,75 @@ describe('ClientsPage', () => {
   it('renders new client button', () => {
     renderPage();
     expect(screen.getByText('New Client')).toBeInTheDocument();
+  });
+
+  // ─── Feedback S14: sort, filters, page size, CSV ───
+  it('sorts server-side from the column headers, flipping direction on a second click', async () => {
+    renderPage();
+    expect(lastFilters()).toMatchObject({ sort: 'created', dir: 'desc' });
+    fireEvent.click(screen.getByRole('button', { name: /^revenue/i }));
+    await waitFor(() => expect(lastFilters()).toMatchObject({ sort: 'revenue', dir: 'desc' }));
+    fireEvent.click(screen.getByRole('button', { name: /^revenue/i }));
+    await waitFor(() => expect(lastFilters()).toMatchObject({ sort: 'revenue', dir: 'asc' }));
+    // Text columns start A→Z.
+    fireEvent.click(screen.getByRole('button', { name: /^company/i }));
+    await waitFor(() => expect(lastFilters()).toMatchObject({ sort: 'company', dir: 'asc' }));
+    expect(screen.getByRole('columnheader', { name: /company/i })).toHaveAttribute('aria-sort', 'ascending');
+  });
+
+  it('reads sort + filters from the URL so a shared link keeps the view', () => {
+    renderPage('/clients?sort=credit&dir=asc&currency=EUR&country=Poland&limit=50&status=active');
+    expect(lastFilters()).toMatchObject({ sort: 'credit', dir: 'asc', currency: 'EUR', country: 'Poland', limit: 50, status: 'active' });
+  });
+
+  it('ignores an unknown sort key or page size in the URL', () => {
+    renderPage('/clients?sort=drop_table&limit=7');
+    expect(lastFilters()).toMatchObject({ sort: 'created', limit: 10 });
+  });
+
+  it('filters by currency and changes page size', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/currency/i), { target: { value: 'CHF' } });
+    await waitFor(() => expect(lastFilters()).toMatchObject({ currency: 'CHF' }));
+    fireEvent.change(screen.getByLabelText(/per page/i), { target: { value: '25' } });
+    await waitFor(() => expect(lastFilters()).toMatchObject({ limit: 25 }));
+  });
+
+  it('filters by country after typing pauses', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/filter by country/i), { target: { value: 'pol' } });
+    await waitFor(() => expect(lastFilters()).toMatchObject({ country: 'pol' }), { timeout: 2000 });
+  });
+
+  it('exports exactly the current filters and sort as CSV', async () => {
+    renderPage('/clients?sort=revenue&dir=desc&currency=EUR');
+    fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
+    await waitFor(() => expect(h.downloadClientsCsv).toHaveBeenCalledTimes(1));
+    expect(h.downloadClientsCsv.mock.calls[0][0]).toMatchObject({ sort: 'revenue', dir: 'desc', currency: 'EUR' });
+    expect(h.downloadClientsCsv.mock.calls[0][0]).not.toHaveProperty('page');
+  });
+
+  it('labels the icon buttons (pager + open client)', () => {
+    renderPage();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Sonova EUR' })).toBeInTheDocument();
+  });
+
+  // ─── Feedback S16: no Import button that can only fail ───
+  it('hides "Import from Attio" when the backend says Attio is not configured', () => {
+    h.attio.configured = false;
+    renderPage();
+    expect(screen.queryByText(/import from attio/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps "Import from Attio" when configured, or when the backend is too old to say', () => {
+    h.attio.configured = true;
+    const { unmount } = renderPage();
+    expect(screen.getByText(/import from attio/i)).toBeInTheDocument();
+    unmount();
+    h.attio.configured = undefined;
+    renderPage();
+    expect(screen.getByText(/import from attio/i)).toBeInTheDocument();
   });
 });
