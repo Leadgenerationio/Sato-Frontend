@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import type { InvoiceSummary } from './use-invoices';
+import type { VatTreatment } from '@/lib/vat-treatment';
 
 export interface ClientSummary {
   id: string;
@@ -61,6 +62,9 @@ export interface ClientDetail extends ClientSummary {
   addVatToInvoices: boolean;
   vatNumber: string;
   vatRate: number;
+  // Sam feedback 2026-09-29 (M5/S4). Optional so an API that predates
+  // clients.vat_treatment still type-checks — read it via resolveVatTreatment().
+  vatTreatment?: VatTreatment;
   leadPrice: number;
   billingWorkflow: string;
   onboardingStatus: string;
@@ -91,13 +95,59 @@ export interface PaginatedClients {
   pageSize: number;
 }
 
-export function useClients(filters?: { status?: string; search?: string; page?: number; limit?: number }) {
+// Feedback S14 (29 Sep 2026): server-side sort + currency/country filters,
+// and a CSV export of exactly the filtered, sorted list.
+export type ClientSortKey = 'company' | 'status' | 'revenue' | 'campaigns' | 'credit' | 'created';
+export type SortDir = 'asc' | 'desc';
+
+export interface ClientListFilters {
+  status?: string;
+  search?: string;
+  currency?: string;
+  country?: string;
+  sort?: ClientSortKey;
+  dir?: SortDir;
+  page?: number;
+  limit?: number;
+}
+
+export function clientListParams(filters?: ClientListFilters, withPaging = true): URLSearchParams {
   const params = new URLSearchParams();
   if (filters?.status && filters.status !== 'all') params.set('status', filters.status);
   if (filters?.search) params.set('search', filters.search);
-  if (filters?.page) params.set('page', String(filters.page));
-  if (filters?.limit) params.set('limit', String(filters.limit));
-  const qs = params.toString();
+  if (filters?.currency) params.set('currency', filters.currency);
+  if (filters?.country?.trim()) params.set('country', filters.country.trim());
+  if (filters?.sort) params.set('sort', filters.sort);
+  if (filters?.dir) params.set('dir', filters.dir);
+  if (withPaging && filters?.page) params.set('page', String(filters.page));
+  if (withPaging && filters?.limit) params.set('limit', String(filters.limit));
+  return params;
+}
+
+/** Download the filtered + sorted list (all pages) as CSV. */
+export async function downloadClientsCsv(filters: ClientListFilters): Promise<Blob> {
+  const qs = clientListParams(filters, false).toString();
+  return api.getBlob(`/api/v1/clients/export.csv${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * Whether Attio import is set up on the backend (feedback S16: the Import
+ * button used to show even when it could only fail). `undefined` while
+ * loading or on an older backend without the endpoint — callers keep the
+ * button visible then, as before.
+ */
+export function useAttioConfigured(): boolean | undefined {
+  const { data } = useQuery({
+    queryKey: ['attio', 'status'],
+    queryFn: async () => unwrap(await api.get<{ configured: boolean }>('/api/v1/clients/import/attio/status')).configured,
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+  return data;
+}
+
+export function useClients(filters?: ClientListFilters) {
+  const qs = clientListParams(filters).toString();
 
   return useQuery({
     queryKey: ['clients', filters],

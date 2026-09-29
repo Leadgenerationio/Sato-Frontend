@@ -23,6 +23,11 @@ export interface FinancialOverviewRow {
    * rows so users don't read them as completed-month figures.
    */
   isPartial?: boolean;
+  /**
+   * Non-GBP recognised revenue this month, e.g. { EUR: 34860 } — NOT in
+   * `revenue`, which is GBP only (feedback M3). Absent on older backends.
+   */
+  otherCurrencyRevenue?: Record<string, number>;
 }
 
 export function useFinancialOverview(opts: { window?: DashboardWindow } = {}) {
@@ -104,6 +109,15 @@ export interface DashboardStats {
    */
   rollingRevenue365d?: number;
   rollingCost90d?: number;
+  /**
+   * Feedback M3/S12 (29 Sep 2026): revenue figures are in `revenueCurrency`
+   * (GBP) only. Other-currency revenue in the window is listed here and never
+   * added in. Optional — older backends summed every currency.
+   */
+  revenueCurrency?: string;
+  otherCurrencyRevenue?: { currency: string; total: number }[];
+  /** What Net Profit / Margin are built from (they differ from the P&L card). */
+  profitBasis?: { revenueDays: number; costDays: number; costSource: string };
   recentInvoices: InvoiceSummary[];
 }
 
@@ -154,6 +168,15 @@ interface BackendStats {
   revenueChange?: number | null;
   /** Period-over-period leads change as a percentage. Null when last month had zero baseline. */
   leadsChange?: number | null;
+  /**
+   * Feedback M3/S12 (29 Sep 2026): revenue figures are in `revenueCurrency`
+   * (GBP) only. Other-currency revenue in the window is listed here and never
+   * added in. Optional — older backends summed every currency.
+   */
+  revenueCurrency?: string;
+  otherCurrencyRevenue?: { currency: string; total: number }[];
+  /** What Net Profit / Margin are built from (they differ from the P&L card). */
+  profitBasis?: { revenueDays: number; costDays: number; costSource: string };
   asOf: string;
 }
 
@@ -211,6 +234,9 @@ export function useDashboardStats(opts: { window?: DashboardWindow } = {}) {
         profitMargin: stats.profitMargin,
         rollingRevenue365d: stats.rollingRevenue365d,
         rollingCost90d: stats.rollingCost90d,
+        revenueCurrency: stats.revenueCurrency,
+        otherCurrencyRevenue: stats.otherCurrencyRevenue,
+        profitBasis: stats.profitBasis,
         recentInvoices,
       } as DashboardStats;
     },

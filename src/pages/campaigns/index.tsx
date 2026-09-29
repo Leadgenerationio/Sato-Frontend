@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useCampaigns, useUnlinkedSpend, type CampaignSummary } from '@/lib/hooks/use-campaigns';
 import { useDebounce } from '@/lib/hooks/use-debounce';
+import { useServerPreference } from '@/lib/hooks/use-preferences';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -47,6 +48,7 @@ function formatCurrency(value: number, currency = 'GBP') {
 }
 
 type GroupMode = 'flat' | 'vertical';
+const decodeGroupMode = (raw: unknown): GroupMode | undefined => (raw === 'flat' || raw === 'vertical' ? raw : undefined);
 
 const GROUP_MODE_KEY = 'stato:campaigns:groupMode';
 
@@ -59,14 +61,12 @@ export function CampaignsPage() {
   // Sam Loom #40 — campaigns grouped by vertical (Solar Panels / Hearing
   // Aids / etc) is closer to his mental model than the flat list. Default
   // to grouped; persist the choice so staff who prefer flat keep flat.
-  const [groupMode, setGroupMode] = useState<GroupMode>(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem(GROUP_MODE_KEY) : null;
-    return stored === 'flat' ? 'flat' : 'vertical';
-  });
-  const handleGroupModeChange = (m: GroupMode) => {
-    setGroupMode(m);
-    try { localStorage.setItem(GROUP_MODE_KEY, m); } catch { /* ignore */ }
-  };
+  // Feedback N2: saved per user on the server so it follows them to other
+  // devices (localStorage stays as the instant/offline cache).
+  const [groupMode, setGroupMode] = useServerPreference<GroupMode>(
+    'campaignGrouping', GROUP_MODE_KEY, decodeGroupMode, 'vertical',
+  );
+  const handleGroupModeChange = (m: GroupMode) => setGroupMode(m);
   // Pull a bigger slice when grouped — Sam's expecting to see ALL the
   // verticals on one page, not paginate by row count.
   const limit = groupMode === 'vertical' ? 100 : 10;

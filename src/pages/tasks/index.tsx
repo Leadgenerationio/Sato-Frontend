@@ -22,6 +22,7 @@ import {
   type TaskSummary, type TaskSubtask,
 } from '@/lib/hooks/use-tasks';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useServerPreference } from '@/lib/hooks/use-preferences';
 import { EmptyState } from '@/components/shared/empty-state';
 import { FilterSelect } from '@/components/ui/filter-select';
 
@@ -304,6 +305,7 @@ function KanbanBoard({
 // current user's email/name) and All tasks (no assignee filter). Pinned
 // to localStorage so each staff member sees their preferred default.
 const SCOPE_KEY = 'stato:tasks:scope';
+const decodeTaskScope = (raw: unknown): 'all' | 'mine' | undefined => (raw === 'mine' || raw === 'all' ? raw : undefined);
 
 // Sam (27 May 2026) — Task and subtasks in folders, option (a). Each
 // list-view row renders this component when expanded. Lazy-loads the
@@ -385,13 +387,11 @@ export function TasksPage() {
   const [archiveView, setArchiveView] = useState<ArchiveView>('today');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [scope, setScope] = useState<'all' | 'mine'>(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem(SCOPE_KEY) : null;
-    return stored === 'mine' ? 'mine' : 'all';
-  });
+  // Feedback N2: the task filter (All / Mine) is saved per user on the
+  // server so it follows them across devices; localStorage is the cache.
+  const [scope, setScope] = useServerPreference<'all' | 'mine'>('taskFilters', SCOPE_KEY, decodeTaskScope, 'all');
   const handleScopeChange = (s: 'all' | 'mine') => {
     setScope(s); setPage(1);
-    try { localStorage.setItem(SCOPE_KEY, s); } catch { /* ignore */ }
   };
 
   // Sam (27 May 2026) "Task and subtasks in folders" — list-view rows

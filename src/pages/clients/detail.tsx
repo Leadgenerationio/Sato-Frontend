@@ -34,6 +34,9 @@ import { SendAgreementDialog } from '@/pages/agreements';
 import { EditClientButton, RemoveClientButton } from '@/components/clients/edit-client-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { features } from '@/config/features';
+import { vatTreatmentLabel, resolveVatTreatment, treatmentChargesVat } from '@/lib/vat-treatment';
+import { formatActivityDiff } from '@/lib/client-activity-format';
+import './clients.css';
 import { clientStatusLabel, clientStatusPill, clientStatusWarnings } from '@/lib/client-status';
 
 import { logError } from '../../lib/log';
@@ -108,7 +111,16 @@ export function ClientDetailPage() {
   // copy inside DocumentsTab so we're not double-fetching.
   const { data: docsForStage } = useClientDocuments(id!);
   const runCheck = useRunCreditCheck();
-  const [tab, setTab] = useState<(typeof CLIENT_TABS)[number]['value']>('overview');
+  // `?tab=activity` (etc.) opens that tab directly, and switching tabs keeps
+  // the URL in step so a link or refresh lands on the same tab.
+  type TabValue = (typeof CLIENT_TABS)[number]['value'];
+  const tabParam = searchParams.get('tab');
+  const tab: TabValue = CLIENT_TABS.some((t) => t.value === tabParam) ? (tabParam as TabValue) : 'overview';
+  const setTab = (next: TabValue) => {
+    const p = new URLSearchParams(searchParams);
+    if (next === 'overview') p.delete('tab'); else p.set('tab', next);
+    setSearchParams(p, { replace: true });
+  };
   // Sam (27 May 2026 portal meeting): "this client is an existing client,
   // we've already signed an agreement, just not within this platform" —
   // admin override to flip agreementSigned without going through SignNow.
@@ -203,6 +215,7 @@ export function ClientDetailPage() {
   }
 
   // Only claim "No documents" once the documents query has actually loaded.
+  const vatTreatment = resolveVatTreatment(client);
   const statusWarnings = clientStatusWarnings(client.status, client.agreementSigned, docsForStage?.length);
   const shownClientType = pendingClientType ?? client.clientType ?? 'ppl';
 
@@ -305,12 +318,14 @@ export function ClientDetailPage() {
             <div className="set-fields">
               <InfoRow icon={PoundSterling} label="Currency" value={client.currency} />
               <InfoRow icon={Calendar} label="Payment Terms" value={`${client.paymentTermsDays} days`} />
-              <InfoRow icon={ReceiptText} label="VAT Registered" value={client.vatRegistered ? 'Yes' : 'No'} />
-              {client.vatRegistered && (
-                <>
-                  <InfoRow icon={ReceiptText} label="VAT Number" value={client.vatNumber || '—'} />
-                  <InfoRow icon={ReceiptText} label="VAT Rate" value={`${client.vatRate}%`} />
-                </>
+              {/* Feedback M5/S4: one VAT treatment instead of "VAT Registered:
+                  Yes/No" (which couldn't express reverse charge or outside scope). */}
+              <InfoRow icon={ReceiptText} label="VAT treatment" value={vatTreatmentLabel(vatTreatment)} />
+              {vatTreatment !== 'outside_scope' && (
+                <InfoRow icon={ReceiptText} label="VAT Number" value={client.vatNumber || '—'} />
+              )}
+              {treatmentChargesVat(vatTreatment) && (
+                <InfoRow icon={ReceiptText} label="VAT Rate" value={`${client.vatRate}%`} />
               )}
               <InfoRow icon={Tag} label="Lead Price" value={formatCurrency(client.leadPrice, client.currency)} />
               <InfoRow icon={Workflow} label="Billing Workflow" value={client.billingWorkflow.replace('_', ' ')} />
@@ -1215,7 +1230,11 @@ function describeClientActivity(ev: ClientActivityEvent): string {
   const p = ev.payload as Record<string, unknown> | null;
   switch (ev.eventType) {
     case 'client_created':           return `${who} created the client`;
-    case 'client_updated':           return `${who} updated ${(p?.changed as string[] | undefined)?.join(', ') || 'the client'}`;
+    case 'client_updated': {
+      // With a `diff` (feedback S3) the changes are listed under the line.
+      if (formatActivityDiff(p?.diff).length > 0) return `${who} updated the client`;
+      return `${who} updated ${(p?.changed as string[] | undefined)?.join(', ') || 'the client'}`;
+    }
     case 'contact_added':            return `${who} added a contact`;
     case 'contact_removed':          return `${who} removed a contact`;
     case 'document_uploaded':        return `${who} uploaded "${p?.name ?? ''}"`;
@@ -1260,6 +1279,16 @@ function ActivityTab({ clientId }: { clientId: string }) {
               <span className="cl-tl-dot" />
               <div className="cl-tl-body">
                 <div className="cl-tl-text">{describeClientActivity(ev)}</div>
+                {ev.eventType === 'client_updated' && (() => {
+                  const lines = formatActivityDiff((ev.payload as Record<string, unknown> | null)?.diff);
+                  return lines.length > 0 ? (
+                    <ul className="cl-tl-diff">
+                      {lines.map((l) => (
+                        <li key={l.field}><strong>{l.label}:</strong> {l.from} → {l.to}</li>
+                      ))}
+                    </ul>
+                  ) : null;
+                })()}
                 <div className="cl-tl-time">
                   {new Date(ev.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
