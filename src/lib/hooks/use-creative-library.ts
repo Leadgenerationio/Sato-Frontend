@@ -190,8 +190,11 @@ export function useCreateLibraryCreatives() {
           const data = unwrap(await api.post<{ results?: CreateResult[] }>('/api/v1/creatives', toCreativesRequest({ ...input, files })));
           const results = Array.isArray(data?.results) ? data.results : [];
           results.forEach((r, i) => {
-            if ('error' in r) { failures.push({ index: start + (r.index ?? i), message: r.error }); answered.add(r.index ?? i); return; }
-            answered.add(i);
+            // Batch-relative position; ignore an answer for a file already answered.
+            const at = 'error' in r && Number.isInteger(r.index) ? r.index : i;
+            if (at < 0 || at >= files.length || answered.has(at)) return;
+            answered.add(at);
+            if ('error' in r) { failures.push({ index: start + at, message: r.error }); return; }
             if (r.creative) creatives.push(r.creative);
             if (!r.created) duplicates += 1;
           });

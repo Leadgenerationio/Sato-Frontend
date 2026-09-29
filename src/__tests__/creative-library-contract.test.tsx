@@ -96,4 +96,15 @@ describe('useCreateLibraryCreatives', () => {
     const out = await run([file]);
     expect(out.failures).toEqual([{ index: 0, message: 'Client not found' }]);
   });
+
+  it('counts each file once even if the server answers for it twice', async () => {
+    api.post.mockResolvedValue({ data: { results: [
+      { id: 'a', created: true, creative: { id: 'a' } },
+      { index: 0, status: 400, error: 'duplicate answer for file 0' },
+      { index: 1, status: 400, error: 'Landing page URL is not valid.' },
+    ] } });
+    const out = await run([file, file]);
+    expect(out.creatives).toHaveLength(1);
+    expect(out.failures).toEqual([{ index: 1, message: 'Landing page URL is not valid.' }]);
+  });
 });
