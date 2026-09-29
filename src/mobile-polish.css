@@ -45,3 +45,13 @@
   .statto-admin .page-actions button,
   .statto-admin .page-actions .btn { width: 100%; justify-content: center; min-height: 44px; }
 }
+
+/* Header on phones: first name only ("Sam", not "Sam Owner"). The full name
+   stays in the title tooltip and on desktop. */
+.name-first { display: none; }
+@media (max-width: 640px) {
+  .statto-admin .atop-name .name-full,
+  .statto-portal .portal-header .ph-user-name .name-full { display: none; }
+  .statto-admin .atop-name .name-first,
+  .statto-portal .portal-header .ph-user-name .name-first { display: inline; }
+}
