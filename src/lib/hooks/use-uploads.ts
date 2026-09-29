@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, NETWORK_ERROR_MESSAGE } from '@/lib/api';
 
 export type UploadFolder = 'invoices' | 'agreements' | 'creatives' | 'landing-pages' | 'sops' | 'misc';
 
@@ -39,13 +39,19 @@ export async function uploadFileToR2(file: File, presigned: PresignedUpload): Pr
     // Backend is not wired to real R2 — skip network call but succeed so dev UX works.
     return;
   }
-  const res = await fetch(presigned.uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': presigned.contentType },
-    body: file,
-  });
+  let res: Response;
+  try {
+    res = await fetch(presigned.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': presigned.contentType },
+      body: file,
+    });
+  } catch {
+    throw new ApiError(NETWORK_ERROR_MESSAGE, 0, 'network_error');
+  }
   if (!res.ok) {
-    throw new ApiError(`R2 upload failed: ${res.status}`, res.status);
+    // Plain words (Sam S10) — the storage status code means nothing to a user.
+    throw new ApiError("The file couldn't be stored — nothing was saved. Please try again.", res.status);
   }
 }
 
