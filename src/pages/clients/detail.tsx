@@ -23,6 +23,9 @@ import {
 } from '@/lib/hooks/use-client-campaigns';
 import { AddCampaignDialog } from '@/components/clients/add-campaign-dialog';
 import { PortalUsersCard } from '@/components/clients/portal-users-card';
+// M2: creative library + landing pages tabs.
+import { CreativeLibrary } from '@/components/creatives/creative-library';
+import { LandingPagesList } from '@/components/creatives/landing-pages-list';
 import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
 import {
   useClientActivity, useClientEmails, useLogClientEmail, useDeleteClientEmail,
@@ -34,8 +37,6 @@ import { SendAgreementDialog } from '@/pages/agreements';
 import { EditClientButton, RemoveClientButton } from '@/components/clients/edit-client-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { features } from '@/config/features';
-import { CreativeLibrary } from '@/components/creatives/creative-library';
-import { LandingPagesList } from '@/components/creatives/landing-pages-list';
 
 import { logError } from '../../lib/log';
 
