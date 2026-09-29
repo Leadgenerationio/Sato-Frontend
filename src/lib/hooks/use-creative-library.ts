@@ -134,11 +134,61 @@ function useInvalidateLibrary() {
   };
 }
 
+/** One entry of POST /creatives when several are sent: saved (created or updated) or refused with a reason. */
+type CreateResult =
+  | { id: string; created: boolean; creative: LibraryCreative | null }
+  | { index: number; status: number; error: string };
+
+export interface CreateCreativesResult {
+  creatives: LibraryCreative[];
+  /** Files that were already in the library and were updated instead of copied. */
+  duplicates: number;
+  /** Files the server refused, by position in `files`. */
+  failures: Array<{ index: number; message: string }>;
+}
+
+/**
+ * The upload dialog works in "files"; the API takes `{ creatives: [...] }` with a `mediaType` on each
+ * (a single object or `{ creatives }`). Sending `{ files }` was rejected with "Invalid input", so
+ * no upload from the dialog was ever saved.
+ */
+export function toCreativesRequest(input: CreateCreativesInput) {
+  return {
+    creatives: input.files.map((f) => ({
+      clientId: input.clientId,
+      campaignId: input.campaignId,
+      landingPageUrl: input.landingPageUrl,
+      mediaType: f.contentType.startsWith('video/') ? 'video' : 'image',
+      r2Key: f.r2Key,
+      name: f.name,
+      contentType: f.contentType,
+      sizeBytes: f.sizeBytes,
+      sha256: f.sha256,
+      width: f.width,
+      height: f.height,
+      durationS: f.durationS,
+    })),
+  };
+}
+
 export function useCreateLibraryCreatives() {
   const invalidate = useInvalidateLibrary();
   return useMutation({
-    mutationFn: async (input: CreateCreativesInput) =>
-      unwrap(await api.post<{ creatives: LibraryCreative[]; duplicates?: number }>('/api/v1/creatives', input)),
+    mutationFn: async (input: CreateCreativesInput): Promise<CreateCreativesResult> => {
+      const data = unwrap(await api.post<{ results?: CreateResult[] }>('/api/v1/creatives', toCreativesRequest(input)));
+      const results = data?.results ?? [];
+      const failures: CreateCreativesResult['failures'] = [];
+      const creatives: LibraryCreative[] = [];
+      let duplicates = 0;
+      for (const r of results) {
+        if ('error' in r) failures.push({ index: r.index, message: r.error });
+        else {
+          if (r.creative) creatives.push(r.creative);
+          if (!r.created) duplicates += 1;
+        }
+      }
+      return { creatives, duplicates, failures };
+    },
     onSuccess: invalidate,
   });
 }

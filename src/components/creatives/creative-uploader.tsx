@@ -117,9 +117,15 @@ export function CreativeUploader({ open, onOpenChange, clientId, clientOptions, 
           landingPageUrl: landingUrl.trim() || undefined,
           files: uploaded.map((u) => u.file),
         });
-        uploaded.forEach((u) => patch(u.id, { stage: 'done' }));
+        // The server answers per file, so one refused file doesn't mark the others as failed.
+        const failed = new Map((res?.failures ?? []).map((f) => [f.index, f.message]));
+        uploaded.forEach((u, i) => (failed.has(i)
+          ? patch(u.id, { stage: 'error', error: `${failed.get(i)} The file reached storage but no creative was saved — try again.` })
+          : patch(u.id, { stage: 'done' })));
+        const saved = uploaded.length - failed.size;
         const dup = res?.duplicates ?? 0;
-        toast.success(`${uploaded.length} creative${uploaded.length === 1 ? '' : 's'} saved${dup ? ` (${dup} already in the library — updated, not copied)` : ''}.`);
+        if (saved > 0) toast.success(`${saved} creative${saved === 1 ? '' : 's'} saved${dup ? ` (${dup} already in the library — updated, not copied)` : ''}.`);
+        if (failed.size > 0) toast.error(`${failed.size} file${failed.size === 1 ? '' : 's'} couldn't be saved. The others were.`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Couldn't save the creatives.";
         uploaded.forEach((u) => patch(u.id, { stage: 'error', error: `${msg} The file reached storage but no creative was saved — try again.` }));

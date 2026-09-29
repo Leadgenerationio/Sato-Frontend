@@ -51,6 +51,18 @@ describe('CreativeUploader', () => {
     expect(presign.mock.calls.every(([a]) => a.folder === 'creatives')).toBe(true);
   });
 
+  it('marks only the file the server refused as failed; the other is saved', async () => {
+    createMutate.mockResolvedValue({ creatives: [], duplicates: 0, failures: [{ index: 1, message: 'Landing page URL is not valid.' }] });
+    renderUp('c1');
+    drop([new File(['abc'], 'one.png', { type: 'image/png' }), new File(['xyz'], 'two.png', { type: 'image/png' })]);
+    fireEvent.click(screen.getByRole('button', { name: /Upload 2 files/ }));
+    await waitFor(() => expect(screen.getAllByText(/Landing page URL is not valid\./)).toHaveLength(1));
+    // The refusal is shown under the second file only.
+    const second = screen.getByText('two.png').closest('li,div[class],div') as HTMLElement;
+    expect(within(second.parentElement as HTMLElement).getAllByText(/Landing page URL is not valid\./)).toHaveLength(1);
+    expect(screen.queryByText(/one\.png: .*Landing page URL/)).not.toBeInTheDocument();
+  });
+
   it('needs a client before uploading when none is fixed', () => {
     renderUp();
     drop([new File(['abc'], 'hero.png', { type: 'image/png' })]);
