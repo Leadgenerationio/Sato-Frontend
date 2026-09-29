@@ -162,7 +162,7 @@ export function CleanupPage() {
         <>
           <div className="inv-toolbar">
             <div className="inv-tabs" role="tablist" aria-label="Clean-up sections">
-              {([['logins', 'Test logins'], ['owners', 'Owners'], ['data', 'Test data']] as const).map(([id, label]) => (
+              {([['logins', 'Logins'], ['owners', 'Owners'], ['data', 'Test data']] as const).map(([id, label]) => (
                 <button key={id} role="tab" aria-selected={tab === id} className={'inv-tab' + (tab === id ? ' on' : '')} onClick={() => setTab(id)}>
                   {label} <span className="cu-count">{counts[id]}</span>
                 </button>
