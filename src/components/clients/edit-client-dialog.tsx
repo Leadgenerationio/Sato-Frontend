@@ -166,12 +166,6 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 {isUk && <p className="text-xs text-muted-foreground">Used for credit checks and Xero matching</p>}
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-country">Country</Label>
-                <CountrySelect id="edit-country" className={selectClass} value={form.addressCountry} onChange={handleCountryChange} />
-              </div>
-            </div>
             <div className="space-y-2">
               <Label>Address Line</Label>
               <Input
@@ -180,7 +174,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 placeholder={isUk ? '10 Fleet Street' : 'Street and number'}
               />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Town / City</Label>
                 <Input
@@ -197,6 +191,9 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                   placeholder={isUk ? 'Greater London' : ''}
                 />
               </div>
+            </div>
+            {/* Same order as New Client: line → town + county → postcode + country. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-postcode">Postcode</Label>
                 <Input
@@ -209,6 +206,10 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                   aria-describedby="edit-postcode-msg"
                 />
                 <FieldMessage id="edit-postcode-msg" check={shown('postcode', checks.postcode)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-country">Country</Label>
+                <CountrySelect id="edit-country" className={selectClass} value={form.addressCountry} onChange={handleCountryChange} />
               </div>
             </div>
           </section>

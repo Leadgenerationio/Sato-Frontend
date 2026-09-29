@@ -171,14 +171,6 @@ export function ClientCreatePage() {
               <input id="nc-company-number" className="nc-input" maxLength={20} value={form.companyNumber} onChange={(e) => update('companyNumber', e.target.value)} placeholder={country?.companyIdPlaceholder ?? ''} />
             </Field>
           </div>
-          <div className="nc-grid2">
-            <Field label="Country" htmlFor="nc-country" hint={country && !isUk ? `Currency and VAT set for ${country.name} — change below if needed.` : undefined}>
-              <div className="nc-select-wrap">
-                <CountrySelect id="nc-country" className="nc-select" value={form.addressCountry} onChange={handleCountryChange} />
-                <ChevronDown className="size-[15px]" />
-              </div>
-            </Field>
-          </div>
           <Field label="Address Line" htmlFor="nc-address-line">
             <input id="nc-address-line" className="nc-input" value={form.addressLine} onChange={(e) => update('addressLine', e.target.value)} placeholder={isUk ? '10 Fleet Street' : 'Street and number'} />
           </Field>
@@ -189,6 +181,9 @@ export function ClientCreatePage() {
             <Field label={country?.regionLabel ?? 'Region'} htmlFor="nc-region">
               <input id="nc-region" className="nc-input" value={form.addressCounty} onChange={(e) => update('addressCounty', e.target.value)} placeholder={isUk ? 'Greater London' : ''} />
             </Field>
+          </div>
+          {/* Address order (Yash review): line → town + county → postcode + country. */}
+          <div className="nc-grid2">
             <Field label="Postcode" htmlFor="nc-postcode">
               <input
                 id="nc-postcode"
@@ -201,6 +196,12 @@ export function ClientCreatePage() {
                 aria-describedby="nc-postcode-msg"
               />
               <FieldMessage id="nc-postcode-msg" check={shown('postcode', checks.postcode)} />
+            </Field>
+            <Field label="Country" htmlFor="nc-country" hint={country && !isUk ? `Currency and VAT set for ${country.name} — change below if needed.` : undefined}>
+              <div className="nc-select-wrap">
+                <CountrySelect id="nc-country" className="nc-select" value={form.addressCountry} onChange={handleCountryChange} />
+                <ChevronDown className="size-[15px]" />
+              </div>
             </Field>
           </div>
         </div>
