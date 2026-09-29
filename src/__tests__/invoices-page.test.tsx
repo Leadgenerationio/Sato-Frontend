@@ -8,12 +8,14 @@ vi.mock('@/components/providers/auth-provider', () => ({
   useAuth: () => ({ user: { id: '1', email: 'owner@stato.app', name: 'Owner', role: 'owner', isActive: true, businessId: null, clientId: null }, token: 'test', loading: false, login: vi.fn(), logout: vi.fn() }),
 }));
 
-vi.mock('@/lib/hooks/use-invoices', () => ({
+vi.mock('@/lib/hooks/use-invoices', async () => ({
+  // Real issuedOn(): the page's date column is what this file's new tests check.
+  issuedOn: (await vi.importActual<typeof import('../lib/hooks/use-invoices')>('../lib/hooks/use-invoices')).issuedOn,
   useInvoices: () => ({
     data: {
       invoices: [
-        { id: 'inv-1', invoiceNumber: 'INV-1050', clientId: 'c-1', clientName: 'Apex Media', status: 'draft', currency: 'GBP', subtotal: '500', vatAmount: '100', total: '600', dueDate: '2026-05-01T00:00:00Z', paidDate: null, daysOverdue: 0, createdAt: '2026-04-01T00:00:00Z' },
-        { id: 'inv-2', invoiceNumber: 'INV-1049', clientId: 'c-2', clientName: 'Brightfield', status: 'paid', currency: 'GBP', subtotal: '800', vatAmount: '160', total: '960', dueDate: '2026-04-15T00:00:00Z', paidDate: '2026-04-10T00:00:00Z', daysOverdue: 0, createdAt: '2026-03-15T00:00:00Z' },
+        { id: 'inv-1', invoiceNumber: 'INV-1050', clientId: 'c-1', clientName: 'Apex Media', status: 'draft', currency: 'GBP', subtotal: '500', vatAmount: '100', total: '600', dueDate: '2026-05-01T00:00:00Z', paidDate: null, daysOverdue: 0, issueDate: '2026-01-05T00:00:00Z', createdAt: '2026-04-01T00:00:00Z' },
+        { id: 'inv-2', invoiceNumber: 'INV-1049', clientId: 'c-2', clientName: 'Brightfield', status: 'paid', currency: 'GBP', subtotal: '800', vatAmount: '160', total: '960', dueDate: '2026-04-15T00:00:00Z', paidDate: '2026-04-10T00:00:00Z', daysOverdue: 0, issueDate: null, createdAt: '2026-03-15T00:00:00Z' },
       ],
       total: 2,
       page: 1,
@@ -49,6 +51,21 @@ describe('InvoiceListPage', () => {
     renderPage();
     expect(screen.getByText('INV-1050')).toBeInTheDocument();
     expect(screen.getByText('INV-1049')).toBeInTheDocument();
+  });
+
+  // Sam S12: Xero imports showed the import date under "Created".
+  it('shows the issue date under "Issued", not the date Stato first stored the row', () => {
+    renderPage();
+    expect(screen.getByRole('columnheader', { name: /issued/i })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /created/i })).not.toBeInTheDocument();
+    expect(screen.getByText('5 Jan 2026')).toBeInTheDocument();
+    expect(screen.queryByText('1 Apr 2026')).not.toBeInTheDocument();
+  });
+
+  it('shows a dash, never the import date, for an import that has no issue date yet', () => {
+    renderPage();
+    expect(screen.queryByText('15 Mar 2026')).not.toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 
   it('renders status filter tabs', () => {

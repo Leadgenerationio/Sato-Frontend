@@ -178,6 +178,8 @@ const mkInvoice =(invoiceNumber: string, clientName: string, status: string, tot
   id: invoiceNumber, invoiceNumber, clientId: 'cl-1', clientName, status, currency: 'GBP',
   subtotal: total, vatAmount: '0', total, dueDate: isoDaysAgo(daysAgo - 14),
   paidDate: status === 'paid' ? isoDaysAgo(daysAgo - 2) : null, daysOverdue, createdAt: isoDaysAgo(daysAgo),
+  // Xero's issue date is earlier than the import; overdue rows stand in for imports not re-synced yet (null).
+  issueDate: daysOverdue > 0 ? null : isoDaysAgo(daysAgo + 10),
   xeroInvoiceId: null,
 });
 const ADMIN_OUTSTANDING = [

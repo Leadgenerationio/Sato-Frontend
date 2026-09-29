@@ -20,11 +20,24 @@ export interface InvoiceSummary {
   subtotal: string;
   vatAmount: string;
   total: string;
+  // Date the invoice was issued (Xero's Date for imports). Null = an import not re-synced yet;
+  // undefined = a backend that predates the field. createdAt is when Stato first stored the row.
+  issueDate?: string | null;
   dueDate: string;
   paidDate: string | null;
   daysOverdue: number;
   createdAt: string;
   xeroInvoiceId: string | null;
+}
+
+/**
+ * When the invoice was issued, for display. Xero imports used to show the import date as
+ * "Created" (Sam S12); the real issue date comes from the backend now. Null means "not known
+ * yet" (an import waiting for its next hourly sync) and shows as a dash, never the import date.
+ * A backend that doesn't send the field at all falls back to createdAt, as before.
+ */
+export function issuedOn(inv: Pick<InvoiceSummary, 'issueDate' | 'createdAt'>): string | null {
+  return inv.issueDate === undefined ? inv.createdAt : inv.issueDate;
 }
 
 export function toMoney(value: string | number | null | undefined): number {
@@ -67,7 +80,7 @@ export interface PaginatedInvoices {
   pageSize: number;
 }
 
-export type InvoiceSortBy = 'createdAt' | 'dueDate' | 'total' | 'status' | 'invoiceNumber';
+export type InvoiceSortBy = 'createdAt' | 'issueDate' | 'dueDate' | 'total' | 'status' | 'invoiceNumber';
 export type SortDir = 'asc' | 'desc';
 
 export function useInvoices(filters?: {

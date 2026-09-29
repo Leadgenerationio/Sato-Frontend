@@ -300,7 +300,7 @@ function PnlCard() {
   return (
     <div className="card pad acard">
       <div className="ac-head">
-        <div><h3 className="statto-title">P&amp;L Summary</h3><p className="ac-sub">{range}</p></div>
+        <div><h3 className="statto-title">P&amp;L Summary</h3><p className="ac-sub">Last 30 days · {range} · paid invoices − all costs</p></div>
         {data.uncategorisedCount > 0 && <span className="pnl-chip"><CircleAlert className="size-[13px]" /> {data.uncategorisedCount} uncategorised</span>}
       </div>
       <div className="pnl-hero">
@@ -557,7 +557,7 @@ export function DashboardPage() {
 
   const MINI = stats ? [
     { icon: CreditCard, value: gbp0(stats.totalCost), label: `Ad Spend — ${stats.leadsWindowLabel ?? windowLabel}`, note: 'Catchr — Google + FB + TikTok', noteKind: '' },
-    { icon: TrendingUp, value: gbp0(stats.netProfit), label: 'Net Profit — rolling 12mo / 90d', note: `${formatPercentCapped(stats.profitMargin)} margin · period-coherent`, noteKind: stats.netProfit >= 0 ? 'pos' : '' },
+    { icon: TrendingUp, value: gbp0(stats.netProfit), label: 'Net Profit — rolling 12mo / 90d', note: `${formatPercentCapped(stats.profitMargin)} margin · invoices − ad spend, before overheads`, noteKind: stats.netProfit >= 0 ? 'pos' : '' },
     { icon: Activity, value: formatPercentCapped(stats.profitMargin), label: 'Margin — rolling 12mo / 90d', note: stats.profitMargin >= 30 ? 'healthy' : stats.profitMargin >= 0 ? 'review' : 'loss-making', noteKind: '' },
   ] : [];
 

@@ -9,6 +9,7 @@ import {
   useAddInvoiceAttachment,
   useRemoveInvoiceAttachment,
   toMoney,
+  issuedOn,
   type InvoiceDetail,
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
@@ -166,7 +167,7 @@ export function InvoiceDetailPage() {
             <DetailRow label="VAT" value={invoice.vatRegistered ? 'Yes (20%)' : 'No'} />
             <DetailRow label="Due Date" value={formatDate(invoice.dueDate)} />
             {invoice.paidDate && <DetailRow label="Paid Date" value={formatDate(invoice.paidDate)} valueClass="pos" />}
-            <DetailRow label="Created" value={formatDate(invoice.createdAt)} last={invoice.chaseCount === 0} />
+            <DetailRow label="Issued" value={issuedOn(invoice) ? formatDate(issuedOn(invoice)!) : '—'} last={invoice.chaseCount === 0} />
             {invoice.chaseCount > 0 && <DetailRow label="Chase Count" value={String(invoice.chaseCount)} valueClass="neg" last />}
           </div>
         </div>
