@@ -214,15 +214,19 @@ export function ClientDetailPage() {
           <div>
             <h1 className="ahead-title">{client.companyName}</h1>
             <p className="ahead-sub">{client.contactName} · {client.companyNumber}</p>
+            {/* Status + warnings sit under the name: they describe the client,
+                and next to the buttons they squeezed the name onto 3 lines. */}
+            <div className="cl-status-row">
+              <span className={'pill p-' + clientStatusPill(client.status) + ' cl-status-pill'}>{clientStatusLabel(client.status)}</span>
+              {statusWarnings.map((w) => (
+                <span key={w} className="pill p-warn cl-status-pill" title={`Status is ${clientStatusLabel(client.status)}, but: ${w.toLowerCase()}`}>
+                  <AlertTriangle className="size-3" aria-hidden /> {w}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="page-actions">
-          <span className={'pill p-' + clientStatusPill(client.status) + ' cl-status-pill'}>{clientStatusLabel(client.status)}</span>
-          {statusWarnings.map((w) => (
-            <span key={w} className="pill p-warn cl-status-pill" title={`Status is ${clientStatusLabel(client.status)}, but: ${w.toLowerCase()}`}>
-              <AlertTriangle className="size-3" aria-hidden /> {w}
-            </span>
-          ))}
+        <div className="page-actions cl-head-actions">
           <EditClientButton client={client} />
           {/* Hard delete is owner-only — mirrors the backend route guard. */}
           {user?.role === 'owner' && <RemoveClientButton client={client} />}

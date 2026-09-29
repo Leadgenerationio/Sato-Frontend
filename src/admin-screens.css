@@ -175,6 +175,14 @@
 /* ---------- NEW CLIENT FORM ---------- */
 .nc-page { max-width: 1100px; }
 .nc-title-row { display: flex; align-items: center; gap: 14px; }
+.cl-status-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+@media (max-width: 640px) {
+  /* Client header on phones: badges on their own line, then Edit + Remove
+     side by side at equal width. */
+  .cl-head-actions { flex-wrap: nowrap; }
+  .cl-head-actions > * { flex: 1 1 0; min-width: 0; }
+  .cl-head-actions .btn { width: 100%; justify-content: center; }
+}
 .nc-back { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: var(--fg1); transition: var(--transition); }
 .nc-back:hover { background: var(--gray-100); }
 .nc-h { margin-bottom: 20px; }
