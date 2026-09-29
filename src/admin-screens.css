@@ -205,11 +205,11 @@
 .nc-check { display: inline-flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--fg1); cursor: pointer; user-select: none; }
 .nc-check input { position: absolute; opacity: 0; pointer-events: none; }
 .nc-check-box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--statto-ink); flex-shrink: 0; margin-top: 1px; transition: var(--transition); }
-/* M1 (Sam 29 Sep): pages render the tick as a bare lucide <svg> (no .lic
-   wrapper), so hide the icon itself — an unticked box must be empty. */
-.nc-check-box .lic, .nc-check-box svg { opacity: 0; }
+/* M1 (Sam 29 Sep): an unticked box must be empty. The tick is whatever icon
+   the page puts inside the box (a bare lucide <svg>), so hide every child
+   until the input is checked. */
+.nc-check input:not(:checked) + .nc-check-box > * { visibility: hidden; }
 .nc-check input:checked + .nc-check-box { background: var(--statto-lime); border-color: var(--statto-lime); }
-.nc-check input:checked + .nc-check-box .lic, .nc-check input:checked + .nc-check-box svg { opacity: 1; }
 /* S15: the native input is visually hidden, so draw the keyboard focus on the box. */
 .nc-check input:focus-visible + .nc-check-box { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
 .nc-row { align-items: start; }
