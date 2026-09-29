@@ -662,7 +662,7 @@ export function TasksPage() {
             link={
               showingArchived || search || statusFilter !== 'all' || priorityFilter !== 'all' || dueFilter !== 'all' || timeFilter !== 'all'
                 ? undefined
-                : { label: 'New task', to: '/tasks/new', icon: Plus }
+                : { label: 'New task', to: '/tasks/create', icon: Plus }
             }
           />
         </div>

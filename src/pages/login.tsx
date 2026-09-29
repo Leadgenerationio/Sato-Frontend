@@ -78,7 +78,7 @@ export function LoginPage() {
       toast.success('Code sent', { description: 'If that email is registered, a 6-digit code is on its way.' });
       setMode('fp-code');
     } catch {
-      setFpError('Network error — please try again');
+      setFpError("Couldn't reach the server. Check your connection and try again.");
     } finally { setFpLoading(false); }
   }
 
@@ -102,7 +102,7 @@ export function LoginPage() {
         setFpError(data.message || 'Invalid or expired code');
       }
     } catch {
-      setFpError('Network error — please try again');
+      setFpError("Couldn't reach the server. Check your connection and try again.");
     } finally { setFpLoading(false); }
   }
 
@@ -129,7 +129,7 @@ export function LoginPage() {
         setFpError(data.message || 'Could not reset password — start again');
       }
     } catch {
-      setFpError('Network error — please try again');
+      setFpError("Couldn't reach the server. Check your connection and try again.");
     } finally { setFpLoading(false); }
   }
 
@@ -182,7 +182,7 @@ export function LoginPage() {
     if (Object.keys(v).length) return;
 
     setLoading(true);
-    const { error: err, user: loggedInUser } = await login(email.trim(), password.trim());
+    const { error: err, user: loggedInUser } = await login(email.trim(), password.trim(), remember);
     setLoading(false);
 
     if (err) {
@@ -227,7 +227,7 @@ export function LoginPage() {
               <label className="field-label" htmlFor="email">Work email</label>
               <div className={'field-input' + (errors.email ? ' err' : '')}>
                 <span className="lic"><Mail className="size-[18px]" /></span>
-                <input id="email" type="email" autoComplete="username" placeholder="you@stato.com"
+                <input id="email" type="email" autoComplete="username" placeholder="name@company.com"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: undefined })); }} />
               </div>
@@ -288,7 +288,7 @@ export function LoginPage() {
                 <label className="field-label" htmlFor="fp-email">Work email</label>
                 <div className="field-input">
                   <span className="lic"><Mail className="size-[18px]" /></span>
-                  <input id="fp-email" type="email" autoComplete="username" placeholder="you@stato.com"
+                  <input id="fp-email" type="email" autoComplete="username" placeholder="name@company.com"
                     value={fpEmail} autoFocus
                     onChange={(e) => { setFpEmail(e.target.value); if (fpError) setFpError(''); }} />
                 </div>

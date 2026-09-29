@@ -344,8 +344,16 @@
 
 @media (max-width: 760px) {
   .statto-admin .atop-burger { display: inline-flex; }
-  .statto-admin .asb { position: fixed; left: 0; top: 0; z-index: 70; width: 248px !important; transform: translateX(-100%); transition: transform var(--transition); box-shadow: var(--shadow-lg); }
+  .statto-admin .asb { position: fixed; left: 0; top: 0; bottom: 0; height: auto; z-index: 70; width: 248px !important; transform: translateX(-100%); transition: transform var(--transition); box-shadow: var(--shadow-lg); }
   .statto-admin.mobile-nav-open .asb { transform: none; }
+  /* The drawer's own chevron would collapse the desktop rail flag and strip the groups; the overlay/menu items close it instead. */
+  .statto-admin .asb-collapse { display: none; }
+  .statto-admin .asb-foot { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  /* Keep the hamburger on screen however long the role / name are. */
+  .statto-admin .atop { padding: 0 12px; }
+  .statto-admin .atop-burger { flex-shrink: 0; }
+  .statto-admin .atop-right { min-width: 0; gap: 8px; }
+  .statto-admin .atop-role { white-space: nowrap; padding: 6px 10px; }
   /* force expanded look on mobile even if desktop-collapsed */
   .statto-admin .asb-label, .statto-admin .asb-word, .statto-admin .asb-chev { display: inline !important; }
   .statto-admin .asb-sub { display: flex !important; }
@@ -354,6 +362,10 @@
   .statto-admin .aview-inner { padding: 20px 16px 56px; }
   .statto-admin .kpi-row { grid-template-columns: 1fr; }
   .statto-admin .ahead { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  .statto-admin .atop-name { display: none; }
 }
 
 /* ---------- SMALL MOBILE (≤640px) ---------- */
@@ -410,8 +422,9 @@
 .statto-admin .checkbox input { position: absolute; opacity: 0; pointer-events: none; }
 .statto-admin .checkbox .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--statto-ink); transition: var(--transition); }
 .statto-admin .checkbox input:checked + .box { background: var(--statto-lime); border-color: var(--statto-lime); }
-.statto-admin .checkbox .box .lic, .statto-admin .checkbox .box svg { width: 13px; height: 13px; opacity: 0; }
-.statto-admin .checkbox input:checked + .box .lic, .statto-admin .checkbox input:checked + .box svg { opacity: 1; }
+.statto-admin .checkbox .box > * { width: 13px; height: 13px; }
+/* M1: an unticked box must be empty (same rule as .nc-check-box in admin-screens.css). */
+.statto-admin .checkbox input:not(:checked) + .box > * { visibility: hidden; }
 .statto-admin .checkbox input:focus-visible + .box { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
 .statto-admin .link { font-size: 13.5px; font-weight: 600; color: var(--lime-text); text-decoration: none; }
 .statto-admin .link:hover { color: var(--green-700); }

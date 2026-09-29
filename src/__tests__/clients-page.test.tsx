@@ -14,8 +14,12 @@ vi.mock('@/lib/hooks/use-clients', () => ({
       clients: [
         { id: 'c-1', companyName: 'Apex Media Ltd', contactName: 'James Wright', contactEmail: 'billing@apex.co.uk', status: 'active', currency: 'GBP', creditScore: 82, activeCampaigns: 2, totalRevenue: 45200, createdAt: '2025-06-15' },
         { id: 'c-2', companyName: 'Delta Solutions', contactName: 'Laura Davies', contactEmail: 'pay@delta.co.uk', status: 'churned', currency: 'GBP', creditScore: 42, activeCampaigns: 0, totalRevenue: 12400, createdAt: '2025-07-01' },
+        // Feedback M3/M4 fixtures: an active EUR client with no signed
+        // agreement, and a paused client.
+        { id: 'c-3', companyName: 'Sonova EUR', contactName: 'Sam', contactEmail: 's@x.pl', status: 'active', agreementSigned: false, documentsCount: 2, currency: 'EUR', creditScore: null, activeCampaigns: 0, totalRevenue: 399791, revenueByCurrency: { EUR: 399791, GBP: 50 }, createdAt: '2025-08-01' },
+        { id: 'c-4', companyName: 'Paused Co', contactName: 'P', contactEmail: 'p@x.uk', status: 'paused', agreementSigned: true, documentsCount: 1, currency: 'GBP', creditScore: null, activeCampaigns: 0, totalRevenue: 0, createdAt: '2025-08-02' },
       ],
-      total: 2,
+      total: 4,
       page: 1,
       pageSize: 10,
     },
@@ -45,21 +49,35 @@ describe('ClientsPage', () => {
     expect(screen.getByText('Delta Solutions')).toBeInTheDocument();
   });
 
-  it('renders status filter tabs', () => {
-    // Sam request 2026-06-15 — the 'active' tab is removed. Remaining tabs:
-    // All / Onboarding / Client Churned.
+  it('renders All / Onboarding / Active / Paused / Churned tabs (feedback M4)', () => {
     renderPage();
-    expect(screen.getAllByText(/^all$/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Onboarding/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Client Churned/i).length).toBeGreaterThanOrEqual(1);
+    const tabs = Array.from(document.querySelectorAll('.inv-tab')).map((el) => el.textContent);
+    expect(tabs).toEqual(['All', 'Onboarding', 'Active', 'Paused', 'Churned']);
   });
 
-  it('does NOT render an "active" status filter tab (Sam 2026-06-15)', () => {
+  it('shows the STORED status — an active client without a signed agreement stays Active, with a warning badge', () => {
     renderPage();
-    const activeTabs = screen
-      .queryAllByText(/^Active Client$/i)
-      .filter((el) => el.className.includes('inv-tab'));
-    expect(activeTabs.length).toBe(0);
+    const row = screen.getByText('Sonova EUR').closest('tr')!;
+    expect(row.textContent).toContain('Active');
+    expect(row.textContent).not.toContain('Onboarding');
+    expect(row.textContent).toContain('No signed agreement');
+  });
+
+  it('shows paused as Paused, not "Client Churned"', () => {
+    renderPage();
+    const row = screen.getByText('Paused Co').closest('tr')!;
+    expect(row.querySelector('.pill')?.textContent).toBe('Paused');
+    expect(row.textContent).not.toMatch(/churned/i);
+  });
+
+  it('formats revenue in the client currency and lists other-currency revenue separately (feedback M3)', () => {
+    renderPage();
+    const row = screen.getByText('Sonova EUR').closest('tr')!;
+    expect(row.textContent).toContain('€399,791.00');
+    expect(row.textContent).not.toContain('£399,791.00');
+    expect(row.textContent).toContain('+ £50.00');
+    // A GBP client still reads in pounds.
+    expect(screen.getByText('Apex Media Ltd').closest('tr')!.textContent).toContain('£45,200.00');
   });
 
   it('renders credit scores', () => {

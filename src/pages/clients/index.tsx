@@ -2,45 +2,40 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ExternalLink, Plus, Users, AlertTriangle, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useClients, type ClientSummary } from '@/lib/hooks/use-clients';
-import { resolveDisplayedStatus } from './detail';
 import { useDebounce } from '@/lib/hooks/use-debounce';
+import { formatCurrency } from '@/lib/currency';
+import {
+  CLIENT_STATUS_TABS, clientStatusLabel, clientStatusPill, clientStatusWarnings,
+} from '@/lib/client-status';
 
-// Sam Loom #31 (13 May response) — only 3 statuses: Onboarding, Active
-// Client, Client Churned. 'prospect' and 'paused' were dropped; existing
-// rows migrated via 0022. UI labels diverge from DB values (we render
-// the longer label) so the underlying enum stays clean.
-// Sam request 2026-06-15: drop the 'active' status tab so there's no active
-// subsection — leave the rest as a plain list. ('active' rows still render in
-// the All view with their badge; only the filter tab is removed.)
-const STATUS_TABS = ['all', 'onboarding', 'churned'] as const;
-
-// Statto pill variant per displayed status. Legacy 'prospect'/'paused' are kept
-// as fallbacks (mirrors clients/detail.tsx) so a row that slipped through
-// migration 0022 renders a styled pill here too instead of raw enum text.
-const statusPill: Record<string, string> = {
-  onboarding: 'infosoft',
-  active: 'pos',
-  churned: 'gray',
-  prospect: 'infosoft',
-  paused: 'warn',
-};
-
-const statusLabels: Record<string, string> = {
-  all: 'All',
-  onboarding: 'Onboarding',
-  active: 'Active Client',
-  churned: 'Client Churned',
-  prospect: 'Onboarding',
-  paused: 'Client Churned',
-};
+// Feedback M4 (29 Sep 2026): tabs follow the stored status. The Active tab was
+// removed on Sam's 15 Jun request and is back at his 29 Sep request; Paused is
+// its own status again (it used to render as "Client Churned").
 
 function CreditCell({ score }: { score: number | null }) {
   if (score === null) return <span className="cl-credit-none">—</span>;
   return <span className="cl-credit-low">{score}</span>;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
+/**
+ * Revenue in the client's own currency (feedback M3 — this column was
+ * hard-coded to £, so a EUR client's €399,791 read as £399,791). Paid invoices
+ * in any OTHER currency are listed underneath rather than added in.
+ * `revenueByCurrency` is absent on older backends — then only the main figure shows.
+ */
+function RevenueCell({ client }: { client: ClientSummary }) {
+  const others = Object.entries(client.revenueByCurrency ?? {})
+    .filter(([cur, amt]) => cur !== client.currency && amt !== 0);
+  return (
+    <>
+      {formatCurrency(client.totalRevenue, client.currency)}
+      {others.length > 0 && (
+        <div className="cl-email" title="Paid invoices in another currency — not added into the figure above">
+          {others.map(([cur, amt]) => `+ ${formatCurrency(amt, cur)}`).join(' · ')}
+        </div>
+      )}
+    </>
+  );
 }
 
 export function ClientsPage() {
@@ -80,14 +75,14 @@ export function ClientsPage() {
       </div>
 
       <div className="inv-toolbar">
-        <div className="inv-tabs">
-          {STATUS_TABS.map((tab) => (
+        <div className="inv-tabs inv-tabs-wrap">
+          {CLIENT_STATUS_TABS.map((tab) => (
             <button
               key={tab}
               className={'inv-tab' + (statusFilter === tab ? ' on' : '')}
               onClick={() => handleStatusChange(tab)}
             >
-              {statusLabels[tab] ?? tab}
+              {clientStatusLabel(tab)}
             </button>
           ))}
         </div>
@@ -136,10 +131,7 @@ export function ClientsPage() {
                 </thead>
                 <tbody>
                   {clients.map((c: ClientSummary) => {
-                    // Apply the same reality-check the detail-page badge does:
-                    // "Active Client" only renders when docs + signed agreement
-                    // are both real — otherwise downgrade to "Onboarding".
-                    const displayed = resolveDisplayedStatus(c.status, c.agreementSigned, c.documentsCount);
+                    const warnings = clientStatusWarnings(c.status, c.agreementSigned, c.documentsCount);
                     return (
                       <tr key={c.id}>
                         <td className="cl-company">{c.companyName}</td>
@@ -147,13 +139,22 @@ export function ClientsPage() {
                           <div className="cl-contact">{c.contactName}</div>
                           <div className="cl-email">{c.contactEmail}</div>
                         </td>
-                        <td><span className={'pill p-' + (statusPill[displayed] ?? 'gray')}>{statusLabels[displayed] ?? displayed}</span></td>
+                        <td>
+                          <span className="cl-status-cell">
+                            <span className={'pill p-' + clientStatusPill(c.status)}>{clientStatusLabel(c.status)}</span>
+                            {warnings.map((w) => (
+                              <span key={w} className="pill p-warn" title={`Status is ${clientStatusLabel(c.status)}, but: ${w.toLowerCase()}`}>
+                                <AlertTriangle className="size-3" aria-hidden /> {w}
+                              </span>
+                            ))}
+                          </span>
+                        </td>
                         <td className="r mono"><CreditCell score={c.creditScore} /></td>
                         <td className="r mono inv-num">{c.activeCampaigns}</td>
-                        <td className="r mono inv-total">{formatCurrency(c.totalRevenue)}</td>
+                        <td className="r mono inv-total"><RevenueCell client={c} /></td>
                         <td className="r">
                           <Link to={`/clients/${c.id}`}>
-                            <button className="inv-open" title="Open client"><ExternalLink className="size-4" /></button>
+                            <button className="inv-open" title="Open client" aria-label={`Open ${c.companyName}`}><ExternalLink className="size-4" /></button>
                           </Link>
                         </td>
                       </tr>
