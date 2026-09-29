@@ -24,6 +24,8 @@ const SettingsPage = lazy(() => import('@/pages/settings').then((m) => ({ defaul
 const CampaignsPage = lazy(() => import('@/pages/campaigns/index').then((m) => ({ default: m.CampaignsPage })));
 const CampaignDetailPage = lazy(() => import('@/pages/campaigns/detail').then((m) => ({ default: m.CampaignDetailPage })));
 const AdAccountsPage = lazy(() => import('@/pages/ad-accounts/index').then((m) => ({ default: m.AdAccountsPage })));
+const CreativesPage = lazy(() => import('@/pages/creatives/index').then((m) => ({ default: m.CreativesPage })));
+const LandingPagesPage = lazy(() => import('@/pages/landing-pages/index').then((m) => ({ default: m.LandingPagesPage })));
 const InvoiceListPage = lazy(() => import('@/pages/finance/invoices').then((m) => ({ default: m.InvoiceListPage })));
 const InvoiceDetailPage = lazy(() => import('@/pages/finance/invoice-detail').then((m) => ({ default: m.InvoiceDetailPage })));
 const InvoiceCreatePage = lazy(() => import('@/pages/finance/invoice-create').then((m) => ({ default: m.InvoiceCreatePage })));
@@ -210,6 +212,23 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
                   <CampaignDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Sam M2: creative library + landing pages per client. */}
+            <Route
+              path="/creatives"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
+                  <CreativesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/landing-pages"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
+                  <LandingPagesPage />
                 </ProtectedRoute>
               }
             />

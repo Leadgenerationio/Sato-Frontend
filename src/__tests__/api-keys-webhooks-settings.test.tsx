@@ -1,0 +1,127 @@
+/**
+ * Settings → API keys + Webhooks (Sam round 1, section 5 — plan phases 2 and
+ * 4). The key / secret is shown exactly once; revoke asks first; webhook
+ * URLs must be https; scopes and events are required.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import type { ApiKey, WebhookEndpoint } from '@/lib/hooks/use-integrations-api';
+
+const createKey = vi.fn();
+const revokeKey = vi.fn();
+const createHook = vi.fn();
+const updateHook = vi.fn();
+const testHook = vi.fn();
+let keys: ApiKey[] = [];
+let hooks: WebhookEndpoint[] = [];
+
+vi.mock('@/lib/hooks/use-integrations-api', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/hooks/use-integrations-api')>('@/lib/hooks/use-integrations-api');
+  return {
+    ...actual,
+    useApiKeys: () => ({ data: keys, isLoading: false, error: null }),
+    useCreateApiKey: () => ({ mutateAsync: createKey, isPending: false }),
+    useRevokeApiKey: () => ({ mutateAsync: revokeKey, isPending: false }),
+    useWebhooks: () => ({ data: hooks, isLoading: false, error: null }),
+    useCreateWebhook: () => ({ mutateAsync: createHook, isPending: false }),
+    useUpdateWebhook: () => ({ mutateAsync: updateHook, isPending: false }),
+    useDeleteWebhook: () => ({ mutateAsync: vi.fn(), isPending: false }),
+    useTestWebhook: () => ({ mutateAsync: testHook, isPending: false }),
+    useWebhookDeliveries: (id: string | null) => ({ data: id ? [{ id: 'd1', event: 'test', status: 200, attempts: 1, deliveredAt: '2026-09-29T10:00:00Z', nextAttemptAt: null, createdAt: '2026-09-29T10:00:00Z' }] : undefined, isLoading: false }),
+  };
+});
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
+import { WebhooksSettings, webhookUrlError } from '@/components/settings/webhooks-settings';
+import { listOf } from '@/lib/hooks/use-integrations-api';
+
+beforeEach(() => {
+  keys = [{ id: 'k1', name: 'Meta uploader', prefix: 'sk_live_ab12', scopes: ['creatives:write'], lastUsedAt: null, revokedAt: null, createdAt: '2026-09-29T09:00:00Z', usage30d: 42 }];
+  hooks = [{ id: 'w1', url: 'https://example.com/hook', events: ['creative.added'], active: true, createdAt: '2026-09-29T09:00:00Z' }];
+  createKey.mockReset().mockResolvedValue({ key: 'sk_live_ab12_SECRET_ONCE', apiKey: { name: 'Taboola sync' } });
+  revokeKey.mockReset().mockResolvedValue(undefined);
+  createHook.mockReset().mockResolvedValue({ webhook: { url: 'https://hooks.example.com/stato' }, secret: 'whsec_ONCE' });
+  updateHook.mockReset().mockResolvedValue({});
+  testHook.mockReset().mockResolvedValue({ status: 200 });
+});
+
+describe('ApiKeysSettings', () => {
+  it('lists keys with prefix, scopes and usage — never the full key', () => {
+    render(<ApiKeysSettings />);
+    const row = within(screen.getByTestId('api-key-row'));
+    expect(row.getByText(/sk_live_ab12…/)).toBeInTheDocument();
+    expect(row.getByText('Upload creatives')).toBeInTheDocument();
+    expect(row.getByText(/42 calls in the last 30 days/)).toBeInTheDocument();
+  });
+
+  it('creates a key with the chosen scopes and shows it once', async () => {
+    render(<ApiKeysSettings />);
+    fireEvent.change(screen.getByPlaceholderText('Meta uploader'), { target: { value: 'Taboola sync' } });
+    fireEvent.click(screen.getByLabelText(/Read creatives/));
+    fireEvent.click(screen.getByRole('button', { name: /Create key/ }));
+    await waitFor(() => expect(createKey).toHaveBeenCalledWith({ name: 'Taboola sync', scopes: ['clients:read', 'creatives:write', 'creatives:read'] }));
+    expect(await screen.findByTestId('shown-once-secret')).toHaveTextContent('sk_live_ab12_SECRET_ONCE');
+    expect(screen.getByText(/won't be shown again/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: "I've saved it" }));
+    expect(screen.queryByText('sk_live_ab12_SECRET_ONCE')).toBeNull();
+  });
+
+  it('asks for a name and at least one permission', async () => {
+    render(<ApiKeysSettings />);
+    fireEvent.click(screen.getByLabelText(/Read clients/));
+    fireEvent.click(screen.getByLabelText(/Upload creatives/));
+    fireEvent.click(screen.getByRole('button', { name: /Create key/ }));
+    expect(await screen.findByText(/Give the key a name/)).toBeInTheDocument();
+    expect(screen.getByText('Choose at least one permission.')).toBeInTheDocument();
+    expect(createKey).not.toHaveBeenCalled();
+  });
+
+  it('revoke asks first and only revokes on yes', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    render(<ApiKeysSettings />);
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke Meta uploader' }));
+    expect(revokeKey).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke Meta uploader' }));
+    await waitFor(() => expect(revokeKey).toHaveBeenCalledWith('k1'));
+    confirm.mockRestore();
+  });
+});
+
+describe('WebhooksSettings', () => {
+  it('only accepts https endpoints', () => {
+    expect(webhookUrlError('http://example.com/h')).toMatch(/https/);
+    expect(webhookUrlError('nope')).toMatch(/isn't a web address/);
+    expect(webhookUrlError('https://example.com/h')).toBeNull();
+  });
+
+  it('adds an endpoint with its events and shows the signing secret once', async () => {
+    render(<WebhooksSettings />);
+    fireEvent.change(screen.getByPlaceholderText('https://example.com/stato-webhook'), { target: { value: 'https://hooks.example.com/stato' } });
+    fireEvent.click(screen.getByLabelText(/Client added/));
+    fireEvent.click(screen.getByRole('button', { name: /Add webhook/ }));
+    await waitFor(() => expect(createHook).toHaveBeenCalledWith({ url: 'https://hooks.example.com/stato', events: ['creative.added', 'creative.changed', 'client.added'] }));
+    expect(await screen.findByTestId('shown-once-secret')).toHaveTextContent('whsec_ONCE');
+  });
+
+  it('send test shows the delivery list', async () => {
+    render(<WebhooksSettings />);
+    fireEvent.click(screen.getByRole('button', { name: /Send test/ }));
+    await waitFor(() => expect(testHook).toHaveBeenCalledWith('w1'));
+    expect(await screen.findByTestId('webhook-deliveries')).toHaveTextContent('HTTP 200');
+  });
+
+  it('the on/off switch is labelled and saves', async () => {
+    render(<WebhooksSettings />);
+    fireEvent.click(screen.getByRole('switch', { name: 'Webhook to https://example.com/hook active' }));
+    await waitFor(() => expect(updateHook).toHaveBeenCalledWith({ id: 'w1', active: false }));
+  });
+});
+
+describe('listOf', () => {
+  it('accepts a bare array or a wrapped list', () => {
+    expect(listOf([1, 2], 'x')).toEqual([1, 2]);
+    expect(listOf({ apiKeys: [1] }, 'apiKeys')).toEqual([1]);
+    expect(listOf(null, 'apiKeys')).toEqual([]);
+  });
+});

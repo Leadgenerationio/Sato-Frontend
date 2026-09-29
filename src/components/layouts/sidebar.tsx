@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutGrid, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Banknote, Users, UsersRound, Megaphone, Workflow, CheckSquare,
-  BookOpen, BarChart3, Bell, Database, FileSignature, Plug, LifeBuoy, Link2,
+  BookOpen, BarChart3, Bell, Database, FileSignature, Plug, LifeBuoy, Link2, ImageIcon, Globe,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useUiStore } from '@/stores/ui-store';
@@ -47,6 +47,10 @@ export const navItems: NavEntry[] = [
   { href: '/clients', label: 'Clients', icon: Users, roles: ['owner', 'finance_admin', 'ops_manager'], section: 'clients' },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone, roles: OPS, section: 'campaigns' },
   // S13: bulk-link ad accounts to clients/campaigns. Same section as Campaigns.
+  // M2: creative library + landing pages. Same Role Access Matrix section as
+  // Campaigns (the backend section map has no separate key for them yet).
+  { href: '/creatives', label: 'Creatives', icon: ImageIcon, roles: OPS, section: 'campaigns' },
+  { href: '/landing-pages', label: 'Landing pages', icon: Globe, roles: OPS, section: 'campaigns' },
   { href: '/ad-accounts', label: 'Link ad accounts', icon: Link2, roles: OPS, section: 'campaigns' },
   { href: '/agreements', label: 'Agreements', icon: FileSignature, roles: OPS, section: 'agreements' },
   {

@@ -1,0 +1,62 @@
+/* Creative library, landing pages, API keys, webhooks (Sam round 1, M2 + §5).
+   Scoped to the admin shell; reuses the Statto tokens from admin-theme.css. */
+
+.statto-admin .crl-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.statto-admin .crl-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.statto-admin .crl-date { display: flex; gap: 6px; align-items: center; grid-column: span 2; }
+.statto-admin .crl-date input { height: 38px; border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 0 10px; font: inherit; font-size: 13px; background: #fff; color: var(--fg1); min-width: 0; width: 100%; }
+.statto-admin .crl-view { display: inline-flex; border: 1.5px solid var(--border-strong); border-radius: 10px; overflow: hidden; }
+.statto-admin .crl-view button { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 38px; background: #fff; color: var(--fg2); border: 0; cursor: pointer; }
+.statto-admin .crl-view button[aria-pressed="true"] { background: var(--statto-ink); color: #fff; }
+
+.statto-admin .crl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; padding: 14px; }
+.statto-admin .crl-card { position: relative; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+.statto-admin .crl-card[data-selected="true"] { outline: 2px solid var(--statto-lime); outline-offset: -1px; }
+.statto-admin .crl-thumb { position: relative; aspect-ratio: 4 / 3; background: var(--gray-50, #f1f3f2); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 0; padding: 0; width: 100%; cursor: pointer; color: var(--fg3); }
+.statto-admin .crl-thumb img, .statto-admin .crl-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.statto-admin .crl-play { position: absolute; inset: auto 8px 8px auto; background: rgba(0,0,0,.65); color: #fff; border-radius: 999px; padding: 3px 8px; font-size: 11px; display: inline-flex; gap: 4px; align-items: center; }
+.statto-admin .crl-check { position: absolute; top: 8px; left: 8px; z-index: 2; width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.92); display: flex; align-items: center; justify-content: center; }
+.statto-admin .crl-check input { width: 16px; height: 16px; }
+.statto-admin .crl-meta { padding: 10px 12px 12px; display: grid; gap: 4px; min-width: 0; }
+.statto-admin .crl-name { font-weight: 600; font-size: 13px; color: var(--fg1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.statto-admin .crl-sub { font-size: 12px; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.statto-admin .crl-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.statto-admin .crl-mini { width: 56px; height: 42px; border-radius: 6px; overflow: hidden; background: var(--gray-50, #f1f3f2); display: flex; align-items: center; justify-content: center; color: var(--fg3); }
+.statto-admin .crl-mini img, .statto-admin .crl-mini video { width: 100%; height: 100%; object-fit: cover; }
+
+.statto-admin .crl-drop { border: 2px dashed var(--border-strong); border-radius: 14px; padding: 22px; text-align: center; display: grid; gap: 8px; justify-items: center; color: var(--fg2); cursor: pointer; background: #fff; }
+.statto-admin .crl-drop[data-over="true"] { border-color: var(--statto-lime); background: var(--positive-bg); }
+.statto-admin .crl-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.statto-admin .crl-file { display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
+.statto-admin .crl-bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.statto-admin .crl-bar > span { display: block; height: 100%; background: var(--statto-lime); transition: width .2s; }
+.statto-admin .crl-err { color: var(--negative, #b42318); font-size: 12px; }
+
+.statto-admin .crl-panel-media { border-radius: 12px; overflow: hidden; background: #000; }
+.statto-admin .crl-panel-media img, .statto-admin .crl-panel-media video { width: 100%; max-height: 50vh; object-fit: contain; display: block; }
+.statto-admin .crl-dl { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; font-size: 13px; margin: 0; }
+.statto-admin .crl-dl dt { color: var(--fg2); }
+.statto-admin .crl-dl dd { margin: 0; color: var(--fg1); overflow-wrap: anywhere; }
+
+.statto-admin .crl-secret { display: flex; gap: 8px; align-items: center; background: var(--warning-bg); border-radius: 10px; padding: 10px 12px; }
+.statto-admin .crl-secret code { flex: 1; overflow-wrap: anywhere; font-size: 12.5px; }
+.statto-admin .crl-scopes { display: grid; gap: 8px; }
+.statto-admin .crl-scope { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+.statto-admin .crl-scope input { margin-top: 3px; width: 16px; height: 16px; }
+
+.statto-admin .crl-list { list-style: none; margin: 0; padding: 0; }
+.statto-admin .crl-list > li { padding: 14px 16px; border-bottom: 1px solid var(--border); display: grid; gap: 8px; }
+
+@media (max-width: 767px) {
+  .statto-admin .crl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 10px; }
+  .statto-admin .crl-filters { grid-template-columns: 1fr 1fr; }
+  .statto-admin .crl-date { grid-column: 1 / -1; }
+  .statto-admin .crl-dl { grid-template-columns: 1fr; }
+  .statto-admin .crl-dl dt { margin-top: 6px; }
+  .statto-admin .crl-view button { width: 44px; height: 44px; }
+  .statto-admin .crl-check { width: 44px; height: 44px; top: 4px; left: 4px; }
+}
+
+/* Settings gained two owner tabs (API keys, Webhooks): let the tab bar wrap
+   like the client-detail tabs do, so no tab ends up off-screen on a phone. */
+.statto-admin .set-seg { flex-wrap: wrap; }
