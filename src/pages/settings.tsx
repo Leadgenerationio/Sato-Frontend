@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { UsersManagement } from '@/pages/users';
 
 import { logError, logWarn } from '../lib/log';
+import { XeroTaxCodes } from '@/components/settings/xero-tax-codes';
 
 const SETTINGS_TABS = ['profile', 'account', 'integrations', 'users'] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
@@ -121,6 +122,7 @@ function XeroIntegration() {
           Xero credentials are set but authentication failed. Check the backend log for details.
         </p>
       )}
+      {isOwner && <XeroTaxCodes />}
     </div>
   );
 }
