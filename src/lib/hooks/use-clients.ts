@@ -5,6 +5,8 @@ import type { VatTreatment } from '@/lib/vat-treatment';
 
 export interface ClientSummary {
   id: string;
+  /** S14: who added the client (null = before this was recorded). Absent on older backends. */
+  createdBy?: { id: string; name: string } | null;
   companyName: string;
   contactName: string;
   contactEmail: string;
@@ -105,6 +107,8 @@ export interface ClientListFilters {
   search?: string;
   currency?: string;
   country?: string;
+  /** S14: user id who added the client, or 'unknown' for older rows. */
+  addedBy?: string;
   sort?: ClientSortKey;
   dir?: SortDir;
   page?: number;
@@ -117,6 +121,7 @@ export function clientListParams(filters?: ClientListFilters, withPaging = true)
   if (filters?.search) params.set('search', filters.search);
   if (filters?.currency) params.set('currency', filters.currency);
   if (filters?.country?.trim()) params.set('country', filters.country.trim());
+  if (filters?.addedBy) params.set('addedBy', filters.addedBy);
   if (filters?.sort) params.set('sort', filters.sort);
   if (filters?.dir) params.set('dir', filters.dir);
   if (withPaging && filters?.page) params.set('page', String(filters.page));
@@ -354,5 +359,15 @@ export function useCreditAlerts() {
       const res = await api.get<{ alerts: CreditAlert[] }>('/api/v1/clients/credit-alerts');
       return unwrap(res).alerts;
     },
+  });
+}
+
+// S14: "Added by" filter options — users who added ≥1 client, plus Unknown.
+export function useClientAddedByOptions() {
+  return useQuery({
+    queryKey: ['clients', 'added-by-options'],
+    queryFn: async () => unwrap(await api.get<{ options: { id: string; name: string; count: number }[] }>('/api/v1/clients/added-by-options')).options,
+    staleTime: 60_000,
+    retry: false,
   });
 }

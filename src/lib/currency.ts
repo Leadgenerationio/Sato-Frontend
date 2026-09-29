@@ -97,3 +97,34 @@ export function groupByCurrency<T>(
   }
   return order.map((c) => ({ currency: c, ...acc.get(c)! }));
 }
+
+/**
+ * Feedback M3 (29 Sep 2026): a total converted to GBP by the backend at ECB
+ * reference rates. Always shown WITH the rate and its date — never silently.
+ */
+export interface ConvertedTotal {
+  amount: number;
+  currency: 'GBP';
+  rates: { currency: string; rate: number; rateDate: string; source: string }[];
+  parts?: { currency: string; total: number; gbp: number }[];
+}
+
+function fmtRateDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+/**
+ * "converted at ECB rates of 28 Sep 2026: €1 = £0.8578, zł1 = £0.1962".
+ * Rates are stored as 1 GBP = rate × currency, so 1 unit = £1/rate.
+ */
+export function describeConversion(c: ConvertedTotal): string {
+  if (!c.rates.length) return '';
+  const dates = [...new Set(c.rates.map((r) => r.rateDate))];
+  const source = c.rates[0]!.source.replace(/ via .*/, '');
+  const each = c.rates.map((r) => {
+    const unit = formatCurrency(1, r.currency, 0).replace(/[\d.,\s]+/g, '').trim() || r.currency;
+    return `${unit}1 = £${(1 / r.rate).toFixed(4)}`;
+  });
+  return `converted at ${source} rates of ${dates.map(fmtRateDate).join(' / ')}: ${each.join(', ')}`;
+}

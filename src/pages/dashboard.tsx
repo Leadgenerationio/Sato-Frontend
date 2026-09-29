@@ -19,7 +19,7 @@ import { useCreditAlerts } from '@/lib/hooks/use-clients';
 import { useTaskStats } from '@/lib/hooks/use-tasks';
 import { useNotifications } from '@/lib/hooks/use-notifications';
 import { toMoney, invoiceDateOf, type InvoiceSummary } from '@/lib/hooks/use-invoices';
-import { formatPercentCapped, formatCurrency, formatCurrencyTotals, groupByCurrency } from '@/lib/currency';
+import { formatPercentCapped, formatCurrency, formatCurrencyTotals, groupByCurrency, describeConversion, type ConvertedTotal } from '@/lib/currency';
 
 // ── Stato Admin dashboard, restyled to the Statto design (Admin Dashboard.html).
 // Editable card grid (drag/add/remove/save → localStorage) ported from
@@ -63,10 +63,16 @@ function CardHead({ title, sub, icon: Icon, tint }: { title: string; sub?: strin
  * revenue is listed, never added in. Null when there's nothing to say on an
  * older backend that doesn't report the split.
  */
-function otherCurrencyNote(others: { currency: string; total: number }[] | undefined): string | null {
+export function otherCurrencyNote(
+  others: { currency: string; total: number }[] | undefined,
+  converted?: ConvertedTotal | null,
+): string | null {
   if (!others) return null;
   if (others.length === 0) return 'GBP invoices only';
-  return `GBP invoices only · not included: ${formatCurrencyTotals(others, { maximumFractionDigits: 0 })}`;
+  const list = formatCurrencyTotals(others, { maximumFractionDigits: 0 });
+  // M3: with a rate, say what the all-in figure would be — with rate + date.
+  if (converted) return `GBP invoices only · ${formatCurrency(converted.amount, 'GBP', 0)} incl. ${list} ${describeConversion(converted)}`;
+  return `GBP invoices only · not included: ${list}`;
 }
 
 /** "Net Profit — revenue 12 mo − Catchr ad spend 90 days" (falls back on older BE). */
@@ -277,6 +283,8 @@ export interface OutstandingPayload {
   totalOutstanding: string;
   /** Added with feedback M3. Absent on an older backend. */
   totalsByCurrency?: { currency: string; total: string; count: number }[];
+  /** M3: all currencies converted to £ at ECB rates (null/absent = no rate or GBP only). */
+  convertedTotalGbp?: ConvertedTotal | null;
 }
 
 /**
@@ -323,6 +331,11 @@ function InvoicesOwedCard({ go }: { go: (v: string) => void }) {
           {totals.length > 1 ? 'Total outstanding, per currency (not converted)' : 'Total outstanding'}
           {partial ? ' · first 100 invoices' : ''}
         </span>
+        {totals.length > 1 && data?.convertedTotalGbp && (
+          <span className="owed-lab" data-testid="owed-converted">
+            ≈ {formatCurrency(data.convertedTotalGbp.amount, 'GBP', 0)} total ({describeConversion(data.convertedTotalGbp)})
+          </span>
+        )}
       </div>
       <div className="owed-list">
         {invoices.map((o) => {
@@ -645,7 +658,7 @@ export function DashboardPage() {
   const windowLabel = DASHBOARD_WINDOW_OPTIONS.find((o) => o.value === leadsWindow)?.label ?? 'Last 12 months';
 
   const KPIS = stats ? [
-    { icon: PoundSterling, value: gbp0(stats.totalRevenue), label: `Revenue — ${stats.leadsWindowLabel ?? windowLabel}`, sub: otherCurrencyNote(stats.otherCurrencyRevenue), delta: stats.revenueChange != null ? `${formatPercentCapped(stats.revenueChange, { showSign: true })} vs prior period` : null, deltaKind: (stats.revenueChange ?? 0) >= 0 ? 'pos' : 'neg' },
+    { icon: PoundSterling, value: gbp0(stats.totalRevenue), label: `Revenue — ${stats.leadsWindowLabel ?? windowLabel}`, sub: otherCurrencyNote(stats.otherCurrencyRevenue, stats.convertedRevenueGbp), delta: stats.revenueChange != null ? `${formatPercentCapped(stats.revenueChange, { showSign: true })} vs prior period` : null, deltaKind: (stats.revenueChange ?? 0) >= 0 ? 'pos' : 'neg' },
     { icon: Users, value: String(stats.activeClients), label: 'Active Clients', delta: stats.clientChange != null ? `${stats.clientChange >= 0 ? '+' : ''}${stats.clientChange} vs prior period` : null, deltaKind: (stats.clientChange ?? 0) >= 0 ? 'pos' : 'neg' },
     { icon: TrendingUp, value: `${stats.linkedCampaigns ?? '–'} / ${stats.activeCampaigns}`, label: 'Campaigns (linked / active)', delta: stats.campaignChange != null ? `${stats.campaignChange >= 0 ? '+' : ''}${stats.campaignChange} vs prior period` : null, deltaKind: (stats.campaignChange ?? 0) >= 0 ? 'pos' : 'neg' },
     { icon: Activity, value: stats.totalLeadsThisMonth.toLocaleString(), label: `Leads — ${stats.leadsWindowLabel ?? windowLabel}`, delta: stats.leadsChange != null ? `${formatPercentCapped(stats.leadsChange, { showSign: true })} vs prior period` : null, deltaKind: (stats.leadsChange ?? 0) >= 0 ? 'pos' : 'neg' },

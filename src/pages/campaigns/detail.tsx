@@ -68,6 +68,11 @@ function windowRange(win: DeliveryWindow): { start: Date; end: Date } {
 
 const statusPill = (s: string) => (s === 'active' ? 'pos' : s === 'paused' ? 'warn' : 'gray');
 
+/** Non-GBP currencies the campaign's buyers are billed in (M3 label). */
+export function buyerCurrencies(linked: { currency?: string | null }[] | undefined): string[] {
+  return [...new Set((linked ?? []).map((c) => (c.currency || 'GBP').toUpperCase()).filter((c) => c !== 'GBP'))].sort();
+}
+
 function formatCurrency(value: number, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
 }
@@ -177,6 +182,13 @@ export function CampaignDetailPage() {
             {buildSubtitle(campaign.clientName, campaign.vertical) && (
               <p className="ahead-sub">{buildSubtitle(campaign.clientName, campaign.vertical)}</p>
             )}
+            {/* M3 (29 Sep 2026): LeadByte revenue and Catchr spend are reported in GBP,
+                even for CH/IE/PL campaigns — say so instead of implying local money.
+                Per-buyer lead prices below stay in each buyer's own currency. */}
+            <p className="ahead-sub" data-testid="campaign-currency-note">
+              Figures in GBP
+              {buyerCurrencies(campaign.linkedClients).length > 0 && ` · buyers billed in ${buyerCurrencies(campaign.linkedClients).join(', ')}`}
+            </p>
           </div>
         </div>
         <div className="page-actions">

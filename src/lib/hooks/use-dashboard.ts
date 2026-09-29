@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { ConvertedTotal } from '@/lib/currency';
 import { api, unwrap } from '@/lib/api';
 import { invoiceDateOf, type InvoiceSummary } from './use-invoices';
 
@@ -118,6 +119,8 @@ export interface DashboardStats {
   otherCurrencyRevenue?: { currency: string; total: number }[];
   /** What Net Profit / Margin are built from (they differ from the P&L card). */
   profitBasis?: { revenueDays: number; costDays: number; costSource: string };
+  /** M3: GBP + other currencies converted at ECB rates (null = no rate). */
+  convertedRevenueGbp?: ConvertedTotal | null;
   recentInvoices: InvoiceSummary[];
 }
 
@@ -177,6 +180,8 @@ interface BackendStats {
   otherCurrencyRevenue?: { currency: string; total: number }[];
   /** What Net Profit / Margin are built from (they differ from the P&L card). */
   profitBasis?: { revenueDays: number; costDays: number; costSource: string };
+  /** M3: GBP + other currencies converted at ECB rates (null = no rate). */
+  convertedRevenueGbp?: ConvertedTotal | null;
   asOf: string;
 }
 
@@ -237,6 +242,7 @@ export function useDashboardStats(opts: { window?: DashboardWindow } = {}) {
         rollingCost90d: stats.rollingCost90d,
         revenueCurrency: stats.revenueCurrency,
         otherCurrencyRevenue: stats.otherCurrencyRevenue,
+        convertedRevenueGbp: stats.convertedRevenueGbp ?? null,
         profitBasis: stats.profitBasis,
         recentInvoices,
       } as DashboardStats;
