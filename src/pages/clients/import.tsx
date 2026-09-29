@@ -77,8 +77,8 @@ export function ClientImportPage() {
         <div className="card pad acard attio-card">
           <div className="attio-empty">
             <span className="attio-ic"><TriangleAlert className="size-[30px]" /></span>
-            <h3>Attio not configured</h3>
-            <p>Add <code>ATTIO_API_KEY</code> to the backend environment to enable importing. Once set, this page reads your Attio companies directly.</p>
+            <h3>Attio isn't connected yet</h3>
+            <p>Ask your administrator to connect your Attio account. Once it's connected, this page lists your Attio companies so you can import them. You can still add clients by hand from the Clients page.</p>
           </div>
         </div>
       ) : (

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { useAuth } from '@/components/providers/auth-provider';
 import { useLbBuyers, useUpdateLbBuyer, type LbBuyer } from '@/lib/hooks/use-leadbyte';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Building2, AlertTriangle } from 'lucide-react';
@@ -36,13 +38,16 @@ export function LeadByteBuyersPage() {
   const { data: rawBuyers, isLoading, error } = useLbBuyers(statusFilter === 'all' ? undefined : statusFilter);
   const buyers = rawBuyers ? dedupeBuyers(rawBuyers) : rawBuyers;
   const updateBuyer = useUpdateLbBuyer();
+  // The API only lets the owner change a buyer; ops_manager gets a read-only table.
+  const { user } = useAuth();
+  const canEdit = user?.role === 'owner';
 
   const toggleStatus = (buyer: LbBuyer) => {
     if (!buyer.id) return;
-    updateBuyer.mutate({
-      id: buyer.id,
-      update: { status: buyer.status === 'Active' ? 'Inactive' : 'Active' },
-    });
+    updateBuyer.mutate(
+      { id: buyer.id, update: { status: buyer.status === 'Active' ? 'Inactive' : 'Active' } },
+      { onError: () => toast.error("Couldn't update the buyer", { description: 'Please try again, or ask an owner.' }) },
+    );
   };
 
   return (
@@ -114,13 +119,15 @@ export function LeadByteBuyersPage() {
                     <td className="r mono inv-num">{formatMoney(b.credit_amount)}</td>
                     <td className="r mono inv-total">{formatMoney(b.credit_balance)}</td>
                     <td className="r">
-                      <button
-                        className="btn b-ghost b-sm lb-act"
-                        disabled={updateBuyer.isPending || !b.id}
-                        onClick={() => toggleStatus(b)}
-                      >
-                        {b.status === 'Active' ? 'Deactivate' : 'Activate'}
-                      </button>
+                      {canEdit && (
+                        <button
+                          className="btn b-ghost b-sm lb-act"
+                          disabled={updateBuyer.isPending || !b.id}
+                          onClick={() => toggleStatus(b)}
+                        >
+                          {b.status === 'Active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

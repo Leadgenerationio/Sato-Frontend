@@ -1,17 +1,19 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { api } from '@/lib/api';
+import { getAccessToken, getRefreshToken, saveTokens, clearTokens } from '@/lib/token-store';
 import { API_URL } from '@/lib/env';
 import { queryClient } from '@/components/providers/query-provider';
 import type { User, AuthTokens, ApiResponse } from '@/types';
 
 import { logWarn } from '../../lib/log';
-// Set the api singleton's token from localStorage at module-evaluation time so
+// Set the api singleton's token from storage (local or session — see
+// token-store.ts) at module-evaluation time so
 // that any synchronous render which reaches a child hook (which immediately
 // fires a request) already carries the Authorization header. Without this,
 // the first request after a hard refresh races AuthProvider's effect and
 // hits 401 before tryRefresh kicks in.
 if (typeof window !== 'undefined') {
-  const stored = window.localStorage.getItem('accessToken');
+  const stored = getAccessToken();
   if (stored) api.setToken(stored);
 }
 
@@ -48,7 +50,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ error: string | null; user: User | null }>;
+  login: (email: string, password: string, remember?: boolean) => Promise<{ error: string | null; user: User | null }>;
   logout: () => void;
   updateUser: (patch: Partial<User>) => void;
 }
@@ -90,14 +92,14 @@ const MOCK_USER: User = {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(SEED_FAKE_USER ? MOCK_USER : null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
+  const [token, setToken] = useState<string | null>(getAccessToken());
   const [loading, setLoading] = useState(!SEED_FAKE_USER);
 
   useEffect(() => {
     if (SEED_FAKE_USER) return; // offline mock user already seeded
     let cancelled = false;
     (async () => {
-      const existing = localStorage.getItem('accessToken');
+      const existing = getAccessToken();
       // Dev auto-login against the real backend — skip the manual login screen.
       if (!existing && AUTO_LOGIN && AUTO_LOGIN_EMAIL && AUTO_LOGIN_PASSWORD) {
         const res = await login(AUTO_LOGIN_EMAIL, AUTO_LOGIN_PASSWORD);
@@ -110,8 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function restoreSession() {
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
+    const accessToken = getAccessToken();
+    const refreshToken = getRefreshToken();
 
     if (!accessToken && !refreshToken) {
       setLoading(false);
@@ -166,8 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const data: ApiResponse<{ tokens: AuthTokens }> = await res.json();
       if (res.ok && data.status === 'success' && data.data) {
-        localStorage.setItem('accessToken', data.data.tokens.accessToken);
-        localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
+        saveTokens(data.data.tokens);
         return data.data.tokens.accessToken;
       }
       return null;
@@ -178,8 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function clearAuth() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearTokens();
     setToken(null);
     setUser(null);
     api.setToken(null);
@@ -188,7 +188,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
   }
 
-  async function login(email: string, password: string): Promise<{ error: string | null; user: User | null }> {
+  // `remember` = the login screen's "Keep me signed in" box (Sam S6).
+  // Unticked → tokens go to sessionStorage and die with the browser.
+  async function login(email: string, password: string, remember = true): Promise<{ error: string | null; user: User | null }> {
     try {
       const res = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: 'POST',
@@ -201,8 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: data.message || 'Login failed', user: null };
       }
 
-      localStorage.setItem('accessToken', data.data.tokens.accessToken);
-      localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
+      saveTokens(data.data.tokens, remember);
       setToken(data.data.tokens.accessToken);
       setUser(data.data.user);
       api.setToken(data.data.tokens.accessToken);
@@ -212,7 +213,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       warmServerCache(data.data.tokens.accessToken, data.data.user.role);
       return { error: null, user: data.data.user };
     } catch {
-      return { error: 'Network error', user: null };
+      // Sign-in has nothing to "save", so not NETWORK_ERROR_MESSAGE (Sam S10).
+      return { error: "Couldn't reach the server. Check your connection and try again.", user: null };
     }
   }
 

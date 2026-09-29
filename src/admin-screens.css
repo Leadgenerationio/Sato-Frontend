@@ -35,6 +35,8 @@
 .inv-search .lic { color: var(--fg3); flex-shrink: 0; }
 .inv-search input { border: none; outline: none; background: none; font-family: inherit; font-size: 14px; color: var(--fg1); flex: 1; min-width: 0; }
 .inv-search input::placeholder { color: var(--fg3); }
+/* S15: the input drops its own outline, so show keyboard focus on the wrapper. */
+.inv-search:has(input:focus-visible) { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
 
 .inv-card { padding: 8px 8px 4px; overflow-x: auto; }
 .inv-table { width: 100%; border-collapse: collapse; min-width: 720px; }
@@ -96,8 +98,8 @@
 .ai-banner { display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 1.5; border-radius: 14px; padding: 14px 18px; }
 .ai-banner .lic { flex-shrink: 0; }
 .ai-banner strong { font-weight: 600; }
-.ai-banner.warn { background: var(--warning-bg); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent); }
-.ai-banner.warn strong { color: #9a6a14; }
+.ai-banner.warn { background: var(--warning-bg); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning-fill) 30%, transparent); }
+.ai-banner.warn strong { color: var(--warning); }
 .ai-banner.ok { background: var(--lime-50); color: var(--green-700); border: 1px solid var(--lime-200); }
 .ai-next-head { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
 .ai-next-head .lic { color: var(--statto-ink); }
@@ -177,6 +179,14 @@
 /* ---------- NEW CLIENT FORM ---------- */
 .nc-page { max-width: 1100px; }
 .nc-title-row { display: flex; align-items: center; gap: 14px; }
+.cl-status-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+@media (max-width: 640px) {
+  /* Client header on phones: badges on their own line, then Edit + Remove
+     side by side at equal width. */
+  .cl-head-actions { flex-wrap: nowrap; }
+  .cl-head-actions > * { flex: 1 1 0; min-width: 0; }
+  .cl-head-actions .btn { width: 100%; justify-content: center; }
+}
 .nc-back { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: var(--fg1); transition: var(--transition); }
 .nc-back:hover { background: var(--gray-100); }
 .nc-h { margin-bottom: 20px; }
@@ -186,6 +196,8 @@
 .nc-hint { font-size: 12.5px; color: var(--fg3); }
 .nc-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
 .nc-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 20px; }
+.nc-billing-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 1024px) { .nc-billing-row { grid-template-columns: 1fr; } }
 .nc-input, .nc-textarea, .nc-select {
   width: 100%; background: var(--gray-50); border: 1px solid var(--border); border-radius: 12px;
   padding: 12px 14px; font-family: inherit; font-size: 14.5px; color: var(--fg1); transition: var(--transition);
@@ -209,9 +221,13 @@
 .nc-check { display: inline-flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--fg1); cursor: pointer; user-select: none; }
 .nc-check input { position: absolute; opacity: 0; pointer-events: none; }
 .nc-check-box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--statto-ink); flex-shrink: 0; margin-top: 1px; transition: var(--transition); }
-.nc-check-box .lic { opacity: 0; }
+/* M1 (Sam 29 Sep): an unticked box must be empty. The tick is whatever icon
+   the page puts inside the box (a bare lucide <svg>), so hide every child
+   until the input is checked. */
+.nc-check input:not(:checked) + .nc-check-box > * { visibility: hidden; }
 .nc-check input:checked + .nc-check-box { background: var(--statto-lime); border-color: var(--statto-lime); }
-.nc-check input:checked + .nc-check-box .lic { opacity: 1; }
+/* S15: the native input is visually hidden, so draw the keyboard focus on the box. */
+.nc-check input:focus-visible + .nc-check-box { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
 .nc-row { align-items: start; }
 .nc-foot { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 4px 2px 8px; }
 .nc-foot-text { font-size: 14px; color: var(--fg1); line-height: 1.4; }
@@ -228,8 +244,8 @@
 /* ---------- CAMPAIGNS ---------- */
 /* Icon top-aligned with the heading; wrap so the link drops below (and the
    text keeps full width) instead of squeezing the copy into a narrow column. */
-.cmp-banner { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 14px 16px; background: var(--warning-bg); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent); border-radius: 16px; padding: 16px 20px; }
-.cmp-banner-ic { width: 40px; height: 40px; border-radius: 11px; background: color-mix(in srgb, var(--warning) 18%, white); color: var(--warning); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cmp-banner { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 14px 16px; background: var(--warning-bg); border: 1px solid color-mix(in srgb, var(--warning-fill) 30%, transparent); border-radius: 16px; padding: 16px 20px; }
+.cmp-banner-ic { width: 40px; height: 40px; border-radius: 11px; background: color-mix(in srgb, var(--warning-fill) 18%, white); color: var(--warning); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .cmp-banner-text { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .cmp-banner-text strong { font-size: 15px; font-weight: 600; color: var(--fg1); line-height: 1.35; }
 .cmp-banner-text span { font-size: 13.5px; color: var(--fg2); line-height: 1.5; }
@@ -287,7 +303,7 @@
 .lb-company { font-size: 14px; font-weight: 600; color: var(--fg1); }
 .lb-bid { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; letter-spacing: .02em; color: var(--fg2); }
 .lb-status { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 999px; background: var(--gray-100); color: var(--fg2); }
-.lb-status.on { background: var(--lime-50); color: var(--lime-600); }
+.lb-status.on { background: var(--lime-50); color: var(--lime-text); }
 .lb-act { min-width: 110px; justify-content: center; }
 
 /* ---------- LEADBYTE DELIVERIES ---------- */
@@ -399,7 +415,7 @@
 .tk-col { background: var(--gray-50); padding: 14px; min-height: 200px; border-radius: 16px; }
 .tk-col-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--fg1); margin-bottom: 12px; }
 .tk-col-dot { width: 9px; height: 9px; border-radius: 999px; }
-.tk-col-dot.st-todo { background: var(--gray-400); } .tk-col-dot.st-prog { background: var(--info); } .tk-col-dot.st-hold { background: #E0A82E; } .tk-col-dot.st-done { background: var(--positive); }
+.tk-col-dot.st-todo { background: var(--gray-400); } .tk-col-dot.st-prog { background: var(--info-fill); } .tk-col-dot.st-hold { background: #E0A82E; } .tk-col-dot.st-done { background: var(--positive-fill); }
 .tk-col-n { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--fg2); background: #fff; border-radius: 999px; padding: 1px 9px; }
 .tk-col-body { display: flex; flex-direction: column; gap: 10px; }
 .tk-mini { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
@@ -467,7 +483,7 @@
 .org-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-md); padding: 20px 22px; min-width: 300px; display: flex; flex-direction: column; gap: 14px; }
 .org-card-head { display: flex; align-items: center; gap: 13px; }
 .org-avatar { position: relative; width: 44px; height: 44px; border-radius: 999px; background: var(--gray-100); color: var(--statto-ink); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; flex-shrink: 0; }
-.org-dot { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 999px; background: var(--positive); border: 2px solid #fff; }
+.org-dot { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 999px; background: var(--positive-fill); border: 2px solid #fff; }
 .org-name { font-size: 16px; font-weight: 600; color: var(--fg1); }
 .org-role { font-size: 13.5px; color: var(--fg2); }
 .org-overview { font-size: 13.5px; color: var(--fg2); margin-top: 14px; }
@@ -500,8 +516,8 @@
 .rpt-menu { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 50; background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 6px; max-height: 440px; overflow-y: auto; }
 .rpt-menu-opt { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 12px; border-radius: 9px; font-size: 13.5px; color: var(--fg1); transition: background var(--transition); }
 .rpt-menu-opt:hover { background: var(--gray-50); }
-.rpt-menu-opt.on, .rpt-menu-opt[aria-selected="true"] { background: var(--lime-50); color: var(--lime-600); font-weight: 600; }
-.rpt-check { width: 16px; display: inline-flex; align-items: center; justify-content: center; color: var(--lime-600); flex-shrink: 0; }
+.rpt-menu-opt.on, .rpt-menu-opt[aria-selected="true"] { background: var(--lime-50); color: var(--lime-text); font-weight: 600; }
+.rpt-check { width: 16px; display: inline-flex; align-items: center; justify-content: center; color: var(--lime-text); flex-shrink: 0; }
 .rpt-kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
 .rpt-kpi { background: #fff; border: 1px solid var(--border); padding: 18px 20px; }
 .rpt-kpi-l { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--fg2); margin-bottom: 10px; }
@@ -559,7 +575,7 @@
 .intg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .intg-card { position: relative; display: flex; flex-direction: column; text-align: left; cursor: pointer; padding: 0; overflow: hidden; transition: box-shadow var(--transition), transform var(--transition); min-height: 240px; }
 .intg-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
-.intg-accent { height: 4px; background: var(--positive); }
+.intg-accent { height: 4px; background: var(--positive-fill); }
 .intg-body { padding: 22px 24px 24px; display: flex; flex-direction: column; }
 .intg-head { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 18px; }
 .intg-ic { width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -599,7 +615,7 @@
 .set-field-v { font-size: 15px; font-weight: 500; color: var(--fg1); margin-top: 2px; }
 
 /* settings account */
-.set-danger { border: 1px solid color-mix(in srgb, var(--negative) 35%, transparent); }
+.set-danger { border: 1px solid color-mix(in srgb, var(--negative-fill) 35%, transparent); }
 .set-danger-h { color: var(--negative); }
 .set-signout { background: var(--negative); color: #fff; }
 .set-signout:hover { background: #c8484d; }
@@ -718,4 +734,45 @@
   .page-head { flex-direction: column; }
   .page-actions { width: 100%; flex-wrap: wrap; }
 }
+}
+
+/* ── Sam feedback round 1, S15 ─────────────────────────────────────────────
+   1. The floating SOS button (fixed, 48px tall, 20px from the corner) sat on
+      top of whatever reached the bottom-right of a page — a card, a pager.
+      Give every admin page enough bottom room to scroll clear of it.
+   2. On a phone every control is at least 44×44px to tap (top-bar icons,
+      sub-menu items, tabs, segment buttons, pagers, small buttons, search).
+   3. Matrix cells that can never be switched read as a quiet dash. */
+.statto-admin .aview-inner { padding-bottom: 96px; }
+.perm-matrix .perm-group th { background: var(--gray-50); color: var(--fg2); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding-top: 10px; padding-bottom: 10px; }
+.perm-matrix .perm-none { color: var(--fg3); }
+/* The matrix scrolls sideways on a phone — keep the section names in view. */
+.perm-matrix thead th:first-child, .perm-matrix tbody th[scope="row"] { position: sticky; left: 0; z-index: 1; background: #fff; }
+
+@media (max-width: 640px) {
+  .statto-admin .aview-inner { padding-bottom: 88px; }
+  .statto-admin .btn,
+  .statto-admin .btn.b-sm,
+  .statto-admin .btn.b-xs,
+  .statto-admin .inv-tab,
+  .statto-admin .seg-btn,
+  .statto-admin .rpt-tab,
+  .statto-admin .dd,
+  .statto-admin .nc-select,
+  .statto-admin .cmp-tg,
+  .statto-admin .tk-tab,
+  .statto-admin .intg-action,
+  .statto-admin .asb-item { min-height: 44px; }
+  .statto-admin .asb-subitem { min-height: 44px; display: flex; align-items: center; }
+  .statto-admin .inv-tab { min-width: 44px; justify-content: center; }
+  .statto-admin .atop-burger,
+  .statto-admin .atop-bell,
+  .statto-admin .atop-logout,
+  .statto-admin .asb-collapse,
+  .statto-admin .bf-pg-btn,
+  .statto-admin .inv-open { min-width: 44px; min-height: 44px; }
+  /* The search box is 44px tall but its input was a 21px strip inside it —
+     make the input itself fill the box so any tap on it focuses. */
+  .statto-admin .inv-search { padding-top: 0; padding-bottom: 0; }
+  .statto-admin .inv-search input { min-height: 44px; }
 }

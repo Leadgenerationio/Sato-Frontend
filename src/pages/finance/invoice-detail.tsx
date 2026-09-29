@@ -12,6 +12,7 @@ import {
   type InvoiceDetail,
 } from '@/lib/hooks/use-invoices';
 import { FileUpload } from '@/components/shared/file-upload';
+import { invoiceVatRate } from '@/lib/invoice-vat';
 import { fetchFreshDownloadUrl, type PresignedUpload } from '@/lib/hooks/use-uploads';
 
 import { logError } from '../../lib/log';
@@ -82,6 +83,8 @@ export function InvoiceDetailPage() {
     );
   }
 
+  const vatRate = invoiceVatRate(toMoney(invoice.subtotal), toMoney(invoice.vatAmount));
+
   return (
     <div className="screen-page nc-page">
       <div className="page-head">
@@ -150,7 +153,7 @@ export function InvoiceDetailPage() {
           <div style={{ padding: '16px 16px 8px' }}>
             <div className="ci-total-row"><span>Subtotal</span><span className="mono">{formatCurrency(toMoney(invoice.subtotal), invoice.currency)}</span></div>
             {toMoney(invoice.vatAmount) > 0 && (
-              <div className="ci-total-row"><span>VAT (20%)</span><span className="mono">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</span></div>
+              <div className="ci-total-row"><span>VAT{vatRate !== null ? ` (${vatRate}%)` : ''}</span><span className="mono">{formatCurrency(toMoney(invoice.vatAmount), invoice.currency)}</span></div>
             )}
             <div className="ci-total-row grand"><span>Total</span><span className="mono">{formatCurrency(toMoney(invoice.total), invoice.currency)}</span></div>
           </div>
@@ -163,7 +166,8 @@ export function InvoiceDetailPage() {
             <DetailRow label="Client" value={invoice.clientName} />
             <DetailRow label="Email" value={invoice.clientEmail} />
             <DetailRow label="Currency" value={invoice.currency} />
-            <DetailRow label="VAT" value={invoice.vatRegistered ? 'Yes (20%)' : 'No'} />
+            {/* What this invoice charged, not the client's flag or a fixed 20%. */}
+            <DetailRow label="VAT" value={toMoney(invoice.vatAmount) > 0 ? `Yes${vatRate !== null ? ` (${vatRate}%)` : ''}` : 'No'} />
             <DetailRow label="Due Date" value={formatDate(invoice.dueDate)} />
             {invoice.paidDate && <DetailRow label="Paid Date" value={formatDate(invoice.paidDate)} valueClass="pos" />}
             {invoice.invoiceDate && <DetailRow label="Invoice Date" value={formatDate(invoice.invoiceDate)} />}

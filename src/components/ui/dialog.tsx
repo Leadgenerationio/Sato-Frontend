@@ -50,15 +50,42 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  // Most dialogs here are opened from state (no <DialogTrigger>), and Radix
+  // then has no trigger to return focus to — it lands on <body> and keyboard
+  // users lose their place (Sam feedback round 1, S15). Radix fires
+  // onOpenAutoFocus just before it moves focus in, so what has focus at that
+  // moment is what opened the dialog; put it back on close. (This component
+  // renders even while the dialog is closed, so it can't read focus in render.)
+  const returnFocusTo = React.useRef<HTMLElement | null>(null)
+  const handleOpenAutoFocus = (event: Event) => {
+    const active = document.activeElement
+    returnFocusTo.current = active instanceof HTMLElement && active !== document.body ? active : null
+    onOpenAutoFocus?.(event)
+  }
+  const handleCloseAutoFocus = (event: Event) => {
+    onCloseAutoFocus?.(event)
+    if (event.defaultPrevented) return
+    const el = returnFocusTo.current
+    returnFocusTo.current = null
+    if (el && el.isConnected) {
+      event.preventDefault()
+      el.focus()
+    }
+  }
+
   return (
     <DialogPortal data-slot="dialog-portal" container={getThemeRoot()}>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        onOpenAutoFocus={handleOpenAutoFocus}
+        onCloseAutoFocus={handleCloseAutoFocus}
         className={cn(
           "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto rounded-3xl border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg sm:max-h-[calc(100vh-4rem)]",
           className
