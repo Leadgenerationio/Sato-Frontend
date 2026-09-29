@@ -14,11 +14,12 @@ import {
   DASHBOARD_WINDOW_OPTIONS, type DashboardWindow, type FinancialOverviewRow,
 } from '@/lib/hooks/use-dashboard';
 import { useCampaigns, type CampaignSummary } from '@/lib/hooks/use-campaigns';
+import { useServerPreference } from '@/lib/hooks/use-preferences';
 import { useCreditAlerts } from '@/lib/hooks/use-clients';
 import { useTaskStats } from '@/lib/hooks/use-tasks';
 import { useNotifications } from '@/lib/hooks/use-notifications';
-import { toMoney, type InvoiceSummary } from '@/lib/hooks/use-invoices';
-import { formatPercentCapped } from '@/lib/currency';
+import { toMoney, invoiceDateOf, type InvoiceSummary } from '@/lib/hooks/use-invoices';
+import { formatPercentCapped, formatCurrency, formatCurrencyTotals, groupByCurrency } from '@/lib/currency';
 
 // ── Stato Admin dashboard, restyled to the Statto design (Admin Dashboard.html).
 // Editable card grid (drag/add/remove/save → localStorage) ported from
@@ -55,6 +56,24 @@ function CardHead({ title, sub, icon: Icon, tint }: { title: string; sub?: strin
       {Icon && <span className={'ac-ic' + (tint ? ' ' + tint : '')}><Icon className="size-5" /></span>}
     </div>
   );
+}
+
+/**
+ * "GBP only" note for a revenue figure (feedback M3/S12): other-currency
+ * revenue is listed, never added in. Null when there's nothing to say on an
+ * older backend that doesn't report the split.
+ */
+function otherCurrencyNote(others: { currency: string; total: number }[] | undefined): string | null {
+  if (!others) return null;
+  if (others.length === 0) return 'GBP invoices only';
+  return `GBP invoices only · not included: ${formatCurrencyTotals(others, { maximumFractionDigits: 0 })}`;
+}
+
+/** "Net Profit — revenue 12 mo − Catchr ad spend 90 days" (falls back on older BE). */
+function profitLabel(what: string, basis: { revenueDays: number; costDays: number } | undefined): string {
+  if (!basis) return `${what} — rolling 12mo / 90d`;
+  const rev = basis.revenueDays === 365 ? '12 mo' : `${basis.revenueDays} days`;
+  return `${what} — revenue ${rev} − Catchr ad spend ${basis.costDays} days`;
 }
 
 // ─────────── Charts ───────────
@@ -197,45 +216,93 @@ function InvoiceStatus({ rows }: { rows: FinancialOverviewRow[] }) {
 
 // ─────────── Finance cards (own queries) ───────────
 interface XeroBankAccount { name: string; currency: string; balance: string; balanceDate: string | null; }
+
+/**
+ * Accounts named "DO NOT USE…" are retired (e.g. "DO NOT USE - Mettle OLD") and
+ * must not count toward the bank total — feedback S12 (29 Sep 2026).
+ */
+export function isRetiredBankAccount(name: string): boolean {
+  return /^\s*do\s+not\s+use\b/i.test(name);
+}
+
+/** Bank balances per currency, excluding retired accounts. Never cross-summed. */
+export function bankTotals(accounts: XeroBankAccount[]): { currency: string; total: number; count: number }[] {
+  const live = accounts.filter((a) => !isRetiredBankAccount(a.name));
+  const totals = groupByCurrency(live, (a) => toMoney(a.balance), (a) => a.currency);
+  // GBP first (the reporting currency), then the rest in first-seen order.
+  return [...totals.filter((t) => t.currency === 'GBP'), ...totals.filter((t) => t.currency !== 'GBP')];
+}
+
 function BankCard() {
   const { data } = useQuery({
     queryKey: ['xero', 'bank-accounts'],
     queryFn: async () => unwrap(await api.get<{ configured: boolean; accounts: XeroBankAccount[] }>('/api/v1/integrations/xero/bank-accounts')),
   });
   const accounts = data?.accounts ?? [];
-  const total = accounts.filter((a) => a.currency === 'GBP').reduce((s, a) => s + toMoney(a.balance), 0);
-  const fmt = (a: XeroBankAccount) => {
-    const sym = a.currency === 'USD' ? 'US$' : a.currency === 'GBP' ? '£' : '';
-    return `${toMoney(a.balance) < 0 ? '-' : ''}${sym}${Math.abs(toMoney(a.balance)).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const totals = bankTotals(accounts);
+  const hasRetired = accounts.some((a) => isRetiredBankAccount(a.name));
   return (
     <div className="card pad acard">
       <CardHead title="Bank Accounts" sub="Statement balance · live from Xero" icon={Landmark} />
       <div className="bank-list">
-        {accounts.map((b, i) => (
-          <div key={i} className="bank-row">
-            <div className="bank-meta">
-              <span className="bank-name">{b.name}</span>
-              {b.balanceDate && <span className="bank-sub">Statement balance · as of {new Date(b.balanceDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+        {accounts.map((b, i) => {
+          const retired = isRetiredBankAccount(b.name);
+          return (
+            <div key={i} className="bank-row" style={retired ? { opacity: 0.5 } : undefined}>
+              <div className="bank-meta">
+                <span className="bank-name">{b.name}</span>
+                {retired
+                  ? <span className="bank-sub">Not counted in the total</span>
+                  : b.balanceDate && <span className="bank-sub">Statement balance · as of {new Date(b.balanceDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+              </div>
+              <span className={'bank-bal mono' + (toMoney(b.balance) < 0 ? ' neg' : '')}>{formatCurrency(toMoney(b.balance), b.currency)}</span>
             </div>
-            <span className={'bank-bal mono' + (toMoney(b.balance) < 0 ? ' neg' : '')}>{fmt(b)}</span>
-          </div>
-        ))}
+          );
+        })}
         {accounts.length === 0 && <p className="ac-sub">No bank accounts connected.</p>}
       </div>
-      <div className="bank-total"><span>Total (GBP)</span><strong className="mono">{gbp0(total).replace(/\.00$/, '')}</strong></div>
+      {(totals.length === 0 ? [{ currency: 'GBP', total: 0, count: 0 }] : totals).map((t) => (
+        <div key={t.currency} className="bank-total">
+          <span>Total ({t.currency}){hasRetired && t === totals[0] ? ' · excl. retired accounts' : ''}</span>
+          <strong className="mono">{formatCurrency(t.total, t.currency, 0)}</strong>
+        </div>
+      ))}
     </div>
   );
+}
+
+export interface OutstandingPayload {
+  invoices: InvoiceSummary[];
+  count: number;
+  totalOutstanding: string;
+  /** Added with feedback M3. Absent on an older backend. */
+  totalsByCurrency?: { currency: string; total: string; count: number }[];
+}
+
+/**
+ * Outstanding totals, one per currency — feedback M3 (29 Sep 2026): a €34,860
+ * invoice used to be shown as £34,860 and added into a "£58,110" total. Uses
+ * the backend's totalsByCurrency; on an older backend falls back to grouping
+ * the returned rows (the list is capped at 100, so `partial` flags a
+ * truncated fallback). Never adds different currencies together.
+ */
+export function outstandingTotals(data: OutstandingPayload | undefined): { totals: { currency: string; total: number }[]; partial: boolean } {
+  if (!data) return { totals: [], partial: false };
+  if (data.totalsByCurrency) {
+    return { totals: data.totalsByCurrency.map((t) => ({ currency: t.currency, total: toMoney(t.total) })), partial: false };
+  }
+  const totals = groupByCurrency(data.invoices, (i) => toMoney(i.total), (i) => i.currency);
+  return { totals, partial: data.invoices.length < data.count };
 }
 
 function InvoicesOwedCard({ go }: { go: (v: string) => void }) {
   const [bucket, setBucket] = useState<'all' | 'due' | 'overdue'>('all');
   const { data } = useQuery({
     queryKey: ['invoices', 'outstanding', bucket],
-    queryFn: async () => (await api.get<{ invoices: InvoiceSummary[]; count: number; totalOutstanding: string }>(`/api/v1/invoices/outstanding?bucket=${bucket}`)).data ?? { invoices: [], count: 0, totalOutstanding: '0' },
+    queryFn: async () => (await api.get<OutstandingPayload>(`/api/v1/invoices/outstanding?bucket=${bucket}`)).data ?? { invoices: [], count: 0, totalOutstanding: '0' },
   });
   const invoices = (data?.invoices ?? []).slice(0, 4);
-  const total = toMoney(data?.totalOutstanding ?? '0');
+  const { totals, partial } = outstandingTotals(data);
   return (
     <div className="card pad acard">
       <CardHead title="Invoices Owed In" sub={`${data?.count ?? 0} invoices awaiting payment`} icon={Wallet} tint="info" />
@@ -244,7 +311,19 @@ function InvoicesOwedCard({ go }: { go: (v: string) => void }) {
           <button key={t} className={'seg-btn' + (bucket === t ? ' on' : '')} onClick={() => setBucket(t)} style={{ textTransform: 'capitalize' }}>{t === 'all' ? 'All' : t}</button>
         ))}
       </div>
-      <div className="owed-total"><span className="owed-amt mono">{gbp0(total)}</span><span className="owed-lab">Total outstanding</span></div>
+      <div className="owed-total">
+        <span data-testid="owed-total" aria-label={`Total outstanding: ${formatCurrencyTotals(totals, { maximumFractionDigits: 0, separator: ' and ' })}`}>
+          {(totals.length ? totals : [{ currency: 'GBP', total: 0 }]).map((t) => (
+            <span key={t.currency} className="owed-amt mono" style={{ display: 'block', ...(totals.length > 1 ? { fontSize: 24 } : {}) }}>
+              {formatCurrency(t.total, t.currency, 0)}
+            </span>
+          ))}
+        </span>
+        <span className="owed-lab">
+          {totals.length > 1 ? 'Total outstanding, per currency (not converted)' : 'Total outstanding'}
+          {partial ? ' · first 100 invoices' : ''}
+        </span>
+      </div>
       <div className="owed-list">
         {invoices.map((o) => {
           const late = o.daysOverdue > 0;
@@ -252,7 +331,7 @@ function InvoicesOwedCard({ go }: { go: (v: string) => void }) {
             <div key={o.id} className="owed-row">
               <div className="owed-meta"><span className="owed-id">{o.invoiceNumber}</span><span className="owed-client">{o.clientName}</span></div>
               <span className={'pill p-' + (late ? 'warn' : 'infosoft')}>{late ? `${o.daysOverdue}d late` : o.status}</span>
-              <span className="owed-amt2 mono">{gbp0(toMoney(o.total))}</span>
+              <span className="owed-amt2 mono">{formatCurrency(toMoney(o.total), o.currency, 0)}</span>
             </div>
           );
         })}
@@ -281,7 +360,7 @@ function VatCard() {
   );
 }
 
-interface PnlSummary { fromDate: string; toDate: string; revenue: string; fixedCosts: string; oneOffCosts: string; advertisingCosts?: string; adSpend: string; totalCosts: string; netProfit: string; margin: string; uncategorisedCount: number; }
+interface PnlSummary { fromDate: string; toDate: string; revenue: string; fixedCosts: string; oneOffCosts: string; advertisingCosts?: string; adSpend: string; totalCosts: string; netProfit: string; margin: string; uncategorisedCount: number; otherCurrencyRevenue?: { currency: string; total: number }[]; }
 function PnlCard() {
   const { data } = useQuery({
     queryKey: ['reports', 'pnl-summary', 30],
@@ -300,7 +379,9 @@ function PnlCard() {
   return (
     <div className="card pad acard">
       <div className="ac-head">
-        <div><h3 className="statto-title">P&amp;L Summary</h3><p className="ac-sub">{range}</p></div>
+        {/* Feedback S12: label the window + sources so this isn't read as the
+            same figure as the Net Profit tile (12 mo revenue vs 90 d Catchr). */}
+        <div><h3 className="statto-title">P&amp;L Summary</h3><p className="ac-sub">Last 30 days ({range}) · bank costs + Catchr · GBP</p></div>
         {data.uncategorisedCount > 0 && <span className="pnl-chip"><CircleAlert className="size-[13px]" /> {data.uncategorisedCount} uncategorised</span>}
       </div>
       <div className="pnl-hero">
@@ -308,7 +389,12 @@ function PnlCard() {
         <span className="pnl-np-sub"><TrendingUp className="size-[14px]" /> Net profit · {marginPct} margin</span>
       </div>
       <div className="pnl-rows">
-        <div className="pnl-row"><span>Revenue (paid invoices)</span><strong className="pos mono">+{gbp0(toMoney(data.revenue))}</strong></div>
+        {/* Revenue counts paid + authorised invoices (accrual), dated by the
+            invoice date — the old "paid invoices" label was wrong. */}
+        <div className="pnl-row"><span>Revenue (issued invoices)</span><strong className="pos mono">+{gbp0(toMoney(data.revenue))}</strong></div>
+        {otherCurrencyNote(data.otherCurrencyRevenue) && data.otherCurrencyRevenue!.length > 0 && (
+          <p className="ac-sub">{otherCurrencyNote(data.otherCurrencyRevenue)}</p>
+        )}
         <div className="pnl-costs">
           {costs.map((c, i) => <div key={i} className="pnl-row"><span>{c.label}</span><strong className="neg mono">{gbp0(c.val)}</strong></div>)}
         </div>
@@ -405,7 +491,7 @@ function RecentInvoicesCard({ invoices }: { invoices: InvoiceSummary[] }) {
           <tbody>
             {invoices.slice(0, 5).map((iv) => (
               <tr key={iv.id}>
-                <td><span className="ri-id">{iv.invoiceNumber}</span><br /><span className="ri-date">{fmtDate(iv.createdAt)}</span></td>
+                <td><span className="ri-id">{iv.invoiceNumber}</span><br /><span className="ri-date">{fmtDate(invoiceDateOf(iv))}</span></td>
                 <td className="ri-client">{iv.clientName}</td>
                 <td><span className={'pill p-' + statusKind(iv.status)} style={{ textTransform: 'capitalize' }}>{iv.status}{iv.daysOverdue > 0 ? ` (${iv.daysOverdue}d)` : ''}</span></td>
                 <td className="r mono ri-amt">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: iv.currency }).format(toMoney(iv.total))}</td>
@@ -474,6 +560,13 @@ function TargetsCard() {
 const DEFAULT_ORDER = ['kpis', 'mini', 'revleads', 'campinv', 'bank', 'pnl', 'tasks'];
 const CATALOG = ['kpis', 'mini', 'revleads', 'campinv', 'bank', 'pnl', 'tasks', 'targets'];
 const LAYOUT_KEY = 'stato-admin-layout-v2';
+
+/** Saved layout → known block ids only; anything malformed → undefined (use default). */
+function decodeLayout(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const ids = raw.filter((id): id is string => typeof id === 'string' && !!BLOCK_TITLES[id]);
+  return ids.length ? ids : undefined;
+}
 const BLOCK_TITLES: Record<string, string> = {
   kpis: 'Key metrics', mini: 'Financial summary', revleads: 'Revenue & leads',
   campinv: 'Campaign & invoice status', bank: 'Banking & VAT', pnl: 'P&L, credit & notifications',
@@ -504,20 +597,23 @@ export function DashboardPage() {
 
   // edit state
   const [editing, setEditing] = useState(false);
-  const [order, setOrder] = useState<string[]>(() => {
-    try {
-      const s = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? 'null');
-      if (Array.isArray(s) && s.length) return s.filter((id: string) => BLOCK_TITLES[id]);
-    } catch { /* ignore */ }
-    return DEFAULT_ORDER;
-  });
+  // Feedback N2: the saved layout follows the user across devices (server
+  // preference, localStorage as cache). Edits are a local draft until Save,
+  // so a late server response can never overwrite an in-progress edit.
+  const [savedOrder, setSavedOrder] = useServerPreference<string[]>(
+    'dashboardLayout', LAYOUT_KEY, decodeLayout, DEFAULT_ORDER, { localIsJson: true },
+  );
+  const [draft, setDraft] = useState<string[] | null>(null);
+  const order = draft ?? savedOrder;
+  const setOrder = (next: string[] | ((o: string[]) => string[])) =>
+    setDraft((d) => (typeof next === 'function' ? next(d ?? savedOrder) : next));
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const hidden = CATALOG.filter((id) => !order.includes(id));
   const isDefault = JSON.stringify(order) === JSON.stringify(DEFAULT_ORDER);
-  const save = () => { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); setEditing(false); setAddOpen(false); };
-  const resetLayout = () => { setOrder(DEFAULT_ORDER); localStorage.removeItem(LAYOUT_KEY); };
+  const save = () => { setSavedOrder(order); setDraft(null); setEditing(false); setAddOpen(false); };
+  const resetLayout = () => { setSavedOrder(null); setDraft(null); };
   const removeBlock = (id: string) => setOrder((o) => o.filter((x) => x !== id));
   const addBlock = (id: string) => { setOrder((o) => [...o, id]); setAddOpen(false); };
   const moveBlock = (i: number, dir: number) => setOrder((o) => {
@@ -549,7 +645,7 @@ export function DashboardPage() {
   const windowLabel = DASHBOARD_WINDOW_OPTIONS.find((o) => o.value === leadsWindow)?.label ?? 'Last 12 months';
 
   const KPIS = stats ? [
-    { icon: PoundSterling, value: gbp0(stats.totalRevenue), label: `Revenue — ${stats.leadsWindowLabel ?? windowLabel}`, delta: stats.revenueChange != null ? `${formatPercentCapped(stats.revenueChange, { showSign: true })} vs prior period` : null, deltaKind: (stats.revenueChange ?? 0) >= 0 ? 'pos' : 'neg' },
+    { icon: PoundSterling, value: gbp0(stats.totalRevenue), label: `Revenue — ${stats.leadsWindowLabel ?? windowLabel}`, sub: otherCurrencyNote(stats.otherCurrencyRevenue), delta: stats.revenueChange != null ? `${formatPercentCapped(stats.revenueChange, { showSign: true })} vs prior period` : null, deltaKind: (stats.revenueChange ?? 0) >= 0 ? 'pos' : 'neg' },
     { icon: Users, value: String(stats.activeClients), label: 'Active Clients', delta: stats.clientChange != null ? `${stats.clientChange >= 0 ? '+' : ''}${stats.clientChange} vs prior period` : null, deltaKind: (stats.clientChange ?? 0) >= 0 ? 'pos' : 'neg' },
     { icon: TrendingUp, value: `${stats.linkedCampaigns ?? '–'} / ${stats.activeCampaigns}`, label: 'Campaigns (linked / active)', delta: stats.campaignChange != null ? `${stats.campaignChange >= 0 ? '+' : ''}${stats.campaignChange} vs prior period` : null, deltaKind: (stats.campaignChange ?? 0) >= 0 ? 'pos' : 'neg' },
     { icon: Activity, value: stats.totalLeadsThisMonth.toLocaleString(), label: `Leads — ${stats.leadsWindowLabel ?? windowLabel}`, delta: stats.leadsChange != null ? `${formatPercentCapped(stats.leadsChange, { showSign: true })} vs prior period` : null, deltaKind: (stats.leadsChange ?? 0) >= 0 ? 'pos' : 'neg' },
@@ -557,8 +653,10 @@ export function DashboardPage() {
 
   const MINI = stats ? [
     { icon: CreditCard, value: gbp0(stats.totalCost), label: `Ad Spend — ${stats.leadsWindowLabel ?? windowLabel}`, note: 'Catchr — Google + FB + TikTok', noteKind: '' },
-    { icon: TrendingUp, value: gbp0(stats.netProfit), label: 'Net Profit — rolling 12mo / 90d', note: `${formatPercentCapped(stats.profitMargin)} margin · period-coherent`, noteKind: stats.netProfit >= 0 ? 'pos' : '' },
-    { icon: Activity, value: formatPercentCapped(stats.profitMargin), label: 'Margin — rolling 12mo / 90d', note: stats.profitMargin >= 30 ? 'healthy' : stats.profitMargin >= 0 ? 'review' : 'loss-making', noteKind: '' },
+    // Feedback S12: say what this is made of — it is NOT the P&L card (last
+    // 30 days, bank costs + Catchr), so the two figures legitimately differ.
+    { icon: TrendingUp, value: gbp0(stats.netProfit), label: profitLabel('Net Profit', stats.profitBasis), note: `${formatPercentCapped(stats.profitMargin)} margin · GBP`, noteKind: stats.netProfit >= 0 ? 'pos' : '' },
+    { icon: Activity, value: formatPercentCapped(stats.profitMargin), label: profitLabel('Margin', stats.profitBasis), note: stats.profitMargin >= 30 ? 'healthy' : stats.profitMargin >= 0 ? 'review' : 'loss-making', noteKind: '' },
   ] : [];
 
   const blocks: Record<string, React.ReactNode> = {
@@ -566,6 +664,7 @@ export function DashboardPage() {
       <div key={i} className="kpi">
         <div className="kpi-top"><span className="kpi-ic"><k.icon className="size-5" /></span>{k.delta && <span className={'kpi-delta ' + k.deltaKind}><ArrowUpRight className="size-[13px]" strokeWidth={2.4} />{k.delta}</span>}</div>
         <div className="kpi-val mono">{k.value}</div><div className="kpi-lab">{k.label}</div>
+        {'sub' in k && k.sub && <div className="ac-sub">{k.sub}</div>}
       </div>
     ))}</div>,
     mini: <div className="mini-row">{MINI.map((m, i) => (
@@ -580,6 +679,14 @@ export function DashboardPage() {
           <CardHead title="Revenue Overview" sub={`Monthly revenue (Xero) vs ad spend (Catchr) — ${windowLabel}.`} />
           <div className="rev-legend"><span className="rl"><span className="rl-dot" style={{ background: 'var(--statto-ink)' }} /> Revenue</span><span className="rl"><span className="rl-dot" style={{ background: 'var(--lime-500)' }} /> Ad spend</span></div>
           {revRows.length > 0 ? <RevenueChart rows={revRows} /> : <p className="ac-sub">No revenue data for this period.</p>}
+          {revRows.length > 0 && revRows.some((r) => r.otherCurrencyRevenue) && (
+            <p className="ac-sub">
+              {otherCurrencyNote(groupByCurrency(
+                revRows.flatMap((r) => Object.entries(r.otherCurrencyRevenue ?? {}).map(([currency, total]) => ({ currency, total }))),
+                (x) => x.total, (x) => x.currency,
+              ).map(({ currency, total }) => ({ currency, total })))}
+            </p>
+          )}
         </div>
         <div className="card pad acard">
           <CardHead title="Leads This Week" sub="Daily lead volume" />

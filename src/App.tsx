@@ -23,6 +23,7 @@ const DashboardPage = lazy(() => import('@/pages/dashboard').then((m) => ({ defa
 const SettingsPage = lazy(() => import('@/pages/settings').then((m) => ({ default: m.SettingsPage })));
 const CampaignsPage = lazy(() => import('@/pages/campaigns/index').then((m) => ({ default: m.CampaignsPage })));
 const CampaignDetailPage = lazy(() => import('@/pages/campaigns/detail').then((m) => ({ default: m.CampaignDetailPage })));
+const AdAccountsPage = lazy(() => import('@/pages/ad-accounts/index').then((m) => ({ default: m.AdAccountsPage })));
 const InvoiceListPage = lazy(() => import('@/pages/finance/invoices').then((m) => ({ default: m.InvoiceListPage })));
 const InvoiceDetailPage = lazy(() => import('@/pages/finance/invoice-detail').then((m) => ({ default: m.InvoiceDetailPage })));
 const InvoiceCreatePage = lazy(() => import('@/pages/finance/invoice-create').then((m) => ({ default: m.InvoiceCreatePage })));
@@ -43,6 +44,7 @@ const SosAdminPage = lazy(() => import('@/pages/sos/index').then((m) => ({ defau
 // Slice 4 Day 3 — the 5 split reports were folded into UnifiedReportPage.
 // Old routes still resolve so deep links from Sam, dashboards, or external
 // docs don't 404 — they redirect to /reports/unified.
+import { LEGACY_REPORT_PATHS } from '@/pages/reports/report-views';
 const UnifiedReportPage = lazy(() => import('@/pages/reports/unified').then((m) => ({ default: m.UnifiedReportPage })));
 const PortalDashboardPage = lazy(() => import('@/pages/portal/dashboard').then((m) => ({ default: m.PortalDashboardPage })));
 const PortalLeadsPage = lazy(() => import('@/pages/portal/leads').then((m) => ({ default: m.PortalLeadsPage })));
@@ -212,6 +214,15 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Sam S13: bulk-link ad accounts to clients (owner/ops can save; the API also lets finance read). */}
+            <Route
+              path="/ad-accounts"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'ops_manager']}>
+                  <AdAccountsPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/workflows"
               element={
@@ -236,9 +247,30 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/tasks/create" element={<TaskCreatePage />} />
-            <Route path="/tasks/:id" element={<TaskDetailPage />} />
+            <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <TasksPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks/create"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <TaskCreatePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <TaskDetailPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/sos"
               element={
@@ -247,10 +279,38 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/sops" element={<SopsPage />} />
-            <Route path="/sops/create" element={<SopCreatePage />} />
-            <Route path="/sops/:id/edit" element={<SopEditPage />} />
-            <Route path="/sops/:id" element={<SopDetailPage />} />
+            <Route
+              path="/sops"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <SopsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sops/create"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <SopCreatePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sops/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <SopEditPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sops/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <SopDetailPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/staff"
               element={
@@ -280,11 +340,10 @@ export default function App() {
                 links from sidebar caches, dashboards, integrations.tsx, and
                 Sam's bookmarks keep working. */}
             <Route path="/reports" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/campaign" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/client-pnl" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/supplier" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/financial" element={<Navigate to="/reports/unified" replace />} />
-            <Route path="/reports/ad-spend" element={<Navigate to="/reports/unified" replace />} />
+            {/* N5: each legacy path opens the matching section (report-views.ts). */}
+            {LEGACY_REPORT_PATHS.map((v) => (
+              <Route key={v} path={`/reports/${v}`} element={<Navigate to={`/reports/unified?view=${v}`} replace />} />
+            ))}
             <Route
               path="/reports/unified"
               element={

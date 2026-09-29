@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { Fragment, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StatCardSkeleton, UserTableSkeleton, PermissionMatrixSkeleton } from '@/components/shared/loading-skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -14,11 +14,7 @@ import type { UserRole, ApiResponse } from '@/types';
 import { toast } from 'sonner';
 
 import { logError, logWarn } from '../lib/log';
-
-interface PermissionEntry {
-  permission: string;
-  access: Record<UserRole, boolean>;
-}
+import type { MatrixSection } from '@/lib/hooks/use-permissions';
 
 interface UserItem {
   id: string;
@@ -43,6 +39,18 @@ const allRoles: { value: UserRole; label: string; icon: React.ElementType; desc:
   { value: 'client', label: 'Client', icon: User, desc: 'View own portal, invoices & leads' },
   { value: 'readonly', label: 'Readonly', icon: Eye, desc: 'View-only access to dashboards' },
 ];
+
+// Role Access Matrix columns (S7): every role, including Client Admin —
+// the add/edit-user picker above deliberately keeps its own shorter list.
+const matrixRoles: { value: UserRole; label: string; icon: React.ElementType }[] = [
+  { value: 'owner', label: 'Owner', icon: Crown },
+  { value: 'finance_admin', label: 'Finance Admin', icon: Calculator },
+  { value: 'ops_manager', label: 'Ops Manager', icon: Briefcase },
+  { value: 'readonly', label: 'Readonly', icon: Eye },
+  { value: 'client', label: 'Client', icon: User },
+  { value: 'client_admin', label: 'Client Admin', icon: User },
+];
+const matrixRoleLabel = (role: UserRole) => matrixRoles.find((r) => r.value === role)?.label ?? role;
 
 function getRoleIcon(role: UserRole) { return allRoles.find((r) => r.value === role)?.icon || Shield; }
 function getRoleLabel(role: UserRole) { return allRoles.find((r) => r.value === role)?.label || role; }
@@ -116,16 +124,16 @@ export function UsersManagement() {
   const [resetLoading, setResetLoading] = useState(false);
 
   // Permissions state
-  const [permissions, setPermissions] = useState<PermissionEntry[]>([]);
+  const [sections, setSections] = useState<MatrixSection[]>([]);
   const [permConfirmOpen, setPermConfirmOpen] = useState(false);
-  const [pendingPerm, setPendingPerm] = useState<{ permission: string; role: UserRole; newValue: boolean } | null>(null);
+  const [pendingPerm, setPendingPerm] = useState<{ section: string; label: string; role: UserRole; newValue: boolean } | null>(null);
   const [permUpdating, setPermUpdating] = useState(false);
 
   const fetchPermissions = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/api/v1/permissions`, { headers: { Authorization: `Bearer ${token}` } });
-      const data: ApiResponse<{ permissions: PermissionEntry[] }> = await res.json();
-      if (data.status === 'success' && data.data) setPermissions(data.data.permissions);
+      const data: ApiResponse<{ sections?: MatrixSection[] }> = await res.json();
+      if (data.status === 'success' && data.data?.sections) setSections(data.data.sections);
     } catch (err) {
       logWarn('fetchPermissions failed', err);
     }
@@ -303,8 +311,8 @@ export function UsersManagement() {
   }
 
   // ─── Permission toggle ───
-  function requestPermToggle(permission: string, role: UserRole, newValue: boolean) {
-    setPendingPerm({ permission, role, newValue });
+  function requestPermToggle(section: MatrixSection, role: UserRole, newValue: boolean) {
+    setPendingPerm({ section: section.key, label: section.label, role, newValue });
     setPermConfirmOpen(true);
   }
 
@@ -317,17 +325,20 @@ export function UsersManagement() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          permission: pendingPerm.permission,
+          section: pendingPerm.section,
           role: pendingPerm.role,
           allowed: pendingPerm.newValue,
         }),
       });
-      const data: ApiResponse<{ permission: PermissionEntry }> = await res.json();
-      if (data.status === 'success' && data.data) {
-        setPermissions((prev) => prev.map((p) => (p.permission === data.data!.permission.permission ? data.data!.permission : p)));
+      const data: ApiResponse<{ section: MatrixSection }> = await res.json();
+      if (data.status === 'success' && data.data?.section) {
+        const updated = data.data.section;
+        setSections((prev) => prev.map((s) => (s.key === updated.key ? updated : s)));
         toast.success('Permission updated', {
-          description: `"${pendingPerm.permission}" ${pendingPerm.newValue ? 'enabled' : 'disabled'} for ${getRoleLabel(pendingPerm.role)}.`,
+          description: `${pendingPerm.label} ${pendingPerm.newValue ? 'switched on' : 'switched off'} for ${matrixRoleLabel(pendingPerm.role)}. It applies to the menu and the server straight away.`,
         });
+      } else {
+        toast.error('Permission not changed', { description: data.message || 'The server refused the change. Nothing was saved.' });
       }
     } catch (err) {
       logError('Permission update failed', err);
@@ -370,22 +381,26 @@ export function UsersManagement() {
         </div>
       )}
 
-      {/* Role Access Matrix — editable by owner */}
+      {/* Role Access Matrix — editable by owner. Stored on the server and
+          enforced there; the sidebar follows it (S7). */}
       <div className="card pad acard">
         <h3 className="statto-title">Role Access Matrix</h3>
-        <p className="ac-sub" style={{ marginTop: 4, marginBottom: 20 }}>Toggle switches to change what each role can access</p>
-        {permissions.length === 0 ? (
+        <p className="ac-sub" style={{ marginTop: 4, marginBottom: 20 }}>
+          Switch a section off to remove it from that role's menu and block it on the server. Owner always has everything; a dash means the role can never open that section.
+        </p>
+        {sections.length === 0 ? (
           <PermissionMatrixSkeleton />
         ) : (
           <div className="table-scroll">
-            <table className="inv-table">
+            <table className="inv-table perm-matrix">
+              <caption className="sr-only">Which sections each role can open</caption>
               <thead>
                 <tr>
-                  <th style={{ width: 180 }}>Permission</th>
-                  {allRoles.map((r) => (
-                    <th key={r.value} style={{ textAlign: 'center', minWidth: 100 }}>
+                  <th scope="col" style={{ width: 180 }}>Section</th>
+                  {matrixRoles.map((r) => (
+                    <th key={r.value} scope="col" style={{ textAlign: 'center', minWidth: 96 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <r.icon className="size-4" />
+                        <r.icon className="size-4" aria-hidden="true" />
                         <span style={{ fontSize: 12 }}>{r.label}</span>
                       </div>
                     </th>
@@ -393,27 +408,34 @@ export function UsersManagement() {
                 </tr>
               </thead>
               <tbody>
-                {permissions.map((row) => (
-                  <tr key={row.permission}>
-                    <td style={{ fontWeight: 500 }}>{row.permission}</td>
-                    {allRoles.map((r) => {
-                      const allowed = row.access[r.value];
-                      const isOwnerCol = r.value === 'owner';
-                      return (
-                        <td key={r.value} style={{ textAlign: 'center' }}>
-                          {isOwnerCol ? (
-                            <span className="pill p-pos">Always</span>
-                          ) : (
-                            <Switch
-                              checked={allowed}
-                              onCheckedChange={(val) => requestPermToggle(row.permission, r.value, val)}
-                              disabled={permUpdating}
-                            />
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
+                {sections.map((row, i) => (
+                  <Fragment key={row.key}>
+                    {(i === 0 || sections[i - 1].group !== row.group) && (
+                      <tr className="perm-group"><th scope="rowgroup" colSpan={matrixRoles.length + 1}>{row.group}</th></tr>
+                    )}
+                    <tr>
+                      <th scope="row" style={{ fontWeight: 500, textAlign: 'left' }}>{row.label}</th>
+                      {matrixRoles.map((r) => {
+                        const cell = row.access[r.value];
+                        return (
+                          <td key={r.value} style={{ textAlign: 'center' }}>
+                            {cell === 'always' ? (
+                              <span className="pill p-pos">Always</span>
+                            ) : cell === 'none' ? (
+                              <span className="perm-none" aria-label={`${r.label} — ${row.label}: not available`}>—</span>
+                            ) : (
+                              <Switch
+                                checked={cell === 'on'}
+                                onCheckedChange={(val) => requestPermToggle(row, r.value, val)}
+                                disabled={permUpdating}
+                                aria-label={`${r.label} — ${row.label}`}
+                              />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -701,17 +723,17 @@ export function UsersManagement() {
           {pendingPerm && (
             <div className="rounded-lg border p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: 'var(--fg2)' }}>Permission</span>
-                <span className="text-sm font-medium">{pendingPerm.permission}</span>
+                <span className="text-sm" style={{ color: 'var(--fg2)' }}>Section</span>
+                <span className="text-sm font-medium">{pendingPerm.label}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: 'var(--fg2)' }}>Role</span>
-                <span className="pill p-gray" style={{ textTransform: 'capitalize' }}>{getRoleLabel(pendingPerm.role)}</span>
+                <span className="pill p-gray">{matrixRoleLabel(pendingPerm.role)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: 'var(--fg2)' }}>Access</span>
                 <span className={'pill ' + (pendingPerm.newValue ? 'p-pos' : 'p-neg')}>
-                  {pendingPerm.newValue ? 'Allow' : 'Deny'}
+                  {pendingPerm.newValue ? 'On' : 'Off'}
                 </span>
               </div>
             </div>

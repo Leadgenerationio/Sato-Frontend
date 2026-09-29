@@ -1,6 +1,12 @@
 import type { ApiResponse, AuthTokens } from '@/types';
 import { API_URL } from '@/lib/env';
 import { getDevMock } from '@/lib/dev-mocks';
+import { getRefreshToken, saveTokens } from '@/lib/token-store';
+
+// Sam feedback S10 (29 Sep 2026): a dropped connection used to surface the
+// browser's raw "Failed to fetch". Say what happened and that nothing saved.
+export const NETWORK_ERROR_MESSAGE =
+  "Couldn't reach the server — nothing was saved. Check your connection and try again.";
 
 // Dev-only: serve canned data from dev-mocks.ts when VITE_USE_MOCKS=true (i.e.
 // no backend). Decoupled from the login bypass so the app can auto-login against
@@ -26,7 +32,7 @@ class ApiClient {
 
   private async tryRefresh(): Promise<string | null> {
     if (this.refreshInFlight) return this.refreshInFlight;
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = getRefreshToken();
     if (!refreshToken) return null;
 
     this.refreshInFlight = (async () => {
@@ -38,8 +44,7 @@ class ApiClient {
         });
         const data: ApiResponse<{ tokens: AuthTokens }> = await res.json();
         if (!res.ok || data.status !== 'success' || !data.data) return null;
-        localStorage.setItem('accessToken', data.data.tokens.accessToken);
-        localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
+        saveTokens(data.data.tokens);
         this.token = data.data.tokens.accessToken;
         return this.token;
       } catch {
@@ -58,7 +63,7 @@ class ApiClient {
       if (mock) return mock as ApiResponse<T>;
     }
 
-    const response = await fetch(`${API_URL}${path}`, { ...options, headers: this.buildHeaders(options) });
+    const response = await fetchOrThrow(`${API_URL}${path}`, { ...options, headers: this.buildHeaders(options) });
 
     if (response.status === 401 && !retried && this.token && !path.startsWith('/api/v1/auth/')) {
       const newToken = await this.tryRefresh();
@@ -91,7 +96,7 @@ class ApiClient {
     const headers: Record<string, string> = {};
     if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
 
-    const response = await fetch(`${API_URL}${path}`, { method: 'GET', headers });
+    const response = await fetchOrThrow(`${API_URL}${path}`, { method: 'GET', headers });
 
     if (response.status === 401 && !retried && this.token) {
       const newToken = await this.tryRefresh();
@@ -127,35 +132,63 @@ export class ApiError extends Error {
   }
 }
 
-// If the response carries a list of validation issues (`errors` or `issues`),
-// expand them into a multi-line message so the UI can show every problem at
-// once. Falls back to `data.message` or the provided default.
-function buildErrorMessage(data: ApiResponse<unknown>, fallback: string): string {
+/**
+ * fetch() rejects (TypeError "Failed to fetch") only when the request never
+ * got an answer — offline, DNS, CORS, server down. Convert that into an
+ * ApiError with status 0 and a message a person can act on.
+ */
+async function fetchOrThrow(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    throw new ApiError(NETWORK_ERROR_MESSAGE, 0, 'network_error');
+  }
+}
+
+// "body.contactEmail" → "Contact email". Validation paths come from zod as
+// dot-joined segments; the leading body/query/params segment is noise.
+export function humanizeField(path: string): string {
+  const segs = path.split('.').filter((s) => s && !['body', 'query', 'params'].includes(s));
+  const last = [...segs].reverse().find((s) => !/^\d+$/.test(s));
+  if (!last) return '';
+  const words = last.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').toLowerCase().trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+// If the response carries validation issues (`errors` or `issues`), lead with
+// the first one in plain words ("Contact email: Invalid email address") and
+// say how many more there are — a wall of "body.x.y: …" lines was unreadable.
+// Falls back to `data.message` or the provided default.
+export function buildErrorMessage(data: ApiResponse<unknown>, fallback: string): string {
   const issues = data.errors ?? data.issues;
   if (issues && issues.length > 0) {
-    const lines = issues.map((e) => (e.path ? `${e.path}: ${e.message}` : e.message));
-    if (data.message) {
-      return [data.message, ...lines].join('\n');
-    }
-    return lines.join('\n');
+    const first = issues[0];
+    const rawPath = Array.isArray(first.path) ? (first.path as unknown[]).join('.') : String(first.path ?? '');
+    const field = humanizeField(rawPath);
+    const line = field ? `${field}: ${first.message}` : first.message;
+    const more = issues.length > 1 ? ` (and ${issues.length - 1} more)` : '';
+    return `Couldn't save — ${line}${more}`;
   }
   return data.message || fallback;
 }
 
-function statusMessage(status: number, fallback: string): string {
+// Plain-words fallback per status, used when the server sends no message.
+export function statusMessage(status: number, fallback: string): string {
   switch (status) {
-    case 400: return 'Invalid request';
-    case 401: return 'Session expired — please sign in again';
-    case 403: return 'Access denied';
-    case 404: return 'Not found';
-    case 409: return 'Conflict — this record was modified or already exists';
-    case 422: return 'Validation failed';
-    case 429: return 'Too many requests — please wait a moment';
+    case 400: return "Couldn't save — some details aren't valid. Check the form and try again.";
+    case 401: return 'Your session has expired — please sign in again.';
+    case 403: return "You don't have permission to do that.";
+    case 404: return "We couldn't find that — it may have been removed.";
+    case 409: return 'This record was changed or already exists — refresh and try again.';
+    case 413: return 'That file or request is too large.';
+    case 422: return "Couldn't save — some details aren't valid. Check the form and try again.";
+    case 429: return 'Too many requests — please wait a moment and try again.';
     case 500:
     case 502:
     case 503:
     case 504:
-      return 'Server error — please try again';
+      return 'Something went wrong on the server — nothing was saved. Please try again.';
     default:
       return fallback;
   }
