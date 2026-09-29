@@ -83,13 +83,13 @@ export function AgreementEditorPage() {
   // Fetch a fresh signed download URL for the source PDF.
   useEffect(() => {
     if (!r2Key) {
-      setPdfError('Missing r2Key — open this page from the Send Agreement dialog.');
+      setPdfError("No agreement PDF was found for this page. Go back to the client, choose Send Agreement, and upload the PDF there.");
       return;
     }
     let cancelled = false;
     fetchFreshDownloadUrl(r2Folder, r2Key)
       .then((url) => { if (!cancelled) setPdfUrl(url); })
-      .catch((err) => { if (!cancelled) setPdfError(err instanceof Error ? err.message : 'Failed to load PDF'); });
+      .catch((err) => { if (!cancelled) setPdfError(err instanceof Error ? `Couldn't open the agreement PDF: ${err.message}` : "Couldn't open the agreement PDF. Please try again."); });
     return () => { cancelled = true; };
   }, [r2Key, r2Folder]);
 
