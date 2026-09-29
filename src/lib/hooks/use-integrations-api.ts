@@ -40,10 +40,14 @@ export interface WebhookEndpoint {
   createdAt: string;
 }
 
+// Matches the backend row (webhook_deliveries): `status` is the delivery
+// state, `responseCode` the endpoint's HTTP answer.
 export interface WebhookDelivery {
   id: string;
   event: WebhookEvent | 'test';
-  status: number | null;
+  status: 'pending' | 'succeeded' | 'failed' | string;
+  responseCode: number | null;
+  lastError?: string | null;
   attempts: number;
   deliveredAt: string | null;
   nextAttemptAt: string | null;
@@ -84,7 +88,7 @@ export function useRevokeApiKey() {
 export function useWebhooks() {
   return useQuery({
     queryKey: ['webhooks'],
-    queryFn: async () => listOf<WebhookEndpoint>(unwrap(await api.get<unknown>('/api/v1/webhooks')), 'webhooks'),
+    queryFn: async () => listOf<WebhookEndpoint>(unwrap(await api.get<unknown>('/api/v1/webhook-endpoints')), 'endpoints'),
   });
 }
 
@@ -92,7 +96,7 @@ export function useCreateWebhook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { url: string; events: WebhookEvent[] }) =>
-      unwrap(await api.post<{ webhook: WebhookEndpoint; secret: string }>('/api/v1/webhooks', input)),
+      unwrap(await api.post<{ endpoint: WebhookEndpoint; secret: string }>('/api/v1/webhook-endpoints', input)),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks'] }),
   });
 }
@@ -101,7 +105,7 @@ export function useUpdateWebhook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: { id: string; active?: boolean; events?: WebhookEvent[]; url?: string }) =>
-      unwrap(await api.patch<{ webhook: WebhookEndpoint }>(`/api/v1/webhooks/${id}`, patch)).webhook,
+      unwrap(await api.patch<{ endpoint: WebhookEndpoint }>(`/api/v1/webhook-endpoints/${id}`, patch)).endpoint,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks'] }),
   });
 }
@@ -109,7 +113,7 @@ export function useUpdateWebhook() {
 export function useDeleteWebhook() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => { await api.delete(`/api/v1/webhooks/${id}`); },
+    mutationFn: async (id: string) => { await api.delete(`/api/v1/webhook-endpoints/${id}`); },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks'] }),
   });
 }
@@ -117,7 +121,7 @@ export function useDeleteWebhook() {
 export function useWebhookDeliveries(id: string | null) {
   return useQuery({
     queryKey: ['webhook-deliveries', id],
-    queryFn: async () => listOf<WebhookDelivery>(unwrap(await api.get<unknown>(`/api/v1/webhooks/${id}/deliveries`)), 'deliveries'),
+    queryFn: async () => listOf<WebhookDelivery>(unwrap(await api.get<unknown>(`/api/v1/webhook-endpoints/${id}/deliveries`)), 'deliveries'),
     enabled: !!id,
   });
 }
@@ -125,7 +129,7 @@ export function useWebhookDeliveries(id: string | null) {
 export function useTestWebhook() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => unwrap(await api.post<{ delivery: WebhookDelivery }>(`/api/v1/webhooks/${id}/test`)).delivery,
+    mutationFn: async (id: string) => unwrap(await api.post<{ ok: boolean; status?: number; error?: string; delivery?: WebhookDelivery }>(`/api/v1/webhook-endpoints/${id}/test`)),
     onSuccess: (_d, id) => qc.invalidateQueries({ queryKey: ['webhook-deliveries', id] }),
   });
 }

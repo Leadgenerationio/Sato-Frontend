@@ -48,7 +48,7 @@ export function WebhooksSettings() {
     if (webhookUrlError(url) || events.size === 0) return;
     try {
       const res = await create.mutateAsync({ url: url.trim(), events: [...events] });
-      setFresh({ url: res.webhook?.url ?? url.trim(), secret: res.secret });
+      setFresh({ url: res.endpoint?.url ?? url.trim(), secret: res.secret });
       setUrl(''); setTouched(false);
     } catch (err) {
       toast.error(`${err instanceof Error ? err.message : "Couldn't add the webhook."} Nothing was saved.`);
@@ -117,8 +117,8 @@ function WebhookRow({ hook }: { hook: WebhookEndpoint }) {
   async function sendTest() {
     try {
       const d = await test.mutateAsync(hook.id);
-      if (d?.status && d.status >= 200 && d.status < 300) toast.success(`Test delivered (HTTP ${d.status}).`);
-      else toast.error(`Test sent, but the endpoint answered ${d?.status ? `HTTP ${d.status}` : 'nothing'}.`);
+      if (d?.ok) toast.success(`Test delivered${d.status ? ` (HTTP ${d.status})` : ''}.`);
+      else toast.error(`Test sent, but ${d?.status ? `the endpoint answered HTTP ${d.status}` : d?.error ? d.error : 'the endpoint did not answer'}.`);
       setShowDeliveries(true);
     } catch (err) { toast.error(`${err instanceof Error ? err.message : "Couldn't send the test."}`); }
   }
@@ -150,10 +150,10 @@ function WebhookRow({ hook }: { hook: WebhookEndpoint }) {
           {isLoading ? <Skeleton className="h-12" /> : !deliveries?.length ? <p className="ac-sub">No deliveries yet.</p> : (
             <ul className="crl-files" style={{ marginTop: 4 }}>
               {deliveries.map((d) => {
-                const ok = d.status != null && d.status >= 200 && d.status < 300;
+                const ok = d.status === 'succeeded';
                 return (
                   <li key={d.id} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 12.5 }}>
-                    <span className={`pill p-${ok ? 'pos' : d.nextAttemptAt ? 'warn' : 'neg'}`}>{d.status ? `HTTP ${d.status}` : 'No answer'}</span>
+                    <span className={`pill p-${ok ? 'pos' : d.nextAttemptAt ? 'warn' : 'neg'}`}>{d.responseCode ? `HTTP ${d.responseCode}` : d.status === 'pending' ? 'Pending' : 'No answer'}</span>
                     <span className="mono">{d.event}</span>
                     <span className="crl-sub">{fmt(d.deliveredAt ?? d.createdAt)} · {d.attempts} attempt{d.attempts === 1 ? '' : 's'}{!ok && d.nextAttemptAt ? ` · retrying ${fmt(d.nextAttemptAt)}` : ''}</span>
                   </li>

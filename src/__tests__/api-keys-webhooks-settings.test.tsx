@@ -27,7 +27,7 @@ vi.mock('@/lib/hooks/use-integrations-api', async () => {
     useUpdateWebhook: () => ({ mutateAsync: updateHook, isPending: false }),
     useDeleteWebhook: () => ({ mutateAsync: vi.fn(), isPending: false }),
     useTestWebhook: () => ({ mutateAsync: testHook, isPending: false }),
-    useWebhookDeliveries: (id: string | null) => ({ data: id ? [{ id: 'd1', event: 'test', status: 200, attempts: 1, deliveredAt: '2026-09-29T10:00:00Z', nextAttemptAt: null, createdAt: '2026-09-29T10:00:00Z' }] : undefined, isLoading: false }),
+    useWebhookDeliveries: (id: string | null) => ({ data: id ? [{ id: 'd1', event: 'test', status: 'succeeded', responseCode: 200, attempts: 1, deliveredAt: '2026-09-29T10:00:00Z', nextAttemptAt: null, createdAt: '2026-09-29T10:00:00Z' }] : undefined, isLoading: false }),
   };
 });
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -41,9 +41,9 @@ beforeEach(() => {
   hooks = [{ id: 'w1', url: 'https://example.com/hook', events: ['creative.added'], active: true, createdAt: '2026-09-29T09:00:00Z' }];
   createKey.mockReset().mockResolvedValue({ key: 'sk_live_ab12_SECRET_ONCE', apiKey: { name: 'Taboola sync' } });
   revokeKey.mockReset().mockResolvedValue(undefined);
-  createHook.mockReset().mockResolvedValue({ webhook: { url: 'https://hooks.example.com/stato' }, secret: 'whsec_ONCE' });
+  createHook.mockReset().mockResolvedValue({ endpoint: { url: 'https://hooks.example.com/stato' }, secret: 'whsec_ONCE' });
   updateHook.mockReset().mockResolvedValue({});
-  testHook.mockReset().mockResolvedValue({ status: 200 });
+  testHook.mockReset().mockResolvedValue({ ok: true, status: 200 });
 });
 
 describe('ApiKeysSettings', () => {
