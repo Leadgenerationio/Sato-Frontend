@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { UsersManagement } from '../pages/users';
 
 // Settings → User Management → Role Access Matrix (Sam feedback round 1, S7).
@@ -38,7 +39,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('Role Access Matrix', () => {
   it('has a column for every role, Client Admin included', async () => {
-    render(<UsersManagement />);
+    render(<MemoryRouter><UsersManagement /></MemoryRouter>);
     const table = await screen.findByRole('table', { name: /which sections each role can open/i });
     for (const label of ['Owner', 'Finance Admin', 'Ops Manager', 'Readonly', 'Client', 'Client Admin']) {
       expect(within(table).getByRole('columnheader', { name: label })).toBeInTheDocument();
@@ -46,7 +47,7 @@ describe('Role Access Matrix', () => {
   });
 
   it('labels every switch with role and section, and locks Owner + Settings', async () => {
-    render(<UsersManagement />);
+    render(<MemoryRouter><UsersManagement /></MemoryRouter>);
     expect(await screen.findByRole('switch', { name: 'Finance Admin — Bank Feed' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Client Admin — Client portal' })).not.toBeChecked();
     expect(screen.queryByRole('switch', { name: /^Owner/ })).not.toBeInTheDocument();
@@ -56,7 +57,7 @@ describe('Role Access Matrix', () => {
 
   it('asks before changing, then sends the section key', async () => {
     const user = userEvent.setup();
-    render(<UsersManagement />);
+    render(<MemoryRouter><UsersManagement /></MemoryRouter>);
     await user.click(await screen.findByRole('switch', { name: 'Finance Admin — Bank Feed' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Bank Feed')).toBeInTheDocument();
