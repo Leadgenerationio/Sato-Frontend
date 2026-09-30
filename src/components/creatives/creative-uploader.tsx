@@ -117,12 +117,21 @@ export function CreativeUploader({ open, onOpenChange, clientId, clientOptions, 
           landingPageUrl: landingUrl.trim() || undefined,
           files: uploaded.map((u) => u.file),
         });
-        uploaded.forEach((u) => patch(u.id, { stage: 'done' }));
+        // The server answers per file, so one refused file doesn't mark the others as failed.
+        const failed = new Map((res?.failures ?? []).map((f) => [f.index, f.message]));
+        uploaded.forEach((u, i) => {
+          if (!failed.has(i)) { patch(u.id, { stage: 'done' }); return; }
+          const why = failed.get(i)!.trim().replace(/[.!?]?$/, '.');
+          patch(u.id, { stage: 'error', error: `${u.file.name}: ${why} The file reached storage but the creative may not have been saved. Remove it and add it again to retry (a file already in the library is updated, not copied).` });
+        });
+        const saved = uploaded.length - failed.size;
         const dup = res?.duplicates ?? 0;
-        toast.success(`${uploaded.length} creative${uploaded.length === 1 ? '' : 's'} saved${dup ? ` (${dup} already in the library — updated, not copied)` : ''}.`);
+        if (saved > 0) toast.success(`${saved} creative${saved === 1 ? '' : 's'} saved${dup ? ` (${dup} already in the library — updated, not copied)` : ''}.`);
+        if (failed.size > 0) toast.error(`${failed.size} file${failed.size === 1 ? '' : 's'} couldn't be saved${saved > 0 ? '. The others were saved' : ''}.`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Couldn't save the creatives.";
-        uploaded.forEach((u) => patch(u.id, { stage: 'error', error: `${msg} The file reached storage but no creative was saved — try again.` }));
+        // The hook reports API errors per file, so this only guards against something unexpected.
+        const msg = (err instanceof Error ? err.message : "Couldn't save the creatives").trim().replace(/[.!?]?$/, '.');
+        uploaded.forEach((u) => patch(u.id, { stage: 'error', error: `${u.file.name}: ${msg} The file reached storage but the creative may not have been saved. Remove it and add it again to retry (a file already in the library is updated, not copied).` }));
       }
     }
     setBusy(false);
