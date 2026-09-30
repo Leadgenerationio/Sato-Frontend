@@ -91,12 +91,21 @@ export function useServerPreference<T>(
     synced.current = true;
     setValue(next === null ? fallback : next);
     writeLocal(localKey, next === null ? null : localIsJson ? JSON.stringify(next) : String(next));
-    qc.setQueryData<Preferences>(PREFERENCES_QUERY_KEY, (prev) => {
-      const copy = { ...(prev ?? {}) };
+    // Only patch a copy of the server's answer we actually have. If the first GET was cancelled we
+    // hold nothing, and a one-key object here would pass for "the server's preferences": another
+    // preference would then see itself missing and upload this browser's stale value over the real one.
+    const prev = qc.getQueryData<Preferences>(PREFERENCES_QUERY_KEY);
+    if (prev !== undefined) {
+      const copy = { ...prev };
       if (next === null) delete copy[key]; else copy[key] = next;
-      return copy;
-    });
-    putPreference(key, next).catch((err) => logError(`Saving ${key} preference failed`, err));
+      qc.setQueryData<Preferences>(PREFERENCES_QUERY_KEY, copy);
+    }
+    putPreference(key, next).then(
+      // Without a cached copy, fetch the full object once the save has landed. Not after a failed
+      // save: offline or on an older backend that would only add a second failing request.
+      () => { if (prev === undefined) void qc.invalidateQueries({ queryKey: PREFERENCES_QUERY_KEY }); },
+      (err) => logError(`Saving ${key} preference failed`, err),
+    );
   }, [fallback, localKey, localIsJson, key, qc]);
 
   return [value, set] as const;

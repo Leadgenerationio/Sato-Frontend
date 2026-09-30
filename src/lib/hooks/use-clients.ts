@@ -196,9 +196,13 @@ export function useUpdateClient() {
       const res = await api.put<{ client: ClientDetail }>(`/api/v1/clients/${id}`, data);
       return unwrap(res).client;
     },
-    onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['clients'] });
-      qc.invalidateQueries({ queryKey: ['client', vars.id] });
+    onSuccess: (client, vars) => {
+      // Seed the client on screen from the save's own answer, so anything showing an optimistic
+      // value until "saved" (the client-type switch, S1) never snaps back to the old value. This
+      // does not depend on a second request, and the mutation does not wait for one.
+      if (client) qc.setQueryData<ClientDetail>(['client', vars.id], (old) => (old ? { ...old, ...client } : client));
+      void qc.invalidateQueries({ queryKey: ['clients'] });
+      void qc.invalidateQueries({ queryKey: ['client', vars.id] });
     },
   });
 }
