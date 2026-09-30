@@ -326,9 +326,8 @@ export function ClientsPage() {
                         <td className="r mono inv-num">{c.activeCampaigns}</td>
                         <td className="r mono inv-total"><RevenueCell client={c} /></td>
                         <td className="r">
-                          <Link to={`/clients/${c.id}`}>
-                            <button className="inv-open" title="Open client" aria-label={`Open ${c.companyName}`}><ExternalLink className="size-4" /></button>
-                          </Link>
+                          {/* One focusable element: a <button> inside a <Link> is two Tab stops and an unnamed link. */}
+                          <Link to={`/clients/${c.id}`} className="inv-open" title="Open client" aria-label={`Open ${c.companyName}`}><ExternalLink className="size-4" aria-hidden /></Link>
                         </td>
                       </tr>
                     );

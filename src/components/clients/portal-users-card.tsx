@@ -387,7 +387,7 @@ export function PortalUsersCard({ clientId, clientName }: Props) {
                 {users.length} login{users.length !== 1 ? 's' : ''} can access {clientName}'s portal
               </CardDescription>
             </div>
-            <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Button size="sm" className="max-md:min-h-11" onClick={() => setAddOpen(true)}>
               <UserPlus className="size-4 mr-1.5" />
               Add portal user
             </Button>

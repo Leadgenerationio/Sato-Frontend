@@ -182,11 +182,15 @@ describe('ClientsPage', () => {
     expect(screen.queryByLabelText('Added by')).toBeNull();
   });
 
-  it('labels the icon buttons (pager + open client)', () => {
+  it('labels the icon controls (pager buttons + open-client link)', () => {
     renderPage();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Sonova EUR' })).toBeInTheDocument();
+    // A single link, not a <button> inside a <Link> (two Tab stops, unnamed link).
+    const open = screen.getByRole('link', { name: 'Open Sonova EUR' });
+    expect(open).toHaveAttribute('href');
+    expect(open.querySelector('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open Sonova EUR' })).toBeNull();
   });
 
   // ─── Feedback S16: no Import button that can only fail ───

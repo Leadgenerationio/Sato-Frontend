@@ -228,7 +228,7 @@ export function ClientDetailPage() {
     <div className="screen-page">
       <div className="page-head">
         <div className="nc-title-row">
-          <Link to="/clients"><button className="nc-back" title="Back to clients"><ArrowLeft className="size-5" /></button></Link>
+          <Link to="/clients" className="nc-back" title="Back to clients" aria-label="Back to clients"><ArrowLeft className="size-5" aria-hidden /></Link>
           <div>
             <h1 className="ahead-title">{client.companyName}</h1>
             <p className="ahead-sub">{client.contactName} · {client.companyNumber}</p>

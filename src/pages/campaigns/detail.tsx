@@ -357,7 +357,8 @@ export function CampaignDetailPage() {
               <XAxis dataKey="date" tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={16} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `£${v}`} />
               <Tooltip formatter={(value) => [`£${Number(value).toFixed(2)}`, '']} />
-              <Legend />
+              {/* Legend text takes the series colour by default — lime on white is 1.8:1. Ink text, coloured swatch. */}
+              <Legend formatter={(value) => <span style={{ color: 'var(--statto-ink)' }}>{value}</span>} />
               <Area type="monotone" dataKey="revenue" stroke="var(--statto-ink)" fill="var(--statto-ink)" fillOpacity={0.1} name="Revenue" />
               <Area type="monotone" dataKey="cost" stroke="var(--lime-500)" fill="var(--lime-500)" fillOpacity={0.1} name="Cost" />
             </AreaChart>
