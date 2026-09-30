@@ -71,7 +71,14 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
   const isUk = country?.code === 'GB';
   function handleCountryChange(name: string) {
     const next = findCountry(name);
-    setForm((prev) => ({ ...prev, addressCountry: name, ...(next ? defaultsForCountry(next) : {}) }));
+    setForm((prev) => {
+      // Only re-default billing when it still matches the OLD country's default;
+      // a deliberately different currency/VAT (e.g. UK address, EUR billing) is kept.
+      const prevCountry = findCountry(prev.addressCountry);
+      const prevDefaults = prevCountry ? defaultsForCountry(prevCountry) : null;
+      const untouched = !prevDefaults || (prev.currency === prevDefaults.currency && prev.vatTreatment === prevDefaults.vatTreatment);
+      return { ...prev, addressCountry: name, ...(next && untouched ? defaultsForCountry(next) : {}) };
+    });
   }
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
