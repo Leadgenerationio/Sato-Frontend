@@ -1,29 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { resolveBrand, DEFAULT_BRAND } from '@/config/brand';
 
-// Fix 10 (2026-06-15): per-company subdomain branding. With no env override set
-// in the test env, resolveBrand falls through to the hostname registry / default.
-describe('resolveBrand — hostname-based branding', () => {
-  it('brands a leadgeneration.io subdomain on stato.com', () => {
-    expect(resolveBrand('leadgeneration.io.stato.com').name).toBe('leadgeneration.io');
-  });
-
-  it('brands portal.leadgeneration.io', () => {
-    const b = resolveBrand('portal.leadgeneration.io');
-    expect(b.name).toBe('leadgeneration.io');
-    expect(b.tagline).toBe('Client portal');
-  });
-
-  it('is case-insensitive on the hostname', () => {
-    expect(resolveBrand('Portal.LeadGeneration.IO').name).toBe('leadgeneration.io');
-  });
-
-  it('falls back to the default brand for an unknown host', () => {
-    expect(resolveBrand('some-other-company.stato.com')).toEqual(DEFAULT_BRAND);
+// Retest R2 / N1 (30 Sep 2026): sign-in said "leadgeneration.io" while the app said "Stato".
+// With no env override and no registry entry, every hostname reads "Stato".
+describe('resolveBrand — one brand by default', () => {
+  it('reads Stato on the live host and on other hosts', () => {
+    expect(resolveBrand('leadgenerationio.stato.tech').name).toBe('Stato');
+    expect(resolveBrand('portal.leadgeneration.io').name).toBe('Stato');
+    expect(resolveBrand('some-other-company.stato.com').name).toBe('Stato');
   });
 
   it('falls back to the default brand when no hostname is given', () => {
     expect(resolveBrand()).toEqual(DEFAULT_BRAND);
     expect(resolveBrand('')).toEqual(DEFAULT_BRAND);
+    expect(DEFAULT_BRAND.name).toBe('Stato');
   });
 });
