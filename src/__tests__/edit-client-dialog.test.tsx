@@ -161,14 +161,22 @@ describe('EditClientDialog', () => {
     fireEvent.change(screen.getByLabelText('Postcode'), { target: { value: '00-950' } });
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
-    // Poland defaults: PLN + reverse charge. Contacts untouched → not sent.
+    // Sonova is billed in EUR on purpose (a UK address, EUR billing), so changing the country
+    // must NOT re-default it to PLN / reverse charge (FE #78). Contacts untouched → not sent.
     expect(mockMutate.mock.calls[0][0]).toEqual({
       id: 'client-sonova',
       addressCountry: 'Poland',
       addressPostcode: '00-950',
-      currency: 'PLN',
-      vatTreatment: 'reverse_charge',
     });
+  });
+
+  it('S3 — a client still on its country\'s default billing IS re-defaulted when the country changes', async () => {
+    renderDialog(true, vi.fn(), { ...sonova, currency: 'GBP', vatRegistered: true, addVatToInvoices: true });
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'Poland' } });
+    fireEvent.change(screen.getByLabelText('Postcode'), { target: { value: '00-950' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({ addressCountry: 'Poland', currency: 'PLN', vatTreatment: 'reverse_charge' });
   });
 
   it('S3 — Save with nothing changed sends nothing', async () => {

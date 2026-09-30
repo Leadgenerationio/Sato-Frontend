@@ -174,7 +174,7 @@ export function InvoiceCreatePage() {
           </Link>
           <div>
             <h1 className="ahead-title">Create Invoice</h1>
-            <p className="ahead-sub">Create a new invoice and push to Xero</p>
+            <p className="ahead-sub">Create a new invoice. Push it to Xero from the invoice page</p>
           </div>
         </div>
       </div>
