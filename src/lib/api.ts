@@ -156,6 +156,20 @@ export function humanizeField(path: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+// Zod's own wording ("Too small: expected string to have >=1 characters") is for
+// developers. Turn the common ones into a short phrase that follows the field
+// name — "Company number can't be empty". Anything else is passed through.
+export function plainIssue(message: string): string | null {
+  let m: RegExpMatchArray | null;
+  if (/^Too small: expected string to have >=1 characters?$/i.test(message)) return "can't be empty";
+  if ((m = message.match(/^Too big: expected string to have <=(\d+) characters?$/i))) return `is too long (at most ${m[1]} characters)`;
+  if ((m = message.match(/^Too small: expected number to be >=(-?[\d.]+)$/i))) return `must be at least ${m[1]}`;
+  if ((m = message.match(/^Too big: expected number to be <=(-?[\d.]+)$/i))) return `must be at most ${m[1]}`;
+  if ((m = message.match(/^Too small: expected array to have >=(\d+) items?$/i))) return `needs at least ${m[1]}`;
+  if (/^Invalid input(: expected .*)?$/i.test(message)) return "isn't valid";
+  return null;
+}
+
 // If the response carries validation issues (`errors` or `issues`), lead with
 // the first one in plain words ("Contact email: Invalid email address") and
 // say how many more there are — a wall of "body.x.y: …" lines was unreadable.
@@ -166,7 +180,8 @@ export function buildErrorMessage(data: ApiResponse<unknown>, fallback: string):
     const first = issues[0];
     const rawPath = Array.isArray(first.path) ? (first.path as unknown[]).join('.') : String(first.path ?? '');
     const field = humanizeField(rawPath);
-    const line = field ? `${field}: ${first.message}` : first.message;
+    const plain = plainIssue(String(first.message));
+    const line = field && plain ? `${field} ${plain}` : field ? `${field}: ${first.message}` : first.message;
     const more = issues.length > 1 ? ` (and ${issues.length - 1} more)` : '';
     return `Couldn't save — ${line}${more}`;
   }
