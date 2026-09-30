@@ -40,6 +40,7 @@ const report: CleanupReport = {
     { id: 'st1', label: 'John', detail: 'john@x.io', reason: 'name looks like a placeholder', preselect: true },
     { id: 'st2', label: 'Priya', detail: 'priya@x.io', reason: 'first name only — check it is a real person', preselect: false },
   ],
+  creativesMissingFile: [{ id: 'cr1', label: 'Yash Missing Creative', detail: 'gone/ad.png', reason: 'file is not in storage — it cannot be previewed or downloaded', preselect: true }],
   untrimmedContacts: [{ id: 'c1', kind: 'contact', label: '"Daniel "', detail: 'dan@claim.co.uk' }],
   agreementTemplatesCount: 0,
 };
@@ -96,6 +97,13 @@ describe('Settings → Clean up (S8 + N6)', () => {
     expect((screen.getByLabelText('Archive Staff "Priya"') as HTMLInputElement).checked).toBe(false);
   });
 
+  it('lists creatives whose file is missing, pre-ticked, under Test data', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: /Test data/ }));
+    expect(screen.getByText('Creatives with no file')).toBeTruthy();
+    expect((screen.getByLabelText('Archive Creatives with no file "Yash Missing Creative"') as HTMLInputElement).checked).toBe(true);
+  });
+
   it('warns when there are no agreement templates', () => {
     renderPage();
     expect(screen.getByText('No agreement templates yet')).toBeTruthy();
@@ -112,6 +120,7 @@ describe('Settings → Clean up (S8 + N6)', () => {
     expect(text).toContain('Deactivate test@test.com — they can no longer sign in');
     expect(text).toContain('Change yash.c@octogle.com from Owner to Ops Manager');
     expect(text).toContain('Archive 2 SOS entries');
+    expect(text).toContain('Hide 1 creative whose file is missing');
     expect(text).toContain('Remove extra spaces from 1 name');
     fireEvent.click(within(dialog).getByRole('button', { name: /^Apply \d+ change/ }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
@@ -121,6 +130,7 @@ describe('Settings → Clean up (S8 + N6)', () => {
       archiveSosIds: ['s1', 's2'],
       archiveSopIds: ['p1'],
       archiveStaffIds: ['st1'],
+      hideCreativeIds: ['cr1'],
       trimContacts: true,
     });
     expect(await screen.findByText('What changed')).toBeTruthy();
@@ -139,7 +149,7 @@ describe('Settings → Clean up (S8 + N6)', () => {
 
 describe('summariseCleanup', () => {
   it('is empty when nothing is selected', () => {
-    expect(summariseCleanup({ deactivateUserIds: [], demoteOwnerIds: [], archiveSosIds: [], archiveSopIds: [], archiveStaffIds: [], trimContacts: false }, report)).toEqual([]);
+    expect(summariseCleanup({ deactivateUserIds: [], demoteOwnerIds: [], archiveSosIds: [], archiveSopIds: [], archiveStaffIds: [], hideCreativeIds: [], trimContacts: false }, report)).toEqual([]);
   });
 });
 

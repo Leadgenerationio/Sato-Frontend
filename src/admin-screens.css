@@ -772,6 +772,14 @@
   .statto-admin .bf-pg-btn,
   .statto-admin .inv-open,
   .statto-admin .nc-back { min-width: 44px; min-height: 44px; }
+  /* Retest R2 / S15: what was still under 44px on the phone client page and its neighbours. */
+  .statto-admin .istat-chip,
+  .statto-admin .cmp-banner-link,
+  .statto-admin .tk-del,
+  .statto-admin [data-slot="button"] { min-height: 44px; min-width: 44px; }
+  .statto-admin .inv-id { display: inline-flex; align-items: center; min-height: 44px; }
+  .statto-admin input[type="date"] { min-height: 44px; }
+  .statto-admin .tap-check { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: -10px 0 -10px -12px; cursor: pointer; }
   /* The search box is 44px tall but its input was a 21px strip inside it —
      make the input itself fill the box so any tap on it focuses. */
   .statto-admin .inv-search { padding-top: 0; padding-bottom: 0; }

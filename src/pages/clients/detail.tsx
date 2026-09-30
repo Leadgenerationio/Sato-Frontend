@@ -965,9 +965,7 @@ export function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
                 )}
               </td>
               <td className="r">
-                <Link to={`/finance/invoices/${inv.id}`} aria-label="Open invoice">
-                  <button className="inv-open"><FileText className="size-4" /></button>
-                </Link>
+                <Link to={`/finance/invoices/${inv.id}`} className="inv-open" aria-label="Open invoice" title="Open invoice"><FileText className="size-4" aria-hidden /></Link>
               </td>
             </tr>
           ))}

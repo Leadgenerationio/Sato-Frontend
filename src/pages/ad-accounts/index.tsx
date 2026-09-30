@@ -238,7 +238,7 @@ export function AdAccountsPage() {
                   style={{ padding: 16, borderBottom: '1px solid var(--border)', background: changed ? 'var(--warning-bg)' : undefined, display: 'grid', gap: 10 }}
                 >
                   <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                    <input type="checkbox" style={{ marginTop: 4 }} aria-label={`Select ${a.accountName ?? a.accountId}`} checked={selected.has(key)} onChange={() => toggle(key)} />
+                    <label className="tap-check"><input type="checkbox" aria-label={`Select ${a.accountName ?? a.accountId}`} checked={selected.has(key)} onChange={() => toggle(key)} /></label>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="cl-contact">{a.accountName ?? <span className="cmp-client">No name in Catchr</span>}</div>
                       <div className="cl-email mono" style={{ overflowWrap: 'anywhere' }}>{a.platformLabel} · {a.accountId}</div>
@@ -275,7 +275,7 @@ export function AdAccountsPage() {
                   return (
                     <tr key={key} data-testid="ad-account-row" data-changed={changed || undefined} style={changed ? { background: 'var(--warning-bg)' } : undefined}>
                       <td>
-                        <input type="checkbox" aria-label={`Select ${a.accountName ?? a.accountId}`} checked={selected.has(key)} onChange={() => toggle(key)} />
+                        <label className="tap-check"><input type="checkbox" aria-label={`Select ${a.accountName ?? a.accountId}`} checked={selected.has(key)} onChange={() => toggle(key)} /></label>
                       </td>
                       <td><span className="cmp-vpill">{a.platformLabel}</span></td>
                       <td>

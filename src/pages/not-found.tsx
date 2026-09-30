@@ -41,14 +41,14 @@ export function NotFoundPage() {
           <Button
             onClick={() => navigate(-1)}
             variant="outline"
-            className="w-full sm:w-auto gap-2"
+            className="w-full sm:w-auto gap-2 max-sm:min-h-11"
           >
             <ArrowLeft className="w-4 h-4" />
             Go back
           </Button>
           <Button
             onClick={() => navigate(user ? '/' : '/login')}
-            className="w-full sm:w-auto gap-2"
+            className="w-full sm:w-auto gap-2 max-sm:min-h-11"
           >
             <Home className="w-4 h-4" />
             {user ? 'Dashboard' : 'Login'}
