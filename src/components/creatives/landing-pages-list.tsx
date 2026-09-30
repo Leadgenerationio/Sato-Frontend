@@ -115,7 +115,7 @@ export function LandingPagesList({ clientId }: { clientId?: string }) {
           <>
             <div className="hidden md:block table-scroll">
               <table className="inv-table">
-                <thead><tr><th>Landing page</th>{!clientId && <th>Client</th>}<th className="r">Creatives</th><th>Added</th><th><span className="sr-only">Actions</span></th></tr></thead>
+                <thead><tr><th>Landing page</th>{!clientId && <th>Client</th>}<th className="r">Creatives</th><th>Added</th>{/* aria-label, not a .sr-only span: that span is position:absolute and escapes .table-scroll, so the page scrolled sideways at 768px. */}<th aria-label="Actions" /></tr></thead>
                 <tbody>
                   {pages.map((p) => (
                     <tr key={p.id} data-testid="landing-page-row">

@@ -34,6 +34,8 @@ export interface LibraryCreative {
   thumbnailUrl: string | null;
   /** Fresh signed URL — minted on every read, never stored. */
   fileUrl: string | null;
+  /** Detail endpoint only: the row points at a stored file that is gone from storage (R2-1). */
+  fileMissing?: boolean;
   status: CreativeStatus;
   shared: boolean;
   firstSeen: string | null;

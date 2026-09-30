@@ -228,7 +228,7 @@ export function ClientDetailPage() {
     <div className="screen-page">
       <div className="page-head">
         <div className="nc-title-row">
-          <Link to="/clients"><button className="nc-back" title="Back to clients"><ArrowLeft className="size-5" /></button></Link>
+          <Link to="/clients" className="nc-back" title="Back to clients" aria-label="Back to clients"><ArrowLeft className="size-5" aria-hidden /></Link>
           <div>
             <h1 className="ahead-title">{client.companyName}</h1>
             <p className="ahead-sub">{client.contactName} · {client.companyNumber}</p>
@@ -965,9 +965,7 @@ export function InvoicesTable({ invoices }: { invoices: InvoiceSummary[] }) {
                 )}
               </td>
               <td className="r">
-                <Link to={`/finance/invoices/${inv.id}`} aria-label="Open invoice">
-                  <button className="inv-open"><FileText className="size-4" /></button>
-                </Link>
+                <Link to={`/finance/invoices/${inv.id}`} className="inv-open" aria-label="Open invoice" title="Open invoice"><FileText className="size-4" aria-hidden /></Link>
               </td>
             </tr>
           ))}

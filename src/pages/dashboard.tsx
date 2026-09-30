@@ -77,9 +77,10 @@ export function otherCurrencyNote(
 
 /** "Net Profit — revenue 12 mo − Catchr ad spend 90 days" (falls back on older BE). */
 function profitLabel(what: string, basis: { revenueDays: number; costDays: number } | undefined): string {
-  if (!basis) return `${what} — rolling 12mo / 90d`;
-  const rev = basis.revenueDays === 365 ? '12 mo' : `${basis.revenueDays} days`;
-  return `${what} — revenue ${rev} − Catchr ad spend ${basis.costDays} days`;
+  if (!basis) return `${what} — last 90 days`;
+  // Same period on both sides: a difference of two different windows means nothing (R2-2).
+  if (basis.revenueDays === basis.costDays) return `${what} — revenue − Catchr ad spend, last ${basis.costDays} days`;
+  return `${what} — revenue ${basis.revenueDays} days − Catchr ad spend ${basis.costDays} days`;
 }
 
 // ─────────── Charts ───────────

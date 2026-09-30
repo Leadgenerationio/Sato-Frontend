@@ -17,6 +17,8 @@ export interface CleanupReport {
   testSops: CleanupRow[];
   placeholderStaff: CleanupRow[];
   untrimmedContacts: CleanupContact[];
+  /** Optional: an older backend does not send it. Files that are gone from storage (retest R2-1). */
+  creativesMissingFile?: CleanupRow[];
   agreementTemplatesCount: number;
 }
 export type DemoteRole = 'finance_admin' | 'ops_manager' | 'readonly';
@@ -26,12 +28,13 @@ export interface CleanupApplyInput {
   archiveSosIds: string[];
   archiveSopIds: string[];
   archiveStaffIds: string[];
+  hideCreativeIds: string[];
   trimContacts: boolean;
 }
 export interface CleanupApplyResult {
   deactivated: Array<{ id: string; email: string }>;
   demoted: Array<{ id: string; email: string; role: DemoteRole }>;
-  archivedSos: number; archivedSops: number; archivedStaff: number;
+  archivedSos: number; archivedSops: number; archivedStaff: number; hiddenCreatives?: number;
   trimmedContacts: number; trimmedClients: number;
 }
 
@@ -66,6 +69,7 @@ export function summariseCleanup(input: CleanupApplyInput, report: CleanupReport
   if (input.archiveSosIds.length) lines.push(`Archive ${n(input.archiveSosIds.length, 'SOS entry', 'SOS entries')}`);
   if (input.archiveSopIds.length) lines.push(`Archive ${n(input.archiveSopIds.length, 'SOP', 'SOPs')}`);
   if (input.archiveStaffIds.length) lines.push(`Archive ${n(input.archiveStaffIds.length, 'staff record', 'staff records')}`);
+  if (input.hideCreativeIds.length) lines.push(`Hide ${n(input.hideCreativeIds.length, 'creative', 'creatives')} whose file is missing`);
   if (input.trimContacts && report.untrimmedContacts.length) lines.push(`Remove extra spaces from ${n(report.untrimmedContacts.length, 'name', 'names')}`);
   return lines;
 }

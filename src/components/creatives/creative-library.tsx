@@ -296,10 +296,19 @@ function StatusPill({ status }: { status: string }) {
 }
 
 function Thumb({ c, small }: { c: LibraryCreative; small?: boolean }) {
+  // R2-1: a row whose file is gone from storage signs a link that 404s, which
+  // used to leave a blank tile. Fall back to the icon plus a plain label.
+  const [broken, setBroken] = useState(false);
   const src = c.thumbnailUrl ?? (c.mediaType === 'image' ? c.fileUrl : null);
-  if (src) return <img src={src} alt="" loading="lazy" />;
-  if (c.mediaType === 'video' && c.fileUrl) return <video src={`${c.fileUrl}#t=0.5`} muted preload="metadata" aria-hidden />;
-  return c.mediaType === 'video' ? <FileVideo className={small ? 'size-5' : 'size-8'} aria-hidden /> : <ImageIcon className={small ? 'size-5' : 'size-8'} aria-hidden />;
+  const Icon = c.mediaType === 'video' ? FileVideo : ImageIcon;
+  if (src && !broken) return <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} />;
+  if (!src && c.mediaType === 'video' && c.fileUrl && !broken) return <video src={`${c.fileUrl}#t=0.5`} muted preload="metadata" aria-hidden onError={() => setBroken(true)} />;
+  return (
+    <span style={{ display: 'grid', justifyItems: 'center', gap: 4 }}>
+      <Icon className={small ? 'size-5' : 'size-8'} aria-hidden />
+      {broken && !small && <span style={{ fontSize: 12 }}>File missing</span>}
+    </span>
+  );
 }
 
 function CreativeDetailPanel({ id, onClose, clientOptions, lpOptions, fixedClient }: {
@@ -331,7 +340,9 @@ function CreativeDetailPanel({ id, onClose, clientOptions, lpOptions, fixedClien
           {c && (
             <>
               <div className="crl-panel-media">
-                {c.mediaType === 'video' && c.fileUrl
+                {c.fileMissing
+                  ? <div role="alert" style={{ padding: 40, color: '#fff', textAlign: 'center' }}>This file is no longer in storage, so it can't be previewed or downloaded. Re-upload it to restore it.</div>
+                  : c.mediaType === 'video' && c.fileUrl
                   ? <video src={c.fileUrl} poster={c.thumbnailUrl ?? undefined} controls preload="metadata" aria-label={`Video: ${c.name}`} />
                   : (c.fileUrl || c.thumbnailUrl) ? <img src={c.fileUrl ?? c.thumbnailUrl!} alt={c.headline ?? c.name} />
                   : <div style={{ padding: 40, color: '#fff', textAlign: 'center' }}>No preview</div>}

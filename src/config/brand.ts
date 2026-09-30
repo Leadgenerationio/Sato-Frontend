@@ -35,8 +35,12 @@ export interface BrandConfig {
   logoUrl: string | null;
 }
 
+// Retest R2 / N1 (30 Sep 2026): the app says "Stato" everywhere (sidebar, title), while
+// sign-in said "leadgeneration.io" — two brands in one product. Sign-in now says Stato too.
+// A company that wants its own wordmark still gets it: add a BRAND_REGISTRY entry for its
+// hostname, or set VITE_BRAND_NAME / VITE_BRAND_TAGLINE / VITE_BRAND_LOGO_URL.
 export const DEFAULT_BRAND: BrandConfig = {
-  name: 'leadgeneration.io',
+  name: 'Stato',
   tagline: 'Client portal',
   logoUrl: null,
 };
@@ -50,12 +54,8 @@ interface BrandRule {
   brand: BrandConfig;
 }
 
-export const BRAND_REGISTRY: BrandRule[] = [
-  {
-    match: 'leadgeneration',
-    brand: { name: 'leadgeneration.io', tagline: 'Client portal', logoUrl: null },
-  },
-];
+// Empty on purpose since N1: every hostname reads "Stato" unless an entry is added here.
+export const BRAND_REGISTRY: BrandRule[] = [];
 
 function envBrand(): BrandConfig | null {
   if (!env.VITE_BRAND_NAME && !env.VITE_BRAND_TAGLINE && !env.VITE_BRAND_LOGO_URL) {

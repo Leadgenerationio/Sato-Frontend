@@ -37,6 +37,7 @@ function initialSelection(r: CleanupReport) {
     sos: pick(r.testSos),
     sops: pick(r.testSops),
     staff: pick(r.placeholderStaff),
+    creatives: pick(r.creativesMissingFile ?? []),
     trim: r.untrimmedContacts.length > 0,
     demote: {} as Record<string, DemoteRole | ''>,
   };
@@ -61,12 +62,13 @@ export function CleanupPage() {
       archiveSosIds: [...sel.sos],
       archiveSopIds: [...sel.sops],
       archiveStaffIds: [...sel.staff],
+      hideCreativeIds: [...sel.creatives],
       trimContacts: sel.trim && report.untrimmedContacts.length > 0,
     };
   }, [sel, report]);
   const summary = input && report ? summariseCleanup(input, report) : [];
 
-  const toggle = (key: 'logins' | 'sos' | 'sops' | 'staff', id: string, on: boolean) =>
+  const toggle = (key: 'logins' | 'sos' | 'sops' | 'staff' | 'creatives', id: string, on: boolean) =>
     setSel((s) => {
       if (!s) return s;
       const next = new Set(s[key]);
@@ -105,7 +107,7 @@ export function CleanupPage() {
   const counts = {
     logins: report.testLogins.length,
     owners: report.owners.length,
-    data: report.testSos.length + report.testSops.length + report.placeholderStaff.length + report.untrimmedContacts.length,
+    data: report.testSos.length + report.testSops.length + report.placeholderStaff.length + (report.creativesMissingFile?.length ?? 0) + report.untrimmedContacts.length,
   };
   const nothingFound = counts.logins + counts.data === 0 && report.owners.length <= 1;
 
@@ -113,7 +115,7 @@ export function CleanupPage() {
     <div className="screen-page">
       <div className="page-head">
         <div className="nc-title-row">
-          <Link to="/settings" aria-label="Back to settings"><button className="nc-back" title="Back to settings" aria-label="Back to settings"><ArrowLeft className="size-5" /></button></Link>
+          <Link to="/settings" className="nc-back" title="Back to settings" aria-label="Back to settings"><ArrowLeft className="size-5" aria-hidden /></Link>
           <div>
             <h1 className="ahead-title">Clean up test data</h1>
             <p className="ahead-sub">Demo and test logins, extra Owners and test entries. Nothing is deleted.</p>
@@ -146,6 +148,7 @@ export function CleanupPage() {
             {result.demoted.map((u) => <li key={'r' + u.id}><strong>{u.email}</strong> is now {DEMOTE_OPTIONS.find((o) => o.value === u.role)?.label}</li>)}
             {result.archivedSos > 0 && <li>Archived {result.archivedSos} SOS {result.archivedSos === 1 ? 'entry' : 'entries'}</li>}
             {result.archivedSops > 0 && <li>Archived {result.archivedSops} SOP{result.archivedSops === 1 ? '' : 's'}</li>}
+            {(result.hiddenCreatives ?? 0) > 0 && <li>Hid {result.hiddenCreatives} creative{result.hiddenCreatives === 1 ? '' : 's'} whose file is missing</li>}
             {result.archivedStaff > 0 && <li>Archived {result.archivedStaff} staff record{result.archivedStaff === 1 ? '' : 's'}</li>}
             {result.trimmedContacts + result.trimmedClients > 0 && <li>Removed extra spaces from {result.trimmedContacts + result.trimmedClients} name{result.trimmedContacts + result.trimmedClients === 1 ? '' : 's'}</li>}
           </ul>
@@ -233,11 +236,12 @@ export function CleanupPage() {
           {tab === 'data' && (
             <section className="card pad acard" aria-labelledby="cu-data-h">
               <h3 id="cu-data-h" className="statto-title">Test entries</h3>
-              <p className="ac-sub cu-sub">Ticked entries are <strong>archived</strong>: hidden from lists, never deleted.</p>
+              <p className="ac-sub cu-sub">Ticked entries are <strong>archived</strong> (creatives: <strong>hidden</strong>): out of the lists, never deleted.</p>
               {([
                 ['sos', 'SOS queue', report.testSos],
                 ['sops', 'SOPs', report.testSops],
                 ['staff', 'Staff', report.placeholderStaff],
+                ['creatives', 'Creatives with no file', report.creativesMissingFile ?? []],
               ] as const).map(([key, heading, rows]) => rows.length > 0 && (
                 <div key={key} className="cu-group">
                   <h4 className="cu-group-h">{heading}</h4>

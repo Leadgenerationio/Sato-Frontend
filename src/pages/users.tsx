@@ -387,7 +387,7 @@ export function UsersManagement() {
       }
     } catch (err) {
       logError('Permission update failed', err);
-      toast.error('Failed to update permission');
+      toast.error('Permission not changed', { description: "Couldn't reach the server — nothing was saved. Check your connection and try again." });
     } finally { setPermUpdating(false); setPendingPerm(null); }
   }
 
