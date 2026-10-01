@@ -70,11 +70,9 @@ export function AgreementTemplatesPage() {
                 {t.fieldLayout.length} field{t.fieldLayout.length === 1 ? '' : 's'} placed
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <Link to={`/agreements/templates/${t.id}`}>
-                  <button type="button" className="btn b-ghost b-sm">
+                <Link to={`/agreements/templates/${t.id}`} className="btn b-ghost b-sm">
                     <Pencil className="size-[15px]" /> Edit
-                  </button>
-                </Link>
+                  </Link>
                 <button
                   type="button"
                   className="btn b-ghost b-sm"

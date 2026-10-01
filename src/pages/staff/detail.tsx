@@ -81,7 +81,7 @@ export function StaffDetailPage() {
         <div className="ph-screen">
           <span className="ph-screen-ic"><User className="size-[26px]" /></span>
           <strong>Staff member not found</strong>
-          <Link to="/staff"><button className="btn b-ghost b-sm"><ArrowLeft className="size-[15px]" /> Back to staff</button></Link>
+          <Link to="/staff" className="btn b-ghost b-sm"><ArrowLeft className="size-[15px]" /> Back to staff</Link>
         </div>
       </div>
     );

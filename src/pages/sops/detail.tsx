@@ -39,7 +39,7 @@ export function SopDetailPage() {
         <div className="ph-screen">
           <span className="ph-screen-ic"><ImageIcon className="size-[26px]" /></span>
           <strong>SOP not found</strong>
-          <Link to="/sops"><button className="btn b-ghost b-sm"><ArrowLeft className="size-[15px]" /> Back to SOPs</button></Link>
+          <Link to="/sops" className="btn b-ghost b-sm"><ArrowLeft className="size-[15px]" /> Back to SOPs</Link>
         </div>
       </div>
     );
@@ -61,9 +61,7 @@ export function SopDetailPage() {
         </div>
         {canWrite && (
           <div className="page-actions">
-            <Link to={`/sops/${sop.id}/edit`}>
-              <button className="btn b-ghost b-sm"><Pencil className="size-[15px]" /> Edit</button>
-            </Link>
+            <Link to={`/sops/${sop.id}/edit`} className="btn b-ghost b-sm"><Pencil className="size-[15px]" /> Edit</Link>
           </div>
         )}
       </div>

@@ -140,7 +140,7 @@ const isoDaysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() 
 const ADMIN_STATS = {
   totalRevenue: 1248563, revenueChange: 999,
   totalCost: 1069847, netProfit: 178716, profitMargin: 14.3,
-  rollingRevenue365d: 1248563, rollingCost90d: 320000,
+  rollingRevenue90d: 1248563, rollingCost90d: 320000,
   activeClients: 5, activeCampaigns: 27, linkedCampaigns: 7,
   leadsThisMonth: 25207, leadsWindow: 'last_year', leadsWindowLabel: 'Last 12 months',
   leadsChange: null, asOf: isoDaysAgo(0),

@@ -202,7 +202,7 @@ export function ClientDetailPage() {
         <div className="ph-screen">
           <span className="ph-screen-ic"><AlertTriangle className="size-[26px]" /></span>
           <strong>Client not found</strong>
-          <Link to="/clients"><button className="btn b-ghost b-sm"><ArrowLeft className="size-4" /> Back to clients</button></Link>
+          <Link to="/clients" className="btn b-ghost b-sm"><ArrowLeft className="size-4" /> Back to clients</Link>
         </div>
       </div>
     );
@@ -847,11 +847,9 @@ function InvoicesTab({ clientId, clientCurrency, totalRevenue }: { clientId: str
             {sync.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <RefreshCw className="size-[15px]" />}
             Sync from Xero
           </button>
-          <Link to={`/finance/invoices?client=${clientId}`}>
-            <button className="btn b-ghost b-sm">
+          <Link to={`/finance/invoices?client=${clientId}`} className="btn b-ghost b-sm">
               <ExternalLink className="size-[15px]" /> Open in invoices list
-            </button>
-          </Link>
+            </Link>
         </div>
       </div>
       {isLoading ? (

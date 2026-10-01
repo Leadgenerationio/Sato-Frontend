@@ -60,7 +60,7 @@ export function WorkflowDetailPage() {
     return (
       <div className="flex flex-col items-center gap-4 py-16 text-muted-foreground">
         <p>Workflow not found</p>
-        <Link to="/workflows"><button type="button" className="btn b-ghost b-sm"><ArrowLeft className="size-4" />Back</button></Link>
+        <Link to="/workflows" className="btn b-ghost b-sm"><ArrowLeft className="size-4" />Back</Link>
       </div>
     );
   }

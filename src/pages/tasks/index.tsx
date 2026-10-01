@@ -540,11 +540,9 @@ export function TasksPage() {
               <LayoutGrid className="size-4" /> Board
             </button>
           </div>
-          <Link to="/tasks/create">
-            <button className="btn b-dark b-sm">
+          <Link to="/tasks/create" className="btn b-dark b-sm">
               <Plus className="size-4" /> New Task
-            </button>
-          </Link>
+            </Link>
         </div>
       </div>
 
@@ -713,6 +711,7 @@ export function TasksPage() {
                       <span className="tk-title">
                         <button
                           type="button"
+                          className="tk-chev"
                           onClick={(e) => { e.stopPropagation(); toggleExpanded(t.id); }}
                           aria-label={`${isExpanded ? 'Hide' : 'Show'} subtasks for ${t.title}`}
                           aria-expanded={isExpanded}

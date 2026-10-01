@@ -75,9 +75,7 @@ export function WorkflowsPage() {
           <p className="ahead-sub">Automated business processes</p>
         </div>
         <div className="page-actions">
-          <Link to="/workflows/create">
-            <button type="button" className="btn b-dark b-sm"><Plus className="size-[15px]" />New Workflow</button>
-          </Link>
+          <Link to="/workflows/create" className="btn b-dark b-sm"><Plus className="size-[15px]" />New Workflow</Link>
         </div>
       </div>
 
@@ -122,12 +120,10 @@ export function WorkflowsPage() {
                 </div>
                 <div className="wf-actions">
                   <PauseResumeButton workflow={wf} />
-                  <Link to={`/workflows/${wf.id}`}>
-                    <button type="button" className="btn b-ghost b-sm">
+                  <Link to={`/workflows/${wf.id}`} className="btn b-ghost b-sm">
                       <ExternalLink className="size-[15px]" />
                       View
-                    </button>
-                  </Link>
+                    </Link>
                 </div>
               </div>
             );

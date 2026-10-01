@@ -14,8 +14,8 @@ export function CreativesPage() {
           <p className="ahead-sub">Every client's images and videos — search, filter, preview, and link each one to its ad and landing page.</p>
         </div>
         <div className="page-actions">
-          <Link to="/landing-pages"><button className="btn b-ghost b-sm"><Globe className="size-[15px]" /> Landing pages</button></Link>
-          <Link to="/ad-accounts"><button className="btn b-ghost b-sm"><Link2 className="size-[15px]" /> Link ad accounts</button></Link>
+          <Link to="/landing-pages" className="btn b-ghost b-sm"><Globe className="size-[15px]" /> Landing pages</Link>
+          <Link to="/ad-accounts" className="btn b-ghost b-sm"><Link2 className="size-[15px]" /> Link ad accounts</Link>
         </div>
       </div>
       <CreativeLibrary />
