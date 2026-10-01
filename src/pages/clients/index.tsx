@@ -186,13 +186,9 @@ export function ClientsPage() {
           {/* Feedback S16: hidden when Attio isn't configured (the button
               could only lead to an error). Shown while unknown / older BE. */}
           {attioConfigured !== false && (
-            <Link to="/clients/import">
-              <button className="btn b-ghost b-sm"><Download className="size-[15px]" aria-hidden /> Import from Attio</button>
-            </Link>
+            <Link to="/clients/import" className="btn b-ghost b-sm"><Download className="size-[15px]" aria-hidden /> Import from Attio</Link>
           )}
-          <Link to="/clients/create">
-            <button className="btn b-dark b-sm"><Plus className="size-[15px]" /> New Client</button>
-          </Link>
+          <Link to="/clients/create" className="btn b-dark b-sm"><Plus className="size-[15px]" /> New Client</Link>
         </div>
       </div>
 
@@ -282,7 +278,7 @@ export function ClientsPage() {
                 : 'Add your first client to start tracking campaigns, invoices, and credit.'}
             </p>
             {!filtered && (
-              <Link to="/clients/create"><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> Add client</button></Link>
+              <Link to="/clients/create" className="btn b-dark b-sm"><Plus className="size-[15px]" /> Add client</Link>
             )}
           </div>
         ) : (

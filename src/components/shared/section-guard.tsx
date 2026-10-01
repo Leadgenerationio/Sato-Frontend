@@ -21,7 +21,7 @@ export function SectionGuard({ children }: { children: React.ReactNode }) {
           <span className="ph-screen-ic"><Lock className="size-[26px]" aria-hidden="true" /></span>
           <h3>You don't have access to this section</h3>
           <p>An Owner has switched it off for your role. Ask them to change it in Settings → User Management → Role Access Matrix.</p>
-          <Link to="/"><button className="btn b-dark b-sm">Go to Dashboard</button></Link>
+          <Link to="/" className="btn b-dark b-sm">Go to Dashboard</Link>
         </div>
       </div>
     );

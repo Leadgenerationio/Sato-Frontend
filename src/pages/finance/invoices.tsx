@@ -135,19 +135,15 @@ export function InvoiceListPage() {
           <p className="ahead-sub">Manage invoices synced with Xero</p>
         </div>
         <div className="page-actions">
-          <Link to="/finance/auto-invoice">
-            <button className="btn b-ghost b-sm">
+          <Link to="/finance/auto-invoice" className="btn b-ghost b-sm">
               <Calendar className="size-[15px]" /> Auto-invoice
-            </button>
-          </Link>
+            </Link>
           <button className="btn b-ghost b-sm" onClick={() => invoices && exportCsv(invoices)} disabled={!invoices?.length}>
             <Download className="size-[15px]" /> CSV
           </button>
-          <Link to="/finance/invoices/create">
-            <button className="btn b-dark b-sm">
+          <Link to="/finance/invoices/create" className="btn b-dark b-sm">
               <Plus className="size-[15px]" /> New Invoice
-            </button>
-          </Link>
+            </Link>
         </div>
       </div>
 

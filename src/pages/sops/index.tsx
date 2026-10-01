@@ -57,9 +57,7 @@ export function SopsPage() {
         </div>
         {canWrite && (
           <div className="page-actions">
-            <Link to="/sops/create">
-              <button className="btn b-dark b-sm"><Plus className="size-[15px]" /> New SOP</button>
-            </Link>
+            <Link to="/sops/create" className="btn b-dark b-sm"><Plus className="size-[15px]" /> New SOP</Link>
           </div>
         )}
       </div>
@@ -101,7 +99,7 @@ export function SopsPage() {
               : 'Standard operating procedures help your team work consistently. Document your first one to get started.'}
           </p>
           {!(search || categoryFilter !== 'all') && canWrite && (
-            <Link to="/sops/create"><button className="btn b-dark b-sm"><Plus className="size-[15px]" /> New SOP</button></Link>
+            <Link to="/sops/create" className="btn b-dark b-sm"><Plus className="size-[15px]" /> New SOP</Link>
           )}
         </div>
       ) : (

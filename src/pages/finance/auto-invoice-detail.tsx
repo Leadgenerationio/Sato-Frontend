@@ -36,9 +36,7 @@ export function AutoInvoiceRunDetailPage() {
       <div className="screen-page">
         <div className="ph-screen">
           <h3>Run not found</h3>
-          <Link to="/finance/auto-invoice">
-            <button className="btn b-ghost b-sm"><ArrowLeft className="size-4" /> Back to auto-invoice</button>
-          </Link>
+          <Link to="/finance/auto-invoice" className="btn b-ghost b-sm"><ArrowLeft className="size-4" /> Back to auto-invoice</Link>
         </div>
       </div>
     );

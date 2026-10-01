@@ -147,7 +147,7 @@ export function AdAccountsPage() {
           <p className="ahead-sub">Say which client owns each ad account, and optionally which campaign. Accounts are matched on their ID, never their name.</p>
         </div>
         <div className="page-actions">
-          <Link to="/campaigns"><button className="btn b-ghost b-sm">Back to campaigns</button></Link>
+          <Link to="/campaigns" className="btn b-ghost b-sm">Back to campaigns</Link>
         </div>
       </div>
 

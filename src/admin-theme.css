@@ -379,7 +379,7 @@
 /* ============================================================
    ADMIN LOGIN — split brand panel + form
    ============================================================ */
-.statto-admin.auth { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 100vh; background: var(--bg); }
+.statto-admin.auth { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); min-height: 100vh; background: var(--bg); }
 .statto-admin .auth-brand { position: relative; overflow: hidden; background: var(--statto-ink); color: var(--fg-on-ink); padding: 52px 56px; display: flex; flex-direction: column; }
 .statto-admin .auth-orb { position: absolute; width: 460px; height: 460px; border-radius: 999px; right: -150px; top: -140px; background: radial-gradient(circle at 38% 32%, #C7F59C 0%, #9FE870 26%, #5FB54A 54%, #1E6B43 78%, #0C3A2C 100%); opacity: .9; filter: blur(2px); }
 .statto-admin .auth-orb.two { width: 280px; height: 280px; right: 120px; bottom: -150px; top: auto; opacity: .35; }
@@ -399,7 +399,7 @@
 .statto-admin .auth-foot { margin-top: auto; padding-top: 38px; font-size: 12.5px; color: #6E8980; display: flex; gap: 18px; }
 .statto-admin .auth-foot a { color: #93AAA1; text-decoration: none; }
 .statto-admin .auth-foot a:hover { color: var(--statto-lime); }
-.statto-admin .auth-form-wrap { display: flex; align-items: center; justify-content: center; padding: 40px; }
+.statto-admin .auth-form-wrap { display: flex; align-items: center; justify-content: center; padding: 40px; min-width: 0; }
 .statto-admin .auth-card { width: 100%; max-width: 408px; }
 .statto-admin .auth-eyebrow { font-size: 13px; font-weight: 600; color: var(--lime-text); letter-spacing: .02em; }
 .statto-admin .auth-title { font-size: 27px; font-weight: 600; letter-spacing: -.02em; color: var(--fg1); margin: 8px 0 6px; }
@@ -413,11 +413,12 @@
 .statto-admin .field-input > .lic { color: var(--fg3); flex-shrink: 0; }
 .statto-admin .field-input input { flex: 1; border: none; outline: none; background: none; font-family: inherit; font-size: 15px; color: var(--fg1); padding: 13px 0; min-width: 0; }
 .statto-admin .field-input input::placeholder { color: var(--fg3); }
-.statto-admin .field-eye { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--fg3); flex-shrink: 0; border: none; background: none; cursor: pointer; }
+.statto-admin .field-eye { width: 44px; height: 44px; margin-right: -10px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--fg3); flex-shrink: 0; border: none; background: none; cursor: pointer; }
 .statto-admin .field-eye:hover { color: var(--statto-ink); background: var(--gray-50); }
 .statto-admin .field-err { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--negative); margin-top: 7px; }
 .statto-admin .field-err .lic { width: 13px; height: 13px; }
-.statto-admin .field-row { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 24px; }
+.statto-admin .field-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 24px; }
+.statto-admin .field-eye:focus-visible, .statto-admin .field-row .link:focus-visible { outline: 2px solid var(--statto-ink); outline-offset: 2px; }
 .statto-admin .checkbox { display: inline-flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--fg2); cursor: pointer; user-select: none; }
 .statto-admin .checkbox input { position: absolute; opacity: 0; pointer-events: none; }
 .statto-admin .checkbox .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--statto-ink); transition: var(--transition); }
@@ -437,6 +438,14 @@
 .statto-admin .spinner { width: 17px; height: 17px; border-radius: 999px; border: 2.2px solid rgba(6,47,40,.25); border-top-color: var(--statto-ink); animation: astospin .7s linear infinite; }
 @keyframes astospin { to { transform: rotate(360deg); } }
 @media (max-width: 880px) {
-  .statto-admin.auth { grid-template-columns: 1fr; }
+  .statto-admin.auth { grid-template-columns: minmax(0, 1fr); }
   .statto-admin .auth-brand { display: none; }
+  /* R3-2: "Forgot password?" is a 44px tap target on phones. */
+  .statto-admin .field-row .link { display: inline-flex; align-items: center; min-height: 44px; }
 }
+/* R3-1: the form column was 453px on Android (grid min = content), so its right edge was clipped. */
+@media (max-width: 400px) {
+  .statto-admin .auth-form-wrap { padding: 20px; }
+}
+/* Links that carry the button classes (one control instead of a link around a button). */
+.statto-admin a.btn { text-decoration: none; }

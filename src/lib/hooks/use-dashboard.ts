@@ -108,7 +108,7 @@ export interface DashboardStats {
    * by the FE tooltip on the Profit/Margin tiles so the user sees what
    * the calc was based on.
    */
-  rollingRevenue365d?: number;
+  rollingRevenue90d?: number;
   rollingCost90d?: number;
   /**
    * Feedback M3/S12 (29 Sep 2026): revenue figures are in `revenueCurrency`
@@ -151,7 +151,7 @@ interface BackendStats {
   totalCost: number;
   netProfit: number;
   profitMargin: number;
-  rollingRevenue365d?: number;
+  rollingRevenue90d?: number;
   rollingCost90d?: number;
   activeClients: number;
   activeCampaigns: number;
@@ -238,7 +238,7 @@ export function useDashboardStats(opts: { window?: DashboardWindow } = {}) {
         totalCost: stats.totalCost,
         netProfit: stats.netProfit,
         profitMargin: stats.profitMargin,
-        rollingRevenue365d: stats.rollingRevenue365d,
+        rollingRevenue90d: stats.rollingRevenue90d,
         rollingCost90d: stats.rollingCost90d,
         revenueCurrency: stats.revenueCurrency,
         otherCurrencyRevenue: stats.otherCurrencyRevenue,

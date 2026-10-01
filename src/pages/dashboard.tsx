@@ -111,7 +111,7 @@ function RevenueChart({ rows }: { rows: FinancialOverviewRow[] }) {
           </defs>
           <path d={revArea} fill="url(#revFill)" />
           <path d={revLine} fill="none" stroke="var(--statto-ink)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          {spendPts.length > 1 && <path d={spendLine} fill="none" stroke="var(--lime-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+          {spendPts.length > 1 && <path d={spendLine} fill="none" stroke="var(--lime-text)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
         </svg>
       </div>
       <div className="achart-x">{rows.map((r, i) => <span key={i}>{r.month.split(' ')[0]}</span>)}</div>

@@ -209,12 +209,10 @@ export function SosAdminPage() {
                     <td className="r">
                       <div className="sos-actions">
                         {extractFirstTaskId(r.message, r.pagePath) && (
-                          <Link to={`/tasks/${extractFirstTaskId(r.message, r.pagePath)}`}>
-                            <button type="button" className="btn b-ghost b-xs" aria-label="Open referenced task">
+                          <Link to={`/tasks/${extractFirstTaskId(r.message, r.pagePath)}`} className="btn b-ghost b-xs" aria-label="Open referenced task">
                               <ExternalLink className="size-4" />
                               Open task
-                            </button>
-                          </Link>
+                            </Link>
                         )}
                         {!r.resolvedAt && (
                           <button

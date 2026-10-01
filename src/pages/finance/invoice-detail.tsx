@@ -75,9 +75,7 @@ export function InvoiceDetailPage() {
       <div className="screen-page">
         <div className="ph-screen">
           <h3>Invoice not found</h3>
-          <Link to="/finance/invoices">
-            <button className="btn b-ghost b-sm"><ArrowLeft className="size-4" /> Back to invoices</button>
-          </Link>
+          <Link to="/finance/invoices" className="btn b-ghost b-sm"><ArrowLeft className="size-4" /> Back to invoices</Link>
         </div>
       </div>
     );

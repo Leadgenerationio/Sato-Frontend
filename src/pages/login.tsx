@@ -241,7 +241,7 @@ export function LoginPage() {
                 <input id="password" type={show ? 'text' : 'password'} autoComplete="current-password" placeholder="••••••••"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((p) => ({ ...p, password: undefined })); }} />
-                <button type="button" className="field-eye" tabIndex={-1} title={show ? 'Hide' : 'Show'} onClick={() => setShow((s) => !s)}>
+                <button type="button" className="field-eye" aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show} title={show ? 'Hide password' : 'Show password'} onClick={() => setShow((s) => !s)}>
                   {show ? <EyeOff className="size-[17px]" /> : <Eye className="size-[17px]" />}
                 </button>
               </div>
@@ -320,7 +320,7 @@ export function LoginPage() {
                     <input id="fp-newpw" type={fpShowPw ? 'text' : 'password'} autoComplete="new-password" placeholder="Min 8 characters"
                       value={fpNewPw} autoFocus
                       onChange={(e) => { setFpNewPw(e.target.value); if (fpError) setFpError(''); }} />
-                    <button type="button" className="field-eye" tabIndex={-1} title={fpShowPw ? 'Hide' : 'Show'} onClick={() => setFpShowPw((s) => !s)}>
+                    <button type="button" className="field-eye" aria-label={fpShowPw ? 'Hide password' : 'Show password'} aria-pressed={fpShowPw} title={fpShowPw ? 'Hide password' : 'Show password'} onClick={() => setFpShowPw((s) => !s)}>
                       {fpShowPw ? <EyeOff className="size-[17px]" /> : <Eye className="size-[17px]" />}
                     </button>
                   </div>

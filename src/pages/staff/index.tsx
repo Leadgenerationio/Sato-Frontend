@@ -608,9 +608,7 @@ export function StaffPage() {
           <p className="ahead-sub">Manage your team, recruitment and holidays</p>
         </div>
         <div className="page-actions">
-          <Link to="/staff/org-chart">
-            <button className="btn b-ghost b-sm"><Network className="size-[15px]" /> View Org Chart</button>
-          </Link>
+          <Link to="/staff/org-chart" className="btn b-ghost b-sm"><Network className="size-[15px]" /> View Org Chart</Link>
         </div>
       </div>
 
