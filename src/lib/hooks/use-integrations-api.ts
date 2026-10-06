@@ -6,17 +6,18 @@ import { api, unwrap } from '@/lib/api';
 // exactly once, in the create response; only their hashes are stored.
 
 export const API_KEY_SCOPES = [
+  // Grouped by resource so read/write pairs sit together; order is UI only.
+  // MCP connector scopes (spec v1.0 §3) were added, never renamed, so existing keys keep working.
   { value: 'clients:read', label: 'Read clients', hint: 'Look up a client, e.g. by ad account' },
+  { value: 'ad_accounts:read', label: 'Read ad accounts', hint: 'List ad accounts and what they are linked to' },
   { value: 'ad_accounts:write', label: 'Link ad accounts', hint: 'Add an ad account → client link' },
+  { value: 'campaigns:read', label: 'Read campaigns', hint: 'List campaigns and their buyers' },
   { value: 'creatives:read', label: 'Read creatives', hint: 'List and search creatives' },
   { value: 'creatives:write', label: 'Upload creatives', hint: 'Create and update creatives' },
-  { value: 'landing_pages:write', label: 'Manage landing pages', hint: 'Create landing pages and attach them to creatives' },
-  // MCP connector (spec v1.0 §3). Added, never renamed, so existing keys keep working.
-  { value: 'campaigns:read', label: 'Read campaigns', hint: 'List campaigns and their buyers' },
-  { value: 'ad_accounts:read', label: 'Read ad accounts', hint: 'List ad accounts and what they are linked to' },
+  { value: 'creatives:archive', label: 'Archive creatives', hint: 'Hide and restore creatives (files are never deleted)' },
   { value: 'uploads:write', label: 'Upload large files', hint: 'Direct and multipart uploads for big videos' },
   { value: 'ad_links:write', label: 'Record platform ads', hint: 'Record which Meta, Google or TikTok ads a creative runs in' },
-  { value: 'creatives:archive', label: 'Archive creatives', hint: 'Hide and restore creatives (files are never deleted)' },
+  { value: 'landing_pages:write', label: 'Manage landing pages', hint: 'Create landing pages and attach them to creatives' },
 ] as const;
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number]['value'];
 

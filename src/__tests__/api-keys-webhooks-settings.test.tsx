@@ -38,7 +38,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
 import { WebhooksSettings, webhookUrlError } from '@/components/settings/webhooks-settings';
-import { listOf } from '@/lib/hooks/use-integrations-api';
+import { API_KEY_SCOPES, listOf } from '@/lib/hooks/use-integrations-api';
 
 beforeEach(() => {
   keys = [{ id: 'k1', name: 'Meta uploader', prefix: 'sk_live_ab12', scopes: ['creatives:write'], lastUsedAt: null, revokedAt: null, createdAt: '2026-09-29T09:00:00Z', usage30d: 42 }];
@@ -119,6 +119,20 @@ describe('WebhooksSettings', () => {
     render(<WebhooksSettings />);
     fireEvent.click(screen.getByRole('switch', { name: 'Webhook to https://example.com/hook active' }));
     await waitFor(() => expect(updateHook).toHaveBeenCalledWith({ id: 'w1', active: false }));
+  });
+});
+
+describe('API_KEY_SCOPES', () => {
+  it('offers the MCP connector scopes', () => {
+    const values = API_KEY_SCOPES.map((s) => s.value);
+    expect(values).toEqual(expect.arrayContaining(['campaigns:read', 'ad_accounts:read', 'uploads:write', 'ad_links:write', 'creatives:archive']));
+    expect(new Set(values).size).toBe(values.length);
+  });
+
+  it('keeps read/write pairs for the same resource next to each other', () => {
+    const values: string[] = API_KEY_SCOPES.map((s) => s.value);
+    expect(values.indexOf('ad_accounts:write') - values.indexOf('ad_accounts:read')).toBe(1);
+    expect(values.indexOf('creatives:write') - values.indexOf('creatives:read')).toBe(1);
   });
 });
 

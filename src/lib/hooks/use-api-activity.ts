@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 
 // Settings → API keys → Activity (MCP spec v1.0 §3, Sam's test 16): every call
@@ -51,5 +51,7 @@ export function useApiActivity(filters: ApiActivityFilters) {
       return { items: data?.items ?? [], nextCursor: data?.nextCursor ?? null };
     },
     getNextPageParam: (last) => last.nextCursor,
+    // Keep the current list on screen while a filter change loads.
+    placeholderData: keepPreviousData,
   });
 }
