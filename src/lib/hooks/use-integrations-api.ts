@@ -11,6 +11,12 @@ export const API_KEY_SCOPES = [
   { value: 'creatives:read', label: 'Read creatives', hint: 'List and search creatives' },
   { value: 'creatives:write', label: 'Upload creatives', hint: 'Create and update creatives' },
   { value: 'landing_pages:write', label: 'Manage landing pages', hint: 'Create landing pages and attach them to creatives' },
+  // MCP connector (spec v1.0 §3). Added, never renamed, so existing keys keep working.
+  { value: 'campaigns:read', label: 'Read campaigns', hint: 'List campaigns and their buyers' },
+  { value: 'ad_accounts:read', label: 'Read ad accounts', hint: 'List ad accounts and what they are linked to' },
+  { value: 'uploads:write', label: 'Upload large files', hint: 'Direct and multipart uploads for big videos' },
+  { value: 'ad_links:write', label: 'Record platform ads', hint: 'Record which Meta, Google or TikTok ads a creative runs in' },
+  { value: 'creatives:archive', label: 'Archive creatives', hint: 'Hide and restore creatives (files are never deleted)' },
 ] as const;
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number]['value'];
 
