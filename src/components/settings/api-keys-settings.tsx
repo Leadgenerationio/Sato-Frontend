@@ -6,6 +6,7 @@ import { API_URL } from '@/lib/env';
 import {
   API_KEY_SCOPES, apiDocsUrl, useApiKeys, useCreateApiKey, useRevokeApiKey, type ApiKey, type ApiKeyScope,
 } from '@/lib/hooks/use-integrations-api';
+import { ApiActivitySettings } from './api-activity-settings';
 import '@/creative-library.css';
 
 // Settings → API keys (Sam feedback round 1, section 5 — plan phase 2).
@@ -132,6 +133,8 @@ export function ApiKeysSettings() {
           </ul>
         )}
       </div>
+
+      <ApiActivitySettings keys={keys ?? []} />
     </div>
   );
 }
