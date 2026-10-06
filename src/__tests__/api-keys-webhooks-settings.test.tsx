@@ -30,6 +30,10 @@ vi.mock('@/lib/hooks/use-integrations-api', async () => {
     useWebhookDeliveries: (id: string | null) => ({ data: id ? [{ id: 'd1', event: 'test', status: 'succeeded', responseCode: 200, attempts: 1, deliveredAt: '2026-09-29T10:00:00Z', nextAttemptAt: null, createdAt: '2026-09-29T10:00:00Z' }] : undefined, isLoading: false }),
   };
 });
+// The Activity card has its own tests (api-activity-settings.test.tsx).
+vi.mock('@/lib/hooks/use-api-activity', () => ({
+  useApiActivity: () => ({ data: { pages: [{ items: [], nextCursor: null }] }, isLoading: false, error: null, hasNextPage: false }),
+}));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
