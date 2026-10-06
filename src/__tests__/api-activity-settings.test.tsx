@@ -10,11 +10,13 @@ import type { ApiActivityFilters, ApiActivityItem } from '@/lib/hooks/use-api-ac
 let pages: Array<{ items: ApiActivityItem[]; nextCursor: string | null }> = [];
 let lastFilters: ApiActivityFilters = {};
 const fetchNextPage = vi.fn();
+const refetch = vi.fn();
+let isFetching = false;
 
 vi.mock('@/lib/hooks/use-api-activity', () => ({
   useApiActivity: (f: ApiActivityFilters) => {
     lastFilters = f;
-    return { data: { pages }, isLoading: false, error: null, hasNextPage: Boolean(pages[pages.length - 1]?.nextCursor), isFetchingNextPage: false, fetchNextPage };
+    return { data: { pages }, isLoading: false, error: null, hasNextPage: Boolean(pages[pages.length - 1]?.nextCursor), isFetchingNextPage: false, fetchNextPage, refetch, isFetching };
   },
 }));
 
@@ -33,6 +35,8 @@ const keys: ApiKey[] = [
 beforeEach(() => {
   lastFilters = {};
   fetchNextPage.mockReset();
+  refetch.mockReset();
+  isFetching = false;
   pages = [{
     items: [
       item({ id: '3', tool: 'link_ad_platform_ids', errorCode: 'account_client_mismatch', result: { outcome: 'error' }, args: { accountId: '428', password: '[redacted]' }, recordsTouched: [{ type: 'creative', id: 'c-1' }] }),
@@ -89,6 +93,47 @@ describe('ApiActivitySettings', () => {
     pages = [{ ...pages[0]!, nextCursor: null }];
     rerender(<ApiActivitySettings keys={keys} />);
     expect(screen.queryByRole('button', { name: /load more/i })).not.toBeInTheDocument();
+  });
+
+  it('names the JSON-RPC method for MCP rows without a tool', () => {
+    pages = [{
+      items: [
+        item({ id: '2', tool: null, args: { method: 'tools/list' } }),
+        item({ id: '1', tool: null, args: {} }),
+      ],
+      nextCursor: null,
+    }];
+    render(<ApiActivitySettings keys={keys} />);
+    const rows = screen.getAllByTestId('api-activity-row');
+    expect(within(rows[0]!).getByText('MCP tools/list')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('MCP request')).toBeInTheDocument();
+  });
+
+  it('refreshes on demand and shows it is busy while fetching', () => {
+    const { rerender } = render(<ApiActivitySettings keys={keys} />);
+    const button = screen.getByRole('button', { name: /refresh/i });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    isFetching = true;
+    rerender(<ApiActivitySettings keys={keys} />);
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /refresh/i })).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('adds the year only to calls from another year', () => {
+    const thisYear = new Date().getFullYear();
+    pages = [{
+      items: [
+        item({ id: '2', at: `${thisYear}-03-04T10:00:00Z` }),
+        item({ id: '1', at: '2019-03-04T10:00:00Z' }),
+      ],
+      nextCursor: null,
+    }];
+    render(<ApiActivitySettings keys={keys} />);
+    const rows = screen.getAllByTestId('api-activity-row');
+    expect(within(rows[0]!).queryByText(new RegExp(String(thisYear)))).not.toBeInTheDocument();
+    expect(within(rows[1]!).getByText(/4 Mar 2019/)).toBeInTheDocument();
   });
 
   it('says so when nothing matches the filters', () => {

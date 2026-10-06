@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, AlertTriangle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { Activity, AlertTriangle, ChevronDown, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ApiKey } from '@/lib/hooks/use-integrations-api';
 import { useApiActivity, type ApiActivityFilters, type ApiActivityItem } from '@/lib/hooks/use-api-activity';
@@ -8,14 +8,25 @@ import { useApiActivity, type ApiActivityFilters, type ApiActivityItem } from '@
 // an API key made, REST or MCP, with the bot name, the tool, the result and
 // the records it touched. Owner only, like the rest of this tab.
 
-function when(iso: string) {
-  return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+/** Day, month and time; the year too when it is not this year. */
+function when(iso: string, now: Date = new Date()) {
+  const d = new Date(iso);
+  return d.toLocaleString('en-GB', {
+    day: 'numeric', month: 'short', ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+}
+
+/** The JSON-RPC method the backend keeps in args.method for MCP rows without a tool. */
+function rpcMethod(args: unknown) {
+  const m = args && typeof args === 'object' ? (args as { method?: unknown }).method : undefined;
+  return typeof m === 'string' && m ? m : null;
 }
 
 /** What was called, in a few words: the MCP tool, else the REST method and path. */
 function callLabel(a: ApiActivityItem) {
   if (a.tool) return a.tool;
-  if (a.transport === 'mcp') return 'MCP request';
+  if (a.transport === 'mcp') { const m = rpcMethod(a.args); return m ? `MCP ${m}` : 'MCP request'; }
   return `${a.method ?? ''} ${a.path ?? ''}`.trim();
 }
 
@@ -75,6 +86,7 @@ export function ApiActivitySettings({ keys }: { keys: ApiKey[] }) {
   const [filters, setFilters] = useState<ApiActivityFilters>({});
   const q = useApiActivity(filters);
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
+  const busy = q.isFetching && !q.isFetchingNextPage;
   const set = <K extends keyof ApiActivityFilters>(k: K, v: string) =>
     setFilters((f) => ({ ...f, [k]: (v || undefined) as ApiActivityFilters[K] }));
 
@@ -82,8 +94,13 @@ export function ApiActivitySettings({ keys }: { keys: ApiKey[] }) {
     <div className="card acard inv-card" data-testid="api-activity">
       <div style={{ padding: '14px 16px', display: 'grid', gap: 10, borderBottom: '1px solid var(--border)' }}>
         <div>
-          <h3 className="statto-title">Activity</h3>
-          <p className="ac-sub" style={{ marginTop: 4 }}>Every call made with an API key, newest first: which key and bot, what it called, and what happened. Passwords, keys and file contents are never stored. Kept for 12 months.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+            <h3 className="statto-title">Activity</h3>
+            <button type="button" className="btn b-ghost b-sm" onClick={() => q.refetch()} disabled={busy} aria-busy={busy}>
+              {busy ? <Loader2 className="size-[15px] animate-spin" /> : <RefreshCw className="size-[15px]" />} Refresh
+            </button>
+          </div>
+          <p className="ac-sub" style={{ marginTop: 4 }}>Every call made with an API key, newest first: which key and bot, what it called, and what happened. Passwords, keys and file contents are masked before they are stored. Kept for 12 months.</p>
         </div>
         <div className="api-act-filters" role="group" aria-label="Filter activity">
           <label><span className="nc-label">Key</span>
