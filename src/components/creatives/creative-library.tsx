@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle, ChevronLeft, ChevronRight, Download, ExternalLink, FileVideo, ImageIcon, LayoutGrid,
   List, Loader2, Play, Search, Send, Upload,
@@ -78,7 +79,13 @@ export function CreativeLibrary({ clientId }: CreativeLibraryProps) {
   const [page, setPage] = useState(1);
   const [view, setViewState] = useState<View>(readView);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [openId, setOpenId] = useState<string | null>(null);
+  // ?creative=<id> opens that asset's detail panel (the portalUrl an MCP upload_asset call returns).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [openId, setOpenIdState] = useState<string | null>(() => searchParams.get('creative'));
+  const setOpenId = (id: string | null) => {
+    setOpenIdState(id);
+    if (id === null && searchParams.has('creative')) setSearchParams((p) => { p.delete('creative'); return p; }, { replace: true });
+  };
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<'assign_landing_page' | 'move_client' | 'submit_for_approval'>('assign_landing_page');
   const [bulkTarget, setBulkTarget] = useState(NONE);
