@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle, ChevronLeft, ChevronRight, Download, ExternalLink, FileVideo, ImageIcon, LayoutGrid,
-  List, Loader2, Play, Search, Send, Upload,
+  List, Loader2, Play, Search, Send, Upload, FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FilterSelect, type FilterOption } from '@/components/ui/filter-select';
@@ -311,6 +311,15 @@ function Thumb({ c, small }: { c: LibraryCreative; small?: boolean }) {
   // used to leave a blank tile. Fall back to the icon plus a plain label.
   const [broken, setBroken] = useState(false);
   const src = c.thumbnailUrl ?? (c.mediaType === 'image' ? c.fileUrl : null);
+  // Ad copy has no file: show its first words instead of an empty icon tile.
+  if (c.mediaType === 'copy') {
+    return (
+      <span style={{ display: 'grid', gap: 4, padding: small ? 0 : 12, textAlign: 'left', overflow: 'hidden' }} data-testid="copy-thumb">
+        <FileText className={small ? 'size-5' : 'size-6'} aria-hidden />
+        {!small && <span style={{ fontSize: 12, lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.headline ?? c.bodyText ?? 'Ad copy'}</span>}
+      </span>
+    );
+  }
   const Icon = c.mediaType === 'video' ? FileVideo : ImageIcon;
   if (src && !broken) return <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} />;
   if (!src && c.mediaType === 'video' && c.fileUrl && !broken) return <video src={`${c.fileUrl}#t=0.5`} muted preload="metadata" aria-hidden onError={() => setBroken(true)} />;
@@ -351,7 +360,14 @@ function CreativeDetailPanel({ id, onClose, clientOptions, lpOptions, fixedClien
           {c && (
             <>
               <div className="crl-panel-media">
-                {c.fileMissing
+                {c.mediaType === 'copy'
+                  ? (
+                    <div style={{ padding: 20, color: '#fff', display: 'grid', gap: 8, textAlign: 'left' }} data-testid="copy-preview">
+                      {c.headline && <strong style={{ fontSize: 17 }}>{c.headline}</strong>}
+                      {c.bodyText && <span style={{ whiteSpace: 'pre-wrap' }}>{c.bodyText}</span>}
+                    </div>
+                  )
+                  : c.fileMissing
                   ? <div role="alert" style={{ padding: 40, color: '#fff', textAlign: 'center' }}>This file is no longer in storage, so it can't be previewed or downloaded. Re-upload it to restore it.</div>
                   : c.mediaType === 'video' && c.fileUrl
                   ? <video src={c.fileUrl} poster={c.thumbnailUrl ?? undefined} controls preload="metadata" aria-label={`Video: ${c.name}`} />
@@ -371,7 +387,7 @@ function CreativeDetailPanel({ id, onClose, clientOptions, lpOptions, fixedClien
                 <dt>Headline</dt><dd>{c.headline ?? '—'}</dd>
                 <dt>Text</dt><dd style={{ whiteSpace: 'pre-wrap' }}>{c.bodyText ?? '—'}</dd>
                 <dt>Landing page</dt><dd>{c.landingPageUrl ? <a href={c.landingPageUrl} target="_blank" rel="noreferrer">{c.landingPageUrl}</a> : '—'}</dd>
-                <dt>Size</dt><dd>{[dims(c), formatBytes(c.sizeBytes), c.contentType].filter(Boolean).join(' · ')}</dd>
+                {c.mediaType !== 'copy' && <><dt>Size</dt><dd>{[dims(c), formatBytes(c.sizeBytes), c.contentType].filter(Boolean).join(' · ')}</dd></>}
                 <dt>First seen live</dt><dd>{fmtDate(c.firstSeen)}</dd>
                 <dt>Last seen live</dt><dd>{fmtDate(c.lastSeen)}</dd>
                 <dt>Added</dt><dd>{fmtDate(c.createdAt)}</dd>

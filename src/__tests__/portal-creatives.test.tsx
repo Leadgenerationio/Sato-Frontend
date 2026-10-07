@@ -105,4 +105,27 @@ describe('PortalCreativesPage — dated batches', () => {
     });
     expect(screen.getAllByText('day2-banner.png').length).toBeGreaterThan(0);
   });
+
+  it('shows the words of an approved copy-only asset in the detail panel', async () => {
+    const COPY = {
+      id: 'cr-copy-1',
+      name: 'Summer headline',
+      type: 'copy',
+      campaignId: 'camp-1',
+      campaignName: 'Solar Panels (UK)',
+      section: 'copy_lp' as const,
+      r2Key: null,
+      uploadedAt: '2026-06-16T10:00:00Z',
+      fileUrl: null,
+      headline: 'Cut your bills by 40%',
+      bodyText: 'Free survey, no obligation.',
+      approval: { status: 'approved' as const, decidedAt: '2026-06-17T09:00:00Z', decidedByName: 'Client User', feedback: null },
+    };
+    mockApi.get.mockResolvedValue({ status: 'success', data: { media: [], copyLp: [COPY] } });
+    renderPage();
+
+    const preview = await screen.findByTestId('copy-preview');
+    expect(preview).toHaveTextContent('Cut your bills by 40%');
+    expect(preview).toHaveTextContent('Free survey, no obligation.');
+  });
 });

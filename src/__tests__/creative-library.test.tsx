@@ -18,6 +18,8 @@ const base: LibraryCreative = {
 };
 const video: LibraryCreative = { ...base, id: 'cr2', name: 'story.mp4', mediaType: 'video', contentType: 'video/mp4', durationS: 15, thumbnailUrl: 'https://cdn.test/p2.jpg', fileUrl: 'https://cdn.test/f2.mp4', platform: 'taboola', platformAdId: 'tb-77', status: 'draft' };
 
+const copyAsset: LibraryCreative = { ...base, id: 'cr3', name: 'Spring boiler copy', mediaType: 'copy', contentType: 'text/plain', fileUrl: null, thumbnailUrl: null, width: null, height: null, sizeBytes: 60, headline: 'Save 20% on boilers', bodyText: 'Free quote in two minutes.\nNo obligation.', platform: 'manual', platformAdId: null, platformCreativeId: null, platformCampaignName: null };
+let items: LibraryCreative[] = [base, video];
 const calls: CreativeFilters[] = [];
 const bulkMutate = vi.fn();
 const updateMutate = vi.fn();
@@ -28,7 +30,7 @@ vi.mock('@/lib/hooks/use-creative-library', async () => {
   const actual = await vi.importActual<typeof import('@/lib/hooks/use-creative-library')>('@/lib/hooks/use-creative-library');
   return {
     ...actual,
-    useLibraryCreatives: (f: CreativeFilters) => { calls.push(f); return { data: { creatives: [base, video], total: 2, page: 1, pageSize: 24 }, isLoading: false, isFetching: false, error: null }; },
+    useLibraryCreatives: (f: CreativeFilters) => { calls.push(f); return { data: { creatives: items, total: items.length, page: 1, pageSize: 24 }, isLoading: false, isFetching: false, error: null }; },
     useLibraryCreative: (id: string | null) => ({ data: id && !detailError ? detail : undefined, isLoading: false, error: id ? detailError : null }),
     useLandingPages: () => ({ data: [{ id: 'lp1', clientId: 'c1', clientName: 'Yash Test Sonova', url: 'https://offers.example.com/hearing', normalisedUrl: 'https://offers.example.com/hearing', title: 'Hearing offer', screenshotUrl: null, creativesCount: 2, createdAt: '2026-09-01T00:00:00Z' }] }),
     useBulkCreatives: () => ({ mutateAsync: bulkMutate, isPending: false }),
@@ -53,6 +55,7 @@ async function pick(label: string, option: string) {
 
 beforeEach(() => {
   detailError = null;
+  items = [base, video];
   calls.length = 0;
   bulkMutate.mockReset().mockResolvedValue({ updated: 2 });
   updateMutate.mockReset().mockResolvedValue({});
@@ -148,6 +151,20 @@ describe('CreativeLibrary', () => {
     expect(await panel.findByText('Creative not found')).toBeInTheDocument();
     expect(panel.queryByText('Loading…')).not.toBeInTheDocument(); // no stale spinner text next to the error
     detailError = null;
+  });
+
+  it('a copy-only asset shows its words in the grid and in the panel, with no download and no size', async () => {
+    items = [copyAsset]; detail = copyAsset;
+    renderLib();
+    expect(screen.getByTestId('copy-thumb')).toHaveTextContent('Save 20% on boilers');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open Spring boiler copy' })[0]);
+    const panel = within(await screen.findByRole('dialog'));
+    const preview = panel.getByTestId('copy-preview');
+    expect(preview).toHaveTextContent('Save 20% on boilers');
+    expect(preview).toHaveTextContent('Free quote in two minutes.');
+    expect(panel.queryByRole('button', { name: /Download/ })).not.toBeInTheDocument();
+    expect(panel.queryByText('Size')).not.toBeInTheDocument();
+    expect(panel.queryByText('No preview')).not.toBeInTheDocument();
   });
 
   it('without ?creative nothing is opened', () => {

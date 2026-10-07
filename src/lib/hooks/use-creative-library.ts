@@ -25,7 +25,7 @@ export interface LibraryCreative {
   landingPageUrl: string | null;
   headline: string | null;
   bodyText: string | null;
-  mediaType: 'image' | 'video' | null;
+  mediaType: 'image' | 'video' | 'copy' | null;
   contentType: string | null;
   width: number | null;
   height: number | null;

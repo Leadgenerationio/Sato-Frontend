@@ -115,6 +115,8 @@ function toDetail(row: FlatRow): CreativeDetailData {
     campaignName: row.campaignName,
     signedUrl: row.creative.signedUrl,
     fileUrl: row.creative.fileUrl,
+    headline: row.creative.headline,
+    bodyText: row.creative.bodyText,
     approval: row.creative.approval ?? PENDING_APPROVAL,
   };
 }

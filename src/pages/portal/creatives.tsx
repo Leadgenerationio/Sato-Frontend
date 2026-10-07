@@ -73,6 +73,8 @@ function toDetail(c: PortalReviewCreative): CreativeDetailData {
     campaignName: c.campaignName,
     signedUrl: c.signedUrl,
     fileUrl: c.fileUrl,
+    headline: c.headline,
+    bodyText: c.bodyText,
     approval: c.approval,
   };
 }
