@@ -92,6 +92,9 @@ export interface PortalCreative {
   type: string;
   uploadedAt: string;
   fileUrl: string;
+  /** Ad copy. A copy-only asset (type 'copy') has no file: this is what the buyer reviews. Optional so an FE-first deploy is safe. */
+  headline?: string | null;
+  bodyText?: string | null;
   /** Fresh 1-hour R2 signed URL ready for <img>/<video>. Optional so an
    *  FE-first deploy doesn't TypeError; treat missing as null. */
   signedUrl?: string | null;
@@ -277,6 +280,9 @@ export interface PortalReviewCreative {
   name: string;
   type: string;
   fileUrl: string;
+  /** Ad copy of a copy-only asset (type 'copy'). Optional so an FE-first deploy is safe. */
+  headline?: string | null;
+  bodyText?: string | null;
   // R2 key for fetching a fresh signed URL on open. Optional on the wire so
   // a Vercel-first deploy doesn't TypeError on the old response shape, and
   // null for legacy rows uploaded before r2Key was recorded.

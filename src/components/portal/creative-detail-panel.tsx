@@ -18,6 +18,9 @@ export interface CreativeDetailData {
   campaignName: string | null;
   signedUrl?: string | null;
   fileUrl?: string | null;
+  /** Ad copy: what a copy-only asset (type 'copy', no file) shows in place of media. */
+  headline?: string | null;
+  bodyText?: string | null;
   approval: CreativeApprovalState;
 }
 
@@ -144,7 +147,13 @@ export function CreativeDetailPanel({ creative, showDecisionControls = false, me
 
       {/* Media */}
       <div style={{ background: 'var(--gray-50)', border: '1px solid var(--border)', borderRadius: 16, minHeight: 280, maxHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 16 }}>
-        {isImg ? (
+        {creative.type === 'copy' ? (
+          <div style={{ width: '100%', display: 'grid', gap: 10, alignSelf: 'start', overflowY: 'auto' }} data-testid="copy-preview">
+            {creative.headline && <p style={{ fontSize: 18, fontWeight: 600, color: 'var(--statto-ink)' }}>{creative.headline}</p>}
+            {creative.bodyText && <p style={{ whiteSpace: 'pre-wrap', fontSize: 15, lineHeight: 1.55 }}>{creative.bodyText}</p>}
+            {!creative.headline && !creative.bodyText && <p className="lc-sub">No text</p>}
+          </div>
+        ) : isImg ? (
           <img src={creative.signedUrl!} alt={creative.name} style={{ maxHeight: '56vh', width: 'auto', objectFit: 'contain', borderRadius: 8 }} />
         ) : isVid ? (
           <video src={creative.signedUrl!} style={{ maxHeight: '56vh', width: 'auto' }} controls autoPlay muted />
