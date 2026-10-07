@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle, ChevronLeft, ChevronRight, Download, ExternalLink, FileVideo, ImageIcon, LayoutGrid,
-  List, Loader2, Play, Search, Send, Upload, FileText
+  List, Loader2, Play, Search, Send, Upload, FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FilterSelect, type FilterOption } from '@/components/ui/filter-select';
