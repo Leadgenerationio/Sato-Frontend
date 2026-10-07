@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle, ChevronLeft, ChevronRight, Download, ExternalLink, FileVideo, ImageIcon, LayoutGrid,
@@ -82,6 +82,10 @@ export function CreativeLibrary({ clientId }: CreativeLibraryProps) {
   // ?creative=<id> opens that asset's detail panel (the portalUrl an MCP upload_asset call returns).
   const [searchParams, setSearchParams] = useSearchParams();
   const [openId, setOpenIdState] = useState<string | null>(() => searchParams.get('creative'));
+  // The library can stay mounted while the address changes (Back and Forward between two ?creative= links, or a link to another
+  // asset): follow the parameter. Closing is handled below, which clears the parameter, so this only reacts to a new value.
+  const creativeParam = searchParams.get('creative');
+  useEffect(() => { if (creativeParam) setOpenIdState(creativeParam); }, [creativeParam]);
   const setOpenId = (id: string | null) => {
     setOpenIdState(id);
     if (id === null && searchParams.has('creative')) setSearchParams((p) => { p.delete('creative'); return p; }, { replace: true });
@@ -339,7 +343,7 @@ function CreativeDetailPanel({ id, onClose, clientOptions, lpOptions, fixedClien
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{c?.name ?? 'Creative'}</SheetTitle>
-          <SheetDescription>{c ? [c.clientName ?? (c.shared ? 'Shared on campaign' : 'No client'), c.campaignName].filter(Boolean).join(' · ') : 'Loading…'}</SheetDescription>
+          <SheetDescription>{c ? [c.clientName ?? (c.shared ? 'Shared on campaign' : 'No client'), c.campaignName].filter(Boolean).join(' · ') : error ? 'This creative could not be opened' : 'Loading…'}</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-6" style={{ display: 'grid', gap: 16 }}>
           {isLoading && <Skeleton className="h-64" />}
