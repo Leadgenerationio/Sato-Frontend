@@ -4,7 +4,11 @@
  * URLs must be https; scopes and events are required.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render as rtlRender, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 import type { ApiKey, WebhookEndpoint } from '@/lib/hooks/use-integrations-api';
 
 const createKey = vi.fn();
@@ -66,6 +70,11 @@ beforeEach(() => {
 });
 
 describe('ApiKeysSettings', () => {
+  it('links to the MCP setup guide', () => {
+    render(<ApiKeysSettings />);
+    expect(screen.getByRole('link', { name: /Connect an AI assistant/ })).toHaveAttribute('href', '/settings/mcp');
+  });
+
   it('lists keys with prefix, scopes and usage — never the full key', () => {
     render(<ApiKeysSettings />);
     const row = within(screen.getByTestId('api-key-row'));

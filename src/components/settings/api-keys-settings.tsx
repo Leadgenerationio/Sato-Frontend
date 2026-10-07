@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AlertTriangle, BookOpen, Check, Copy, KeyRound, Loader2, Plus, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, BookOpen, Bot, Check, Copy, KeyRound, Loader2, Plus, Trash2, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { API_URL } from '@/lib/env';
@@ -110,7 +111,10 @@ export function ApiKeysSettings() {
             <h3 className="statto-title">API keys</h3>
             <p className="ac-sub" style={{ marginTop: 4 }}>Let another system (or an AI assistant through the MCP server) file creatives under the right client. Send the key in the <code>X-API-Key</code> header.</p>
           </div>
-          <a href={apiDocsUrl(API_URL)} target="_blank" rel="noreferrer"><button type="button" className="btn b-ghost b-sm"><BookOpen className="size-[15px]" /> API docs</button></a>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <Link to="/settings/mcp" className="btn b-ghost b-sm"><Bot className="size-[15px]" aria-hidden /> Connect an AI assistant</Link>
+            <a href={apiDocsUrl(API_URL)} target="_blank" rel="noreferrer"><button type="button" className="btn b-ghost b-sm"><BookOpen className="size-[15px]" /> API docs</button></a>
+          </div>
         </div>
 
         {fresh && (

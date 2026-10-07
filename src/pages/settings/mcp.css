@@ -1,0 +1,23 @@
+/* Settings → MCP setup guide (p07): the guide is markdown from the backend. */
+.statto-admin .mcpd { display: grid; gap: 0; margin-bottom: 16px; min-width: 0; line-height: 1.55; }
+.statto-admin .mcpd > :first-child { margin-top: 0; }
+.statto-admin .mcpd h2 { font-size: 17px; font-weight: 600; margin: 22px 0 8px; scroll-margin-top: 80px; }
+.statto-admin .mcpd h3 { font-size: 15px; font-weight: 600; margin: 16px 0 6px; }
+.statto-admin .mcpd p, .statto-admin .mcpd ul, .statto-admin .mcpd ol { margin: 0 0 10px; }
+.statto-admin .mcpd ul, .statto-admin .mcpd ol { padding-left: 20px; }
+.statto-admin .mcpd ul { list-style: disc; }
+.statto-admin .mcpd ol { list-style: decimal; }
+.statto-admin .mcpd li { margin: 3px 0; }
+.statto-admin .mcpd a { text-decoration: underline; text-underline-offset: 2px; }
+.statto-admin .mcpd code { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 0.9em; background: var(--gray-50, #f6f7f6); border-radius: 4px; padding: 1px 4px; overflow-wrap: anywhere; }
+.statto-admin .mcpd pre { margin: 0 0 12px; padding: 10px 12px; background: var(--gray-50, #f6f7f6); border-radius: 8px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; }
+.statto-admin .mcpd pre code { background: none; padding: 0; overflow-wrap: normal; }
+.statto-admin .mcpd-scroll { overflow-x: auto; margin: 0 0 12px; max-width: 100%; }
+.statto-admin .mcpd table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.statto-admin .mcpd th, .statto-admin .mcpd td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.statto-admin .mcpd th { font-weight: 600; white-space: nowrap; }
+.statto-admin .mcpd td code { white-space: nowrap; overflow-wrap: normal; }
+.statto-admin .mcpd-muted { color: var(--fg3); }
+@media (max-width: 640px) {
+  .statto-admin .mcpd table { min-width: 560px; }
+}

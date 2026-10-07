@@ -22,6 +22,7 @@ import { LoginPage } from '@/pages/login';
 const DashboardPage = lazy(() => import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage })));
 const SettingsPage = lazy(() => import('@/pages/settings').then((m) => ({ default: m.SettingsPage })));
 const CleanupPage = lazy(() => import('@/pages/settings/cleanup').then((m) => ({ default: m.CleanupPage })));
+const McpDocsPage = lazy(() => import('@/pages/settings/mcp').then((m) => ({ default: m.McpDocsPage })));
 const CampaignsPage = lazy(() => import('@/pages/campaigns/index').then((m) => ({ default: m.CampaignsPage })));
 const CampaignDetailPage = lazy(() => import('@/pages/campaigns/detail').then((m) => ({ default: m.CampaignDetailPage })));
 const AdAccountsPage = lazy(() => import('@/pages/ad-accounts/index').then((m) => ({ default: m.AdAccountsPage })));
@@ -446,6 +447,15 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
                   <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* t23 / p07: the MCP setup guide and tool table, linked from Settings → API keys. */}
+            <Route
+              path="/settings/mcp"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'finance_admin', 'ops_manager']}>
+                  <McpDocsPage />
                 </ProtectedRoute>
               }
             />
