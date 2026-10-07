@@ -78,9 +78,10 @@ export function ClientLimitPicker({ value, onChange, idPrefix }: { value: Client
   );
 }
 
-/** One line for a key's row: "All clients" or the names it is limited to. */
-export function clientLimitLabel(ids: string[] | null | undefined, names: Map<string, string>): string {
+/** One line for a key's row: "All clients" or the names it is limited to. `named` (from the API) wins over the page of clients. */
+export function clientLimitLabel(ids: string[] | null | undefined, names: Map<string, string>, named?: Array<{ id: string; name: string }> | null): string {
   if (!ids) return 'All clients';
+  if (named) names = new Map([...names, ...named.map((c) => [c.id, c.name] as [string, string])]);
   const known = ids.map((id) => names.get(id)).filter(Boolean) as string[];
   const unknown = ids.length - known.length;
   const list = known.slice(0, 3).join(', ');

@@ -170,7 +170,7 @@ export function ApiKeysSettings() {
                 </div>
                 <div className="crl-tags">{k.scopes.map((s) => <span key={s} className="cmp-vpill">{API_KEY_SCOPES.find((x) => x.value === s)?.label ?? s}</span>)}</div>
                 <div className="crl-sub" data-testid="api-key-clients" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Users className="size-[13px]" /> {clientLimitLabel(k.allowedClientIds, names)}{k.agentLabel ? ` · assistant "${k.agentLabel}"` : ''}
+                  <Users className="size-[13px]" /> {clientLimitLabel(k.allowedClientIds, names, k.allowedClients)}{k.agentLabel ? ` · assistant "${k.agentLabel}"` : ''}
                   {!k.revokedAt && editingLimit !== k.id && (
                     <button type="button" className="btn b-ghost b-sm" onClick={() => setEditingLimit(k.id)} aria-label={`Change clients for ${k.name}`}>Change clients</button>
                   )}

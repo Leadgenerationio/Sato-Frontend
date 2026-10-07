@@ -32,6 +32,8 @@ export interface ApiKey {
   usage30d: number;
   /** MCP spec §3 (1h): the clients this key is limited to; null or absent = every client. */
   allowedClientIds?: string[] | null;
+  /** The same clients with names (backend #91), so a client beyond the first page of /clients is still named. */
+  allowedClients?: Array<{ id: string; name: string }> | null;
   /** Bot name in the Activity log when a call sends no X-Stato-Agent header. */
   agentLabel?: string | null;
 }

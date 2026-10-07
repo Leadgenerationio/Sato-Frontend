@@ -125,6 +125,12 @@ describe('ApiKeysSettings', () => {
     await waitFor(() => expect(updateKey).toHaveBeenCalledWith({ id: 'k1', allowedClientIds: null }));
   });
 
+  it('names a chosen client from the API even when it is not in the first page of clients', () => {
+    keys = [{ ...keys[0]!, allowedClientIds: ['c-far'], allowedClients: [{ id: 'c-far', name: 'Zeta Far Ltd' }] }];
+    render(<ApiKeysSettings />);
+    expect(screen.getByTestId('api-key-clients')).toHaveTextContent('Only Zeta Far Ltd');
+  });
+
   it('a key with no limit says so', () => {
     render(<ApiKeysSettings />);
     expect(screen.getByTestId('api-key-clients')).toHaveTextContent('All clients');
