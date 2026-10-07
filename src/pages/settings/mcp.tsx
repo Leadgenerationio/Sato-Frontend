@@ -20,10 +20,12 @@ export function prepareGuide(markdown: string, apiUrl: string = API_URL) {
     .replace(/\]\(\.\/mcp-tools\.md\)/g, '](#mcp-tools)');
 }
 
+// react-markdown passes its syntax-tree `node` to custom components; keep it off the DOM.
+type MdProps<T extends 'table' | 'a'> = ComponentProps<T> & { node?: unknown };
 const components = {
   // Wide tables scroll inside their own box instead of the page.
-  table: (p: ComponentProps<'table'>) => <div className="mcpd-scroll"><table {...p} /></div>,
-  a: ({ href, ...p }: ComponentProps<'a'>) =>
+  table: ({ node: _node, ...p }: MdProps<'table'>) => <div className="mcpd-scroll"><table {...p} /></div>,
+  a: ({ node: _node, href, ...p }: MdProps<'a'>) =>
     href?.startsWith('http') ? <a href={href} target="_blank" rel="noopener noreferrer" {...p} /> : <a href={href} {...p} />,
 };
 

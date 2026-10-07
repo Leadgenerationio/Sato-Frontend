@@ -65,6 +65,7 @@ describe('MCP docs page', () => {
     expect(guide).toHaveTextContent('https://api.example.test/mcp');
     expect(within(guide).getByRole('table')).toHaveTextContent('clients:read');
     expect(within(guide).getByRole('link', { name: 'mcp-tools.md' })).toHaveAttribute('href', '#mcp-tools');
+    expect(guide.querySelector('[node]')).toBeNull();
   });
 
   it('lists every tool with its scope, kind and inputs', () => {
