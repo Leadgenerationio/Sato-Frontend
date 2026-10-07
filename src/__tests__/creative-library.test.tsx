@@ -41,8 +41,9 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { CreativeLibrary } from '@/components/creatives/creative-library';
 
-function renderLib(props: { clientId?: string } = {}) {
-  return render(<MemoryRouter><CreativeLibrary {...props} /></MemoryRouter>);
+function renderLib(props: { clientId?: string; url?: string } = {}) {
+  const { url, ...rest } = props;
+  return render(<MemoryRouter initialEntries={[url ?? '/creatives']}><CreativeLibrary {...rest} /></MemoryRouter>);
 }
 async function pick(label: string, option: string) {
   fireEvent.click(screen.getByRole('button', { name: label }));
@@ -115,6 +116,21 @@ describe('CreativeLibrary', () => {
     expect(panel.getAllByRole('link', { name: /offers\.example\.com\/hearing|Open landing page/ }).length).toBeGreaterThan(0);
     expect(panel.getByRole('button', { name: /Download/ }).closest('a')).toHaveAttribute('href', 'https://cdn.test/f1.jpg?sig=fresh');
     expect(panel.getByText('1080×1080 · 244 KB · image/jpeg')).toBeInTheDocument();
+  });
+
+  it('?creative=<id> opens that asset straight away (the portalUrl from an MCP upload), and closing it clears the link', async () => {
+    detail = base;
+    renderLib({ url: '/creatives?creative=cr1' });
+    const panel = within(await screen.findByRole('dialog'));
+    expect(panel.getByText('120210000000001')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('without ?creative nothing is opened', () => {
+    detail = base;
+    renderLib();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('video detail plays inline with the poster frame', async () => {
