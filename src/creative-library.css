@@ -74,7 +74,13 @@
 .statto-admin .api-act-call .crl-sub { white-space: normal; }
 .statto-admin .api-act-detail { padding: 0 16px 14px 42px; }
 .statto-admin .api-act-json { margin: 0; max-height: 260px; overflow: auto; font-size: 12px; background: var(--gray-50, #f6f7f6); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.statto-admin .api-act-record { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.statto-admin .api-act-record .mono { overflow-wrap: anywhere; }
+.statto-admin .api-act-record-links { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.statto-admin .api-act-chip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; border-radius: 8px; background: var(--gray-50, #f6f7f6); font-size: 13px; }
+.statto-admin .api-act-chip .mono { overflow-wrap: anywhere; }
 @media (max-width: 640px) {
   .statto-admin .api-act-detail { padding-left: 16px; grid-template-columns: 1fr; }
+  .statto-admin .api-act-card .btn { min-height: 44px; }
   .statto-admin .api-act-detail dt { margin-top: 6px; }
 }

@@ -33,6 +33,20 @@ export interface ApiActivityFilters {
   keyId?: string;
   transport?: 'rest' | 'mcp';
   outcome?: 'ok' | 'error';
+  /** Only the calls that touched this creative (its history). */
+  creativeId?: string;
+}
+
+function activityParams(filters: ApiActivityFilters) {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) if (v) qs.set(k, v);
+  return qs;
+}
+
+/** The filtered list as a CSV, every matching call (up to 10,000), from GET /api-keys/activity.csv. */
+export async function downloadApiActivityCsv(filters: ApiActivityFilters): Promise<Blob> {
+  const qs = activityParams(filters).toString();
+  return api.getBlob(`/api/v1/api-keys/activity.csv${qs ? `?${qs}` : ''}`);
 }
 
 interface ActivityPage { items: ApiActivityItem[]; nextCursor: string | null }
@@ -44,8 +58,8 @@ export function useApiActivity(filters: ApiActivityFilters) {
     queryKey: ['api-activity', filters],
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {
-      const qs = new URLSearchParams({ limit: String(ACTIVITY_PAGE_SIZE) });
-      for (const [k, v] of Object.entries(filters)) if (v) qs.set(k, v);
+      const qs = activityParams(filters);
+      qs.set('limit', String(ACTIVITY_PAGE_SIZE));
       if (pageParam) qs.set('cursor', pageParam);
       const data = unwrap(await api.get<ActivityPage>(`/api/v1/api-keys/activity?${qs.toString()}`));
       return { items: data?.items ?? [], nextCursor: data?.nextCursor ?? null };

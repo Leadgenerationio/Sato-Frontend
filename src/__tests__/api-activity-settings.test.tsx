@@ -3,7 +3,9 @@
  * call made with an API key, with key, bot, tool, result and details.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render as rtlRender, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ApiKey } from '@/lib/hooks/use-integrations-api';
 import type { ApiActivityFilters, ApiActivityItem } from '@/lib/hooks/use-api-activity';
 
@@ -11,6 +13,9 @@ let pages: Array<{ items: ApiActivityItem[]; nextCursor: string | null }> = [];
 let lastFilters: ApiActivityFilters = {};
 const fetchNextPage = vi.fn();
 const refetch = vi.fn();
+const downloadCsv = vi.fn();
+const saveBlob = vi.fn();
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 let isFetching = false;
 
 vi.mock('@/lib/hooks/use-api-activity', () => ({
@@ -18,7 +23,9 @@ vi.mock('@/lib/hooks/use-api-activity', () => ({
     lastFilters = f;
     return { data: { pages }, isLoading: false, error: null, hasNextPage: Boolean(pages[pages.length - 1]?.nextCursor), isFetchingNextPage: false, fetchNextPage, refetch, isFetching };
   },
+  downloadApiActivityCsv: (f: ApiActivityFilters) => downloadCsv(f),
 }));
+vi.mock('@/lib/download', () => ({ saveBlob: (b: Blob, name: string) => saveBlob(b, name) }));
 
 import { ApiActivitySettings } from '@/components/settings/api-activity-settings';
 
@@ -36,6 +43,8 @@ beforeEach(() => {
   lastFilters = {};
   fetchNextPage.mockReset();
   refetch.mockReset();
+  downloadCsv.mockReset();
+  saveBlob.mockReset();
   isFetching = false;
   pages = [{
     items: [
@@ -72,6 +81,30 @@ describe('ApiActivitySettings', () => {
     expect(within(row).getByText('creative c-1')).toBeInTheDocument();
     expect(within(row).getByText('127.0.0.1')).toBeInTheDocument();
     expect(within(row).getByText('req-1')).toBeInTheDocument();
+  });
+
+  it("shows one creative's history from a record it touched, and clears it", () => {
+    render(<ApiActivitySettings keys={keys} />);
+    expect(screen.queryByTestId('api-activity-creative-filter')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getAllByTestId('api-activity-row')[0]!).getAllByRole('button')[0]!);
+    expect(screen.getByRole('link', { name: 'Open in library' })).toHaveAttribute('href', '/creatives?creative=c-1');
+    fireEvent.click(screen.getByRole('button', { name: "This creative's history" }));
+    expect(lastFilters).toEqual({ creativeId: 'c-1' });
+    const chip = screen.getByTestId('api-activity-creative-filter');
+    expect(chip).toHaveTextContent('History of creative c-1');
+    fireEvent.click(within(chip).getByRole('button', { name: 'Show every creative' }));
+    expect(lastFilters.creativeId).toBeUndefined();
+    expect(screen.queryByTestId('api-activity-creative-filter')).not.toBeInTheDocument();
+  });
+
+  it('downloads the filtered list as CSV', async () => {
+    const blob = new Blob(['csv']);
+    downloadCsv.mockResolvedValue(blob);
+    render(<ApiActivitySettings keys={keys} />);
+    fireEvent.change(screen.getAllByRole('combobox')[2]!, { target: { value: 'error' } });
+    fireEvent.click(screen.getByRole('button', { name: /Download CSV/ }));
+    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(blob, expect.stringMatching(/^api-activity-\d{4}-\d{2}-\d{2}\.csv$/)));
+    expect(downloadCsv).toHaveBeenCalledWith({ outcome: 'error' });
   });
 
   it('filters by key, transport and result, and labels revoked keys', () => {

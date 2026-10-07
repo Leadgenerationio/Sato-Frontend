@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { Activity, AlertTriangle, ChevronDown, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Activity, AlertTriangle, ChevronDown, ChevronRight, Download, Loader2, RefreshCw, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ApiKey } from '@/lib/hooks/use-integrations-api';
-import { useApiActivity, type ApiActivityFilters, type ApiActivityItem } from '@/lib/hooks/use-api-activity';
+import { downloadApiActivityCsv, useApiActivity, type ApiActivityFilters, type ApiActivityItem } from '@/lib/hooks/use-api-activity';
+import { saveBlob } from '@/lib/download';
+import { logError } from '@/lib/log';
 
 // Settings → API keys → Activity (MCP spec v1.0 §3, Sam's test 16): every call
 // an API key made, REST or MCP, with the bot name, the tool, the result and
@@ -47,7 +51,7 @@ function Json({ label, value }: { label: string; value: unknown }) {
   );
 }
 
-function Row({ a }: { a: ApiActivityItem }) {
+function Row({ a, onCreativeHistory }: { a: ApiActivityItem; onCreativeHistory: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const Icon = open ? ChevronDown : ChevronRight;
   return (
@@ -71,7 +75,17 @@ function Row({ a }: { a: ApiActivityItem }) {
           {a.requestId && (<><dt>Request ID</dt><dd className="mono">{a.requestId}</dd></>)}
           {a.ip && (<><dt>IP</dt><dd className="mono">{a.ip.replace(/^::ffff:/, '')}</dd></>)}
           {a.recordsTouched?.length ? (
-            <><dt>Records touched</dt><dd>{a.recordsTouched.map((r) => <div key={`${r.type}:${r.id}`} className="mono">{r.type} {r.id}</div>)}</dd></>
+            <><dt>Records touched</dt><dd>{a.recordsTouched.map((r) => (
+              <div key={`${r.type}:${r.id}`} className="api-act-record">
+                <span className="mono">{r.type} {r.id}</span>
+                {r.type === 'creative' && (
+                  <span className="api-act-record-links">
+                    <button type="button" className="btn b-ghost b-sm" onClick={() => onCreativeHistory(r.id)}>This creative's history</button>
+                    <Link className="btn b-ghost b-sm" to={`/creatives?creative=${encodeURIComponent(r.id)}`}>Open in library</Link>
+                  </span>
+                )}
+              </div>
+            ))}</dd></>
           ) : null}
           <Json label="Arguments" value={a.args} />
           <Json label="Before" value={a.before} />
@@ -89,16 +103,34 @@ export function ApiActivitySettings({ keys }: { keys: ApiKey[] }) {
   const busy = q.isFetching && !q.isFetchingNextPage;
   const set = <K extends keyof ApiActivityFilters>(k: K, v: string) =>
     setFilters((f) => ({ ...f, [k]: (v || undefined) as ApiActivityFilters[K] }));
+  const [exporting, setExporting] = useState(false);
+  const exportCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      saveBlob(await downloadApiActivityCsv(filters), `api-activity-${new Date().toISOString().slice(0, 10)}.csv`);
+    } catch (err) {
+      logError('API activity CSV export failed', err);
+      toast.error(err instanceof Error ? err.message : "Couldn't download the activity. Try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
-    <div className="card acard inv-card" data-testid="api-activity">
+    <div className="card acard inv-card api-act-card" data-testid="api-activity">
       <div style={{ padding: '14px 16px', display: 'grid', gap: 10, borderBottom: '1px solid var(--border)' }}>
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
             <h3 className="statto-title">Activity</h3>
-            <button type="button" className="btn b-ghost b-sm" onClick={() => q.refetch()} disabled={busy} aria-busy={busy}>
-              {busy ? <Loader2 className="size-[15px] animate-spin" /> : <RefreshCw className="size-[15px]" />} Refresh
-            </button>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button type="button" className="btn b-ghost b-sm" onClick={exportCsv} disabled={exporting} aria-busy={exporting} title="Every call that matches the filters, up to 10,000">
+                {exporting ? <Loader2 className="size-[15px] animate-spin" /> : <Download className="size-[15px]" />} Download CSV
+              </button>
+              <button type="button" className="btn b-ghost b-sm" onClick={() => q.refetch()} disabled={busy} aria-busy={busy}>
+                {busy ? <Loader2 className="size-[15px] animate-spin" /> : <RefreshCw className="size-[15px]" />} Refresh
+              </button>
+            </div>
           </div>
           <p className="ac-sub" style={{ marginTop: 4 }}>Every call made with an API key, newest first: which key and bot, what it called, and what happened. Passwords, keys and file contents are masked before they are stored. Kept for 12 months.</p>
         </div>
@@ -124,6 +156,15 @@ export function ApiActivitySettings({ keys }: { keys: ApiKey[] }) {
             </select>
           </label>
         </div>
+        {filters.creativeId && (
+          <div className="api-act-chip" data-testid="api-activity-creative-filter">
+            <span>History of creative <span className="mono">{filters.creativeId}</span></span>
+            <Link className="btn b-ghost b-sm" to={`/creatives?creative=${encodeURIComponent(filters.creativeId)}`}>Open in library</Link>
+            <button type="button" className="btn b-ghost b-sm" onClick={() => set('creativeId', '')} aria-label="Show every creative">
+              <X className="size-[15px]" /> All calls
+            </button>
+          </div>
+        )}
       </div>
 
       {q.isLoading ? <div style={{ padding: 16 }}><Skeleton className="h-24" /></div>
@@ -134,7 +175,7 @@ export function ApiActivitySettings({ keys }: { keys: ApiKey[] }) {
       ) : (
         <>
           <ul className="crl-list api-act-list" aria-label="API activity">
-            {items.map((a) => <Row key={a.id} a={a} />)}
+            {items.map((a) => <Row key={a.id} a={a} onCreativeHistory={(id) => set('creativeId', id)} />)}
           </ul>
           {q.hasNextPage && (
             <div style={{ padding: 12, display: 'flex', justifyContent: 'center' }}>
