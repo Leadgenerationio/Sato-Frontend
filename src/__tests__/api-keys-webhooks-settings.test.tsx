@@ -46,6 +46,7 @@ vi.mock('@/lib/hooks/use-clients', () => ({
 // The Activity card has its own tests (api-activity-settings.test.tsx).
 vi.mock('@/lib/hooks/use-api-activity', () => ({
   useApiActivity: () => ({ data: { pages: [{ items: [], nextCursor: null }] }, isLoading: false, error: null, hasNextPage: false }),
+  downloadApiActivityCsv: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
