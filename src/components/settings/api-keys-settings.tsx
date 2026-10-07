@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { AlertTriangle, BookOpen, Check, Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, BookOpen, Check, Copy, KeyRound, Loader2, Plus, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { API_URL } from '@/lib/env';
 import {
-  API_KEY_SCOPES, apiDocsUrl, useApiKeys, useCreateApiKey, useRevokeApiKey, type ApiKey, type ApiKeyScope,
+  API_KEY_SCOPES, apiDocsUrl, useApiKeys, useCreateApiKey, useRevokeApiKey, useUpdateApiKeyLimits, type ApiKey, type ApiKeyScope,
 } from '@/lib/hooks/use-integrations-api';
 import { ApiActivitySettings } from './api-activity-settings';
+import { ClientLimitPicker, clientLimitLabel, useClientNames, type ClientLimit } from './api-key-client-limit';
 import '@/creative-library.css';
 
 // Settings → API keys (Sam feedback round 1, section 5 — plan phase 2).
@@ -33,10 +34,41 @@ export function CopyOnce({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Change which clients an existing key can see. */
+function KeyClientLimitEditor({ apiKey, onDone }: { apiKey: ApiKey; onDone: () => void }) {
+  const update = useUpdateApiKeyLimits();
+  const [limit, setLimit] = useState<ClientLimit>(apiKey.allowedClientIds ?? null);
+  async function save() {
+    if (limit && limit.length === 0) return;
+    try {
+      await update.mutateAsync({ id: apiKey.id, allowedClientIds: limit });
+      toast.success(`"${apiKey.name}" now sees ${limit ? `${limit.length} client${limit.length === 1 ? '' : 's'}` : 'all clients'}. It applies from its next call.`);
+      onDone();
+    } catch (err) {
+      toast.error(`${err instanceof Error ? err.message : "Couldn't change the key."} Nothing was changed.`);
+    }
+  }
+  return (
+    <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+      <ClientLimitPicker value={limit} onChange={setLimit} idPrefix={`edit-${apiKey.id}`} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className="btn b-dark b-sm" onClick={save} disabled={update.isPending || (limit !== null && limit.length === 0)}>
+          {update.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Check className="size-[15px]" />} Save clients
+        </button>
+        <button type="button" className="btn b-ghost b-sm" onClick={onDone}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 export function ApiKeysSettings() {
   const { data: keys, isLoading, error } = useApiKeys();
   const create = useCreateApiKey();
   const revoke = useRevokeApiKey();
+  const names = useClientNames();
+  const [editingLimit, setEditingLimit] = useState<string | null>(null);
+  const [limit, setLimit] = useState<ClientLimit>(null);
+  const [agentLabel, setAgentLabel] = useState('');
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<Set<ApiKeyScope>>(new Set(['clients:read', 'creatives:write']));
   const [fresh, setFresh] = useState<{ name: string; key: string } | null>(null);
@@ -50,11 +82,15 @@ export function ApiKeysSettings() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (!name.trim() || scopes.size === 0) return;
+    if (!name.trim() || scopes.size === 0 || (limit !== null && limit.length === 0)) return;
     try {
-      const res = await create.mutateAsync({ name: name.trim(), scopes: [...scopes] });
+      const res = await create.mutateAsync({
+        name: name.trim(), scopes: [...scopes],
+        ...(limit ? { allowedClientIds: limit } : {}),
+        ...(agentLabel.trim() ? { agentLabel: agentLabel.trim() } : {}),
+      });
       setFresh({ name: res.apiKey?.name ?? name.trim(), key: res.key });
-      setName(''); setTouched(false);
+      setName(''); setAgentLabel(''); setLimit(null); setTouched(false);
     } catch (err) {
       toast.error(`${err instanceof Error ? err.message : "Couldn't create the key."} No key was created.`);
     }
@@ -101,6 +137,12 @@ export function ApiKeysSettings() {
             ))}
             {scopeErr && <span className="crl-err">{scopeErr}</span>}
           </fieldset>
+          <ClientLimitPicker value={limit} onChange={setLimit} idPrefix="new-key" />
+          <label style={{ display: 'grid', gap: 6, maxWidth: 420 }}>
+            <span className="nc-label">Assistant name (optional)</span>
+            <input className="nc-input" value={agentLabel} maxLength={100} onChange={(e) => setAgentLabel(e.target.value)} placeholder="Pipeboard bot" />
+            <span className="ac-sub" style={{ marginTop: 0 }}>Shown in Activity when the assistant doesn't name itself.</span>
+          </label>
           <div><button type="submit" className="btn b-dark b-sm" disabled={create.isPending}>{create.isPending ? <Loader2 className="size-[15px] animate-spin" /> : <Plus className="size-[15px]" />} Create key</button></div>
         </form>
       </div>
@@ -127,6 +169,13 @@ export function ApiKeysSettings() {
                   )}
                 </div>
                 <div className="crl-tags">{k.scopes.map((s) => <span key={s} className="cmp-vpill">{API_KEY_SCOPES.find((x) => x.value === s)?.label ?? s}</span>)}</div>
+                <div className="crl-sub" data-testid="api-key-clients" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Users className="size-[13px]" /> {clientLimitLabel(k.allowedClientIds, names, k.allowedClients)}{k.agentLabel ? ` · assistant "${k.agentLabel}"` : ''}
+                  {!k.revokedAt && editingLimit !== k.id && (
+                    <button type="button" className="btn b-ghost b-sm" onClick={() => setEditingLimit(k.id)} aria-label={`Change clients for ${k.name}`}>Change clients</button>
+                  )}
+                </div>
+                {editingLimit === k.id && <KeyClientLimitEditor apiKey={k} onDone={() => setEditingLimit(null)} />}
                 <div className="crl-sub">Last used {fmt(k.lastUsedAt)} · {k.usage30d} call{k.usage30d === 1 ? '' : 's'} in the last 30 days{k.revokedAt ? ` · revoked ${fmt(k.revokedAt)}` : ''}</div>
               </li>
             ))}

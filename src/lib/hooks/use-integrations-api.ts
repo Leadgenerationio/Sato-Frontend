@@ -30,6 +30,17 @@ export interface ApiKey {
   revokedAt: string | null;
   createdAt: string;
   usage30d: number;
+  /** MCP spec §3 (1h): the clients this key is limited to; null or absent = every client. */
+  allowedClientIds?: string[] | null;
+  /** The same clients with names (backend #91), so a client beyond the first page of /clients is still named. */
+  allowedClients?: Array<{ id: string; name: string }> | null;
+  /** Bot name in the Activity log when a call sends no X-Stato-Agent header. */
+  agentLabel?: string | null;
+}
+
+export interface ApiKeyLimits {
+  allowedClientIds?: string[] | null;
+  agentLabel?: string | null;
 }
 
 export const WEBHOOK_EVENTS = [
@@ -78,8 +89,18 @@ export function useApiKeys() {
 export function useCreateApiKey() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; scopes: ApiKeyScope[] }) =>
+    mutationFn: async (input: { name: string; scopes: ApiKeyScope[] } & ApiKeyLimits) =>
       unwrap(await api.post<{ key: string; apiKey: ApiKey }>('/api/v1/api-keys', input)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['api-keys'] }),
+  });
+}
+
+/** Change a key's client limit or agent label. Takes effect on the key's next call. */
+export function useUpdateApiKeyLimits() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...limits }: { id: string } & ApiKeyLimits) =>
+      unwrap(await api.patch<{ apiKey: ApiKey }>(`/api/v1/api-keys/${id}`, limits)),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['api-keys'] }),
   });
 }
