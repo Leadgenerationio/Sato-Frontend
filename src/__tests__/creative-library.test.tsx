@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Link } from 'react-router-dom';
 import type { LibraryCreative, CreativeFilters } from '@/lib/hooks/use-creative-library';
 
 const base: LibraryCreative = {
@@ -22,13 +22,14 @@ const calls: CreativeFilters[] = [];
 const bulkMutate = vi.fn();
 const updateMutate = vi.fn();
 let detail: LibraryCreative | null = null;
+let detailError: Error | null = null;
 
 vi.mock('@/lib/hooks/use-creative-library', async () => {
   const actual = await vi.importActual<typeof import('@/lib/hooks/use-creative-library')>('@/lib/hooks/use-creative-library');
   return {
     ...actual,
     useLibraryCreatives: (f: CreativeFilters) => { calls.push(f); return { data: { creatives: [base, video], total: 2, page: 1, pageSize: 24 }, isLoading: false, isFetching: false, error: null }; },
-    useLibraryCreative: (id: string | null) => ({ data: id ? detail : undefined, isLoading: false, error: null }),
+    useLibraryCreative: (id: string | null) => ({ data: id && !detailError ? detail : undefined, isLoading: false, error: id ? detailError : null }),
     useLandingPages: () => ({ data: [{ id: 'lp1', clientId: 'c1', clientName: 'Yash Test Sonova', url: 'https://offers.example.com/hearing', normalisedUrl: 'https://offers.example.com/hearing', title: 'Hearing offer', screenshotUrl: null, creativesCount: 2, createdAt: '2026-09-01T00:00:00Z' }] }),
     useBulkCreatives: () => ({ mutateAsync: bulkMutate, isPending: false }),
     useUpdateLibraryCreative: () => ({ mutateAsync: updateMutate, isPending: false }),
@@ -51,6 +52,7 @@ async function pick(label: string, option: string) {
 }
 
 beforeEach(() => {
+  detailError = null;
   calls.length = 0;
   bulkMutate.mockReset().mockResolvedValue({ updated: 2 });
   updateMutate.mockReset().mockResolvedValue({});
@@ -125,6 +127,27 @@ describe('CreativeLibrary', () => {
     expect(panel.getByText('120210000000001')).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('following a link to another asset while the library is already open opens that asset', async () => {
+    detail = base;
+    render(<MemoryRouter initialEntries={['/creatives?creative=cr1']}><Link to="/creatives?creative=cr2">next</Link><CreativeLibrary /></MemoryRouter>);
+    expect(await within(await screen.findByRole('dialog')).findByText('1080×1080 · 244 KB · image/jpeg')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    detail = video;
+    fireEvent.click(screen.getByRole('link', { name: 'next' }));
+    const panel = within(await screen.findByRole('dialog'));
+    expect(await panel.findByText(/story\.mp4/)).toBeInTheDocument();
+  });
+
+  it('an unknown asset id shows the panel\'s error message, not a spinner', async () => {
+    detail = null; detailError = new Error('Creative not found');
+    renderLib({ url: '/creatives?creative=00000000-0000-4000-8000-000000000000' });
+    const panel = within(await screen.findByRole('dialog'));
+    expect(await panel.findByText('Creative not found')).toBeInTheDocument();
+    expect(panel.queryByText('Loading…')).not.toBeInTheDocument(); // no stale spinner text next to the error
+    detailError = null;
   });
 
   it('without ?creative nothing is opened', () => {
