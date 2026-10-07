@@ -9,6 +9,7 @@ import type { ApiKey, WebhookEndpoint } from '@/lib/hooks/use-integrations-api';
 
 const createKey = vi.fn();
 const revokeKey = vi.fn();
+const updateKey = vi.fn();
 const createHook = vi.fn();
 const updateHook = vi.fn();
 const testHook = vi.fn();
@@ -22,6 +23,7 @@ vi.mock('@/lib/hooks/use-integrations-api', async () => {
     useApiKeys: () => ({ data: keys, isLoading: false, error: null }),
     useCreateApiKey: () => ({ mutateAsync: createKey, isPending: false }),
     useRevokeApiKey: () => ({ mutateAsync: revokeKey, isPending: false }),
+    useUpdateApiKeyLimits: () => ({ mutateAsync: updateKey, isPending: false }),
     useWebhooks: () => ({ data: hooks, isLoading: false, error: null }),
     useCreateWebhook: () => ({ mutateAsync: createHook, isPending: false }),
     useUpdateWebhook: () => ({ mutateAsync: updateHook, isPending: false }),
@@ -30,6 +32,17 @@ vi.mock('@/lib/hooks/use-integrations-api', async () => {
     useWebhookDeliveries: (id: string | null) => ({ data: id ? [{ id: 'd1', event: 'test', status: 'succeeded', responseCode: 200, attempts: 1, deliveredAt: '2026-09-29T10:00:00Z', nextAttemptAt: null, createdAt: '2026-09-29T10:00:00Z' }] : undefined, isLoading: false }),
   };
 });
+// The client picker searches the business's clients (1h: keys limited to some clients).
+const CLIENTS = [
+  { id: 'c-acme', companyName: 'Acme Ltd' },
+  { id: 'c-beta', companyName: 'Beta Media' },
+];
+vi.mock('@/lib/hooks/use-clients', () => ({
+  useClients: (f?: { search?: string }) => ({
+    data: { clients: CLIENTS.filter((c) => !f?.search || c.companyName.toLowerCase().includes(f.search.toLowerCase())), total: 2, page: 1, pageSize: 100 },
+    isLoading: false,
+  }),
+}));
 // The Activity card has its own tests (api-activity-settings.test.tsx).
 vi.mock('@/lib/hooks/use-api-activity', () => ({
   useApiActivity: () => ({ data: { pages: [{ items: [], nextCursor: null }] }, isLoading: false, error: null, hasNextPage: false }),
@@ -45,6 +58,7 @@ beforeEach(() => {
   hooks = [{ id: 'w1', url: 'https://example.com/hook', events: ['creative.added'], active: true, createdAt: '2026-09-29T09:00:00Z' }];
   createKey.mockReset().mockResolvedValue({ key: 'sk_live_ab12_SECRET_ONCE', apiKey: { name: 'Taboola sync' } });
   revokeKey.mockReset().mockResolvedValue(undefined);
+  updateKey.mockReset().mockResolvedValue({});
   createHook.mockReset().mockResolvedValue({ endpoint: { url: 'https://hooks.example.com/stato' }, secret: 'whsec_ONCE' });
   updateHook.mockReset().mockResolvedValue({});
   testHook.mockReset().mockResolvedValue({ ok: true, status: 200 });
@@ -79,6 +93,41 @@ describe('ApiKeysSettings', () => {
     expect(await screen.findByText(/Give the key a name/)).toBeInTheDocument();
     expect(screen.getByText('Choose at least one permission.')).toBeInTheDocument();
     expect(createKey).not.toHaveBeenCalled();
+  });
+
+  it('a new key sees all clients unless limited, and sends the limit and assistant name', async () => {
+    render(<ApiKeysSettings />);
+    fireEvent.change(screen.getByPlaceholderText('Meta uploader'), { target: { value: 'Acme bot' } });
+    const form = within(screen.getByRole('form', { name: 'Create an API key' }));
+    fireEvent.click(form.getByLabelText(/Only these clients/));
+    // An empty list is not allowed: nothing is created.
+    fireEvent.click(screen.getByRole('button', { name: /Create key/ }));
+    expect(await form.findByText(/Choose at least one client/)).toBeInTheDocument();
+    expect(createKey).not.toHaveBeenCalled();
+    fireEvent.change(form.getByLabelText('Search clients'), { target: { value: 'acme' } });
+    expect(form.queryByLabelText('Beta Media')).toBeNull();
+    fireEvent.click(form.getByLabelText('Acme Ltd'));
+    fireEvent.change(form.getByPlaceholderText('Pipeboard bot'), { target: { value: 'Pipeboard' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create key/ }));
+    await waitFor(() => expect(createKey).toHaveBeenCalledWith({
+      name: 'Acme bot', scopes: ['clients:read', 'creatives:write'], allowedClientIds: ['c-acme'], agentLabel: 'Pipeboard',
+    }));
+  });
+
+  it('shows which clients each key sees, and changes them', async () => {
+    keys = [{ ...keys[0]!, allowedClientIds: ['c-beta'], agentLabel: 'Pipeboard' }];
+    render(<ApiKeysSettings />);
+    expect(screen.getByTestId('api-key-clients')).toHaveTextContent('Only Beta Media · assistant "Pipeboard"');
+    fireEvent.click(screen.getByRole('button', { name: 'Change clients for Meta uploader' }));
+    const row = within(screen.getByTestId('api-key-row'));
+    fireEvent.click(row.getByLabelText(/All clients/));
+    fireEvent.click(row.getByRole('button', { name: /Save clients/ }));
+    await waitFor(() => expect(updateKey).toHaveBeenCalledWith({ id: 'k1', allowedClientIds: null }));
+  });
+
+  it('a key with no limit says so', () => {
+    render(<ApiKeysSettings />);
+    expect(screen.getByTestId('api-key-clients')).toHaveTextContent('All clients');
   });
 
   it('revoke asks first and only revokes on yes', async () => {
