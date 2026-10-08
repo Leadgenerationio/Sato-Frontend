@@ -12,7 +12,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}'],
+    // scripts/*.test.mjs: tests of the repo's own shell scripts (plain JS: the app's tsconfig has no Node types)
+    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
     setupFiles: ['src/__tests__/setup.ts'],
     css: false,
   },
