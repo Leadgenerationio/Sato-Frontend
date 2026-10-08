@@ -82,6 +82,32 @@ describe('MCP docs page', () => {
     expect(screen.getByText('2 tools. Every ID is a string.')).toBeInTheDocument();
   });
 
+  it('links in the guide: web links open in a new tab and cannot reach back (noopener, noreferrer); in-page and relative links stay in the page', () => {
+    state = { data: { ...docs, setup: [docs.setup, '', 'Docs: [Cursor](https://docs.cursor.com/mcp), [the table](#mcp-tools), [a page](/settings).'].join('\n') }, isLoading: false, error: null };
+    page();
+    const guide = screen.getByTestId('mcp-guide');
+    const web = within(guide).getByRole('link', { name: 'Cursor' });
+    expect(web).toHaveAttribute('href', 'https://docs.cursor.com/mcp');
+    expect(web).toHaveAttribute('target', '_blank');
+    expect(web.getAttribute('rel')).toMatch(/noopener/);
+    expect(web.getAttribute('rel')).toMatch(/noreferrer/);
+    for (const name of ['the table', 'a page']) {
+      const local = within(guide).getByRole('link', { name });
+      expect(local).not.toHaveAttribute('target');
+      expect(local).not.toHaveAttribute('rel');
+    }
+  });
+
+  it('does not render raw HTML or javascript: links from the guide', () => {
+    state = { data: { ...docs, setup: [docs.setup, '', '<script>window.__pwned = 1</script><iframe src="https://evil.test"></iframe>', '', '[click](javascript:alert(1))'].join('\n') }, isLoading: false, error: null };
+    page();
+    const guide = screen.getByTestId('mcp-guide');
+    expect(guide.querySelector('script, iframe')).toBeNull();
+    expect((window as unknown as { __pwned?: number }).__pwned).toBeUndefined();
+    const bad = guide.querySelector('a[href^="javascript:"]');
+    expect(bad).toBeNull();
+  });
+
   it('says so when the guide cannot load', () => {
     state = { isLoading: false, error: new Error('Network down') };
     page();
