@@ -19,5 +19,15 @@
 .statto-admin .mcpd td code { white-space: nowrap; overflow-wrap: normal; }
 .statto-admin .mcpd-muted { color: var(--fg3); }
 @media (max-width: 640px) {
-  .statto-admin .mcpd table { min-width: 560px; }
+  /* Code blocks wrap instead of scrolling sideways, so the endpoint and key can be read and copied. */
+  .statto-admin .mcpd pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; }
+  .statto-admin .mcpd pre code { overflow-wrap: anywhere; }
+  /* Tables become stacked cards: no off-screen columns. */
+  .statto-admin .mcpd-scroll { overflow-x: visible; }
+  .statto-admin .mcpd table, .statto-admin .mcpd tbody, .statto-admin .mcpd tr, .statto-admin .mcpd td { display: block; width: 100%; }
+  .statto-admin .mcpd thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .statto-admin .mcpd tr { border: 1px solid var(--border); border-radius: 8px; padding: 4px 0; margin-bottom: 10px; }
+  .statto-admin .mcpd td { border-bottom: 0; padding: 4px 12px; }
+  .statto-admin .mcpd td[data-label]::before { content: attr(data-label); display: block; font-size: 11.5px; font-weight: 600; color: var(--fg3); }
+  .statto-admin .mcpd td code { white-space: normal; overflow-wrap: anywhere; }
 }

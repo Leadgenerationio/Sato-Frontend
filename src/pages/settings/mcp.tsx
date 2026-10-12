@@ -75,11 +75,11 @@ export function McpDocsPage() {
                 <tbody>
                   {data.tools.map((t) => (
                     <tr key={t.name}>
-                      <td><code>{t.name}</code></td>
-                      <td>{t.summary}</td>
-                      <td>{t.scope ? <code>{t.scope}</code> : <span className="mcpd-muted">any key</span>}</td>
-                      <td>{t.kind}</td>
-                      <td><Inputs t={t} /></td>
+                      <td data-label="Tool"><code>{t.name}</code></td>
+                      <td data-label="What it does">{t.summary}</td>
+                      <td data-label="Scope">{t.scope ? <code>{t.scope}</code> : <span className="mcpd-muted">any key</span>}</td>
+                      <td data-label="Kind">{t.kind}</td>
+                      <td data-label="Inputs"><Inputs t={t} /></td>
                     </tr>
                   ))}
                 </tbody>
