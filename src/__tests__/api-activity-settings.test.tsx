@@ -89,7 +89,7 @@ describe('ApiActivitySettings', () => {
     fireEvent.click(within(screen.getAllByTestId('api-activity-row')[0]!).getAllByRole('button')[0]!);
     expect(screen.getByRole('link', { name: 'Open in library' })).toHaveAttribute('href', '/creatives?creative=c-1');
     fireEvent.click(screen.getByRole('button', { name: "This creative's history" }));
-    expect(lastFilters).toEqual({ creativeId: 'c-1' });
+    expect(lastFilters).toEqual({ includeConnection: 'false', creativeId: 'c-1' });
     const chip = screen.getByTestId('api-activity-creative-filter');
     expect(chip).toHaveTextContent('History of creative c-1');
     fireEvent.click(within(chip).getByRole('button', { name: 'Show every creative' }));
@@ -104,7 +104,7 @@ describe('ApiActivitySettings', () => {
     fireEvent.change(screen.getAllByRole('combobox')[2]!, { target: { value: 'error' } });
     fireEvent.click(screen.getByRole('button', { name: /Download CSV/ }));
     await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(blob, expect.stringMatching(/^api-activity-\d{4}-\d{2}-\d{2}\.csv$/)));
-    expect(downloadCsv).toHaveBeenCalledWith({ outcome: 'error' });
+    expect(downloadCsv).toHaveBeenCalledWith({ includeConnection: 'false', outcome: 'error' });
   });
 
   it('filters by key, transport and result, and labels revoked keys', () => {
@@ -114,9 +114,9 @@ describe('ApiActivitySettings', () => {
     fireEvent.change(keySel!, { target: { value: 'k1' } });
     fireEvent.change(viaSel!, { target: { value: 'mcp' } });
     fireEvent.change(resultSel!, { target: { value: 'error' } });
-    expect(lastFilters).toEqual({ keyId: 'k1', transport: 'mcp', outcome: 'error' });
+    expect(lastFilters).toEqual({ includeConnection: 'false', keyId: 'k1', transport: 'mcp', outcome: 'error' });
     fireEvent.change(resultSel!, { target: { value: '' } });
-    expect(lastFilters).toEqual({ keyId: 'k1', transport: 'mcp', outcome: undefined });
+    expect(lastFilters).toEqual({ includeConnection: 'false', keyId: 'k1', transport: 'mcp', outcome: undefined });
   });
 
   it('loads the next page on demand and hides the button on the last page', () => {
@@ -167,6 +167,16 @@ describe('ApiActivitySettings', () => {
     const rows = screen.getAllByTestId('api-activity-row');
     expect(within(rows[0]!).queryByText(new RegExp(String(thisYear)))).not.toBeInTheDocument();
     expect(within(rows[1]!).getByText(/4 Mar 2019/)).toBeInTheDocument();
+  });
+
+  it('hides MCP connection steps by default and shows them on request', () => {
+    render(<ApiActivitySettings keys={keys} />);
+    expect(lastFilters.includeConnection).toBe('false');
+    const show = screen.getByTestId('api-activity-show');
+    expect(show).toHaveValue('false');
+    expect(within(show).getByRole('option', { name: 'Tool calls and connection steps' })).toBeInTheDocument();
+    fireEvent.change(show, { target: { value: 'true' } });
+    expect(lastFilters.includeConnection).toBe('true');
   });
 
   it('says so when nothing matches the filters', () => {

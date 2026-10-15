@@ -97,7 +97,9 @@ function Row({ a, onCreativeHistory }: { a: ApiActivityItem; onCreativeHistory: 
 }
 
 export function ApiActivitySettings({ keys }: { keys: ApiKey[] }) {
-  const [filters, setFilters] = useState<ApiActivityFilters>({});
+  // Connection steps (MCP initialize, tools/list) are hidden by default: Sam's 10-step test showed 33 rows for 15 tool calls.
+  const [filters, setFilters] = useState<ApiActivityFilters>({ includeConnection: 'false' });
+  const filtered = Boolean(filters.keyId || filters.transport || filters.outcome || filters.creativeId);
   const q = useApiActivity(filters);
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
   const busy = q.isFetching && !q.isFetchingNextPage;
@@ -155,6 +157,12 @@ export function ApiActivitySettings({ keys }: { keys: ApiKey[] }) {
               <option value="error">Errors</option>
             </select>
           </label>
+          <label><span className="nc-label">Show</span>
+            <select className="nc-select" value={filters.includeConnection ?? 'true'} onChange={(e) => set('includeConnection', e.target.value)} data-testid="api-activity-show">
+              <option value="false">Tool calls</option>
+              <option value="true">Tool calls and connection steps</option>
+            </select>
+          </label>
         </div>
         {filters.creativeId && (
           <div className="api-act-chip" data-testid="api-activity-creative-filter">
@@ -171,7 +179,7 @@ export function ApiActivitySettings({ keys }: { keys: ApiKey[] }) {
       : q.error ? (
         <div className="ph-screen"><span className="ph-screen-ic"><AlertTriangle className="size-[26px]" /></span><strong>Couldn't load the activity</strong><p>{q.error instanceof Error ? q.error.message : 'Try refreshing the page.'}</p></div>
       ) : !items.length ? (
-        <div className="ph-screen"><span className="ph-screen-ic"><Activity className="size-[26px]" /></span><strong>No calls yet</strong><p>{Object.values(filters).some(Boolean) ? 'Nothing matches these filters.' : 'Calls made with an API key show up here.'}</p></div>
+        <div className="ph-screen"><span className="ph-screen-ic"><Activity className="size-[26px]" /></span><strong>No calls yet</strong><p>{filtered ? 'Nothing matches these filters.' : 'Calls made with an API key show up here.'}</p></div>
       ) : (
         <>
           <ul className="crl-list api-act-list" aria-label="API activity">

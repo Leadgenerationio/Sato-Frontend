@@ -35,6 +35,11 @@ export interface ApiActivityFilters {
   outcome?: 'ok' | 'error';
   /** Only the calls that touched this creative (its history). */
   creativeId?: string;
+  /**
+   * 'false' leaves out MCP connection steps (initialize, tools/list): an assistant sends them before its tool calls, so they
+   * outnumber the calls people care about. 'true' (or unset) shows every row. Backend: Sato-Backend fix/sam-staging-feedback.
+   */
+  includeConnection?: 'true' | 'false';
 }
 
 function activityParams(filters: ApiActivityFilters) {
